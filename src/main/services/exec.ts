@@ -1,5 +1,3 @@
-// `spawn` (not `execFile`) is used so stderr can be streamed line-by-line
-// for progress, rather than collected only after the process exits.
 import { spawn } from 'node:child_process'
 import { z } from 'zod'
 import { AppError } from '../ipc/registry'
@@ -120,9 +118,8 @@ function spawnCollect(
       }
       if (exitCode === 0)
         return resolve({ stdout: Buffer.concat(stdoutChunks), stderr, exitCode: 0 })
-      // exitCode is null when the process was killed by a signal, including
-      // Node's own `timeout`/`killSignal` option firing; that's a failure,
-      // not a clean exit.
+      // Node reports a null exit code and a signal when the process is killed,
+      // including by its own `timeout` option.
       if (signal) {
         return reject(
           new ExecError(
@@ -151,6 +148,8 @@ function spawnCollect(
     })
 
     if (opts.stdin !== undefined) {
+      // Writing to the stdin of a child that has already exited emits EPIPE.
+      child.stdin?.on('error', () => undefined)
       child.stdin?.end(opts.stdin)
     }
   })
@@ -161,8 +160,6 @@ export async function run(cmd: string, args: string[], opts: RunOptions = {}): P
   return { stdout: stdout.toString('utf8'), stderr, exitCode }
 }
 
-// Returns raw stdout bytes instead of decoding as UTF-8, which would corrupt
-// binary content (e.g. image blobs from `git cat-file blob`).
 export function runBuffer(
   cmd: string,
   args: string[],

@@ -2,12 +2,17 @@ import { useState, type FormEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import styled from 'styled-components'
 import { Download, Folder, Trash2 } from 'react-feather'
+import { FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl'
+import { defineMessages } from '../../i18n/defineMessages'
 import { IconButton } from '../../components/IconButton'
 import { Button } from '../../components/Button'
+import { Caption } from '../../components/Caption'
+import { Checkbox } from '../../components/Checkbox'
 import { Ellipsis } from '../../components/Ellipsis'
 import { Inline } from '../../components/Layout'
-import { List, ListRow } from '../../components/List'
+import { List, ListRow, RowTitle } from '../../components/List'
 import { Message } from '../../components/Message'
+import { SectionHeading } from '../../components/SectionHeading'
 import { useIpcEvent } from '../../ipc/client'
 import { qk } from '../../queries/keys'
 import {
@@ -15,15 +20,140 @@ import {
   useCloneStart,
   useProjects,
   useRemoveProject,
+  useSetTrustWorkspaceToolchain,
   useViewer,
   useViewerRepos
 } from '../../queries/projects'
 import { useAppDispatch } from '../../state/AppContext'
 import { RepoUrlCombobox } from './RepoUrlCombobox'
 import { ExtensionsPanel } from './ExtensionsPanel'
+import { ThemePanel } from './ThemePanel'
 import type { EventPayload } from '@shared/ipc/contract'
 
 type CloneProgress = EventPayload<'clone.progress'>
+
+const messages = defineMessages({
+  title: {
+    id: 'launchpad.title',
+    defaultMessage: 'Projects'
+  },
+  urlPlaceholder: {
+    id: 'launchpad.urlPlaceholder',
+    defaultMessage: 'https://github.com/owner/repo'
+  },
+  addProject: {
+    id: 'launchpad.addProject',
+    defaultMessage: 'Add project'
+  },
+  loading: {
+    id: 'launchpad.loading',
+    defaultMessage: 'Loading projects…'
+  },
+  empty: {
+    id: 'launchpad.empty',
+    defaultMessage: 'No projects yet — add one above.'
+  },
+  open: {
+    id: 'launchpad.open',
+    defaultMessage: 'Open'
+  },
+  clone: {
+    id: 'launchpad.clone',
+    defaultMessage: 'Clone'
+  },
+  remove: {
+    id: 'launchpad.remove',
+    defaultMessage: 'Remove'
+  },
+  confirmRemoveQuestion: {
+    id: 'launchpad.confirmRemoveQuestion',
+    defaultMessage: 'Remove this project and its local review data?'
+  },
+  cancelRemove: {
+    id: 'launchpad.cancelRemove',
+    defaultMessage: 'Cancel'
+  },
+  phaseCounting: {
+    id: 'launchpad.progress.counting',
+    defaultMessage: 'Counting'
+  },
+  phaseCompressing: {
+    id: 'launchpad.progress.compressing',
+    defaultMessage: 'Compressing'
+  },
+  phaseReceiving: {
+    id: 'launchpad.progress.receiving',
+    defaultMessage: 'Receiving'
+  },
+  phaseResolving: {
+    id: 'launchpad.progress.resolving',
+    defaultMessage: 'Resolving'
+  },
+  phaseCheckout: {
+    id: 'launchpad.progress.checkout',
+    defaultMessage: 'Checkout'
+  },
+  phaseCountingDetail: {
+    id: 'launchpad.progress.countingDetail',
+    defaultMessage: 'Counting — {detail}'
+  },
+  phaseCompressingDetail: {
+    id: 'launchpad.progress.compressingDetail',
+    defaultMessage: 'Compressing — {detail}'
+  },
+  phaseReceivingDetail: {
+    id: 'launchpad.progress.receivingDetail',
+    defaultMessage: 'Receiving — {detail}'
+  },
+  phaseResolvingDetail: {
+    id: 'launchpad.progress.resolvingDetail',
+    defaultMessage: 'Resolving — {detail}'
+  },
+  phaseCheckoutDetail: {
+    id: 'launchpad.progress.checkoutDetail',
+    defaultMessage: 'Checkout — {detail}'
+  },
+  projectSlug: {
+    id: 'launchpad.projectSlug',
+    defaultMessage: '{owner}/{repo}'
+  },
+  trustWorkspaceToolchain: {
+    id: 'launchpad.trustWorkspaceToolchain',
+    defaultMessage: 'Trust workspace TypeScript'
+  }
+})
+
+type ActivePhase = Exclude<CloneProgress['phase'], 'done' | 'error'>
+
+function phaseLabel(phase: ActivePhase): MessageDescriptor {
+  switch (phase) {
+    case 'counting':
+      return messages.phaseCounting
+    case 'compressing':
+      return messages.phaseCompressing
+    case 'receiving':
+      return messages.phaseReceiving
+    case 'resolving':
+      return messages.phaseResolving
+    case 'checkout':
+      return messages.phaseCheckout
+  }
+}
+
+function phaseDetailLabel(phase: ActivePhase): MessageDescriptor {
+  switch (phase) {
+    case 'counting':
+      return messages.phaseCountingDetail
+    case 'compressing':
+      return messages.phaseCompressingDetail
+    case 'receiving':
+      return messages.phaseReceivingDetail
+    case 'resolving':
+      return messages.phaseResolvingDetail
+    case 'checkout':
+      return messages.phaseCheckoutDetail
+  }
+}
 
 const Page = styled.div`
   max-width: 720px;
@@ -32,16 +162,7 @@ const Page = styled.div`
 `
 
 const TopBar = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   margin-bottom: ${({ theme }) => theme.space[5]};
-`
-
-const Title = styled.h1`
-  margin: 0;
-  font-size: ${({ theme }) => theme.font.size.lg};
-  font-weight: 600;
 `
 
 const ViewerBadge = styled(Inline)`
@@ -69,11 +190,6 @@ const ProjectsList = styled(List)`
 const RowMain = styled.div`
   flex: 1;
   min-width: 0;
-`
-
-const RowName = styled.div`
-  font-size: ${({ theme }) => theme.font.size.md};
-  color: ${({ theme }) => theme.colors.fg};
 `
 
 const RowUrl = styled(Ellipsis)`
@@ -107,6 +223,7 @@ function isActiveClone(progress: CloneProgress | undefined): boolean {
 }
 
 export function Launchpad(): React.JSX.Element {
+  const intl = useIntl()
   const dispatch = useAppDispatch()
   const qc = useQueryClient()
   const { data: viewer } = useViewer()
@@ -115,10 +232,12 @@ export function Launchpad(): React.JSX.Element {
   const addProject = useAddProject()
   const removeProject = useRemoveProject()
   const cloneStart = useCloneStart()
+  const setTrustWorkspaceToolchain = useSetTrustWorkspaceToolchain()
 
   const [url, setUrl] = useState('')
   const [urlTouched, setUrlTouched] = useState(false)
   const [progressById, setProgressById] = useState<Record<string, CloneProgress>>({})
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
 
   const prefill = viewer ? `https://github.com/${viewer.login}/` : ''
   const urlValue = urlTouched ? url : prefill
@@ -163,11 +282,13 @@ export function Launchpad(): React.JSX.Element {
 
   function handleOpen(projectId: string): void {
     qc.invalidateQueries({ queryKey: qk.project(projectId) })
+    qc.removeQueries({ queryKey: qk.open(projectId) })
     dispatch({ type: 'project/open', projectId })
   }
 
   function handleRemove(projectId: string): void {
     removeProject.mutate(projectId)
+    setConfirmRemoveId(null)
     setProgressById((prev) => {
       if (!(projectId in prev)) return prev
       const next = { ...prev }
@@ -179,13 +300,19 @@ export function Launchpad(): React.JSX.Element {
   return (
     <Page>
       <TopBar>
-        <Title>Projects</Title>
-        {viewer && (
-          <ViewerBadge>
-            <Avatar src={viewer.avatarUrl} alt="" />
-            <span>{viewer.name ?? viewer.login}</span>
-          </ViewerBadge>
-        )}
+        <SectionHeading
+          as="h1"
+          size="lg"
+          title={<FormattedMessage {...messages.title} />}
+          actions={
+            viewer && (
+              <ViewerBadge>
+                <Avatar src={viewer.avatarUrl} alt="" />
+                <span>{viewer.name ?? viewer.login}</span>
+              </ViewerBadge>
+            )
+          }
+        />
       </TopBar>
 
       <AddForm onSubmit={handleAdd}>
@@ -197,20 +324,26 @@ export function Launchpad(): React.JSX.Element {
           }}
           repos={viewerRepos ?? []}
           loading={viewerReposLoading}
-          placeholder="https://github.com/owner/repo"
+          placeholder={intl.formatMessage(messages.urlPlaceholder)}
         />
         <Button
           type="submit"
           variant="primary"
           disabled={addProject.isPending || urlValue.trim().length === 0}
         >
-          Add project
+          <FormattedMessage {...messages.addProject} />
         </Button>
       </AddForm>
 
-      {isLoading && <Message>Loading projects…</Message>}
+      {isLoading && (
+        <Message>
+          <FormattedMessage {...messages.loading} />
+        </Message>
+      )}
       {!isLoading && (projects?.length ?? 0) === 0 && (
-        <Message>No projects yet — add one above.</Message>
+        <Message>
+          <FormattedMessage {...messages.empty} />
+        </Message>
       )}
 
       <ProjectsList>
@@ -224,40 +357,88 @@ export function Launchpad(): React.JSX.Element {
               onClick={project.cloned ? () => handleOpen(project.id) : undefined}
             >
               <RowMain>
-                <RowName>
-                  {project.owner}/{project.repo}
-                </RowName>
+                <RowTitle>
+                  <FormattedMessage
+                    {...messages.projectSlug}
+                    values={{ owner: project.owner, repo: project.repo }}
+                  />
+                </RowTitle>
                 <RowUrl>{project.url}</RowUrl>
                 {cloning && (
                   <ProgressBar>
                     <ProgressFill style={{ width: `${progress?.percent ?? 0}%` }} />
                   </ProgressBar>
                 )}
-                {cloning && (
-                  <ProgressLabel>
-                    {progress?.phase}
-                    {progress?.message ? ` — ${progress.message}` : ''}
-                  </ProgressLabel>
-                )}
+                {cloning &&
+                  progress &&
+                  (() => {
+                    const phase = progress.phase as ActivePhase
+                    const detail = progress.message
+                    return detail ? (
+                      <ProgressLabel>
+                        <FormattedMessage {...phaseDetailLabel(phase)} values={{ detail }} />
+                      </ProgressLabel>
+                    ) : (
+                      <ProgressLabel>{intl.formatMessage(phaseLabel(phase))}</ProgressLabel>
+                    )
+                  })()}
               </RowMain>
               <Inline $gap={1} onClick={(e) => e.stopPropagation()}>
+                <Checkbox
+                  checked={project.trustWorkspaceToolchain}
+                  onChange={(checked) =>
+                    setTrustWorkspaceToolchain.mutate({
+                      projectId: project.id,
+                      trustWorkspaceToolchain: checked
+                    })
+                  }
+                  label={intl.formatMessage(messages.trustWorkspaceToolchain)}
+                />
                 {project.cloned ? (
-                  <IconButton icon={Folder} label="Open" onClick={() => handleOpen(project.id)} />
+                  <IconButton
+                    icon={Folder}
+                    label={intl.formatMessage(messages.open)}
+                    onClick={() => handleOpen(project.id)}
+                  />
                 ) : (
                   <IconButton
                     icon={Download}
-                    label="Clone"
+                    label={intl.formatMessage(messages.clone)}
                     disabled={cloning}
                     onClick={() => startClone(project.id)}
                   />
                 )}
-                <IconButton icon={Trash2} label="Remove" onClick={() => handleRemove(project.id)} />
+                {confirmRemoveId === project.id ? (
+                  <>
+                    <Caption>
+                      <FormattedMessage {...messages.confirmRemoveQuestion} />
+                    </Caption>
+                    <Button
+                      variant="danger"
+                      disabled={cloning || removeProject.isPending}
+                      onClick={() => handleRemove(project.id)}
+                    >
+                      <FormattedMessage {...messages.remove} />
+                    </Button>
+                    <Button onClick={() => setConfirmRemoveId(null)}>
+                      <FormattedMessage {...messages.cancelRemove} />
+                    </Button>
+                  </>
+                ) : (
+                  <IconButton
+                    icon={Trash2}
+                    label={intl.formatMessage(messages.remove)}
+                    disabled={cloning}
+                    onClick={() => setConfirmRemoveId(project.id)}
+                  />
+                )}
               </Inline>
             </ListRow>
           )
         })}
       </ProjectsList>
 
+      <ThemePanel />
       <ExtensionsPanel />
     </Page>
   )

@@ -6,9 +6,9 @@ import { createMainWindow } from './window'
 import { log } from './log'
 import { formatCaughtError, markRendererReady, notifyMainFailure } from './notify'
 
-// app.setName must run before any app.getPath() call so dev and prod agree
-// on the userData path.
-app.setName('gh-large-review')
+// Electron derives the userData path from the app name at the first
+// `app.getPath()` call.
+app.setName('gepard')
 
 process.on('uncaughtException', (err) => {
   notifyMainFailure('app', `uncaughtException: ${formatCaughtError(err)}`)
@@ -30,13 +30,12 @@ app.whenReady().then(() => {
       `chrome=${process.versions.chrome} node=${process.versions.node} ` +
       `platform=${process.platform} arch=${process.arch}`
   )
-  electronApp.setAppUserModelId('com.ghlargereview.app')
+  electronApp.setAppUserModelId('io.github.dee-gmiterko.gepard')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
-    // Module scripts run before the page's load event, which is what
-    // triggers `did-finish-load`, so the renderer's module-level
-    // `subscribe('app.error', ...)` has already run by this point.
+    // Module scripts run before the page's load event, which triggers
+    // `did-finish-load`.
     window.webContents.once('did-finish-load', () => markRendererReady())
   })
 

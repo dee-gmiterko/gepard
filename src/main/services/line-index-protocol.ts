@@ -13,6 +13,5 @@ export type LineIndexRequest =
 
 export type LineIndexResponse =
   | { type: 'progress'; done: number; total: number }
-  | { type: 'built'; fileCount: number }
-  | { type: 'updated' }
+  | { type: 'built' }
   | { type: 'result'; id: number; files: LineIndexFileMatches[] }

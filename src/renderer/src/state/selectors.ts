@@ -1,10 +1,6 @@
 import type { AppState, Targeting } from './reducer'
 import type { TargetRef } from '@shared/ipc/schemas/pr'
 
-export function isDiffView(state: AppState): boolean {
-  return state.targeting.pr !== null || state.targeting.commit !== null
-}
-
 export function activeTargetRef({
   pr,
   commit
@@ -12,6 +8,10 @@ export function activeTargetRef({
   if (commit !== null) return { kind: 'commit', sha: commit }
   if (pr !== null) return { kind: 'pr', pr }
   return null
+}
+
+export function isDiffView(state: AppState): boolean {
+  return activeTargetRef(state.targeting) !== null
 }
 
 export function openTabs(state: AppState): string[] {

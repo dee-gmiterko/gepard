@@ -1,13 +1,10 @@
-// The language session only indexes the working tree at the checked-out
-// head, so symbols are only resolvable for a RIGHT-side line at that head,
-// never for a LEFT-side (base version) line.
 import type { Anchor, DraftAnchor } from '@shared/ipc/schemas/comment'
 
 export interface RefAnchor {
   sha: string
   path: string
   line: number
-  symbols: boolean
+  symbolsResolvable: boolean
 }
 
 type Checkout = { base: string; head: string } | null
@@ -26,7 +23,7 @@ export function refAnchorFromThread(anchor: Anchor, checkout: Checkout): RefAnch
     sha,
     path: anchor.path,
     line,
-    symbols: anchor.side === 'RIGHT' && sha === checkout?.head
+    symbolsResolvable: anchor.side === 'RIGHT' && sha === checkout?.head
   }
 }
 
@@ -37,6 +34,6 @@ export function refAnchorFromDraft(draft: DraftAnchor, checkout: Checkout): RefA
     sha: left ? checkout.base : checkout.head,
     path: draft.path,
     line: draft.line,
-    symbols: !left
+    symbolsResolvable: !left
   }
 }

@@ -5,17 +5,15 @@ import type { Comment, ReviewThread } from '../src/shared/ipc/schemas/comment'
 function comment(id: string, createdAt: string): Comment {
   return {
     id,
-    databaseId: null,
     threadId: 'thread',
     reviewId: null,
     reviewState: null,
-    author: { login: 'octocat', isBot: false },
+    author: { login: 'octocat' },
     body: `comment ${id}`,
     createdAt,
     updatedAt: createdAt,
     lastEditedAt: null,
     replyToId: null,
-    url: null,
     outdated: false,
     viewerDidAuthor: false,
     viewerCanDelete: false
@@ -40,8 +38,7 @@ function thread(id: string, comments: Comment[]): ReviewThread {
     },
     isResolved: false,
     isOutdated: false,
-    comments,
-    remoteUpdatedAt: comments[comments.length - 1].createdAt
+    comments
   }
 }
 
@@ -71,13 +68,14 @@ describe('sortThreadsChronologically', () => {
     ])
   })
 
-  it('does not mutate the input array', () => {
+  it('returns a new sorted array without mutating the input', () => {
     const a = thread('a', [comment('c1', '2026-01-02T00:00:00Z')])
     const b = thread('b', [comment('c2', '2026-01-01T00:00:00Z')])
     const input = [a, b]
 
-    sortThreadsChronologically(input)
+    const sorted = sortThreadsChronologically(input)
 
-    expect(input).toEqual([a, b])
+    expect(sorted.map((t) => t.id)).toEqual(['b', 'a'])
+    expect(input.map((t) => t.id)).toEqual(['a', 'b'])
   })
 })

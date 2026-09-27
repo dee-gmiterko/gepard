@@ -1,9 +1,8 @@
 import { spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
-import { join } from 'node:path'
 import { rgPath as rgPathRaw } from '@vscode/ripgrep'
+import { matchesTarget } from '@shared/model/paths'
 
-// Binaries cannot execute from inside an asar.
+// Electron cannot execute binaries from inside an asar archive.
 function resolveRgPath(): string {
   return rgPathRaw.includes('app.asar')
     ? rgPathRaw.replace('app.asar', 'app.asar.unpacked')
@@ -24,12 +23,8 @@ export interface RipgrepFileResult {
 export interface RipgrepSearchOptions {
   cwd: string
   pattern: string
-  /** `-F`: fixed string, not a regex. */
   fixedString: boolean
-  /** `-w`: whole word. */
   word?: boolean
-  /** Restricts the search to these files/folders (repo-relative); absent or
-   * empty searches the whole repo. */
   paths?: string[]
   signal?: AbortSignal
 }
@@ -48,9 +43,7 @@ function isMatchMessage(m: unknown): m is RgMatchMessage {
   return typeof m === 'object' && m !== null && (m as { type?: unknown }).type === 'match'
 }
 
-// ripgrep reports byte offsets, but CodeMirror (and JS strings) use UTF-16
-// code units, so offsets need to be mapped between the two.
-// boundaries[i] = UTF-8 byte length of `text`'s first `i` UTF-16 code units.
+// ripgrep reports UTF-8 byte offsets, while JS strings index by UTF-16 code units.
 export function utf16ByteBoundaries(text: string): number[] {
   const boundaries = new Array<number>(text.length + 1)
   boundaries[0] = 0
@@ -60,7 +53,7 @@ export function utf16ByteBoundaries(text: string): number[] {
     const codePoint = text.codePointAt(i) as number
     bytes += Buffer.byteLength(String.fromCodePoint(codePoint), 'utf8')
     if (codePoint > 0xffff) {
-      // astral character: occupies two UTF-16 code units (a surrogate pair)
+      // A code point above U+FFFF occupies two UTF-16 code units.
       boundaries[i + 1] = bytes
       boundaries[i + 2] = bytes
       i += 2
@@ -83,22 +76,24 @@ export function byteOffsetToUtf16(boundaries: number[], byteOffset: number): num
   return lo
 }
 
-// ripgrep's `--sort path` forces single-threaded execution, so results are
-// sorted in JS instead.
 export function ripgrepSearch(opts: RipgrepSearchOptions): Promise<RipgrepFileResult[]> {
-  // rg exits with code 2 when given a path argument that doesn't exist
-  // (e.g. a file deleted by the PR), so those are dropped first.
-  const paths = opts.paths?.filter((p) => existsSync(join(opts.cwd, p)))
-  if (opts.paths && opts.paths.length > 0 && paths?.length === 0) return Promise.resolve([])
+  // Always search the whole tree and filter the results with matchesTarget
+  // (the app's own path/glob semantics) below, rather than asking rg to
+  // narrow the search itself: rg's own `--glob` is unanchored on a bare
+  // basename pattern (unlike matchesTarget), a positional path argument and
+  // an include `--glob` filter each other in ways that drop legitimate
+  // matches when mixed, and argv would otherwise grow with every targeted
+  // path, which can exceed the OS argv limit on a large PR.
+  const targetedPaths = opts.paths
+  if (targetedPaths && targetedPaths.length === 0) return Promise.resolve([])
 
-  const args = ['--json', '--glob', '!.git']
+  const args = ['--json', '--hidden', '--glob', '!.git']
   if (opts.fixedString) args.push('-F')
   if (opts.word) args.push('-w')
-  args.push('--', opts.pattern)
-  args.push(...(paths && paths.length > 0 ? paths : ['.']))
+  args.push('--', opts.pattern, '.')
 
   return new Promise((resolve, reject) => {
-    // stdin must be ignored: rg searches stdin when it's a non-TTY pipe and hangs.
+    // rg searches stdin instead of the paths when stdin is a non-TTY pipe.
     const child = spawn(resolveRgPath(), args, {
       cwd: opts.cwd,
       signal: opts.signal,
@@ -126,8 +121,7 @@ export function ripgrepSearch(opts: RipgrepSearchOptions): Promise<RipgrepFileRe
         if (!isMatchMessage(msg)) continue
         const filePath = msg.data.path.text
         const rawLine = msg.data.lines.text
-        // ripgrep's --json output omits `text` (using `bytes` instead) for
-        // non-UTF8 lines; skip those as binary.
+        // ripgrep's --json output uses `bytes` instead of `text` for non-UTF-8 data.
         if (filePath === undefined || rawLine === undefined) continue
 
         const boundaries = utf16ByteBoundaries(rawLine)
@@ -152,12 +146,13 @@ export function ripgrepSearch(opts: RipgrepSearchOptions): Promise<RipgrepFileRe
         reject(new Error(`rg exited with code ${code}: ${stderr.trim()}`))
         return
       }
-      // code === 1 means "no matches", not an error.
+      // rg exits with code 1 when nothing matched.
       const results = Array.from(files.entries())
         .map(([filePath, matches]) => ({
           path: filePath,
           matches: matches.sort((a, b) => a.line - b.line)
         }))
+        .filter((f) => !targetedPaths || targetedPaths.some((t) => matchesTarget(f.path, t)))
         .sort((a, b) => a.path.localeCompare(b.path))
       resolve(results)
     })

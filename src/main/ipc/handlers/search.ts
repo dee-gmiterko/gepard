@@ -1,16 +1,31 @@
 import { readFile } from 'node:fs/promises'
-import * as path from 'node:path'
 import type { HandlerMap } from '../registry'
 import { AppError } from '../registry'
 import { withLatestWins } from '../cancellation'
 import { ripgrepSearch, type RipgrepFileResult } from '../../services/ripgrep'
+import { resolveWithinRepo } from '../../services/repo-fs'
 import { indexer } from '../../lsp'
 import type { LanguageSession } from '../../lsp/session'
 import { projectRepoDir } from '../../paths'
 import { isTargeted } from '@shared/model/paths'
 
-// The LSP definition request only returns the definition targets, not the
-// name of the symbol under the cursor, so it's extracted here separately.
+function staleShaError(requested: string, current: string): Error {
+  const err = new Error(
+    `Requested sha ${requested} does not match the checked-out head ${current}; the project was checked out to a different target since this request was made`
+  )
+  err.name = 'AbortError'
+  return err
+}
+
+function requireCurrentSha(projectId: string, sha: string): void {
+  const current = indexer.currentSha(projectId)
+  if (current !== null && current !== sha) {
+    throw staleShaError(sha, current)
+  }
+}
+
+// LSP textDocument/definition does not return the name of the symbol under
+// the cursor.
 function identifierAt(lineText: string, col1: number): string {
   const idx = col1 - 1
   const isWordChar = (c: string | undefined): boolean => !!c && /[A-Za-z0-9_$]/.test(c)
@@ -57,6 +72,7 @@ export const searchHandlers: Pick<
 > = {
   'search.run': (input) =>
     withLatestWins(searchRunKey(input), async ({ signal, token }) => {
+      requireCurrentSha(input.projectId, input.sha)
       const repoRoot = projectRepoDir(input.projectId)
       const targetedPaths = input.targetedPaths
 
@@ -154,6 +170,7 @@ export const searchHandlers: Pick<
     withLatestWins(
       `symbols.line:${input.projectId}:${input.path}:${input.line}`,
       async ({ token }) => {
+        requireCurrentSha(input.projectId, input.sha)
         const session = requireSession(input.projectId)
         const symbols = await session.lineSymbols(input.path, input.line, token)
         return { path: input.path, line: input.line, symbols }
@@ -164,15 +181,19 @@ export const searchHandlers: Pick<
     withLatestWins(
       `symbols.definition:${input.projectId}:${input.path}:${input.pos.line}:${input.pos.col}`,
       async ({ token }) => {
+        requireCurrentSha(input.projectId, input.sha)
         const session = requireSession(input.projectId)
         const repoRoot = projectRepoDir(input.projectId)
         let symbol = ''
-        try {
-          const text = await readFile(path.join(repoRoot, input.path), 'utf8')
-          const lineText = text.split('\n')[input.pos.line - 1] ?? ''
-          symbol = identifierAt(lineText, input.pos.col)
-        } catch {
-          symbol = ''
+        const real = await resolveWithinRepo(repoRoot, input.path)
+        if (real) {
+          try {
+            const text = await readFile(real, 'utf8')
+            const lineText = text.split('\n')[input.pos.line - 1] ?? ''
+            symbol = identifierAt(lineText, input.pos.col)
+          } catch {
+            symbol = ''
+          }
         }
         const definitions = await session.definition(input.path, input.pos, token)
         return { symbol, definitions }
@@ -181,6 +202,7 @@ export const searchHandlers: Pick<
 
   'symbols.workspace': (input) =>
     withLatestWins(`symbols.workspace:${input.projectId}`, async ({ token }) => {
+      requireCurrentSha(input.projectId, input.sha)
       const session = requireSession(input.projectId)
       return session.workspaceSymbols(input.query, input.limit ?? 50, token)
     })

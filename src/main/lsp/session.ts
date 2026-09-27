@@ -52,7 +52,7 @@ export interface LanguageExtension {
   id: string
   displayName: string
   matches(filePath: string): boolean
-  resolve(project: { root: string }): Promise<LaunchPlan>
+  resolve(project: { root: string; trustWorkspaceToolchain?: boolean }): Promise<LaunchPlan>
   start(plan: LaunchPlan, sink: ExtensionEvents): Promise<LanguageSession>
 }
 
@@ -62,25 +62,20 @@ export interface FileChange {
 }
 
 export interface LanguageSession {
-  /** LSP `semanticTokens/range`. */
   lineSymbols(filePath: string, line: number, token?: CancellationToken): Promise<LineSymbol[]>
-  /** LSP `textDocument/definition`. */
   definition(filePath: string, pos: Pos, token?: CancellationToken): Promise<DefinitionTarget[]>
-  /** LSP `textDocument/references`, grouped per file. */
   references(filePath: string, pos: Pos, token?: CancellationToken): Promise<FileMatches[]>
-  /** LSP `workspace/symbol`. */
   workspaceSymbols(
     query: string,
     limit: number,
     token?: CancellationToken
   ): Promise<WorkspaceSymbol[]>
-  /** LSP `workspace/didChangeWatchedFiles`. */
   filesChanged(changes: FileChange[]): void
   dispose(): Promise<void>
 }
 
-// Standard LSP 3.17 semantic token legend the client declares support for;
-// servers otherwise report an empty legend.
+// LSP servers report an empty semantic token legend unless the client
+// declares the token types it supports.
 const STANDARD_TOKEN_TYPES = [
   'namespace',
   'type',
@@ -118,14 +113,7 @@ const STANDARD_TOKEN_MODIFIERS = [
   'documentation',
   'defaultLibrary'
 ]
-const KNOWN_MODIFIERS = new Set([
-  'declaration',
-  'readonly',
-  'static',
-  'async',
-  'local',
-  'defaultLibrary'
-])
+const KNOWN_MODIFIERS = new Set(['declaration', 'readonly', 'static', 'async', 'defaultLibrary'])
 
 function toPosix(p: string): string {
   return p.split(path.sep).join('/')
@@ -171,7 +159,6 @@ function mapSemanticTokenType(type: string | undefined, readonly: boolean): Symb
   }
 }
 
-// LSP 3.17 numeric SymbolKind (workspace/symbol, documentSymbol) -> our enum.
 function mapLspSymbolKind(k: number): SymbolKind {
   switch (k) {
     case 3:
@@ -215,7 +202,7 @@ interface LspLocation {
   uri: string
   range: LspRange
 }
-/** textDocument/definition may reply with plain Locations or LocationLinks. */
+// textDocument/definition may reply with plain Locations or LocationLinks.
 interface LspLocationLink {
   targetUri: string
   targetSelectionRange: LspRange
@@ -239,6 +226,14 @@ export class LspSession implements LanguageSession {
   private docQueue = new Map<string, Promise<unknown>>()
   private disposed = false
   private restarting = false
+  private restartTimer: NodeJS.Timeout | null = null
+  private restartAttempts = 0
+  private restartWindowStart = 0
+  private static readonly MAX_RESTARTS_PER_WINDOW = 5
+  private static readonly RESTART_WINDOW_MS = 60_000
+  private static readonly RESTART_BASE_DELAY_MS = 500
+  private static readonly RESTART_MAX_DELAY_MS = 30_000
+  private static readonly DISPOSE_TIMEOUT_MS = 3_000
   private crashGate = new CrashGate()
 
   private constructor(
@@ -262,9 +257,7 @@ export class LspSession implements LanguageSession {
     })
     this.child = child
     child.stderr.on('data', (d: Buffer) => this.sink.log('warn', d.toString('utf8').trim()))
-    // vscode-jsonrpc doesn't reject pending requests when the connection
-    // closes, so without this a server that dies mid-`initialize` would
-    // hang launch() forever.
+    // vscode-jsonrpc does not reject pending requests when the connection closes.
     let failLaunch: ((e: Error) => void) | null = null
     let abandoned = false
     const launchFailed = new Promise<never>((_, reject) => {
@@ -274,8 +267,7 @@ export class LspSession implements LanguageSession {
       if (abandoned) return
       const message = `LSP process error: ${err.message}`
       if (failLaunch) failLaunch(new Error(message))
-      // Node doesn't guarantee only one of 'error'/'exit' fires for a given
-      // failure; the crash gate ensures this is toasted only once regardless.
+      // Node may fire both 'error' and 'exit' for the same failure.
       else if (this.crashGate.crash()) {
         this.sink.log('error', message)
       }
@@ -327,8 +319,6 @@ export class LspSession implements LanguageSession {
       workspaceFolders: [{ uri: rootUri, name: path.basename(this.plan.cwd) }],
       initializationOptions: this.plan.initializationOptions,
       capabilities: {
-        // LSP defaults to UTF-16 code units for positions unless negotiated
-        // otherwise; declared explicitly rather than relying on the default.
         general: { positionEncodings: ['utf-16'] },
         workspace: {
           configuration: true,
@@ -367,28 +357,69 @@ export class LspSession implements LanguageSession {
 
   private handleExit(code: number | null, signal: NodeJS.Signals | null): void {
     if (this.disposed) return
-    // vscode-jsonrpc never rejects pending requests on its own when the
-    // underlying stream closes, so they're rejected here instead.
     if (this.crashGate.crash()) {
       this.sink.log('error', `LSP process exited unexpectedly (code=${code}, signal=${signal})`)
     }
     if (this.restarting) return
     this.restarting = true
-    this.launch().then(
-      () => {
-        this.restarting = false
-        this.sink.log('warn', 'LSP process restarted')
-      },
-      (e: Error) => {
-        if (!this.disposed) this.sink.log('error', `LSP restart failed: ${e.message}`)
-      }
+    this.scheduleRestart()
+  }
+
+  private scheduleRestart(): void {
+    if (this.disposed) {
+      this.restarting = false
+      return
+    }
+
+    const now = Date.now()
+    if (now - this.restartWindowStart > LspSession.RESTART_WINDOW_MS) {
+      this.restartWindowStart = now
+      this.restartAttempts = 0
+    }
+    this.restartAttempts++
+    if (this.restartAttempts > LspSession.MAX_RESTARTS_PER_WINDOW) {
+      this.sink.log(
+        'error',
+        `LSP process crashed ${this.restartAttempts} times within a minute; giving up`
+      )
+      this.restarting = false
+      return
+    }
+
+    const delay = Math.min(
+      LspSession.RESTART_MAX_DELAY_MS,
+      LspSession.RESTART_BASE_DELAY_MS * 2 ** (this.restartAttempts - 1)
     )
+    this.restartTimer = setTimeout(() => {
+      this.restartTimer = null
+      if (this.disposed) {
+        this.restarting = false
+        return
+      }
+      this.launch().then(
+        () => {
+          this.restarting = false
+          this.sink.log('warn', 'LSP process restarted')
+        },
+        (e: Error) => {
+          if (this.disposed) {
+            this.restarting = false
+            return
+          }
+          this.crashGate.crash()
+          this.sink.log('error', `LSP restart attempt failed: ${e.message}`)
+          this.scheduleRestart()
+        }
+      )
+    }, delay)
+    this.restartTimer.unref?.()
   }
 
   private toRepoLocation(uri: string): { path: string; external: boolean } {
     const abs = fileURLToPath(uri)
     const rel = path.relative(this.plan.cwd, abs)
-    const isInside = rel.length > 0 && !rel.startsWith('..') && !path.isAbsolute(rel)
+    const isInside =
+      rel.length > 0 && rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel)
     if (isInside) return { path: toPosix(rel), external: false }
     const stripped = toPosix(abs).replace(/^\/+/, '')
     return { path: stripped.length > 0 ? stripped : 'external', external: true }
@@ -398,10 +429,8 @@ export class LspSession implements LanguageSession {
     return path.join(this.plan.cwd, repoRelativePath)
   }
 
-  // `MessageConnection#sendRequest`'s string overload treats an explicit
-  // `undefined` third argument as a second params element, not "no
-  // cancellation token" — it only special-cases an actual `CancellationToken`
-  // — so `token` is appended only when given.
+  // `MessageConnection#sendRequest` treats an explicit `undefined` third
+  // argument as a params element, not as a missing cancellation token.
   private sendRequest<R>(method: string, params: unknown, token?: CancellationToken): Promise<R> {
     const real = (
       token ? this.conn.sendRequest(method, params, token) : this.conn.sendRequest(method, params)
@@ -602,11 +631,29 @@ export class LspSession implements LanguageSession {
 
   async dispose(): Promise<void> {
     this.disposed = true
+    if (this.restartTimer) {
+      clearTimeout(this.restartTimer)
+      this.restartTimer = null
+    }
+    let timer: NodeJS.Timeout | undefined
     try {
-      await this.conn.sendRequest('shutdown')
-      await this.conn.sendNotification('exit')
+      await Promise.race([
+        (async () => {
+          await this.conn.sendRequest('shutdown')
+          await this.conn.sendNotification('exit')
+        })(),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error('LSP shutdown handshake timed out')),
+            LspSession.DISPOSE_TIMEOUT_MS
+          )
+          timer.unref?.()
+        })
+      ])
     } catch {
-      // The server may already be gone; disposal proceeds regardless.
+      // The server may already have exited.
+    } finally {
+      if (timer) clearTimeout(timer)
     }
     this.conn.dispose()
     if (!this.child.killed) this.child.kill()

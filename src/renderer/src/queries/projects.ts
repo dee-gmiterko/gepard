@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { invoke, useIpcEvent } from '../ipc/client'
 import { qk } from './keys'
 import { useAppState } from '../state/AppContext'
-import type { ChannelInput } from '@shared/ipc/contract'
+import type { ChannelInput, ChannelOutput } from '@shared/ipc/contract'
 
 export function useViewer() {
   return useQuery({ queryKey: qk.viewer(), queryFn: () => invoke('app.viewer') })
@@ -37,6 +37,19 @@ export function useSetTargeting(projectId: string) {
   return useMutation({
     mutationFn: (targeting: ChannelInput<'projects.setTargeting'>['targeting']) =>
       invoke('projects.setTargeting', { projectId, targeting })
+  })
+}
+
+export function useSetTrustWorkspaceToolchain() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { projectId: string; trustWorkspaceToolchain: boolean }) =>
+      invoke('projects.setTrustWorkspaceToolchain', input),
+    onSuccess: (project) =>
+      qc.setQueryData(qk.projects(), (prev: ChannelOutput<'projects.list'> | undefined) =>
+        prev?.map((p) => (p.id === project.id ? project : p))
+      ),
+    onSettled: () => qc.invalidateQueries({ queryKey: qk.projects() })
   })
 }
 

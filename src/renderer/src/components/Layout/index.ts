@@ -1,1 +1,1 @@
-export { Stack, Inline } from './Layout'
+export { Stack, Inline, type Gap } from './Layout'

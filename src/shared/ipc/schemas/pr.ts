@@ -9,19 +9,13 @@ export const Login = z.string().min(1)
 
 export const Actor = z.object({
   login: Login,
-  id: z.string().optional(),
-  name: z.string().nullable().optional(),
-  isBot: z.boolean().default(false)
+  name: z.string().nullable().optional()
 })
 export type Actor = z.infer<typeof Actor>
 
 export const DiffSide = z.enum(['LEFT', 'RIGHT'])
 export const ChangeType = z.enum(['ADDED', 'DELETED', 'RENAMED', 'COPIED', 'MODIFIED', 'CHANGED'])
 export const ViewedState = z.enum(['UNVIEWED', 'VIEWED', 'DISMISSED'])
-export const PrState = z.enum(['OPEN', 'CLOSED', 'MERGED'])
-export const ReviewDecision = z
-  .enum(['APPROVED', 'CHANGES_REQUESTED', 'REVIEW_REQUIRED'])
-  .nullable()
 export const ReviewState = z.enum([
   'PENDING',
   'COMMENTED',
@@ -31,15 +25,12 @@ export const ReviewState = z.enum([
 ])
 export const SubjectType = z.enum(['LINE', 'FILE'])
 
-// Repo-relative POSIX path: rejects absolute paths and `..` segments.
 export const RepoPath = z.string().regex(/^(?!\/)(?!.*\\)(?!.*(^|\/)\.\.(\/|$)).+/)
 
 // Shape of `gh pr list --json` output.
 export const PrListItem = z.object({
   number: z.int().positive(),
   title: z.string(),
-  state: PrState,
-  isDraft: z.boolean(),
   author: z.object({
     login: Login,
     name: z.string().nullable().optional(),
@@ -48,14 +39,9 @@ export const PrListItem = z.object({
   headRefName: z.string(),
   baseRefName: z.string(),
   headRefOid: Sha,
-  updatedAt: IsoDate,
   createdAt: IsoDate,
   changedFiles: z.int().nonnegative(),
   labels: z.array(z.object({ name: z.string(), color: z.string() })),
-  reviewDecision: z
-    .string()
-    .transform((s) => (s === '' ? null : s))
-    .pipe(ReviewDecision),
   url: z.url()
 })
 export type PrListItem = z.infer<typeof PrListItem>
@@ -64,22 +50,17 @@ export type PrListItem = z.infer<typeof PrListItem>
 export const PrSummary = PrListItem.extend({
   // GitHub mutations require the GraphQL node id, not the PR number.
   id: NodeId,
-  baseRefOid: Sha,
-  additions: z.int(),
-  deletions: z.int(),
-  mergedAt: IsoDate.nullable(),
-  mergeCommit: z.object({ oid: Sha }).nullable()
+  baseRefOid: Sha
 })
 export type PrSummary = z.infer<typeof PrSummary>
 
 export const ChangedFile = z.object({
   path: z.string(),
-  // Only git's rename detection populates this; GitHub's API doesn't provide it.
+  // GitHub's GraphQL PR files omit a renamed file's previous path.
   previousPath: z.string().nullable().default(null),
   changeType: ChangeType,
   additions: z.int().nonnegative(),
-  deletions: z.int().nonnegative(),
-  isBinary: z.boolean().optional()
+  deletions: z.int().nonnegative()
 })
 export type ChangedFile = z.infer<typeof ChangedFile>
 
@@ -89,8 +70,7 @@ export const Commit = z.object({
   messageBody: z.string(),
   authoredDate: IsoDate,
   committedDate: IsoDate,
-  authors: z.array(z.object({ login: Login.nullable(), name: z.string(), email: z.string() })),
-  files: z.array(z.lazy(() => ChangedFile)).optional()
+  authors: z.array(z.object({ login: Login.nullable(), name: z.string(), email: z.string() }))
 })
 export type Commit = z.infer<typeof Commit>
 
@@ -108,9 +88,6 @@ export const PersistedTargeting = z.object({
 })
 export type PersistedTargeting = z.infer<typeof PersistedTargeting>
 
-/** For a root commit (no parent), base uses git's canonical empty-tree sha
- * 4b825dc642cb6eb9a060e54bf8d69288fbee4904 since there is no parent to diff
- * against. */
 export const CheckoutResult = z.object({ base: Sha, head: Sha })
 export type CheckoutResult = z.infer<typeof CheckoutResult>
 
@@ -125,9 +102,8 @@ export const FileContent = z.discriminatedUnion('kind', [
 ])
 export type FileContent = z.infer<typeof FileContent>
 
-// Rows are computed from `git diff -U3` hunks. A row maps to GitHub's
-// review-comment diff anchor as: add -> RIGHT/newLine, delete -> LEFT/oldLine,
-// context -> RIGHT/newLine.
+// GitHub anchors review comments on added and context lines to RIGHT/newLine
+// and on deleted lines to LEFT/oldLine.
 export const DiffRowKind = z.enum(['context', 'add', 'delete', 'hunk'])
 export const DiffRow = z.object({
   kind: DiffRowKind,

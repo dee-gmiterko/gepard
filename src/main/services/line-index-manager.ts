@@ -9,8 +9,7 @@ import type {
 
 export type { LineIndexFileChange }
 
-// Emitted by electron.vite.config.ts as its own main-process entry, next to
-// index.js in out/main/ — a worker_threads Worker needs a real file on disk.
+// electron.vite.config.ts emits line-index-worker.js next to index.js.
 const WORKER_ENTRY = join(__dirname, 'line-index-worker.js')
 
 export interface LineIndexHandle {
@@ -19,22 +18,18 @@ export interface LineIndexHandle {
     exclude?: { path: string; line: number }
   ): Promise<LineIndexFileMatches[]>
   queryWord(word: string): Promise<LineIndexFileMatches[]>
-  /** Fire-and-forget: applied inside the worker in the background. ripgrep
-   * rereads files from disk on every search, so it never goes stale on its
-   * own; this cached index does, so it must be told about changes
-   * explicitly. */
   applyChanges(changes: LineIndexFileChange[]): void
   dispose(): Promise<void>
 }
 
-export interface WorkerLike {
+interface WorkerLike {
   postMessage(message: unknown): void
   on(event: 'message', listener: (message: LineIndexResponse) => void): void
   once(event: 'error' | 'exit', listener: (...args: unknown[]) => void): void
   terminate(): Promise<number> | void
 }
 
-export class LineIndexWorkerHandle implements LineIndexHandle {
+class LineIndexWorkerHandle implements LineIndexHandle {
   private nextId = 1
   private pending = new Map<number, (files: LineIndexFileMatches[]) => void>()
   private alive = true
@@ -89,9 +84,7 @@ export class LineIndexWorkerHandle implements LineIndexHandle {
 
   async dispose(): Promise<void> {
     if (!this.alive) return
-    // Set before terminate(): terminate() fires the worker's own 'exit'
-    // event, which would otherwise re-enter as if the worker had crashed and
-    // call `onDown` a second time for an intentional close.
+    // `terminate()` fires the worker's own 'exit' event.
     this.alive = false
     this.pending.clear()
     await this.worker.terminate()
@@ -103,15 +96,20 @@ export function startLineIndex(
   files: string[],
   onProgress: (done: number, total: number) => void,
   onDown: () => void
-): Promise<LineIndexHandle> {
+): Promise<LineIndexHandle | null> {
   return new Promise((resolve) => {
     const worker = new Worker(WORKER_ENTRY)
-    const handle = new LineIndexWorkerHandle(worker, onDown)
+    // Node's EventEmitter calls listeners synchronously in registration order.
+    let down = false
+    const handle = new LineIndexWorkerHandle(worker, () => {
+      down = true
+      onDown()
+    })
     let settled = false
     const settle = (): void => {
       if (settled) return
       settled = true
-      resolve(handle)
+      resolve(down ? null : handle)
     }
     worker.on('message', (msg: LineIndexResponse) => {
       if (msg.type === 'progress') onProgress(msg.done, msg.total)

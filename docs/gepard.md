@@ -1,9 +1,13 @@
-## Github large PR review tool
+## Gepard - Great Pull Request Review Tool
+### Naming
+- id: `gepard`; short: Gepard; full: Gepard - Great Pull Request Review Tool
+- repo/web: https://github.com/dee-gmiterko/gepard
 ### Tech
 - electron desktop app
 - `gh` command used to interact with PRs over json<->zod schemas interface
 - React 19 dom, Vite, Typescript, Tanstack queries and mutations (hooks), AppContext holding app ui state
 - @codemirror editor for code and diff view (read only) 
+- Localization: all UI text is localizable, English default; a script refreshes every locale from the source strings
 ### Projects (launchpad)
 - Start interface for managing projects - selecting one from GitHub url - with prefill from lovely signed `gh` profile.
 - When new project is added its cloned into an internal app storage in profile (git hooks are ignored).
@@ -13,6 +17,7 @@
 - Header panel - targeting:
 	- series of fuzzy search select boxes entering: PR, commit, path
 		- path accepts a folder prefix or a glob; the select suggests folders
+	- `+` next to the PR select opens a New PR modal: base and head branch, title, description; creates the PR immediately and targets it
 - Side panel - navigation: vertical tabs:
 	- file browser - full tree.
 	- targeted file browser - limited to targeted files changed (or path targeted). Tree or flat list.
@@ -57,7 +62,7 @@
 ### Styling
 - heavy use of styled components - all dedicated locally defined in React components (any duplication is sign of missing component)
 - default fonts
-- light and dark theme respecting system preference
+- themes: full color templates, with light and dark ones built in and followed by system preference
 - icons from a feathericons react
 - minimalist interface like similar software
 

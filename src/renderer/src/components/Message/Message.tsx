@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import styled, { css } from 'styled-components'
+import { centerLayout } from './centerLayout'
 
 export type MessageTone = 'muted' | 'subtle' | 'danger'
 export type MessageLayout = 'block' | 'center' | 'inline'
@@ -15,14 +16,7 @@ const Box = styled.div<{ $tone: MessageTone; $layout: MessageLayout }>`
         : theme.colors.fgMuted};
   ${({ theme, $layout }) =>
     $layout === 'center'
-      ? css`
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: 100%;
-          padding: ${theme.space[4]};
-          text-align: center;
-        `
+      ? centerLayout
       : $layout === 'block'
         ? css`
             padding: ${theme.space[3]};
@@ -33,18 +27,16 @@ const Box = styled.div<{ $tone: MessageTone; $layout: MessageLayout }>`
 export interface MessageProps {
   tone?: MessageTone
   layout?: MessageLayout
-  title?: string
   children: ReactNode
 }
 
 export function Message({
   tone = 'muted',
   layout = 'block',
-  title,
   children
 }: MessageProps): React.JSX.Element {
   return (
-    <Box $tone={tone} $layout={layout} title={title} role={tone === 'danger' ? 'alert' : undefined}>
+    <Box $tone={tone} $layout={layout} role={tone === 'danger' ? 'alert' : undefined}>
       {children}
     </Box>
   )

@@ -5,21 +5,30 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Plus } from 'react-feather'
 import type { DraftAnchor, ReviewThread } from '@shared/ipc/schemas/comment'
+import { defineMessages } from '../i18n/defineMessages'
+import { intl } from '../i18n/intl'
 
-export interface LineCommentEntry {
+const messages = defineMessages({
+  addComment: {
+    id: 'codemirror.addComment',
+    defaultMessage: 'Add comment'
+  }
+})
+
+interface LineCommentEntry {
   docLine: number
   threads: ReviewThread[]
   draft: DraftAnchor | null
 }
 
-export interface CommentPortal {
+interface CommentPortal {
   key: number
   dom: HTMLElement
   entry: LineCommentEntry
 }
 
 // CodeMirror may recreate a widget's DOM node when a line scrolls out of
-// view and back in, so entries are keyed by DOM node rather than by line.
+// view and back in.
 export class CommentPortals {
   private byDom = new Map<HTMLElement, CommentPortal>()
   private snapshot: CommentPortal[] = []
@@ -77,9 +86,7 @@ class ThreadBlockWidget extends WidgetType {
   toDOM(view: EditorView): HTMLElement {
     const dom = document.createElement('div')
     dom.className = 'cm-comment-widget'
-    // CodeMirror caches each widget's height and does not detect the portal
-    // content resizing on its own, so requestMeasure() must be called
-    // explicitly when it does.
+    // CodeMirror caches each widget's height and does not detect content resizes.
     const observer = new ResizeObserver(() => view.requestMeasure())
     observer.observe(dom)
     resizeObservers.set(dom, observer)
@@ -119,8 +126,7 @@ export function commentBlockDecorations(
   return EditorView.decorations.of(builder.finish())
 }
 
-// CodeMirror gutter markers are plain DOM, not part of the React tree, so
-// the icon is rendered to static markup once and reused.
+// CodeMirror gutter markers are plain DOM outside the React tree.
 let plusIconMarkup: string | null = null
 
 class AffordanceMarker extends GutterMarker {
@@ -132,6 +138,16 @@ class AffordanceMarker extends GutterMarker {
     const span = document.createElement('span')
     span.className = 'cm-comment-affordance'
     span.innerHTML = plusIconMarkup
+    // CodeMirror handles gutter clicks through a `click` event delegated at
+    // the gutter level.
+    span.tabIndex = 0
+    span.setAttribute('role', 'button')
+    span.setAttribute('aria-label', intl.formatMessage(messages.addComment))
+    span.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return
+      e.preventDefault()
+      span.click()
+    })
     return span
   }
 }
@@ -158,45 +174,12 @@ export function commentAffordanceGutter(
   })
 }
 
-export function codeViewCommentEntries(
-  threads: readonly ReviewThread[],
-  path: string,
-  draftLine: number | null
-): LineCommentEntry[] {
-  const byLine = new Map<number, ReviewThread[]>()
-  for (const t of threads) {
-    if (t.anchor.path !== path || t.anchor.subjectType !== 'LINE') continue
-    if (t.anchor.side !== 'RIGHT' || t.anchor.line == null) continue
-    const list = byLine.get(t.anchor.line) ?? []
-    list.push(t)
-    byLine.set(t.anchor.line, list)
-  }
-  const entries: LineCommentEntry[] = [...byLine.entries()].map(([docLine, lineThreads]) => ({
-    docLine,
-    threads: lineThreads,
-    draft: null
-  }))
-  if (draftLine != null) {
-    const draft: DraftAnchor = {
-      path,
-      subjectType: 'LINE',
-      side: 'RIGHT',
-      line: draftLine,
-      startLine: null,
-      startSide: null
-    }
-    const existing = entries.find((e) => e.docLine === draftLine)
-    if (existing) existing.draft = draft
-    else entries.push({ docLine: draftLine, threads: [], draft })
-  }
-  return entries
-}
-
 export function diffViewCommentEntries(
   threads: readonly ReviewThread[],
   path: string,
   infos: readonly { oldLine: number | null; newLine: number | null }[],
-  draft: { docLine: number; side: 'LEFT' | 'RIGHT' } | null
+  draft: { docLine: number; side: 'LEFT' | 'RIGHT' } | null,
+  head: string
 ): LineCommentEntry[] {
   const oldToDoc = new Map<number, number>()
   const newToDoc = new Map<number, number>()
@@ -208,6 +191,7 @@ export function diffViewCommentEntries(
   const byLine = new Map<number, ReviewThread[]>()
   for (const t of threads) {
     if (t.anchor.path !== path || t.anchor.subjectType !== 'LINE' || t.anchor.line == null) continue
+    if (t.isOutdated || t.anchor.commitOid !== head) continue
     const docLine = (t.anchor.side === 'LEFT' ? oldToDoc : newToDoc).get(t.anchor.line)
     if (docLine == null) continue
     const list = byLine.get(docLine) ?? []

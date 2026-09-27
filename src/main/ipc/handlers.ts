@@ -7,6 +7,7 @@ import { commentsHandlers } from './handlers/comments'
 import { syncHandlers } from './handlers/sync'
 import { logHandlers } from './handlers/log'
 import { extensionsHandlers } from './handlers/extensions'
+import { themeHandlers } from './handlers/theme'
 
 export const handlers: HandlerMap = {
   ...projectsHandlers,
@@ -16,5 +17,6 @@ export const handlers: HandlerMap = {
   ...commentsHandlers,
   ...syncHandlers,
   ...logHandlers,
-  ...extensionsHandlers
+  ...extensionsHandlers,
+  ...themeHandlers
 }

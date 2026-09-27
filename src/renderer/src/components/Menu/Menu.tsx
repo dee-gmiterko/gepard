@@ -1,7 +1,10 @@
-// The parent must be `position: relative`, since this positions itself absolutely.
 import styled from 'styled-components'
 import { ellipsis } from '../Ellipsis'
 import { Surface } from '../Surface'
+
+export const MenuAnchor = styled.div`
+  position: relative;
+`
 
 export const Menu = styled(Surface).attrs({ as: 'ul' as const })`
   position: absolute;

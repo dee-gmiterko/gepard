@@ -1,9 +1,8 @@
 import styled from 'styled-components'
-import { ellipsis } from '../Ellipsis'
+import { PathLabel } from '../PathLabel'
 
-export const TreeLabel = styled.span`
-  flex: 1;
-  min-width: 0;
-  ${ellipsis}
+export const TreeLabel = styled(PathLabel)`
+  font-family: inherit;
   font-size: ${({ theme }) => theme.font.size.sm};
+  color: inherit;
 `

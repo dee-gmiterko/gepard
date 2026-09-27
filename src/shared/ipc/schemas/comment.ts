@@ -32,40 +32,32 @@ export const LocalViewedState = z.object({
 })
 export type LocalViewedState = z.infer<typeof LocalViewedState>
 
-// GitHub review comment ids start with PRRC_.
+export const CommentReference = z.object({
+  path: z.string(),
+  line: z.int(),
+  kind: z.enum(['symbol', 'exact', 'pattern'])
+})
+export type CommentReference = z.infer<typeof CommentReference>
+
 export const Comment = z.object({
   id: NodeId,
-  databaseId: z.int().nullable(),
-  // GitHub review thread ids start with PRRT_.
   threadId: NodeId,
-  // GitHub review ids start with PRR_.
   reviewId: NodeId.nullable(),
-  // PENDING means the review is a draft on GitHub, visible only to its author.
   reviewState: ReviewState.nullable(),
-  author: Actor,
+  author: Actor.nullable(),
   body: z.string(),
   createdAt: IsoDate,
   updatedAt: IsoDate,
   lastEditedAt: IsoDate.nullable(),
-  // GitHub replies always reference the thread root, not their immediate parent.
   replyToId: NodeId.nullable(),
-  url: z.url().nullable(),
   outdated: z.boolean(),
   viewerDidAuthor: z.boolean(),
   viewerCanDelete: z.boolean(),
   local: z
     .object({
-      status: z.enum(['synced', 'new', 'deleted']),
+      status: z.enum(['synced', 'new', 'edited', 'deleted']),
       updatedAt: IsoDate,
-      references: z
-        .array(
-          z.object({
-            path: z.string(),
-            line: z.int(),
-            kind: z.enum(['symbol', 'exact', 'pattern'])
-          })
-        )
-        .default([])
+      references: z.array(CommentReference).default([])
     })
     .optional()
 })
@@ -85,7 +77,6 @@ export const Anchor = z.object({
 })
 export type Anchor = z.infer<typeof Anchor>
 
-// GitHub review thread ids start with PRRT_.
 export const ReviewThread = z.object({
   id: NodeId,
   prId: NodeId,
@@ -93,7 +84,6 @@ export const ReviewThread = z.object({
   isResolved: z.boolean(),
   isOutdated: z.boolean(),
   comments: z.array(Comment).min(1),
-  remoteUpdatedAt: IsoDate,
   local: z
     .object({
       status: z.enum(['synced', 'new', 'deleted']),
@@ -115,8 +105,6 @@ export const GqlError = z.object({
 export type GqlError = z.infer<typeof GqlError>
 export const GqlReviewCommentRaw = z.object({
   id: NodeId,
-  databaseId: z.number().nullable(),
-  url: z.string(),
   author: z.object({ login: z.string().min(1) }).nullable(), // GitHub returns null when the user account was deleted
   body: z.string(),
   createdAt: IsoDate,
@@ -127,7 +115,6 @@ export const GqlReviewCommentRaw = z.object({
   originalLine: z.number().nullable(),
   startLine: z.number().nullable(),
   originalStartLine: z.number().nullable(),
-  diffHunk: z.string(),
   outdated: z.boolean(),
   state: z.enum(['PENDING', 'SUBMITTED']),
   commit: z.object({ oid: Sha }).nullable(),
@@ -177,13 +164,6 @@ export const GqlReviewThreadsPage = z.object({
   errors: z.array(GqlError).optional()
 })
 export type GqlReviewThreadsPage = z.infer<typeof GqlReviewThreadsPage>
-
-export const CommentReference = z.object({
-  path: z.string(),
-  line: z.int(),
-  kind: z.enum(['symbol', 'exact', 'pattern'])
-})
-export type CommentReference = z.infer<typeof CommentReference>
 
 export const DraftAnchor = z.object({
   path: RepoPath,

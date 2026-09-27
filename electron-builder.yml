@@ -1,22 +1,31 @@
-appId: com.ghlargereview.app
-productName: gh-large-review
+appId: io.github.dee-gmiterko.gepard
+productName: Gepard
 directories:
   buildResources: build
 files:
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,README.md}'
   - '!{.env,.env.*,.npmrc,yarn.lock}'
-  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
-# Binaries cannot be executed from inside an asar. ripgrep and the bundled
-# TS native binary ship as platform optionalDependency binaries.
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json,tsconfig.test.json,vitest.config.ts}'
+  - '!test/**'
+  - '!docs/**'
+  - '!scripts/**'
+  - '!.yarn/**'
+  # electron is a devDependency, but @electron-toolkit/utils' peerDependencies.electron
+  # resolves against it in the installed tree, so electron-builder's module collector
+  # treats electron and its download toolchain as production dependencies.
+  - '!**/node_modules/{electron,debug,ms,semver,progress,sumchecker,undici,undici-types,graceful-fs,env-paths}{,/**/*}'
+  - '!**/node_modules/@electron/get{,/**/*}'
+  - '!**/node_modules/@electron-internal/extract-zip{,/**/*}'
+  - '!**/node_modules/@types/node{,/**/*}'
+# Electron cannot execute binaries from inside an asar archive.
 asarUnpack:
-  - resources/**
   - '**/@vscode/ripgrep-*/bin/**'
   - '**/@typescript/typescript-*/lib/**'
 win:
-  executableName: gh-large-review
+  executableName: Gepard
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
@@ -24,22 +33,19 @@ nsis:
   createDesktopShortcut: always
 mac:
   entitlementsInherit: build/entitlements.mac.plist
-  extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
   target:
     - AppImage
-  maintainer: electronjs.org
+  maintainer: 'dee-gmiterko <d.gmiterko@gmail.com>'
   category: Utility
+  syncDesktopName: true
 appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
 publish:
-  provider: generic
-  url: https://example.com/auto-updates
+  provider: github
+  owner: dee-gmiterko
+  repo: gepard

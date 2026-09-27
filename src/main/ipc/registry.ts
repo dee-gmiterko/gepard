@@ -42,11 +42,21 @@ function toIpcError(e: unknown): IpcErrorShape {
   return { code: 'INTERNAL', message: String(e) }
 }
 
+function isTrustedSender(event: IpcMainInvokeEvent): boolean {
+  return event.senderFrame != null && event.senderFrame === event.sender.mainFrame
+}
+
 export function registerHandlers(handlers: HandlerMap): void {
   for (const name of Object.keys(channels) as ChannelName[]) {
     const { input } = channels[name]
     const handler = handlers[name] as (i: unknown, c: HandlerCtx) => unknown
     ipcMain.handle(name, async (event, raw: unknown): Promise<Envelope<unknown>> => {
+      if (!isTrustedSender(event)) {
+        return {
+          ok: false,
+          error: { code: 'FORBIDDEN', message: `${name} invoked from an untrusted frame` }
+        }
+      }
       const parsed = input.safeParse(raw)
       if (!parsed.success)
         return {

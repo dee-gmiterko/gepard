@@ -1,6 +1,5 @@
-// `emit` (registry.ts's `webContents.send`) is fire-and-forget: it only
-// reaches windows that exist right now and have already registered a
-// listener, not a queue that delivers later.
+// `webContents.send` reaches only windows that already exist and have
+// registered a listener; it does not queue messages.
 import { emit } from './ipc/registry'
 import { log } from './log'
 

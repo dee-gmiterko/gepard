@@ -1,17 +1,8 @@
 import { useMemo } from 'react'
-import styled from 'styled-components'
 import type { ImageData } from '@shared/ipc/schemas/pr'
 import { Image } from '../../../../components/Image'
+import { ViewerFrame } from '../ViewerFrame'
 import { imageSrc } from '../imageSrc'
-
-const Frame = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  overflow: auto;
-  padding: ${({ theme }) => theme.space[4]};
-`
 
 export function ImageViewer({
   path,
@@ -23,8 +14,8 @@ export function ImageViewer({
   const url = useMemo(() => imageSrc(image), [image])
 
   return (
-    <Frame>
-      <Image $fit src={url} alt={path} />
-    </Frame>
+    <ViewerFrame $center>
+      <Image src={url} alt={path} />
+    </ViewerFrame>
   )
 }

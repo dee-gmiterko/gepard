@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes } from 'react'
 import styled, { css } from 'styled-components'
+import { disabledControl } from './disabledControl'
 
 export type ButtonVariant = 'primary' | 'secondary' | 'danger'
 
@@ -43,10 +44,7 @@ const StyledButton = styled.button<{ $variant: ButtonVariant; $block: boolean }>
             }
           `}
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
+  ${disabledControl}
 `
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

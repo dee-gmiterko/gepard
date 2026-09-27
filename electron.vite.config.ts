@@ -9,9 +9,6 @@ export default defineConfig({
         '@shared': resolve('src/shared')
       }
     },
-    // A worker_threads Worker needs a real file on disk to spawn, so
-    // line-index-worker must be its own emitted entry rather than a module
-    // inlined into index.js.
     build: {
       rollupOptions: {
         input: {
@@ -33,7 +30,6 @@ export default defineConfig({
   renderer: {
     resolve: {
       alias: {
-        '@renderer': resolve('src/renderer/src'),
         '@shared': resolve('src/shared')
       }
     },

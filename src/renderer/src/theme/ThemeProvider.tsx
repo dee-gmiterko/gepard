@@ -1,12 +1,11 @@
-// Electron keeps the renderer's `prefers-color-scheme` in sync with
-// `nativeTheme.shouldUseDarkColors`, but the matchMedia `change` event alone
-// can arrive late in a background-throttled window, so main's
-// `theme.changed` event (from `nativeTheme.on('updated')`) is treated as the
-// live source of truth once it has fired at least once.
-import { useState, useSyncExternalStore, type ReactNode } from 'react'
+// The `prefers-color-scheme` matchMedia `change` event can arrive late in a
+// background-throttled Electron window.
+import { useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { ThemeProvider as StyledThemeProvider, createGlobalStyle } from 'styled-components'
 import { useIpcEvent } from '../ipc/client'
-import { darkTheme, lightTheme } from './tokens'
+import { useThemeTemplateId } from '../queries/theme'
+import { buildTheme } from './tokens'
+import { resolveTemplate } from './resolveTemplate'
 
 const DARK_QUERY = '(prefers-color-scheme: dark)'
 
@@ -57,11 +56,16 @@ export function AppThemeProvider({ children }: { children: ReactNode }): React.J
     () => false
   )
   const [mainDark, setMainDark] = useState<boolean | null>(null)
-  const dark = mainDark ?? systemDark
+  const systemPrefersDark = mainDark ?? systemDark
 
   useIpcEvent('theme.changed', (payload) => setMainDark(payload.dark))
 
-  const theme = dark ? darkTheme : lightTheme
+  const { data: templateId } = useThemeTemplateId()
+  const resolvedTemplateId = templateId ?? null
+  const theme = useMemo(
+    () => buildTheme(resolveTemplate(resolvedTemplateId, systemPrefersDark)),
+    [resolvedTemplateId, systemPrefersDark]
+  )
 
   return (
     <StyledThemeProvider theme={theme}>

@@ -1,4 +1,5 @@
 import styled from 'styled-components'
+import { FormattedDate } from 'react-intl'
 import { Caption } from '../Caption'
 
 const Author = styled.span`
@@ -10,7 +11,9 @@ export function Byline({ author, time }: { author: string; time: string }): Reac
   return (
     <>
       <Author>{author}</Author>
-      <Caption>{new Date(time).toLocaleString()}</Caption>
+      <Caption>
+        <FormattedDate value={time} dateStyle="medium" timeStyle="short" />
+      </Caption>
     </>
   )
 }

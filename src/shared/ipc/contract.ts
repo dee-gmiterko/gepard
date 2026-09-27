@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { Viewer, ViewerRepo, Project } from './schemas/project'
+import { Viewer, ViewerRepo, Project, ProjectId } from './schemas/project'
 import {
   ChangedFile,
   CheckoutResult,
@@ -8,6 +8,7 @@ import {
   FileDiff,
   PersistedTargeting,
   PrListItem,
+  PrSummary,
   RepoPath,
   Sha,
   TargetRef
@@ -27,8 +28,8 @@ const ch = <I extends z.ZodType, O extends z.ZodType>(
   output
 })
 
-const ProjectRef = { projectId: z.string() }
-const PrRef = { projectId: z.string(), pr: z.int().positive() }
+const ProjectRef = { projectId: ProjectId }
+const PrRef = { projectId: ProjectId, pr: z.int().positive() }
 
 export const channels = {
   'app.viewer': ch(z.void(), Viewer.nullable()),
@@ -50,11 +51,13 @@ export const channels = {
     z.object({ project: Project, head: Sha, targeting: PersistedTargeting })
   ),
   'projects.setTargeting': ch(z.object({ ...ProjectRef, targeting: PersistedTargeting }), z.void()),
+  'projects.setTrustWorkspaceToolchain': ch(
+    z.object({ ...ProjectRef, trustWorkspaceToolchain: z.boolean() }),
+    Project
+  ),
   'projects.remove': ch(z.object(ProjectRef), z.void()),
   'clone.start': ch(z.object(ProjectRef), z.void()),
 
-  /** `commit` narrows to PRs containing that commit via GitHub's REST "list
-   * pull requests associated with a commit" endpoint. */
   'pr.list': ch(
     z.object({
       ...ProjectRef,
@@ -64,10 +67,25 @@ export const channels = {
     }),
     z.array(PrListItem)
   ),
-  /** Uses one `git diff-tree --stdin` call for all commit oids instead of
-   * spawning git once per commit. */
   'pr.commits': ch(z.object({ ...PrRef, path: RepoPath.optional() }), z.array(Commit)),
   'pr.checkout': ch(z.object({ ...ProjectRef, target: TargetRef }), CheckoutResult),
+  'pr.branches': ch(
+    z.object(ProjectRef),
+    z.object({
+      branches: z.array(z.string().min(1)),
+      defaultBranch: z.string().min(1).nullable()
+    })
+  ),
+  'pr.create': ch(
+    z.object({
+      ...ProjectRef,
+      base: z.string().min(1),
+      head: z.string().min(1),
+      title: z.string().min(1),
+      body: z.string().default('')
+    }),
+    PrSummary
+  ),
   'commits.list': ch(
     z.object({
       ...ProjectRef,
@@ -108,7 +126,10 @@ export const channels = {
 
   'sync.run': ch(
     z.object({ ...PrRef, mode: z.enum(['full', 'pull']).default('full') }),
-    z.object({ syncedAt: z.iso.datetime({ offset: true }) })
+    z.object({
+      syncedAt: z.iso.datetime({ offset: true }),
+      droppedRemoteDeleted: z.int().nonnegative()
+    })
   ),
   'sync.pendingCount': ch(z.object(PrRef), z.int().nonnegative()),
   'index.get': ch(z.object(ProjectRef), IndexStatus),
@@ -127,8 +148,14 @@ export const channels = {
     z.object({ id: z.string(), enabled: z.boolean() }),
     z.array(ExtensionInfo)
   ),
-  'extensions.install': ch(z.void(), z.array(ExtensionInfo)),
-  'extensions.dir': ch(z.void(), z.string())
+  'extensions.install': ch(
+    z.object({ dialogTitle: z.string().min(1), filterName: z.string().min(1) }),
+    z.array(ExtensionInfo)
+  ),
+  'extensions.dir': ch(z.void(), z.string()),
+
+  'theme.getTemplateId': ch(z.void(), z.string().nullable()),
+  'theme.setTemplateId': ch(z.object({ templateId: z.string().nullable() }), z.string().nullable())
 } as const satisfies Record<ChannelNameList, { input: z.ZodType; output: z.ZodType }>
 
 export const events = {
@@ -160,9 +187,9 @@ void _namesComplete
 
 export type Channels = typeof channels
 export type ChannelName = keyof Channels
-/** zod's `z.input` type excludes fields with `.default()`; this is what the renderer passes in. */
+// zod's `z.input` leaves fields with `.default()` optional.
 export type ChannelInput<C extends ChannelName> = z.input<Channels[C]['input']>
-/** zod's `z.output` type has `.default()` fields applied; this is what main's handler receives. */
+// zod's `z.output` has `.default()` values applied.
 export type ChannelParsedInput<C extends ChannelName> = z.output<Channels[C]['input']>
 export type ChannelOutput<C extends ChannelName> = z.output<Channels[C]['output']>
 
@@ -170,8 +197,7 @@ export type Events = typeof events
 export type EventName = keyof Events
 export type EventPayload<E extends EventName> = z.output<Events[E]>
 
-/** Rejected `ipcMain.handle` promises lose everything but `.message` when
- * crossing the bridge, so errors travel as data instead. */
+// Electron keeps only `.message` of an error rejected from `ipcMain.handle`.
 export interface IpcErrorShape {
   code: string
   message: string

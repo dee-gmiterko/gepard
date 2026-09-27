@@ -7,13 +7,19 @@ export function usePersistTargeting(): void {
   const projectId = state.projectId
   const { pr, commit, path } = state.targeting
   const { mutate } = useSetTargeting(projectId ?? '')
-  const lastRef = useRef<string | null>(null)
+  const baselineRef = useRef<{ projectId: string; key: string } | null>(null)
 
   useEffect(() => {
     if (!projectId) return
     const key = JSON.stringify({ pr, commit, path })
-    if (lastRef.current === key) return
-    lastRef.current = key
+
+    if (baselineRef.current?.projectId !== projectId) {
+      baselineRef.current = { projectId, key }
+      return
+    }
+    if (baselineRef.current.key === key) return
+
+    baselineRef.current = { projectId, key }
     mutate({ pr, commit, path })
   }, [projectId, pr, commit, path, mutate])
 }

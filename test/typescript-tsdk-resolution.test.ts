@@ -1,10 +1,9 @@
-// VS Code uses its bundled TypeScript by default and only switches to a
-// workspace version when `.vscode/settings.json` sets `typescript.tsdk`.
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   readTsdkSetting,
+  resolveLaunchPlan,
   resolveWorkspaceTypeScript,
   stripJsonComments
 } from '../src/main/lsp/extensions/typescript'
@@ -12,11 +11,13 @@ import { makeTmpDir, type TmpDir } from './support/tmp'
 
 describe('stripJsonComments', () => {
   it('removes line comments', () => {
-    expect(stripJsonComments('{\n  "a": 1 // comment\n}')).toBe('{\n  "a": 1 \n}')
+    const input = '{\n  "a": 1 // comment\n}'
+    expect(JSON.parse(stripJsonComments(input))).toEqual({ a: 1 })
   })
 
   it('removes block comments', () => {
-    expect(stripJsonComments('{ /* c */ "a": 1 }')).toBe('{  "a": 1 }')
+    const input = '{ /* c */ "a": 1 }'
+    expect(JSON.parse(stripJsonComments(input))).toEqual({ a: 1 })
   })
 
   it('leaves // and /* inside string values alone', () => {
@@ -136,6 +137,21 @@ describe('resolveWorkspaceTypeScript (VS Code tsdk semantics)', () => {
     expect(resolved.jsApi).toBe(join(dir.path, 'node_modules/typescript/lib/typescript.js'))
   })
 
+  it('resolveLaunchPlan ignores a valid workspace tsdk without an explicit trust opt-in', async () => {
+    dir = await makeTmpDir('tsdk-untrusted-by-default')
+    await writeTsPackage(dir.path, 'node_modules/typescript', '5.6.3', {
+      'lib/tsserver.js': '// tsserver',
+      'lib/typescript.js': '// typescript'
+    })
+    await setTsdk(dir.path, 'node_modules/typescript/lib')
+
+    const resolved = resolveWorkspaceTypeScript(dir.path)
+    expect(resolved.source).toBe('workspace')
+
+    const plan = await resolveLaunchPlan(dir.path)
+    expect(plan.source).toBe('bundled')
+  })
+
   it('resolves a >=7 tsdk to the "native-lsp" kind, locating the platform package', async () => {
     dir = await makeTmpDir('tsdk-7x')
     await writeTsPackage(dir.path, 'node_modules/typescript', '7.0.2')
@@ -154,7 +170,7 @@ describe('resolveWorkspaceTypeScript (VS Code tsdk semantics)', () => {
     expect(resolved.lspArgs).toEqual(['--lsp', '--stdio'])
   })
 
-  it('a >=7 tsdk with no platform package present resolves exe to null (falls back to bundled at launch)', async () => {
+  it('a >=7 tsdk with no platform package present resolves exe to null, and resolveLaunchPlan falls back to bundled', async () => {
     dir = await makeTmpDir('tsdk-7x-no-native')
     await writeTsPackage(dir.path, 'node_modules/typescript', '7.0.2')
     await setTsdk(dir.path, 'node_modules/typescript/lib')
@@ -164,6 +180,10 @@ describe('resolveWorkspaceTypeScript (VS Code tsdk semantics)', () => {
     if (resolved.source !== 'workspace' || resolved.kind !== 'native-lsp')
       throw new Error('unreachable')
     expect(resolved.exe).toBeNull()
+
+    const plan = await resolveLaunchPlan(dir.path, true)
+    expect(plan.source).toBe('bundled')
+    expect(plan.args).toEqual(['--lsp', '--stdio'])
   })
 
   it('an absolute tsdk path is honored as-is', async () => {

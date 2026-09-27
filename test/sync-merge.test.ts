@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   composeBody,
   countPendingChanges,
+  groupPendingByCommit,
   mergeThreads,
   mergeViewed
 } from '../src/main/services/sync'
@@ -14,17 +15,15 @@ import type {
 
 function makeComment(overrides: Partial<Comment> & { id: string }): Comment {
   return {
-    databaseId: null,
     threadId: 'PRRT_1',
     reviewId: null,
     reviewState: null,
-    author: { login: 'alice', isBot: false },
+    author: { login: 'alice' },
     body: 'body',
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',
     lastEditedAt: null,
     replyToId: null,
-    url: null,
     outdated: false,
     viewerDidAuthor: false,
     viewerCanDelete: false,
@@ -51,7 +50,6 @@ function makeThread(
     },
     isResolved: false,
     isOutdated: false,
-    remoteUpdatedAt: '2024-01-01T00:00:00Z',
     ...overrides
   }
 }
@@ -280,6 +278,103 @@ describe('mergeViewed', () => {
   })
 })
 
+describe('groupPendingByCommit', () => {
+  const HEAD = '2222222222222222222222222222222222222222'
+  const OTHER = '3333333333333333333333333333333333333333'
+
+  it('includes a reply added to a still-unsynced new thread, not just its root', () => {
+    const thread = makeThread({
+      id: 'local:t1',
+      local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z' },
+      comments: [
+        makeComment({
+          id: 'local:root',
+          local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z', references: [] }
+        }),
+        makeComment({
+          id: 'local:reply',
+          replyToId: 'local:root',
+          local: { status: 'new', updatedAt: '2024-01-01T00:01:00Z', references: [] }
+        })
+      ]
+    })
+    const [group] = groupPendingByCommit([thread], HEAD)
+    expect(group.newThreads).toEqual([thread])
+    expect(group.replies).toHaveLength(1)
+    expect(group.replies[0].comment.id).toBe('local:reply')
+  })
+
+  it('rejects a new LEFT-side thread anchored to a commit other than the head', () => {
+    const thread = makeThread({
+      id: 'local:t1',
+      local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z' },
+      anchor: {
+        path: 'a.ts',
+        subjectType: 'LINE',
+        side: 'LEFT',
+        line: 3,
+        startLine: null,
+        startSide: null,
+        originalLine: 3,
+        originalStartLine: null,
+        commitOid: OTHER,
+        originalCommitOid: OTHER
+      },
+      comments: [
+        makeComment({
+          id: 'local:root',
+          local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z', references: [] }
+        })
+      ]
+    })
+    expect(() => groupPendingByCommit([thread], HEAD)).toThrow(/LEFT/)
+  })
+
+  it('accepts a new LEFT-side thread anchored to the head commit', () => {
+    const thread = makeThread({
+      id: 'local:t1',
+      local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z' },
+      anchor: {
+        path: 'a.ts',
+        subjectType: 'LINE',
+        side: 'LEFT',
+        line: 3,
+        startLine: null,
+        startSide: null,
+        originalLine: 3,
+        originalStartLine: null,
+        commitOid: HEAD,
+        originalCommitOid: HEAD
+      },
+      comments: [
+        makeComment({
+          id: 'local:root',
+          local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z', references: [] }
+        })
+      ]
+    })
+    const groups = groupPendingByCommit([thread], HEAD)
+    expect(groups).toHaveLength(1)
+    expect(groups[0].commitOid).toBe(HEAD)
+  })
+
+  it('groups a RIGHT-side new thread under the commit it was drafted against', () => {
+    const thread = makeThread({
+      id: 'local:t1',
+      local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z' },
+      comments: [
+        makeComment({
+          id: 'local:root',
+          local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z', references: [] }
+        })
+      ]
+    })
+    const groups = groupPendingByCommit([thread], HEAD)
+    expect(groups).toHaveLength(1)
+    expect(groups[0].commitOid).toBe('1111111111111111111111111111111111111111')
+  })
+})
+
 describe('countPendingChanges', () => {
   function viewedRow(overrides: Partial<LocalViewedState> & { path: string }): LocalViewedState {
     return {
@@ -294,9 +389,14 @@ describe('countPendingChanges', () => {
 
   it('is zero for a store with nothing pending', () => {
     const synced = makeThread({ id: 'PRRT_1', comments: [makeComment({ id: 'C1' })] })
-    expect(countPendingChanges({ threads: [synced], viewed: [], lastSuccessfulSyncAt: null })).toBe(
-      0
-    )
+    expect(
+      countPendingChanges({
+        threads: [synced],
+        viewed: [],
+        pendingReviewId: null,
+        lastSuccessfulSyncAt: null
+      })
+    ).toBe(0)
   })
 
   it('counts a new (not yet synced) thread as one', () => {
@@ -310,9 +410,14 @@ describe('countPendingChanges', () => {
         })
       ]
     })
-    expect(countPendingChanges({ threads: [draft], viewed: [], lastSuccessfulSyncAt: null })).toBe(
-      1
-    )
+    expect(
+      countPendingChanges({
+        threads: [draft],
+        viewed: [],
+        pendingReviewId: null,
+        lastSuccessfulSyncAt: null
+      })
+    ).toBe(1)
   })
 
   it('counts a new reply once, and never double-counts its thread root', () => {
@@ -326,9 +431,14 @@ describe('countPendingChanges', () => {
         })
       ]
     })
-    expect(countPendingChanges({ threads: [thread], viewed: [], lastSuccessfulSyncAt: null })).toBe(
-      1
-    )
+    expect(
+      countPendingChanges({
+        threads: [thread],
+        viewed: [],
+        pendingReviewId: null,
+        lastSuccessfulSyncAt: null
+      })
+    ).toBe(1)
   })
 
   it('counts a whole-thread deletion once, regardless of its reply count', () => {
@@ -337,9 +447,14 @@ describe('countPendingChanges', () => {
       local: { status: 'deleted', updatedAt: '2024-01-01T00:00:00Z' },
       comments: [makeComment({ id: 'C1' }), makeComment({ id: 'C2' }), makeComment({ id: 'C3' })]
     })
-    expect(countPendingChanges({ threads: [thread], viewed: [], lastSuccessfulSyncAt: null })).toBe(
-      1
-    )
+    expect(
+      countPendingChanges({
+        threads: [thread],
+        viewed: [],
+        pendingReviewId: null,
+        lastSuccessfulSyncAt: null
+      })
+    ).toBe(1)
   })
 
   it('counts a single deleted reply in an otherwise-synced thread', () => {
@@ -353,9 +468,14 @@ describe('countPendingChanges', () => {
         })
       ]
     })
-    expect(countPendingChanges({ threads: [thread], viewed: [], lastSuccessfulSyncAt: null })).toBe(
-      1
-    )
+    expect(
+      countPendingChanges({
+        threads: [thread],
+        viewed: [],
+        pendingReviewId: null,
+        lastSuccessfulSyncAt: null
+      })
+    ).toBe(1)
   })
 
   it('counts a viewed row touched since the last successful sync, and ignores one that is not', () => {
@@ -374,6 +494,7 @@ describe('countPendingChanges', () => {
       countPendingChanges({
         threads: [],
         viewed: [dirty, clean, untouched],
+        pendingReviewId: null,
         lastSuccessfulSyncAt: null
       })
     ).toBe(1)
@@ -404,6 +525,7 @@ describe('countPendingChanges', () => {
       countPendingChanges({
         threads: [newThread, deletedThread],
         viewed: [dirtyViewed],
+        pendingReviewId: null,
         lastSuccessfulSyncAt: null
       })
     ).toBe(3)

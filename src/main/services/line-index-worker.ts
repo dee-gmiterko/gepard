@@ -1,14 +1,8 @@
-// Runs inside a worker_threads Worker spawned by line-index-manager.ts, doing
-// the index build/update/query work off the main thread so it does not block
-// Electron's main-process IPC handling.
-//
-// worker_threads' `Worker` constructor needs a path to a real file, not an
-// in-memory module value; the build emits this file next to index.js as
-// `line-index-worker.js`, and line-index-manager.ts spawns it by that path.
 import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
 import { parentPort } from 'node:worker_threads'
+import { looksBinary } from './binary'
 import { LineIndex } from './line-index'
+import { resolveWithinRepo } from './repo-fs'
 import type {
   LineIndexFileChange,
   LineIndexRequest,
@@ -29,19 +23,14 @@ let repoRoot = ''
 
 const MAX_INDEXED_BYTES = 8 * 1024 * 1024
 
-// Mirrors git's own heuristic for detecting binary content: a NUL byte
-// within the first 8000 bytes.
-function looksBinary(buf: Buffer): boolean {
-  const len = Math.min(buf.length, 8000)
-  for (let i = 0; i < len; i++) {
-    if (buf[i] === 0) return true
-  }
-  return false
-}
-
 async function indexOneFile(relPath: string): Promise<void> {
   try {
-    const buf = await readFile(join(repoRoot, relPath))
+    const real = await resolveWithinRepo(repoRoot, relPath)
+    if (!real) {
+      index.removeFile(relPath)
+      return
+    }
+    const buf = await readFile(real)
     if (buf.length > MAX_INDEXED_BYTES || looksBinary(buf)) {
       index.removeFile(relPath)
       return
@@ -54,8 +43,6 @@ async function indexOneFile(relPath: string): Promise<void> {
 
 async function build(files: string[]): Promise<void> {
   const total = files.length
-  // worker_threads' `postMessage` has per-call overhead, so progress is
-  // reported once per batch of concurrent reads rather than once per file.
   const CHUNK = 200
   let done = 0
   for (let i = 0; i < total; i += CHUNK) {
@@ -63,14 +50,13 @@ async function build(files: string[]): Promise<void> {
     done = Math.min(total, i + CHUNK)
     post({ type: 'progress', done, total })
   }
-  post({ type: 'built', fileCount: index.fileCount })
+  post({ type: 'built' })
 }
 
 async function applyChanges(changes: LineIndexFileChange[]): Promise<void> {
   await Promise.all(
     changes.map((c) => (c.type === 'deleted' ? index.removeFile(c.path) : indexOneFile(c.path)))
   )
-  post({ type: 'updated' })
 }
 
 port.on('message', (msg: LineIndexRequest) => {

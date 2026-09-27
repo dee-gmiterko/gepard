@@ -1,9 +1,23 @@
 import styled from 'styled-components'
 import { AlertTriangle, X } from 'react-feather'
+import { useIntl } from 'react-intl'
+import { defineMessages } from '../../i18n/defineMessages'
 import { IconButton } from '../IconButton'
 import { Surface } from '../Surface'
+import type { ReportTone } from '../../errors/report'
 
-export type ToastTone = 'danger' | 'warning'
+const messages = defineMessages({
+  notifications: {
+    id: 'components.toast.notifications',
+    defaultMessage: 'Notifications'
+  },
+  dismiss: {
+    id: 'components.toast.dismiss',
+    defaultMessage: 'Dismiss'
+  }
+})
+
+export type ToastTone = ReportTone
 
 export interface ToastItem {
   id: string
@@ -55,14 +69,20 @@ export function ToastViewport({
   toasts: ToastItem[]
   onDismiss: (id: string) => void
 }): React.JSX.Element | null {
+  const intl = useIntl()
   if (toasts.length === 0) return null
   return (
-    <Viewport role="region" aria-label="Notifications">
+    <Viewport role="region" aria-label={intl.formatMessage(messages.notifications)}>
       {toasts.map((toast) => (
         <Card key={toast.id} $tone={toast.tone} role="alert">
           <StyledIcon size={16} $tone={toast.tone} />
           <Text>{toast.message}</Text>
-          <IconButton icon={X} label="Dismiss" size={14} onClick={() => onDismiss(toast.id)} />
+          <IconButton
+            icon={X}
+            label={intl.formatMessage(messages.dismiss)}
+            size={14}
+            onClick={() => onDismiss(toast.id)}
+          />
         </Card>
       ))}
     </Viewport>

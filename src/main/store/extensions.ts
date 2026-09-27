@@ -1,61 +1,37 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
-import { randomUUID } from 'node:crypto'
-import { join } from 'node:path'
 import { z } from 'zod'
-import { AppError } from '../ipc/registry'
-import { extensionsJsonPath, userDataDir } from '../paths'
+import { extensionsFilesJsonPath, extensionsJsonPath } from '../paths'
+import { readJsonFile, writeJsonFile } from './jsonFile'
 
 const ExtensionsState = z.record(z.string(), z.boolean())
-type ExtensionsState = z.infer<typeof ExtensionsState>
+export type ExtensionsState = z.infer<typeof ExtensionsState>
 
 async function readState(): Promise<ExtensionsState> {
-  let raw: string
-  try {
-    raw = await readFile(extensionsJsonPath(), 'utf8')
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return {}
-    throw e
-  }
-  let json: unknown
-  try {
-    json = JSON.parse(raw)
-  } catch (e) {
-    throw new AppError(
-      'STORE_CORRUPT',
-      `extensions.json is not valid JSON: ${(e as Error).message}`
-    )
-  }
-  const parsed = ExtensionsState.safeParse(json)
-  if (!parsed.success) {
-    throw new AppError(
-      'STORE_CORRUPT',
-      `extensions.json is invalid: ${z.prettifyError(parsed.error)}`
-    )
-  }
-  return parsed.data
-}
-
-// Write tmp -> rename: POSIX rename is atomic, so a crash mid-write never
-// leaves a corrupt extensions.json.
-async function writeState(state: ExtensionsState): Promise<void> {
-  const dir = userDataDir()
-  await mkdir(dir, { recursive: true })
-  const tmpPath = join(dir, `.extensions.json.${randomUUID()}.tmp`)
-  await writeFile(tmpPath, JSON.stringify(state, null, 2) + '\n', 'utf8')
-  await rename(tmpPath, extensionsJsonPath())
+  return readJsonFile(extensionsJsonPath(), ExtensionsState, () => ({}))
 }
 
 export async function getEnabledMap(): Promise<ExtensionsState> {
   return readState()
 }
 
-export async function isEnabled(id: string, defaultValue = true): Promise<boolean> {
-  const state = await readState()
-  return state[id] ?? defaultValue
-}
-
 export async function setEnabled(id: string, enabled: boolean): Promise<void> {
   const state = await readState()
   state[id] = enabled
-  await writeState(state)
+  await writeJsonFile(extensionsJsonPath(), state)
+}
+
+const KnownFile = z.object({ id: z.string(), displayName: z.string() })
+export type KnownFile = z.infer<typeof KnownFile>
+
+const KnownFilesState = z.record(z.string(), KnownFile)
+export type KnownFilesState = z.infer<typeof KnownFilesState>
+
+// Records, per extension file path, the id/displayName learned the last time
+// that file was imported, so a disabled extension's id can be looked up (and
+// its import skipped) without importing it again.
+export async function getKnownFiles(): Promise<KnownFilesState> {
+  return readJsonFile(extensionsFilesJsonPath(), KnownFilesState, () => ({}))
+}
+
+export async function setKnownFiles(state: KnownFilesState): Promise<void> {
+  await writeJsonFile(extensionsFilesJsonPath(), state)
 }

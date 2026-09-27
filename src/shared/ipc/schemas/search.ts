@@ -35,7 +35,7 @@ export const FileMatches = z.object({
 })
 export const GroupedResult = z.object({
   query: z.object({
-    kind: z.enum(['references', 'exactLine', 'pattern', 'regex', 'fuzzySymbol']),
+    kind: z.enum(['references', 'exactLine', 'pattern', 'regex']),
     text: z.string(),
     scope: z.enum(['all', 'targeted'])
   }),
@@ -48,15 +48,10 @@ export const WorkspaceSymbol = z.object({
   name: z.string(),
   kind: SymbolKind,
   containerName: z.string().optional(),
-  location: Location,
-  score: z.number().optional()
+  location: Location
 })
 export type WorkspaceSymbol = z.infer<typeof WorkspaceSymbol>
 
-// `kind` maps to ripgrep flags: pattern -> `rg -F` (`rg -w -F` when word is
-// true), regex -> plain `rg` regex, exactLine -> `rg -F` on the trimmed line
-// with results filtered to an exact match, references -> LSP
-// textDocument/references.
 const SearchBase = {
   projectId: z.string(),
   sha: z.string().regex(/^[0-9a-f]{40}$/),

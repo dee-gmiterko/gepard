@@ -8,6 +8,16 @@ import { AppThemeProvider } from './theme/ThemeProvider'
 import { isCancelledError, subscribe } from './ipc/client'
 import { ErrorBoundary } from './errors/ErrorBoundary'
 import { reportError, reportQueryError } from './errors/report'
+import { IntlRoot } from './i18n/IntlRoot'
+import { intl } from './i18n/intl'
+import { defineMessages } from './i18n/defineMessages'
+
+const messages = defineMessages({
+  cloneFailed: {
+    id: 'main.cloneFailed',
+    defaultMessage: 'Clone failed.'
+  }
+})
 
 window.addEventListener('error', (event) => {
   reportError({
@@ -34,7 +44,8 @@ subscribe('clone.progress', (payload) => {
   if (payload.phase !== 'error') return
   reportError({
     scope: `clone:${payload.projectId}`,
-    message: payload.message ?? 'Clone failed.',
+    message: intl.formatMessage(messages.cloneFailed),
+    detail: payload.message,
     loggedByMain: true
   })
 })
@@ -56,7 +67,6 @@ const queryClient = new QueryClient({
     onError: (error, query) => reportQueryError(`query:${query.queryHash}`, error)
   }),
   mutationCache: new MutationCache({
-    // Signature is (error, variables, onMutateResult, mutation, context).
     onError: (error, _variables, _onMutateResult, mutation) =>
       reportQueryError(mutationScope(mutation), error)
   }),
@@ -70,15 +80,17 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <AppThemeProvider>
-        <AppProvider>
-          <ToastHost />
-          <ErrorBoundary>
-            <App />
-          </ErrorBoundary>
-        </AppProvider>
-      </AppThemeProvider>
-    </QueryClientProvider>
+    <IntlRoot>
+      <QueryClientProvider client={queryClient}>
+        <AppThemeProvider>
+          <AppProvider>
+            <ToastHost />
+            <ErrorBoundary>
+              <App />
+            </ErrorBoundary>
+          </AppProvider>
+        </AppThemeProvider>
+      </QueryClientProvider>
+    </IntlRoot>
   </StrictMode>
 )

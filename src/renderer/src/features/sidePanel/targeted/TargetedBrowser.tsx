@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { FormattedMessage } from 'react-intl'
+import { defineMessages } from '../../../i18n/defineMessages'
 import { useAppState } from '../../../state/AppContext'
 import { isDiffView } from '../../../state/selectors'
 import { useTree } from '../../../queries/files'
@@ -11,6 +13,37 @@ import { ViewModeToggle, type ViewMode } from '../../../components/ViewModeToggl
 import { matchesTarget } from '@shared/model/paths'
 import { ReviewTree } from '../fileRows/ReviewTree'
 import { aggregateRows, useRowData, ZERO_ROW, type RowData } from '../fileRows/rowData'
+
+const messages = defineMessages({
+  noTarget: {
+    id: 'sidePanel.targetedBrowser.noTarget',
+    defaultMessage: 'Target a PR, commit, or path to see files.'
+  },
+  checkingOut: {
+    id: 'sidePanel.targetedBrowser.checkingOut',
+    defaultMessage: 'Checking out…'
+  },
+  loading: {
+    id: 'sidePanel.targetedBrowser.loading',
+    defaultMessage: 'Loading…'
+  },
+  emptyAll: {
+    id: 'sidePanel.targetedBrowser.emptyAll',
+    defaultMessage: 'No files.'
+  },
+  emptyAllForPath: {
+    id: 'sidePanel.targetedBrowser.emptyAllForPath',
+    defaultMessage: 'No files for this path.'
+  },
+  emptyChanged: {
+    id: 'sidePanel.targetedBrowser.emptyChanged',
+    defaultMessage: 'No changed files.'
+  },
+  emptyChangedForPath: {
+    id: 'sidePanel.targetedBrowser.emptyChangedForPath',
+    defaultMessage: 'No changed files for this path.'
+  }
+})
 
 export function TargetedBrowser(): React.JSX.Element {
   const state = useAppState()
@@ -52,15 +85,35 @@ export function TargetedBrowser(): React.JSX.Element {
       ? fullTree.isLoading
       : false
 
-  if (!projectId) return <Message>No project open.</Message>
   if (!hasCheckoutTarget && !path)
-    return <Message>Target a PR, commit, or path to see files.</Message>
-  if (hasCheckoutTarget && !state.checkout) return <Message>Checking out…</Message>
-  if (isLoading) return <Message>Loading…</Message>
-  if (items.length === 0) {
     return (
       <Message>
-        No {diffMode ? 'changed ' : ''}files{path ? ' for this path.' : '.'}
+        <FormattedMessage {...messages.noTarget} />
+      </Message>
+    )
+  if (hasCheckoutTarget && !state.checkout)
+    return (
+      <Message>
+        <FormattedMessage {...messages.checkingOut} />
+      </Message>
+    )
+  if (isLoading)
+    return (
+      <Message>
+        <FormattedMessage {...messages.loading} />
+      </Message>
+    )
+  if (items.length === 0) {
+    const emptyMessage = diffMode
+      ? path
+        ? messages.emptyChangedForPath
+        : messages.emptyChanged
+      : path
+        ? messages.emptyAllForPath
+        : messages.emptyAll
+    return (
+      <Message>
+        <FormattedMessage {...emptyMessage} />
       </Message>
     )
   }

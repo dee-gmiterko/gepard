@@ -1,7 +1,5 @@
-// Cancelling a vscode-jsonrpc `CancellationToken` passed to
-// `MessageConnection#sendRequest` sends `$/cancelRequest` to the server, but
-// the server isn't required to honor it, so a superseded call's promise must
-// settle immediately instead of waiting for the underlying work to finish.
+// Cancelling a vscode-jsonrpc `CancellationToken` sends `$/cancelRequest`,
+// which the server is not required to honor.
 import { CancellationTokenSource, type CancellationToken } from 'vscode-jsonrpc'
 
 export interface CancellableRun {

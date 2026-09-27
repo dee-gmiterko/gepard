@@ -4,8 +4,9 @@ import { Location, Range, RepoPath, SymbolKind } from './search'
 export const LineSymbol = z.object({
   name: z.string(),
   kind: SymbolKind,
+  // The bundled TypeScript 7 native LSP reports only standard LSP 3.17 token modifiers.
   modifiers: z
-    .array(z.enum(['declaration', 'readonly', 'static', 'async', 'local', 'defaultLibrary']))
+    .array(z.enum(['declaration', 'readonly', 'static', 'async', 'defaultLibrary']))
     .default([]),
   range: Range
 })
@@ -18,9 +19,6 @@ export type LineSymbolsResult = z.infer<typeof LineSymbolsResult>
 
 export const DefinitionTarget = z.object({
   location: Location,
-  name: z.string().optional(),
-  kind: SymbolKind.optional(),
-  containerName: z.string().optional(),
   external: z.boolean().default(false)
 })
 export const DefinitionResult = z.object({
@@ -30,7 +28,7 @@ export const DefinitionResult = z.object({
 export type DefinitionResult = z.infer<typeof DefinitionResult>
 
 export const IndexStatus = z.discriminatedUnion('state', [
-  z.object({ state: z.literal('idle'), commit: z.string(), files: z.int() }),
+  z.object({ state: z.literal('idle') }),
   z.object({
     state: z.literal('indexing'),
     phase: z.enum(['files', 'language']),

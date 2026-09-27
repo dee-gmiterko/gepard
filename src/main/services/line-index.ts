@@ -1,9 +1,10 @@
-// Tokenizing into runs of `[A-Za-z0-9_]` (the class `\b` uses) matches
-// `rg -w -F`'s whole-word semantics, since `rg -w` treats `$` as a boundary
-// too — unlike `identifierAt()` in ipc/handlers/search.ts, which includes
-// `$` when reading a symbol name.
-
-const WORD_RE = /[A-Za-z0-9_]+/g
+// `rg -w` matches only where a word character meets a non-word character or
+// the edge of the line. ripgrep's `\w` is Unicode-aware: a word character is
+// any Alphabetic, Mark, decimal-Number, Connector_Punctuation, or
+// Join_Control code point (the Rust regex crate's definition of `\w` under
+// Unicode mode, which is on by default).
+const WORD_RE =
+  /[\p{Alphabetic}\p{Mark}\p{Decimal_Number}\p{Connector_Punctuation}\p{Join_Control}]+/gu
 
 export interface LineIndexMatch {
   line: number
@@ -16,13 +17,7 @@ export interface LineIndexFileMatches {
   matches: LineIndexMatch[]
 }
 
-interface LineHit {
-  path: string
-  line: number
-}
-
-interface WordHit {
-  path: string
+interface WordOccurrence {
   line: number
   start: number
   end: number
@@ -34,26 +29,29 @@ interface FileEntry {
   wordKeys: Set<string>
 }
 
-function push<T>(map: Map<string, T[]>, key: string, value: T): void {
-  const list = map.get(key)
+// Each key's bucket is keyed by path, so removing one file's entries is a
+// handful of Map deletes (proportional to that file's own keys) rather than
+// a scan of every other file sharing the same line text or word.
+type Bucket<T> = Map<string, T[]>
+
+function pushEntry<T>(map: Map<string, Bucket<T>>, key: string, path: string, value: T): void {
+  let bucket = map.get(key)
+  if (!bucket) {
+    bucket = new Map()
+    map.set(key, bucket)
+  }
+  const list = bucket.get(path)
   if (list) list.push(value)
-  else map.set(key, [value])
+  else bucket.set(path, [value])
 }
 
-function removeFromBucket<T extends { path: string }>(
-  map: Map<string, T[]>,
-  key: string,
-  path: string
-): void {
-  const list = map.get(key)
-  if (!list) return
-  const filtered = list.filter((e) => e.path !== path)
-  if (filtered.length === 0) map.delete(key)
-  else map.set(key, filtered)
+function removeFromBucket<T>(map: Map<string, Bucket<T>>, key: string, path: string): void {
+  const bucket = map.get(key)
+  if (!bucket) return
+  bucket.delete(path)
+  if (bucket.size === 0) map.delete(key)
 }
 
-// Matches what ripgrep's own submatch span would be for `rg -F -- <trimmed>`
-// against `raw`.
 function trimmedSpan(raw: string, trimmed: string): [number, number] {
   if (trimmed.length === 0) return [0, 0]
   const start = raw.length - raw.trimStart().length
@@ -62,15 +60,11 @@ function trimmedSpan(raw: string, trimmed: string): [number, number] {
 
 export class LineIndex {
   private files = new Map<string, FileEntry>()
-  private byLine = new Map<string, LineHit[]>()
-  private byWord = new Map<string, WordHit[]>()
+  private byLine = new Map<string, Bucket<number>>()
+  private byWord = new Map<string, Bucket<WordOccurrence>>()
 
   get fileCount(): number {
     return this.files.size
-  }
-
-  has(path: string): boolean {
-    return this.files.has(path)
   }
 
   setFile(path: string, text: string): void {
@@ -85,13 +79,13 @@ export class LineIndex {
       const lineNo = i + 1
       const trimmed = raw.trim()
       lineKeys.add(trimmed)
-      push(this.byLine, trimmed, { path, line: lineNo })
+      pushEntry(this.byLine, trimmed, path, lineNo)
 
       WORD_RE.lastIndex = 0
       let m: RegExpExecArray | null
       while ((m = WORD_RE.exec(raw))) {
         wordKeys.add(m[0])
-        push(this.byWord, m[0], { path, line: lineNo, start: m.index, end: m.index + m[0].length })
+        pushEntry(this.byWord, m[0], path, { line: lineNo, start: m.index, end: m.index + m[0].length })
       }
     })
 
@@ -110,22 +104,17 @@ export class LineIndex {
     trimmed: string,
     exclude?: { path: string; line: number }
   ): LineIndexFileMatches[] {
-    const hits = this.byLine.get(trimmed)
-    if (!hits || hits.length === 0) return []
-
-    const byPath = new Map<string, number[]>()
-    for (const h of hits) {
-      if (exclude && h.path === exclude.path && h.line === exclude.line) continue
-      const lines = byPath.get(h.path)
-      if (lines) lines.push(h.line)
-      else byPath.set(h.path, [h.line])
-    }
+    const bucket = this.byLine.get(trimmed)
+    if (!bucket || bucket.size === 0) return []
 
     const results: LineIndexFileMatches[] = []
-    for (const [path, lineNos] of byPath) {
+    for (const [path, lineNos] of bucket) {
       const file = this.files.get(path)
       if (!file) continue
-      const matches = lineNos
+      const kept =
+        exclude && exclude.path === path ? lineNos.filter((line) => line !== exclude.line) : lineNos
+      if (kept.length === 0) continue
+      const matches = kept
         .slice()
         .sort((a, b) => a - b)
         .map((line) => {
@@ -138,25 +127,19 @@ export class LineIndex {
   }
 
   queryWord(word: string): LineIndexFileMatches[] {
-    const hits = this.byWord.get(word)
-    if (!hits || hits.length === 0) return []
-
-    const byPath = new Map<string, Map<number, Array<[number, number]>>>()
-    for (const h of hits) {
-      let byLineMap = byPath.get(h.path)
-      if (!byLineMap) {
-        byLineMap = new Map()
-        byPath.set(h.path, byLineMap)
-      }
-      const spans = byLineMap.get(h.line)
-      if (spans) spans.push([h.start, h.end])
-      else byLineMap.set(h.line, [[h.start, h.end]])
-    }
+    const bucket = this.byWord.get(word)
+    if (!bucket || bucket.size === 0) return []
 
     const results: LineIndexFileMatches[] = []
-    for (const [path, byLineMap] of byPath) {
+    for (const [path, occurrences] of bucket) {
       const file = this.files.get(path)
       if (!file) continue
+      const byLineMap = new Map<number, Array<[number, number]>>()
+      for (const occ of occurrences) {
+        const spans = byLineMap.get(occ.line)
+        if (spans) spans.push([occ.start, occ.end])
+        else byLineMap.set(occ.line, [[occ.start, occ.end]])
+      }
       const matches = Array.from(byLineMap.entries())
         .sort(([a], [b]) => a - b)
         .map(([line, spans]) => ({

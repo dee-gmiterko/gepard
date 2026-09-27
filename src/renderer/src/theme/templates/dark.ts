@@ -1,0 +1,47 @@
+import type { ThemeTemplate } from '../tokens'
+
+export const darkTemplate: ThemeTemplate = {
+  id: 'dark',
+  name: 'Dark',
+  mode: 'dark',
+  shadow: {
+    popover: '0 4px 12px rgba(1, 4, 9, 0.6)',
+    floating: '0 4px 16px rgba(1, 4, 9, 0.7)'
+  },
+  colors: {
+    bg: '#0d1117',
+    bgSubtle: '#161b22',
+    bgElevated: '#161b22',
+    bgHover: '#21262d',
+    bgSelected: '#132e53',
+    fg: '#e6edf3',
+    fgMuted: '#9198a1',
+    fgSubtle: '#6e7681',
+    border: '#30363d',
+    borderStrong: '#484f58',
+    accent: '#4493f8',
+    accentFg: '#ffffff',
+    danger: '#f85149',
+    success: '#3fb950',
+    warning: '#d29922',
+    diffAddBg: '#033a16',
+    diffAddFg: '#3fb950',
+    diffDelBg: '#67060c',
+    diffDelFg: '#f85149',
+    diffHunk: '#122447',
+    commentBg: '#3b2b00',
+    overlay: 'rgba(1, 4, 9, 0.6)'
+  },
+  syntax: {
+    keyword: '#ff7b72',
+    string: '#a5d6ff',
+    number: '#79c0ff',
+    comment: '#9198a1',
+    type: '#ffa657',
+    function: '#d2a8ff',
+    property: '#79c0ff',
+    constant: '#79c0ff',
+    tag: '#7ee787',
+    invalid: '#ffa198'
+  }
+}

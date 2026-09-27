@@ -1,7 +1,7 @@
-// `app.setName(...)` must run before any of these are called so dev and prod
-// agree on the userData path.
 import { app } from 'electron'
 import { join } from 'node:path'
+import { ProjectId } from '@shared/ipc/schemas/project'
+import { AppError } from './ipc/registry'
 
 export function userDataDir(): string {
   return app.getPath('userData')
@@ -20,6 +20,9 @@ export function projectId(owner: string, repo: string): string {
 }
 
 export function projectDir(id: string): string {
+  if (!ProjectId.safeParse(id).success) {
+    throw new AppError('INVALID_PROJECT_ID', `invalid project id: ${id}`)
+  }
   return join(projectsDir(), id)
 }
 
@@ -45,6 +48,14 @@ export function extensionsDir(): string {
 
 export function extensionsJsonPath(): string {
   return join(userDataDir(), 'extensions.json')
+}
+
+export function extensionsFilesJsonPath(): string {
+  return join(userDataDir(), 'extensions-files.json')
+}
+
+export function themeJsonPath(): string {
+  return join(userDataDir(), 'theme.json')
 }
 
 export function reviewJsonPath(id: string, pr: number): string {

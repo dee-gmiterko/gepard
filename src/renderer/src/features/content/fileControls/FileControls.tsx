@@ -1,13 +1,40 @@
-import { useRef, useState, type PointerEvent } from 'react'
+import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import styled, { css, keyframes } from 'styled-components'
 import { Move, RefreshCw } from 'react-feather'
+import { FormattedMessage, useIntl } from 'react-intl'
+import { defineMessages } from '../../../i18n/defineMessages'
 import { useAppState } from '../../../state/AppContext'
 import { usePendingCount, useSetViewed, useSync, useViewed } from '../../../queries/comments'
+import { useIsCheckedOutChangedFile } from '../commentScope'
 import { Checkbox } from '../../../components/Checkbox'
 import { Accordion } from '../../../components/Accordion'
 import { Button } from '../../../components/Button'
+import { IconButton } from '../../../components/IconButton'
 import { Surface } from '../../../components/Surface'
 import { FileComments } from '../../commentEditor/FileComments'
+
+const messages = defineMessages({
+  viewed: {
+    id: 'content.fileControls.viewed',
+    defaultMessage: 'Viewed'
+  },
+  move: {
+    id: 'content.fileControls.move',
+    defaultMessage: 'Move'
+  },
+  fileComments: {
+    id: 'content.fileControls.fileComments',
+    defaultMessage: 'File comments'
+  },
+  sync: {
+    id: 'content.fileControls.sync',
+    defaultMessage: 'Sync'
+  },
+  syncWithCount: {
+    id: 'content.fileControls.syncWithCount',
+    defaultMessage: 'Sync +{count}'
+  }
+})
 
 const Floating = styled(Surface).attrs({ $elevation: 'floating' as const })`
   position: absolute;
@@ -30,10 +57,8 @@ const Row = styled.div`
   padding: 0 ${({ theme }) => theme.space[1]};
 `
 
-const Grip = styled.span`
-  display: inline-flex;
+const Grip = styled(IconButton)`
   margin-left: auto;
-  color: ${({ theme }) => theme.colors.fgSubtle};
   cursor: grab;
   touch-action: none;
 
@@ -59,9 +84,12 @@ const Spinning = styled(RefreshCw)<{ $spinning: boolean }>`
     `}
 `
 
+const GRIP_STEP = 16
+
 function useDragOffset(): {
   offset: { x: number; y: number }
   onPointerDown: (e: PointerEvent<HTMLElement>) => void
+  onKeyDown: (e: KeyboardEvent<HTMLElement>) => void
 } {
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const start = useRef<{ px: number; py: number; x: number; y: number } | null>(null)
@@ -74,30 +102,59 @@ function useDragOffset(): {
       const s = start.current
       if (s) setOffset({ x: s.x + ev.clientX - s.px, y: s.y + ev.clientY - s.py })
     }
-    const up = (): void => {
+    // Browsers fire pointercancel instead of pointerup when they interrupt a gesture.
+    const end = (): void => {
       start.current = null
       el.removeEventListener('pointermove', move)
-      el.removeEventListener('pointerup', up)
+      el.removeEventListener('pointerup', end)
+      el.removeEventListener('pointercancel', end)
     }
     el.addEventListener('pointermove', move)
-    el.addEventListener('pointerup', up)
+    el.addEventListener('pointerup', end)
+    el.addEventListener('pointercancel', end)
   }
 
-  return { offset, onPointerDown }
+  function onKeyDown(e: KeyboardEvent<HTMLElement>): void {
+    const step = e.shiftKey ? GRIP_STEP * 4 : GRIP_STEP
+    switch (e.key) {
+      case 'ArrowUp':
+        setOffset((o) => ({ ...o, y: o.y - step }))
+        break
+      case 'ArrowDown':
+        setOffset((o) => ({ ...o, y: o.y + step }))
+        break
+      case 'ArrowLeft':
+        setOffset((o) => ({ ...o, x: o.x - step }))
+        break
+      case 'ArrowRight':
+        setOffset((o) => ({ ...o, x: o.x + step }))
+        break
+      case 'Home':
+        setOffset({ x: 0, y: 0 })
+        break
+      default:
+        return
+    }
+    e.preventDefault()
+  }
+
+  return { offset, onPointerDown, onKeyDown }
 }
 
 export function FileControls(): React.JSX.Element | null {
+  const intl = useIntl()
   const state = useAppState()
   const projectId = state.projectId ?? ''
   const pr = state.targeting.pr
   const path = state.activeFile
   const [accordionOpen, setAccordionOpen] = useState(false)
-  const { offset, onPointerDown } = useDragOffset()
+  const { offset, onPointerDown, onKeyDown } = useDragOffset()
 
   const { data: viewed } = useViewed(projectId, pr ?? NaN)
   const { mutate: setViewed } = useSetViewed(projectId, pr ?? NaN)
   const { mutate: runSync, isPending: syncing } = useSync(projectId, pr ?? NaN)
   const { data: pendingCount } = usePendingCount(projectId, pr ?? NaN)
+  const isChangedFile = useIsCheckedOutChangedFile(path)
 
   if (pr === null) return null
 
@@ -106,23 +163,27 @@ export function FileControls(): React.JSX.Element | null {
   return (
     <Floating style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}>
       <Row>
-        {path !== null && (
+        {path !== null && isChangedFile && (
           <Checkbox
             checked={isViewed}
             onChange={(checked) => setViewed({ paths: [path], viewed: checked })}
-            label="Viewed"
+            label={intl.formatMessage(messages.viewed)}
           />
         )}
-        <Grip title="Move" onPointerDown={onPointerDown}>
-          <Move size={14} />
-        </Grip>
+        <Grip
+          icon={Move}
+          size={14}
+          label={intl.formatMessage(messages.move)}
+          onPointerDown={onPointerDown}
+          onKeyDown={onKeyDown}
+        />
       </Row>
 
-      {path !== null && (
+      {path !== null && isChangedFile && (
         <Accordion
           open={accordionOpen}
           onToggle={() => setAccordionOpen((v) => !v)}
-          title="File comments"
+          title={intl.formatMessage(messages.fileComments)}
         >
           <FileComments projectId={projectId} pr={pr} path={path} />
         </Accordion>
@@ -130,7 +191,11 @@ export function FileControls(): React.JSX.Element | null {
 
       <Button block disabled={syncing} onClick={() => runSync('full')}>
         <Spinning size={14} $spinning={syncing} />
-        Sync{Boolean(pendingCount) && ` +${pendingCount}`}
+        {pendingCount ? (
+          <FormattedMessage {...messages.syncWithCount} values={{ count: pendingCount }} />
+        ) : (
+          <FormattedMessage {...messages.sync} />
+        )}
       </Button>
     </Floating>
   )

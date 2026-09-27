@@ -21,13 +21,7 @@ export function CommentPortalHost({
         createPortal(
           <>
             {entry.threads.map((thread) => (
-              <ThreadWidget
-                key={thread.id}
-                projectId={projectId}
-                pr={pr}
-                thread={thread}
-                onClose={() => {}}
-              />
+              <ThreadWidget key={thread.id} projectId={projectId} pr={pr} thread={thread} />
             ))}
             {entry.draft && (
               <ThreadWidget

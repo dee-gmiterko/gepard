@@ -1,9 +1,11 @@
+import type { ReportTone } from '../errors/report'
+
 export type SidePanelTab = 'files' | 'targeted' | 'search'
 export type MainTab = 'files' | 'comments'
 
 export interface Toast {
   id: string
-  tone: 'danger' | 'warning'
+  tone: ReportTone
   message: string
 }
 
@@ -23,6 +25,7 @@ export interface AppState {
   mainTab: MainTab
   checkout: { base: string; head: string } | null
   toasts: Toast[]
+  revealLine: { line: number; side: 'LEFT' | 'RIGHT' } | null
 }
 
 export const initialAppState: AppState = {
@@ -34,7 +37,8 @@ export const initialAppState: AppState = {
   activeFile: null,
   mainTab: 'files',
   checkout: null,
-  toasts: []
+  toasts: [],
+  revealLine: null
 }
 
 export type AppAction =
@@ -46,7 +50,7 @@ export type AppAction =
   | { type: 'target/restore'; targeting: Targeting }
   | { type: 'target/checkoutResult'; checkout: { base: string; head: string } | null }
   | { type: 'sidePanel/setTab'; tab: SidePanelTab }
-  | { type: 'file/open'; path: string }
+  | { type: 'file/open'; path: string; line?: number | null; side?: 'LEFT' | 'RIGHT' }
   | { type: 'file/focus'; path: string }
   | { type: 'file/pin'; path: string }
   | { type: 'file/unpin'; path: string }
@@ -55,7 +59,8 @@ export type AppAction =
   | { type: 'toast/dismiss'; id: string }
 
 function withTarget(state: AppState, targeting: Targeting, set: boolean): AppState {
-  return { ...state, targeting, sidePanelTab: set ? 'targeted' : state.sidePanelTab }
+  const mainTab = targeting.pr === null && state.mainTab === 'comments' ? 'files' : state.mainTab
+  return { ...state, targeting, mainTab, sidePanelTab: set ? 'targeted' : state.sidePanelTab }
 }
 
 export function appReducer(state: AppState, action: AppAction): AppState {
@@ -86,10 +91,19 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, checkout: action.checkout }
     case 'sidePanel/setTab':
       return { ...state, sidePanelTab: action.tab }
-    case 'file/open':
+    case 'file/open': {
+      const revealLine =
+        action.line != null ? { line: action.line, side: action.side ?? ('RIGHT' as const) } : null
       return state.pinnedFiles.includes(action.path)
-        ? { ...state, activeFile: action.path, mainTab: 'files' }
-        : { ...state, previewFile: action.path, activeFile: action.path, mainTab: 'files' }
+        ? { ...state, activeFile: action.path, mainTab: 'files', revealLine }
+        : {
+            ...state,
+            previewFile: action.path,
+            activeFile: action.path,
+            mainTab: 'files',
+            revealLine
+          }
+    }
     case 'file/focus':
       return { ...state, activeFile: action.path, mainTab: 'files' }
     case 'file/pin':

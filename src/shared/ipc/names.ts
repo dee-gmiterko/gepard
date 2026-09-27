@@ -1,5 +1,5 @@
-// The preload runs with sandbox: true and must be a self-contained bundle
-// that imports nothing but `electron`, so this file has no zod dependency.
+// The sandboxed preload imports this file and cannot load modules other than
+// `electron`.
 export const channelNames = [
   'app.viewer',
   'app.viewerRepos',
@@ -7,11 +7,14 @@ export const channelNames = [
   'projects.add',
   'projects.open',
   'projects.setTargeting',
+  'projects.setTrustWorkspaceToolchain',
   'projects.remove',
   'clone.start',
   'pr.list',
   'pr.commits',
   'pr.checkout',
+  'pr.branches',
+  'pr.create',
   'commits.list',
   'files.changed',
   'files.diff',
@@ -33,7 +36,9 @@ export const channelNames = [
   'extensions.list',
   'extensions.setEnabled',
   'extensions.install',
-  'extensions.dir'
+  'extensions.dir',
+  'theme.getTemplateId',
+  'theme.setTemplateId'
 ] as const
 
 export const eventNames = ['clone.progress', 'index.status', 'theme.changed', 'app.error'] as const

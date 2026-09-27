@@ -1,51 +1,10 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import {
-  ExtensionRegistry,
-  isLanguageExtension,
-  loadExternalExtensions
-} from '../src/main/lsp/registry'
+import { ExtensionRegistry, loadExternalExtensions } from '../src/main/lsp/registry'
 import * as extensionsStore from '../src/main/store/extensions'
 import { __setUserDataDir } from './support/electron'
 import { makeTmpDir, type TmpDir } from './support/tmp'
-
-const validExtensionShape = {
-  id: 'demo-lang',
-  displayName: 'Demo Lang',
-  matches: () => true,
-  resolve: async () => ({}),
-  start: async () => ({})
-}
-
-describe('isLanguageExtension', () => {
-  it('accepts a value with the full LanguageExtension shape', () => {
-    expect(isLanguageExtension(validExtensionShape)).toBe(true)
-  })
-
-  it('rejects null/undefined/non-objects', () => {
-    expect(isLanguageExtension(null)).toBe(false)
-    expect(isLanguageExtension(undefined)).toBe(false)
-    expect(isLanguageExtension('typescript')).toBe(false)
-    expect(isLanguageExtension(42)).toBe(false)
-  })
-
-  it('rejects an object missing any required member', () => {
-    for (const omit of ['id', 'displayName', 'matches', 'resolve', 'start'] as const) {
-      const rest: Record<string, unknown> = { ...validExtensionShape }
-      delete rest[omit]
-      expect(isLanguageExtension(rest)).toBe(false)
-    }
-  })
-
-  it('rejects a blank id', () => {
-    expect(isLanguageExtension({ ...validExtensionShape, id: '' })).toBe(false)
-  })
-
-  it('rejects members that are the wrong type (e.g. matches as a non-function)', () => {
-    expect(isLanguageExtension({ ...validExtensionShape, matches: 'not a function' })).toBe(false)
-  })
-})
 
 describe('loadExternalExtensions', () => {
   let dir: TmpDir
@@ -56,7 +15,9 @@ describe('loadExternalExtensions', () => {
 
   it('returns empty loaded/failed when the directory does not exist', async () => {
     const result = await loadExternalExtensions('/nonexistent/path/for/sure')
-    expect(result).toEqual({ loaded: [], failed: [] })
+    expect(result.loaded).toEqual([])
+    expect(result.failed).toEqual([])
+    expect(result.cache.size).toBe(0)
   })
 
   it('loads a conforming module, reports a wrong-shaped one, and reports one that throws on import', async () => {
@@ -89,6 +50,108 @@ describe('loadExternalExtensions', () => {
       'module does not export a LanguageExtension'
     )
     expect(byFile.get(join(dir.path, 'throws.js'))).toContain('boom during import')
+  })
+
+  it('never re-imports a path once it has succeeded, threading the cache through repeated scans', async () => {
+    dir = await makeTmpDir('ext-scan-once')
+    const counterFile = join(dir.path, 'counter.txt')
+    const extFile = join(dir.path, 'ext.js')
+    await writeFile(counterFile, '')
+    await writeFile(
+      extFile,
+      `require('node:fs').appendFileSync(${JSON.stringify(counterFile)}, 'x')
+      module.exports = {
+        id: 'demo-lang',
+        displayName: 'Demo Lang',
+        matches: () => false,
+        resolve: async () => ({}),
+        start: async () => ({})
+      }`
+    )
+
+    const first = await loadExternalExtensions(dir.path)
+    expect(first.loaded).toHaveLength(1)
+    expect((await readFile(counterFile, 'utf8')).length).toBe(1)
+
+    const second = await loadExternalExtensions(dir.path, first.cache)
+    expect(second.loaded).toHaveLength(1)
+    expect(second.loaded[0].extension).toBe(first.loaded[0].extension)
+    expect((await readFile(counterFile, 'utf8')).length).toBe(1)
+  })
+
+  it('keeps reporting a failed path as failed on a later scan, since a fix on disk is never re-imported', async () => {
+    dir = await makeTmpDir('ext-scan-stale-failure')
+    const extFile = join(dir.path, 'ext.js')
+    await writeFile(extFile, `module.exports = { id: 'incomplete' }`)
+
+    const first = await loadExternalExtensions(dir.path)
+    expect(first.loaded).toHaveLength(0)
+    expect(first.failed).toHaveLength(1)
+
+    await writeFile(
+      extFile,
+      `module.exports = {
+        id: 'now-complete',
+        displayName: 'Now Complete',
+        matches: () => false,
+        resolve: async () => ({}),
+        start: async () => ({})
+      }`
+    )
+    const second = await loadExternalExtensions(dir.path, first.cache)
+    expect(second.loaded).toHaveLength(0)
+    expect(second.failed).toHaveLength(1)
+    expect(second.failed[0].error).toBe(first.failed[0].error)
+  })
+
+  it('never imports a file already known to be disabled', async () => {
+    dir = await makeTmpDir('ext-scan-disabled-skip')
+    const counterFile = join(dir.path, 'counter.txt')
+    const extFile = join(dir.path, 'ext.js')
+    await writeFile(counterFile, '')
+    await writeFile(
+      extFile,
+      `require('node:fs').appendFileSync(${JSON.stringify(counterFile)}, 'x')
+      module.exports = {
+        id: 'demo-lang',
+        displayName: 'Demo Lang',
+        matches: () => false,
+        resolve: async () => ({}),
+        start: async () => ({})
+      }`
+    )
+
+    const known = new Map([[extFile, { id: 'demo-lang', displayName: 'Demo Lang' }]])
+    const result = await loadExternalExtensions(dir.path, new Map(), known, () => false)
+
+    expect(result.loaded).toEqual([])
+    expect(result.disabled).toEqual([{ file: extFile, id: 'demo-lang', displayName: 'Demo Lang' }])
+    expect((await readFile(counterFile, 'utf8')).length).toBe(0)
+  })
+
+  it('re-checks enabled state on every scan, so a known file is imported as soon as it is enabled', async () => {
+    dir = await makeTmpDir('ext-scan-disabled-then-enabled')
+    const extFile = join(dir.path, 'ext.js')
+    await writeFile(
+      extFile,
+      `module.exports = {
+        id: 'demo-lang',
+        displayName: 'Demo Lang',
+        matches: () => false,
+        resolve: async () => ({}),
+        start: async () => ({})
+      }`
+    )
+    const known = new Map([[extFile, { id: 'demo-lang', displayName: 'Demo Lang' }]])
+
+    const first = await loadExternalExtensions(dir.path, new Map(), known, () => false)
+    expect(first.loaded).toEqual([])
+    expect(first.disabled).toHaveLength(1)
+
+    const second = await loadExternalExtensions(dir.path, first.cache, known, () => true)
+    expect(second.disabled).toEqual([])
+    expect(second.loaded).toHaveLength(1)
+    expect(second.loaded[0].extension.id).toBe('demo-lang')
   })
 })
 
@@ -126,7 +189,7 @@ describe('ExtensionRegistry', () => {
 
     const reopened = new ExtensionRegistry(join(userData.path, 'extensions'))
     expect(await reopened.enabledExtensions()).toEqual([])
-    expect(await extensionsStore.isEnabled('typescript')).toBe(false)
+    expect((await extensionsStore.getEnabledMap()).typescript).toBe(false)
   })
 
   it('picks up an external extension dropped into the extensions directory, enabled by default', async () => {
@@ -184,6 +247,51 @@ describe('ExtensionRegistry', () => {
 
     const enabled = await registry.enabledExtensions()
     expect(enabled.map((e) => e.id)).toEqual(['typescript'])
+  })
+
+  it('never imports an extension file already known and disabled from a previous session', async () => {
+    userData = await makeTmpDir('ext-registry-seeded-disabled')
+    __setUserDataDir(userData.path)
+    const extDir = join(userData.path, 'extensions')
+    await mkdir(extDir, { recursive: true })
+    const counterFile = join(extDir, 'counter.txt')
+    await writeFile(counterFile, '')
+    const extFile = join(extDir, 'demo.js')
+    await writeFile(
+      extFile,
+      `require('node:fs').appendFileSync(${JSON.stringify(counterFile)}, 'x')
+      module.exports = {
+        id: 'demo-lang',
+        displayName: 'Demo Lang',
+        matches: () => false,
+        resolve: async () => ({}),
+        start: async () => ({})
+      }`
+    )
+
+    await extensionsStore.setKnownFiles({
+      [extFile]: { id: 'demo-lang', displayName: 'Demo Lang' }
+    })
+    await extensionsStore.setEnabled('demo-lang', false)
+
+    const registry = new ExtensionRegistry(extDir)
+    const list = await registry.list()
+
+    expect((await readFile(counterFile, 'utf8')).length).toBe(0)
+    expect(list).toEqual(
+      expect.arrayContaining([
+        { id: 'demo-lang', displayName: 'Demo Lang', source: 'external', enabled: false }
+      ])
+    )
+    expect((await registry.enabledExtensions()).map((e) => e.id)).toEqual(['typescript'])
+    expect((await readFile(counterFile, 'utf8')).length).toBe(0)
+
+    await registry.setEnabled('demo-lang', true)
+    expect((await registry.enabledExtensions()).map((e) => e.id).sort()).toEqual([
+      'demo-lang',
+      'typescript'
+    ])
+    expect((await readFile(counterFile, 'utf8')).length).toBe(1)
   })
 
   it('rescans on every list()/enabledExtensions() call, so a newly dropped file is picked up without restarting', async () => {

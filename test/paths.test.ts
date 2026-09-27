@@ -60,20 +60,32 @@ describe('isGlob', () => {
 })
 
 describe('matchesTarget (the shared matcher)', () => {
-  it('falls back to isWithin’s prefix/exact semantics for a plain target', () => {
-    expect(matchesTarget('src/sub/b.ts', 'src')).toBe(true)
-    expect(matchesTarget('src-extra/b.ts', 'src')).toBe(false)
-  })
-
   it('matches `*` against any run of characters within one path segment', () => {
     expect(matchesTarget('src/a.ts', 'src/*.ts')).toBe(true)
     expect(matchesTarget('src/sub/a.ts', 'src/*.ts')).toBe(false)
   })
 
-  it('matches `**` across path separators', () => {
-    expect(matchesTarget('src/a.ts', 'src/**/*.ts')).toBe(false)
+  it('matches `**` across path separators, including zero components (a/**/b matches a/b)', () => {
+    expect(matchesTarget('a/b', 'a/**/b')).toBe(true)
+    expect(matchesTarget('src/a.ts', 'src/**/*.ts')).toBe(true)
     expect(matchesTarget('src/sub/a.ts', 'src/**/*.ts')).toBe(true)
     expect(matchesTarget('src/sub/deep/a.ts', 'src/**/*.ts')).toBe(true)
+    expect(matchesTarget('other/a.ts', 'src/**/*.ts')).toBe(false)
+  })
+
+  it('requires a `**` in the middle to still span whole path components', () => {
+    expect(matchesTarget('ab', 'a/**/b')).toBe(false)
+    expect(matchesTarget('afoo/b', 'a/**/b')).toBe(false)
+    expect(matchesTarget('src.ts', 'src/**/*.ts')).toBe(false)
+    expect(matchesTarget('srcx/y.ts', 'src/**/*.ts')).toBe(false)
+  })
+
+  it('matches a leading or trailing `**` segment', () => {
+    expect(matchesTarget('a.ts', '**/a.ts')).toBe(true)
+    expect(matchesTarget('src/sub/a.ts', '**/a.ts')).toBe(true)
+    expect(matchesTarget('src', 'src/**')).toBe(true)
+    expect(matchesTarget('src/sub/a.ts', 'src/**')).toBe(true)
+    expect(matchesTarget('other/a.ts', 'src/**')).toBe(false)
   })
 
   it('matches `?` against exactly one non-slash character', () => {
@@ -86,8 +98,11 @@ describe('matchesTarget (the shared matcher)', () => {
     expect(matchesTarget('src/c.ts', 'src/[ab].ts')).toBe(false)
   })
 
-  it('does not implicitly include everything under a glob (unlike a folder prefix)', () => {
-    expect(matchesTarget('src/sub/a.ts', 'src/*.ts')).toBe(false)
+  it('negates a `[!...]` or `[^...]` character class (shell and regex spellings alike)', () => {
+    expect(matchesTarget('src/c.ts', 'src/[!ab].ts')).toBe(true)
+    expect(matchesTarget('src/a.ts', 'src/[!ab].ts')).toBe(false)
+    expect(matchesTarget('src/c.ts', 'src/[^ab].ts')).toBe(true)
+    expect(matchesTarget('src/a.ts', 'src/[^ab].ts')).toBe(false)
   })
 })
 

@@ -24,8 +24,6 @@ function highlightStyle(theme: Theme): HighlightStyle {
   ])
 }
 
-// Swapped into a Compartment on theme change so switching light/dark does
-// not rebuild the document.
 export function editorTheme(theme: Theme): Extension {
   const c = theme.colors
   const view = EditorView.theme(
@@ -33,7 +31,6 @@ export function editorTheme(theme: Theme): Extension {
       '&': {
         color: c.fg,
         backgroundColor: c.bg,
-        height: '100%',
         fontSize: theme.font.size.md
       },
       '.cm-scroller': {

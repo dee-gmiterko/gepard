@@ -87,10 +87,10 @@ describe('ripgrepSearch (real spawn)', () => {
     ])
   })
 
-  it('rejects on an invalid regex', async () => {
+  it('rejects on an invalid regex (rg exits > 1)', async () => {
     await expect(
       ripgrepSearch({ cwd: dir.path, pattern: '(unclosed', fixedString: false })
-    ).rejects.toThrow()
+    ).rejects.toThrow(/rg exited with code \d+/)
   })
 
   it('resolves empty when every targeted path is missing from the working tree', async () => {
@@ -101,5 +101,57 @@ describe('ripgrepSearch (real spawn)', () => {
       paths: ['does-not-exist.txt']
     })
     expect(results).toEqual([])
+  })
+
+  it('filters by a glob targeted path using the app’s own matchesTarget semantics', async () => {
+    const results = await ripgrepSearch({
+      cwd: dir.path,
+      pattern: 'fo[ao]',
+      fixedString: false,
+      paths: ['sub/*.txt']
+    })
+    expect(results).toEqual([
+      {
+        path: 'sub/regex.txt',
+        matches: [
+          { line: 1, preview: 'foo', spans: [[0, 3]] },
+          { line: 2, preview: 'foa', spans: [[0, 3]] }
+        ]
+      }
+    ])
+  })
+
+  it('keeps a literal targeted path even when another targeted entry is a glob', async () => {
+    const results = await ripgrepSearch({
+      cwd: dir.path,
+      pattern: 'foo',
+      fixedString: true,
+      paths: ['fixed.txt', 'sub/*.txt']
+    })
+    expect(results.map((f) => f.path).sort()).toEqual(['fixed.txt', 'sub/regex.txt'])
+  })
+
+  it('does not match a bare glob against a file nested in a subdirectory (matchesTarget is anchored)', async () => {
+    const results = await ripgrepSearch({
+      cwd: dir.path,
+      pattern: 'fo[ao]',
+      fixedString: false,
+      paths: ['*.txt']
+    })
+    expect(results).toEqual([
+      {
+        path: 'fixed.txt',
+        matches: [{ line: 2, preview: 'foo bar', spans: [[0, 3]] }]
+      }
+    ])
+  })
+
+  it('finds matches in tracked dotfiles (--hidden), consistent with the line index', async () => {
+    await writeFile(join(dir.path, '.dotfile'), 'needle in a dotfile\n')
+    const results = await ripgrepSearch({ cwd: dir.path, pattern: 'needle', fixedString: true })
+    expect(results).toContainEqual({
+      path: '.dotfile',
+      matches: [{ line: 1, preview: 'needle in a dotfile', spans: [[0, 6]] }]
+    })
   })
 })

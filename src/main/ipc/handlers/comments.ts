@@ -1,5 +1,6 @@
 import type { HandlerMap } from '../registry'
 import * as gh from '../../services/gh'
+import * as git from '../../services/git'
 import * as review from '../../store/review'
 
 export const commentsHandlers: Pick<
@@ -10,19 +11,16 @@ export const commentsHandlers: Pick<
 
   'comments.upsert': async (draft) => {
     const { projectId, pr, id, threadId, anchor, body, references } = draft
-    const isNewComment = id === null
-    const isNewThread = isNewComment && threadId === null && anchor !== null
+    const isNewThread = id === null && threadId === null && anchor !== null
 
-    let ctx: review.UpsertContext = { prId: '', headRefOid: '', viewerLogin: '' }
+    let ctx: review.UpsertContext = { prId: '', commitOid: '' }
     if (isNewThread) {
-      const { owner, repo } = await gh.repoRefFor(projectId)
-      const [{ id: prId, headRefOid }, viewerLogin] = await Promise.all([
-        gh.viewPr(owner, repo, pr),
-        gh.currentUserLogin()
+      const [{ owner, repo }, { head: commitOid }] = await Promise.all([
+        gh.repoRefFor(projectId),
+        git.workingTree(projectId)
       ])
-      ctx = { prId, headRefOid, viewerLogin }
-    } else if (isNewComment) {
-      ctx = { prId: '', headRefOid: '', viewerLogin: await gh.currentUserLogin() }
+      const { id: prId } = await gh.viewPr(owner, repo, pr)
+      ctx = { prId, commitOid }
     }
 
     return review.upsertLocalComment(projectId, pr, ctx, { id, threadId, anchor, body, references })

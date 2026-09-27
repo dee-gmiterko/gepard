@@ -1,4 +1,6 @@
 import styled from 'styled-components'
+import { FormattedMessage, useIntl } from 'react-intl'
+import { defineMessages } from '../../i18n/defineMessages'
 import { PrTarget } from './PrTarget'
 import { CommitTarget } from './CommitTarget'
 import { PathTarget } from './PathTarget'
@@ -9,6 +11,21 @@ import { IconButton } from '../../components/IconButton'
 import { Ellipsis } from '../../components/Ellipsis'
 import { useIndexStatus } from '../../queries/projects'
 import { useAppDispatch, useAppState } from '../../state/AppContext'
+
+const messages = defineMessages({
+  projects: {
+    id: 'header.projects',
+    defaultMessage: 'Projects'
+  },
+  checkingOut: {
+    id: 'header.checkingOut',
+    defaultMessage: 'Checking out…'
+  },
+  indexing: {
+    id: 'header.indexing',
+    defaultMessage: 'Indexing…'
+  }
+})
 
 const Bar = styled.header`
   display: flex;
@@ -29,7 +46,14 @@ const Spacer = styled.div`
   flex: 1;
 `
 
+const Targets = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[5]};
+`
+
 export function Header(): React.JSX.Element {
+  const intl = useIntl()
   const { pending } = useTargetCheckoutEffect()
   usePersistTargeting()
   const state = useAppState()
@@ -40,15 +64,25 @@ export function Header(): React.JSX.Element {
     <Bar>
       <IconButton
         icon={Grid}
-        label="Projects"
+        label={intl.formatMessage(messages.projects)}
         onClick={() => dispatch({ type: 'project/close' })}
       />
-      <PrTarget />
-      <CommitTarget />
-      <PathTarget />
-      {pending && <Status>Checking out…</Status>}
+      <Targets>
+        <PrTarget />
+        <CommitTarget />
+        <PathTarget />
+      </Targets>
+      {pending && (
+        <Status>
+          <FormattedMessage {...messages.checkingOut} />
+        </Status>
+      )}
       <Spacer />
-      {index?.state === 'indexing' && <Status>Indexing…</Status>}
+      {index?.state === 'indexing' && (
+        <Status>
+          <FormattedMessage {...messages.indexing} />
+        </Status>
+      )}
     </Bar>
   )
 }

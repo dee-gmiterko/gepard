@@ -1,16 +1,19 @@
 export const qk = {
-  all: ['ghlr'] as const,
+  all: ['gepard'] as const,
   viewer: () => [...qk.all, 'viewer'] as const,
   viewerRepos: () => [...qk.all, 'viewerRepos'] as const,
   projects: () => [...qk.all, 'projects'] as const,
   extensions: () => [...qk.all, 'extensions'] as const,
   extensionsDir: () => [...qk.all, 'extensionsDir'] as const,
+  themeTemplate: () => [...qk.all, 'themeTemplate'] as const,
   project: (projectId: string) => [...qk.all, 'project', projectId] as const,
   open: (p: string) => [...qk.project(p), 'open'] as const,
   commits: (p: string, search?: string, path?: string) =>
     [...qk.project(p), 'commits', search, path] as const,
+  prsAll: (p: string) => [...qk.project(p), 'prs'] as const,
   prs: (p: string, search?: string, commit?: string, path?: string) =>
-    [...qk.project(p), 'prs', search, commit, path] as const,
+    [...qk.prsAll(p), search, commit, path] as const,
+  branches: (p: string) => [...qk.project(p), 'branches'] as const,
   pr: (p: string, pr: number) => [...qk.project(p), 'pr', pr] as const,
   prCommits: (p: string, pr: number, path?: string) => [...qk.pr(p, pr), 'commits', path] as const,
   comments: (p: string, pr: number) => [...qk.pr(p, pr), 'comments'] as const,

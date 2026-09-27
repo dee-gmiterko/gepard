@@ -1,5 +1,3 @@
-// Kept out of TextInput.tsx so that file exports only components, as
-// required for React Fast Refresh.
 import { css } from 'styled-components'
 
 export const textFieldBase = css`
@@ -9,5 +7,16 @@ export const textFieldBase = css`
 
   &::placeholder {
     color: ${({ theme }) => theme.colors.fgSubtle};
+  }
+`
+
+export const fieldChrome = css`
+  background: ${({ theme }) => theme.colors.bg};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radius.sm};
+
+  &:focus-within {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.accent};
   }
 `

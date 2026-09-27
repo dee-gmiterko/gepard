@@ -1,6 +1,7 @@
 import { mkdir, rename, rm } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { run, runBuffer, type RunResult } from './exec'
+import { looksBinary } from './binary'
 import { AppError, emit } from '../ipc/registry'
 import { indexer, type FileChange } from '../lsp'
 import { nohooksDir, projectCloneTmpDir, projectRepoDir } from '../paths'
@@ -20,8 +21,26 @@ type ChangeType = ChangedFile['changeType']
 
 const EMPTY_TREE_SHA = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
 
+// `GIT_TERMINAL_PROMPT=0` makes git fail instead of prompting for credentials.
+const GIT_ENV: NodeJS.ProcessEnv = { ...process.env, GIT_TERMINAL_PROMPT: '0' }
+const GIT_TIMEOUT_MS = 2 * 60_000
+
+// Clears any credential helper from the user's own git config and routes
+// authentication through `gh` instead, so a private repo works without the
+// user having run `gh auth setup-git` separately.
+const GH_CREDENTIAL_ARGS = [
+  '-c',
+  'credential.helper=',
+  '-c',
+  'credential.helper=!gh auth git-credential'
+]
+
 async function gitRun(repoRoot: string, args: string[]): Promise<RunResult> {
-  return run('git', args, { cwd: repoRoot })
+  return run('git', [...GH_CREDENTIAL_ARGS, ...args], {
+    cwd: repoRoot,
+    env: GIT_ENV,
+    timeoutMs: GIT_TIMEOUT_MS
+  })
 }
 
 const CLONE_PHASE_BY_LABEL: Record<
@@ -35,7 +54,7 @@ const CLONE_PHASE_BY_LABEL: Record<
   'Updating files': 'checkout'
 }
 
-// Server-side phases arrive prefixed with "remote: " (GitHub).
+// git prefixes server-side progress phases with "remote: ".
 const CLONE_PROGRESS_RE =
   /^(?:remote: )?(Counting objects|Compressing objects|Receiving objects|Resolving deltas|Updating files):\s+(\d+)%/
 
@@ -48,7 +67,11 @@ export function parseCloneProgressLine(line: string): {
   return { phase: CLONE_PHASE_BY_LABEL[m[1]], percent: Number(m[2]) }
 }
 
-export async function cloneProject(projectId: string, url: string): Promise<void> {
+export function cloneProject(projectId: string, url: string): Promise<void> {
+  return enqueue(projectId, () => doCloneProject(projectId, url))
+}
+
+async function doCloneProject(projectId: string, url: string): Promise<void> {
   const repoDir = projectRepoDir(projectId)
   const tmpDir = projectCloneTmpDir(projectId)
   const nohooks = nohooksDir()
@@ -64,6 +87,7 @@ export async function cloneProject(projectId: string, url: string): Promise<void
     await run(
       'git',
       [
+        ...GH_CREDENTIAL_ARGS,
         '-c',
         `core.hooksPath=${nohooks}`,
         '-c',
@@ -80,6 +104,7 @@ export async function cloneProject(projectId: string, url: string): Promise<void
         tmpDir
       ],
       {
+        env: GIT_ENV,
         onStderrLine: (line) => {
           const progress = parseCloneProgressLine(line)
           if (progress) emit('clone.progress', { projectId, ...progress, message: line })
@@ -125,7 +150,7 @@ async function currentHeadSha(repoRoot: string): Promise<string> {
     const { stdout } = await gitRun(repoRoot, ['rev-parse', 'HEAD'])
     return stdout.trim()
   } catch {
-    return EMPTY_TREE_SHA // unborn HEAD (freshly initialised, no commits yet)
+    return EMPTY_TREE_SHA // `git rev-parse HEAD` fails before the first commit
   }
 }
 
@@ -142,8 +167,7 @@ export function workingTree(projectId: string): Promise<{ head: string; files: s
   })
 }
 
-// LSP's FileChangeType has no rename event, so a rename becomes a delete of
-// the old path plus a create of the new one.
+// LSP's FileChangeType has no rename event.
 async function changedPathsBetween(
   repoRoot: string,
   oldSha: string,
@@ -244,7 +268,7 @@ export async function checkoutTarget(
         await gitRun(repoRoot, [
           'fetch',
           'origin',
-          `+refs/pull/${target.pr}/head:refs/ghlr/pr/${target.pr}`
+          `+refs/pull/${target.pr}/head:refs/gepard/pr/${target.pr}`
         ])
       }
       if (!(await hasCommit(repoRoot, target.baseRefOid))) {
@@ -261,7 +285,10 @@ export async function checkoutTarget(
       await checkoutDetached(repoRoot, target.sha)
       result = { base: await parentOrEmptyTree(repoRoot, target.sha), head: target.sha }
     } else {
-      await gitRun(repoRoot, ['fetch', 'origin']).catch(() => undefined)
+      await gitRun(repoRoot, ['fetch', 'origin']).catch((e) => {
+        const message = e instanceof Error ? e.message : String(e)
+        log.warn('checkout', `projectId=${projectId} fetch origin failed: ${message}`)
+      })
       await checkoutDetached(repoRoot, DEFAULT_BRANCH_REF)
       const head = await currentHeadSha(repoRoot)
       result = { base: head, head }
@@ -308,13 +335,8 @@ function parseGitLog(stdout: string): Commit[] {
     })
 }
 
-// git's own pathspec glob (`:(glob)`) is a different algorithm than the
-// shared matcher (`@shared/model/paths`), so a glob target can't be handed to
-// git as a pathspec directly. Instead git's plain pathspec narrows the walk
-// to `staticPrefixOf(path)` — a superset of what the glob matches — and the
-// shared matcher makes the real per-commit decision afterwards.
 const GLOB_OVERFETCH_FACTOR = 5
-const GLOB_OVERFETCH_MAX = 2000
+const GLOB_OVERFETCH_MAX = 20000
 
 export async function listCommits(
   projectId: string,
@@ -323,38 +345,39 @@ export async function listCommits(
   const repoRoot = projectRepoDir(projectId)
   const limit = opts.limit ?? DEFAULT_LOG_LIMIT
   const glob = opts.path !== undefined && isGlob(opts.path)
-  const fetchCount = glob
-    ? Math.min(Math.max(limit * GLOB_OVERFETCH_FACTOR, limit), GLOB_OVERFETCH_MAX)
-    : limit
-  const args = [
-    'log',
-    `--pretty=format:${LOG_FORMAT}`,
-    '--date=iso-strict',
-    '-n',
-    String(fetchCount)
-  ]
-  if (opts.search) args.push('-i', `--grep=${opts.search}`)
-  // HEAD may be a detached commit (after targeting a PR/commit), not the
-  // branch, so listing from it would hide later commits.
-  args.push((await hasRef(repoRoot, DEFAULT_BRANCH_REF)) ? DEFAULT_BRANCH_REF : 'HEAD')
+  const rev = (await hasRef(repoRoot, DEFAULT_BRANCH_REF)) ? DEFAULT_BRANCH_REF : 'HEAD'
   const pathspec = opts.path ? (glob ? staticPrefixOf(opts.path) : opts.path) : ''
-  if (pathspec) args.push('--', pathspec)
-  const { stdout } = await gitRun(repoRoot, args)
-  const commits = parseGitLog(stdout)
-  if (!glob) return commits
-  const filesByOid = await filesTouchedByCommits(
-    projectId,
-    commits.map((c) => c.oid)
-  )
-  return commits
-    .filter((c) => (filesByOid.get(c.oid) ?? []).some((f) => matchesTarget(f, opts.path!)))
-    .slice(0, limit)
+
+  const runLog = async (count: number): Promise<Commit[]> => {
+    const args = ['log', `--pretty=format:${LOG_FORMAT}`, '--date=iso-strict', '-n', String(count)]
+    if (opts.search) args.push('-i', `--grep=${opts.search}`)
+    args.push(rev)
+    if (pathspec) args.push('--', pathspec)
+    const { stdout } = await gitRun(repoRoot, args)
+    return parseGitLog(stdout)
+  }
+
+  if (!glob) return runLog(limit)
+
+  let fetchCount = Math.min(Math.max(limit * GLOB_OVERFETCH_FACTOR, limit), GLOB_OVERFETCH_MAX)
+  for (;;) {
+    const commits = await runLog(fetchCount)
+    const filesByOid = await filesTouchedByCommits(
+      projectId,
+      commits.map((c) => c.oid)
+    )
+    const matched = commits.filter((c) =>
+      (filesByOid.get(c.oid) ?? []).some((f) => matchesTarget(f, opts.path!))
+    )
+    const historyExhausted = commits.length < fetchCount
+    if (matched.length >= limit || historyExhausted || fetchCount >= GLOB_OVERFETCH_MAX) {
+      return matched.slice(0, limit)
+    }
+    fetchCount = Math.min(fetchCount * 2, GLOB_OVERFETCH_MAX)
+  }
 }
 
-/** `git diff-tree --stdin -r --name-only --format=%H`: for each given oid (in
- * order), the commit hash appears on its own line followed by every path its
- * diff against its parent touched. A root commit (no parent) never matches
- * `diff-tree` and is simply absent from the result. */
+// git C-quotes paths with unusual characters unless `-z` is given.
 export function parseDiffTreeStdinFiles(
   stdout: string,
   oids: readonly string[]
@@ -362,20 +385,23 @@ export function parseDiffTreeStdinFiles(
   const known = new Set(oids)
   const map = new Map<string, string[]>()
   let current: string[] | null = null
-  for (const line of stdout.split('\n')) {
-    if (line === '') continue
-    if (known.has(line)) {
+  const tokens = stdout.split('\0')
+  if (tokens.length > 0 && tokens[tokens.length - 1] === '') tokens.pop()
+  for (const raw of tokens) {
+    // `--format=%H` output puts a blank line before each commit's path list.
+    const token = raw.replace(/^\n/, '')
+    if (token === '') continue
+    if (known.has(token)) {
       current = []
-      map.set(line, current)
+      map.set(token, current)
       continue
     }
-    current?.push(line)
+    current?.push(token)
   }
   return map
 }
 
-// Once fetched, objects stay in git's object database regardless of later
-// checkouts, so the diff-tree read below needs no queueing of its own.
+// Fetched objects stay in git's object database regardless of what is checked out.
 export function ensurePrCommitsFetched(
   projectId: string,
   pr: number,
@@ -386,14 +412,12 @@ export function ensurePrCommitsFetched(
     const repoRoot = projectRepoDir(projectId)
     const newest = oids[oids.length - 1]
     if (!(await hasCommit(repoRoot, newest))) {
-      await gitRun(repoRoot, ['fetch', 'origin', `+refs/pull/${pr}/head:refs/ghlr/pr/${pr}`])
+      await gitRun(repoRoot, ['fetch', 'origin', `+refs/pull/${pr}/head:refs/gepard/pr/${pr}`])
     }
   })
 }
 
-/** Every changed file of each of `oids` (one batched `diff-tree`, not one
- * spawn per commit). Requires every oid (and its parent) to already be
- * present locally; git diff-tree doesn't fetch missing objects. */
+// git diff-tree fails on a missing object instead of fetching it.
 export async function filesTouchedByCommits(
   projectId: string,
   oids: string[]
@@ -402,17 +426,17 @@ export async function filesTouchedByCommits(
   const repoRoot = projectRepoDir(projectId)
   const { stdout } = await run(
     'git',
-    ['diff-tree', '--stdin', '-r', '--name-only', '--format=%H'],
+    ['diff-tree', '--stdin', '-r', '--name-only', '-z', '--format=%H'],
     {
       cwd: repoRoot,
+      env: GIT_ENV,
+      timeoutMs: GIT_TIMEOUT_MS,
       stdin: oids.join('\n') + '\n'
     }
   )
   return parseDiffTreeStdinFiles(stdout, oids)
 }
 
-/** Which of `oids` (a PR's commits) touch the path target — folder prefix or
- * glob alike, via the shared matcher (`@shared/model/paths`). */
 export async function commitsTouchingPath(
   projectId: string,
   oids: string[],
@@ -439,8 +463,8 @@ interface NameStatusEntry {
   previousPath: string | null
 }
 
-/** `git diff --name-status -z`: plain entries are `<letter>\0<path>\0`;
- * renames/copies are `<letter+score>\0<oldPath>\0<newPath>\0`. */
+// `git diff --name-status -z` emits `<letter>\0<path>\0`, or
+// `<letter+score>\0<oldPath>\0<newPath>\0` for renames and copies.
 export function parseNameStatus(tokens: string[]): NameStatusEntry[] {
   const out: NameStatusEntry[] = []
   let i = 0
@@ -460,16 +484,15 @@ export function parseNameStatus(tokens: string[]): NameStatusEntry[] {
 }
 
 interface NumstatEntry {
-  additions: number | null // null = binary ("-" from git)
+  additions: number | null // git numstat prints "-" for binary files
   deletions: number | null
   path: string
 }
 
 const NUMSTAT_LINE_RE = /^(-|\d+)\t(-|\d+)\t(.*)$/
 
-/** `git diff --numstat -z`: plain entries are one token `<add>\t<del>\t<path>`;
- * renames/copies are `<add>\t<del>\t\0<oldPath>\0<newPath>\0` (empty path in
- * the first token, then two more tokens). */
+// `git diff --numstat -z` emits `<add>\t<del>\t<path>`, or
+// `<add>\t<del>\t\0<oldPath>\0<newPath>\0` for renames and copies.
 export function parseNumstat(tokens: string[]): NumstatEntry[] {
   const out: NumstatEntry[] = []
   let i = 0
@@ -528,13 +551,16 @@ export async function changedFiles(
     previousPath: s.previousPath,
     changeType: changeTypeFromLetter(s.status),
     additions: nums[i].additions ?? 0,
-    deletions: nums[i].deletions ?? 0,
-    isBinary: nums[i].additions === null
+    deletions: nums[i].deletions ?? 0
   }))
 }
 
 async function readBlobBuffer(repoRoot: string, ref: string): Promise<Buffer> {
-  const { stdout } = await runBuffer('git', ['cat-file', 'blob', ref], { cwd: repoRoot })
+  const { stdout } = await runBuffer('git', ['cat-file', 'blob', ref], {
+    cwd: repoRoot,
+    env: GIT_ENV,
+    timeoutMs: GIT_TIMEOUT_MS
+  })
   return stdout
 }
 
@@ -563,15 +589,6 @@ export function mimeForPath(path: string): string | null {
   const dot = path.lastIndexOf('.')
   if (dot < 0) return null
   return IMAGE_MIME_BY_EXT[path.slice(dot).toLowerCase()] ?? null
-}
-
-/** git's own binary heuristic: a NUL byte in the first 8000 bytes. */
-export function looksBinary(buf: Buffer): boolean {
-  const len = Math.min(buf.length, 8000)
-  for (let i = 0; i < len; i++) {
-    if (buf[i] === 0) return true
-  }
-  return false
 }
 
 export async function fileContentAt(
@@ -620,7 +637,7 @@ export function parseUnifiedDiff(diffText: string): DiffRow[] {
       continue
     }
     if (!inHunk) continue
-    if (line.startsWith('\\')) continue // "\ No newline at end of file"
+    if (line.startsWith('\\')) continue // git's "\ No newline at end of file" marker
 
     const marker = line[0]
     const text = line.slice(1)
@@ -635,23 +652,55 @@ export function parseUnifiedDiff(diffText: string): DiffRow[] {
       oldLine++
       newLine++
     }
-    // any other marker inside a hunk is not expected from `git diff -U3`
   }
   return rows
 }
 
-// A pathspec-scoped `git diff --name-status` loses rename detection (the
-// pathspec hides the old file from the comparison), so this always runs the
-// whole-tree diff and picks the matching entry.
+// A pathspec-scoped `git diff --name-status` loses rename detection because
+// the pathspec hides the old path from the comparison, so callers need the
+// whole-tree status; cache it per (repo, base, head) so opening many files in
+// a row does not re-run the same whole-tree diff for each one.
+let statusCache: { key: string; entries: Promise<NameStatusEntry[]> } | null = null
+
+function statusEntriesFor(
+  repoRoot: string,
+  base: string,
+  head: string
+): Promise<NameStatusEntry[]> {
+  const key = `${repoRoot}\0${base}\0${head}`
+  if (statusCache?.key === key) return statusCache.entries
+  const entries = gitRun(repoRoot, ['diff', '--name-status', '-M', '-C', '-z', base, head])
+    .then(({ stdout }) => parseNameStatus(parseZTokens(stdout)))
+    .catch((e) => {
+      if (statusCache?.key === key) statusCache = null
+      throw e
+    })
+  statusCache = { key, entries }
+  return entries
+}
+
 async function statusEntryFor(
   repoRoot: string,
   base: string,
   head: string,
   path: string
 ): Promise<NameStatusEntry | null> {
-  const { stdout } = await gitRun(repoRoot, ['diff', '--name-status', '-M', '-C', '-z', base, head])
-  const entries = parseNameStatus(parseZTokens(stdout))
+  const entries = await statusEntriesFor(repoRoot, base, head)
   return entries.find((e) => e.path === path) ?? null
+}
+
+// A copy's source can also have its own independent diff between base and
+// head; scoping the pathspec to both paths then makes git print two
+// concatenated "diff --git" sections, and parseUnifiedDiff would otherwise
+// misread the second section's `--- +++` header as delete/add rows because it
+// never resets after the first section's last hunk.
+export function selectDiffSection(diffText: string, oldPath: string, newPath: string): string {
+  const marker = `diff --git a/${oldPath} b/${newPath}`
+  const idx = diffText.indexOf(marker)
+  if (idx === -1) return diffText
+  const rest = diffText.slice(idx + marker.length)
+  const nextIdx = rest.indexOf('\ndiff --git ')
+  return nextIdx === -1 ? rest : rest.slice(0, nextIdx)
 }
 
 export async function fileDiff(
@@ -690,11 +739,55 @@ export async function fileDiff(
   if (previousPath) diffArgs.push('-M', '-C', base, head, '--', oldPath, path)
   else diffArgs.push(base, head, '--', path)
   const { stdout } = await gitRun(repoRoot, diffArgs)
-  return { kind: 'text', path, previousPath, rows: parseUnifiedDiff(stdout) }
+  const section = previousPath ? selectDiffSection(stdout, oldPath, path) : stdout
+  return { kind: 'text', path, previousPath, rows: parseUnifiedDiff(section) }
 }
 
 export async function listTree(projectId: string, sha: string): Promise<string[]> {
   const repoRoot = projectRepoDir(projectId)
   const { stdout } = await gitRun(repoRoot, ['ls-tree', '-r', '--name-only', '-z', sha])
   return parseZTokens(stdout)
+}
+
+function stripOriginPrefix(ref: string): string {
+  return ref.startsWith('origin/') ? ref.slice('origin/'.length) : ref
+}
+
+// `git for-each-ref --format=%(refname:short)` prints remote heads prefixed
+// `origin/`, including the symbolic `origin/HEAD`.
+export function parseBranchNames(stdout: string): string[] {
+  const names = new Set<string>()
+  for (const line of stdout.split('\n')) {
+    const ref = line.trim()
+    if (!ref || ref === 'origin/HEAD') continue
+    names.add(stripOriginPrefix(ref))
+  }
+  return [...names].sort((a, b) => a.localeCompare(b))
+}
+
+// `refs/remotes/origin/HEAD` records the remote's default branch and is
+// absent when the remote reported no symref.
+async function resolveDefaultBranch(repoRoot: string): Promise<string | null> {
+  try {
+    const { stdout } = await gitRun(repoRoot, ['symbolic-ref', '--short', DEFAULT_BRANCH_REF])
+    return stripOriginPrefix(stdout.trim())
+  } catch {
+    return null
+  }
+}
+
+export interface BranchesInfo {
+  branches: string[]
+  defaultBranch: string | null
+}
+
+// A GitHub pull request can use only branches that exist on the remote.
+export async function listBranches(projectId: string): Promise<BranchesInfo> {
+  const repoRoot = projectRepoDir(projectId)
+  await gitRun(repoRoot, ['fetch', 'origin', '--prune'])
+  const [refsOut, defaultBranch] = await Promise.all([
+    gitRun(repoRoot, ['for-each-ref', '--format=%(refname:short)', 'refs/remotes/origin']),
+    resolveDefaultBranch(repoRoot)
+  ])
+  return { branches: parseBranchNames(refsOut.stdout), defaultBranch }
 }

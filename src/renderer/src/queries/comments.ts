@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { invoke } from '../ipc/client'
 import { qk } from './keys'
-import type { CommentDraft } from '@shared/ipc/schemas/comment'
+import type { CommentDraft, LocalViewedState } from '@shared/ipc/schemas/comment'
 
 export function useComments(projectId: string, pr: number) {
   return useQuery({
@@ -43,12 +43,44 @@ export function useDeleteComment(projectId: string, pr: number) {
 
 export function useSetViewed(projectId: string, pr: number) {
   const qc = useQueryClient()
+  const key = qk.viewed(projectId, pr)
   return useMutation({
-    mutationKey: [...qk.viewed(projectId, pr), 'set'] as const,
+    mutationKey: [...key, 'set'] as const,
     mutationFn: (input: { paths: string[]; viewed: boolean }) =>
       invoke('viewed.set', { projectId, pr, paths: input.paths, viewed: input.viewed }),
+    onMutate: async (input) => {
+      await qc.cancelQueries({ queryKey: key })
+      const previous = qc.getQueryData<LocalViewedState[]>(key)
+      qc.setQueryData<LocalViewedState[]>(key, (prev) => {
+        const paths = new Set(input.paths)
+        const now = new Date().toISOString()
+        const next = (prev ?? []).map((v) =>
+          paths.has(v.path) ? { ...v, viewed: input.viewed, localUpdatedAt: now } : v
+        )
+        for (const path of input.paths) {
+          if (!next.some((v) => v.path === path)) {
+            next.push({
+              prId: '',
+              path,
+              viewed: input.viewed,
+              remote: null,
+              localUpdatedAt: now,
+              remoteFetchedAt: null
+            })
+          }
+        }
+        return next
+      })
+      return { previous }
+    },
+    onError: (_err, _input, context) => {
+      if (context) qc.setQueryData(key, context.previous)
+    },
+    onSuccess: (data) => {
+      qc.setQueryData(key, data)
+    },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: qk.viewed(projectId, pr) })
+      qc.invalidateQueries({ queryKey: key })
       qc.invalidateQueries({ queryKey: qk.pendingCount(projectId, pr) })
     }
   })

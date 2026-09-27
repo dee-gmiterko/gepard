@@ -3,9 +3,7 @@ import { invoke, isCancelledError } from '../ipc/client'
 import { qk } from './keys'
 import type { SearchQuery } from '@shared/ipc/schemas/search'
 
-/** A superseded request resolves to a `CANCELLED` error rather than a real
- * failure. React Query already leaves `data` at its last successful value on
- * a failed fetch, so clearing `error` is enough to hide it. */
+// React Query keeps `data` at its last successful value when a fetch fails.
 function ignoreCancelled<TData, TError>(
   result: UseQueryResult<TData, TError>
 ): UseQueryResult<TData, TError> {

@@ -4,6 +4,7 @@ import eslintConfigPrettier from '@electron-toolkit/eslint-config-prettier'
 import eslintPluginReact from 'eslint-plugin-react'
 import eslintPluginReactHooks from 'eslint-plugin-react-hooks'
 import eslintPluginReactRefresh from 'eslint-plugin-react-refresh'
+import eslintPluginFormatjs from 'eslint-plugin-formatjs'
 
 export default defineConfig(
   { ignores: ['**/node_modules', '**/dist', '**/out'] },
@@ -29,10 +30,49 @@ export default defineConfig(
     }
   },
   {
-    // Query hooks return TanStack result types inferred from the IPC
-    // contract; spelling them out would duplicate the contract.
     files: ['src/renderer/src/queries/**/*.ts'],
     rules: { '@typescript-eslint/explicit-function-return-type': 'off' }
+  },
+  {
+    files: ['**/*.mjs'],
+    rules: { '@typescript-eslint/explicit-function-return-type': 'off' }
+  },
+  {
+    files: ['src/renderer/src/**/*.{ts,tsx}'],
+    plugins: { formatjs: eslintPluginFormatjs },
+    rules: {
+      'formatjs/enforce-default-message': 'error',
+      'formatjs/enforce-id': 'error',
+      'formatjs/enforce-placeholders': 'error',
+      'formatjs/no-complex-selectors': 'error',
+      'formatjs/no-emoji': 'error',
+      'formatjs/no-invalid-icu': 'error',
+      'formatjs/no-literal-string-in-jsx': [
+        'error',
+        {
+          props: {
+            include: [
+              ['*', 'label'],
+              ['*', 'placeholder'],
+              ['*', 'title'],
+              ['*', 'alt'],
+              ['*', 'aria-label'],
+              ['*', 'aria-description'],
+              ['*', 'aria-details'],
+              ['*', 'aria-errormessage'],
+              ['*', 'aria-placeholder'],
+              ['*', 'aria-roledescription'],
+              ['*', 'aria-valuetext']
+            ]
+          }
+        }
+      ],
+      'formatjs/no-literal-string-in-object': ['error', { include: ['message', 'label'] }],
+      'formatjs/no-multiple-plurals': 'error',
+      'formatjs/no-multiple-whitespaces': 'error',
+      'formatjs/no-offset': 'error',
+      'formatjs/no-useless-message': 'error'
+    }
   },
   eslintConfigPrettier
 )

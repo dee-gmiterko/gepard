@@ -20,13 +20,13 @@ export function useExtensionsDir() {
   return useQuery({ queryKey: qk.extensionsDir(), queryFn: () => invoke('extensions.dir') })
 }
 
-/** A cancelled native file-picker dialog does not throw or reject; it
- * resolves with no file chosen, so the mutation just leaves the list
- * unchanged. */
+// A cancelled native file-picker dialog resolves with no file chosen instead
+// of rejecting.
 export function useInstallExtension() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: () => invoke('extensions.install'),
+    mutationFn: (input: { dialogTitle: string; filterName: string }) =>
+      invoke('extensions.install', input),
     onSuccess: (extensions) => qc.setQueryData(qk.extensions(), extensions),
     onSettled: () => qc.invalidateQueries({ queryKey: qk.extensions() })
   })

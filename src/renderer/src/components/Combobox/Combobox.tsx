@@ -1,11 +1,31 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import styled from 'styled-components'
 import { X } from 'react-feather'
+import { useIntl } from 'react-intl'
+import { defineMessages } from '../../i18n/defineMessages'
+import { useOutsideClick } from '../../hooks/useOutsideClick'
 import { IconButton } from '../IconButton'
-import { Menu, MenuItem, MenuMessage } from '../Menu'
+import { Menu, MenuAnchor, MenuItem, MenuMessage } from '../Menu'
 import { HighlightedText } from '../HighlightedText'
 import { textFieldBase } from '../TextInput'
 import { fuzzyFilter, fuzzyRanges } from './fuzzy'
+
+const messages = defineMessages({
+  loading: {
+    id: 'components.combobox.loading',
+    defaultMessage: 'Loading…'
+  },
+  noMatches: {
+    id: 'components.combobox.noMatches',
+    defaultMessage: 'No matches'
+  },
+  clear: {
+    id: 'components.combobox.clear',
+    defaultMessage: 'Clear'
+  }
+})
+
+export const NO_HIGHLIGHT = -1
 
 export interface ComboboxProps<T> {
   items: readonly T[]
@@ -15,15 +35,21 @@ export interface ComboboxProps<T> {
   getLabel: (item: T) => string
   getFilterText?: (item: T) => string
   onQueryChange?: (query: string) => void
+  unresolvedLabel?: string
   placeholder?: string
   disabled?: boolean
   loading?: boolean
+  loadingLabel?: string
   emptyLabel?: string
   clearLabel?: string
+  freeText?: {
+    text: string
+    onTextChange: (text: string) => void
+    searchText?: string
+  }
 }
 
-const Container = styled.div`
-  position: relative;
+const Container = styled(MenuAnchor)`
   width: 100%;
 `
 
@@ -63,38 +89,48 @@ export function Combobox<T>({
   getLabel,
   getFilterText = getLabel,
   onQueryChange,
+  unresolvedLabel,
   placeholder,
   disabled,
   loading,
-  emptyLabel = 'No matches',
-  clearLabel = 'Clear'
+  loadingLabel,
+  emptyLabel,
+  clearLabel,
+  freeText
 }: ComboboxProps<T>): React.JSX.Element {
+  const intl = useIntl()
+  const resolvedLoadingLabel = loadingLabel ?? intl.formatMessage(messages.loading)
+  const resolvedEmptyLabel = emptyLabel ?? intl.formatMessage(messages.noMatches)
+  const resolvedClearLabel = clearLabel ?? intl.formatMessage(messages.clear)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const [highlight, setHighlight] = useState(0)
+  const [highlight, setHighlight] = useState(NO_HIGHLIGHT)
   const containerRef = useRef<HTMLDivElement>(null)
+  const listboxId = useId()
+  const optionId = (i: number): string => `${listboxId}-option-${i}`
+
+  const searchText = freeText ? (freeText.searchText ?? freeText.text) : query
 
   const filtered = useMemo(
-    () => fuzzyFilter(items, query, getFilterText),
-    [items, query, getFilterText]
+    () => fuzzyFilter(items, searchText, getFilterText),
+    [items, searchText, getFilterText]
   )
 
   const active = Math.min(highlight, Math.max(filtered.length - 1, 0))
 
-  useEffect(() => {
-    function onDocMouseDown(e: MouseEvent): void {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false)
-        setQuery('')
-      }
-    }
-    document.addEventListener('mousedown', onDocMouseDown)
-    return () => document.removeEventListener('mousedown', onDocMouseDown)
-  }, [])
+  function resetQuery(): void {
+    setQuery('')
+    onQueryChange?.('')
+  }
+
+  useOutsideClick(containerRef, () => {
+    setOpen(false)
+    resetQuery()
+  })
 
   function selectItem(item: T | null): void {
     onSelect(item)
-    setQuery('')
+    resetQuery()
     setOpen(false)
   }
 
@@ -105,8 +141,9 @@ export function Combobox<T>({
       setHighlight(Math.max(0, Math.min(active + 1, filtered.length - 1)))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      setHighlight(Math.max(active - 1, 0))
+      setHighlight(Math.max(active - 1, NO_HIGHLIGHT))
     } else if (e.key === 'Enter') {
+      if (active === NO_HIGHLIGHT) return
       const item = filtered[active]
       if (item) {
         e.preventDefault()
@@ -114,46 +151,78 @@ export function Combobox<T>({
       }
     } else if (e.key === 'Escape') {
       setOpen(false)
-      setQuery('')
+      resetQuery()
     }
   }
 
-  const displayValue = open ? query : value !== null ? getLabel(value) : query
+  const displayValue = freeText
+    ? freeText.text
+    : open
+      ? query
+      : value !== null
+        ? getLabel(value)
+        : (unresolvedLabel ?? query)
 
   return (
     <Container ref={containerRef}>
       <InputRow>
         <Input
+          role="combobox"
+          aria-expanded={open && !disabled}
+          aria-autocomplete="list"
+          aria-controls={listboxId}
+          aria-activedescendant={active >= 0 ? optionId(active) : undefined}
           value={displayValue}
           placeholder={placeholder}
           disabled={disabled}
           onFocus={() => {
             setOpen(true)
-            setHighlight(0)
+            setHighlight(NO_HIGHLIGHT)
+          }}
+          onBlur={() => {
+            setOpen(false)
+            resetQuery()
           }}
           onChange={(e) => {
             const next = e.target.value
-            setQuery(next)
-            setHighlight(0)
+            if (freeText) freeText.onTextChange(next)
+            else setQuery(next)
+            setHighlight(NO_HIGHLIGHT)
             setOpen(true)
             onQueryChange?.(next)
           }}
           onKeyDown={handleKeyDown}
         />
-        {value !== null && !disabled && (
-          <IconButton icon={X} label={clearLabel} size={12} onClick={() => selectItem(null)} />
+        {!freeText && (value !== null || unresolvedLabel !== undefined) && !disabled && (
+          <IconButton
+            icon={X}
+            label={resolvedClearLabel}
+            size={12}
+            onClick={() => selectItem(null)}
+          />
         )}
       </InputRow>
       {open && !disabled && (
-        <Menu onMouseDown={(e) => e.preventDefault()}>
-          {loading && <MenuMessage>Loading…</MenuMessage>}
-          {!loading && filtered.length === 0 && <MenuMessage>{emptyLabel}</MenuMessage>}
+        <Menu id={listboxId} role="listbox" onMouseDown={(e) => e.preventDefault()}>
+          {loading && <MenuMessage>{resolvedLoadingLabel}</MenuMessage>}
+          {!loading && filtered.length === 0 && <MenuMessage>{resolvedEmptyLabel}</MenuMessage>}
           {!loading &&
             filtered.map((item, i) => (
-              <MenuItem key={getKey(item)} $active={i === active} onClick={() => selectItem(item)}>
+              <MenuItem
+                key={getKey(item)}
+                id={optionId(i)}
+                role="option"
+                aria-selected={i === active}
+                $active={i === active}
+                onClick={() => selectItem(item)}
+                onMouseEnter={() => setHighlight(i)}
+                ref={(el) => {
+                  if (i === active) el?.scrollIntoView({ block: 'nearest' })
+                }}
+              >
                 <HighlightedText
                   text={getLabel(item)}
-                  ranges={fuzzyRanges(query, getLabel(item))}
+                  ranges={fuzzyRanges(searchText, getLabel(item))}
                 />
               </MenuItem>
             ))}

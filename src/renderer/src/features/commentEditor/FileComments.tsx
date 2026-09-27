@@ -1,29 +1,48 @@
 import { useMemo, useState } from 'react'
 import styled from 'styled-components'
 import { Plus } from 'react-feather'
+import { FormattedMessage } from 'react-intl'
+import { defineMessages } from '../../i18n/defineMessages'
 import type { ReviewThread } from '@shared/ipc/schemas/comment'
 import { Accordion } from '../../components/Accordion'
-import { Badge } from '../../components/Badge'
 import { Button } from '../../components/Button'
 import { Caption } from '../../components/Caption'
 import { Ellipsis } from '../../components/Ellipsis'
 import { Stack } from '../../components/Layout'
+import { LineTag } from '../../components/LineTag'
 import { Message } from '../../components/Message'
+import { ResolvedBadge } from '../../components/StatusBadge'
 import { useComments } from '../../queries/comments'
 import { ThreadWidget } from './ThreadWidget'
+
+const messages = defineMessages({
+  fileTag: {
+    id: 'commentEditor.fileComments.fileTag',
+    defaultMessage: 'file'
+  },
+  lineTag: {
+    id: 'commentEditor.fileComments.lineTag',
+    defaultMessage: 'L{line}'
+  },
+  replies: {
+    id: 'commentEditor.fileComments.replies',
+    defaultMessage: '{count, plural, one {# reply} other {# replies}}'
+  },
+  empty: {
+    id: 'commentEditor.fileComments.empty',
+    defaultMessage: 'No comments on this file.'
+  },
+  newFileComment: {
+    id: 'commentEditor.fileComments.newFileComment',
+    defaultMessage: 'New file comment'
+  }
+})
 
 export interface FileCommentsProps {
   projectId: string
   pr: number
   path: string
 }
-
-const LineTag = styled.span`
-  flex-shrink: 0;
-  font-family: ${({ theme }) => theme.font.mono};
-  font-size: ${({ theme }) => theme.font.size.xs};
-  color: ${({ theme }) => theme.colors.fgMuted};
-`
 
 const Snippet = styled(Ellipsis)`
   color: ${({ theme }) => theme.colors.fg};
@@ -34,14 +53,20 @@ function ThreadSummary({ thread }: { thread: ReviewThread }): React.JSX.Element 
   const replies = thread.comments.length - 1
   return (
     <>
-      <LineTag>{thread.anchor.line != null ? `L${thread.anchor.line}` : 'file'}</LineTag>
+      <LineTag>
+        {thread.anchor.line != null ? (
+          <FormattedMessage {...messages.lineTag} values={{ line: thread.anchor.line }} />
+        ) : (
+          <FormattedMessage {...messages.fileTag} />
+        )}
+      </LineTag>
       <Snippet>{root?.body.slice(0, 80) ?? ''}</Snippet>
       {replies > 0 && (
         <Caption>
-          {replies} {replies === 1 ? 'reply' : 'replies'}
+          <FormattedMessage {...messages.replies} values={{ count: replies }} />
         </Caption>
       )}
-      {thread.isResolved && <Badge $tone="success">resolved</Badge>}
+      {thread.isResolved && <ResolvedBadge />}
     </>
   )
 }
@@ -66,7 +91,9 @@ export function FileComments({ projectId, pr, path }: FileCommentsProps): React.
   return (
     <Stack>
       {fileThreads.length === 0 && !addingNew && (
-        <Message layout="inline">No comments on this file.</Message>
+        <Message layout="inline">
+          <FormattedMessage {...messages.empty} />
+        </Message>
       )}
 
       {fileThreads.map((thread) => (
@@ -76,12 +103,7 @@ export function FileComments({ projectId, pr, path }: FileCommentsProps): React.
           onToggle={() => setOpenId(openId === thread.id ? null : thread.id)}
           title={<ThreadSummary thread={thread} />}
         >
-          <ThreadWidget
-            projectId={projectId}
-            pr={pr}
-            thread={thread}
-            onClose={() => setOpenId(null)}
-          />
+          <ThreadWidget projectId={projectId} pr={pr} thread={thread} />
         </Accordion>
       ))}
 
@@ -102,7 +124,7 @@ export function FileComments({ projectId, pr, path }: FileCommentsProps): React.
       ) : (
         <div>
           <Button onClick={() => setAddingNew(true)}>
-            <Plus size={14} /> New file comment
+            <Plus size={14} /> <FormattedMessage {...messages.newFileComment} />
           </Button>
         </div>
       )}

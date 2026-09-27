@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { invoke } from '../ipc/client'
 import { qk } from './keys'
-import type { ChannelOutput } from '@shared/ipc/contract'
+import type { ChannelInput, ChannelOutput } from '@shared/ipc/contract'
 import type { TargetRef } from '@shared/ipc/schemas/pr'
 
 export function usePrList(projectId: string, search?: string, commit?: string, path?: string) {
@@ -29,6 +29,23 @@ export function useCommits(
     queryKey: qk.commits(projectId, opts.search, opts.path),
     queryFn: () => invoke('commits.list', { projectId, ...opts }),
     enabled: enabled && Boolean(projectId)
+  })
+}
+
+export function useBranches(projectId: string) {
+  return useQuery({
+    queryKey: qk.branches(projectId),
+    queryFn: () => invoke('pr.branches', { projectId }),
+    enabled: Boolean(projectId)
+  })
+}
+
+export function useCreatePr(projectId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: Omit<ChannelInput<'pr.create'>, 'projectId'>) =>
+      invoke('pr.create', { projectId, ...input }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.prsAll(projectId) })
   })
 }
 

@@ -4,7 +4,7 @@ import * as git from '../../services/git'
 
 export const prsHandlers: Pick<
   HandlerMap,
-  'pr.list' | 'pr.commits' | 'pr.checkout' | 'commits.list'
+  'pr.list' | 'pr.commits' | 'pr.checkout' | 'pr.branches' | 'pr.create' | 'commits.list'
 > = {
   'pr.list': async ({ projectId, search, commit, path }) => {
     const { owner, repo } = await gh.repoRefFor(projectId)
@@ -24,12 +24,18 @@ export const prsHandlers: Pick<
   'pr.checkout': async ({ projectId, target }) => {
     if (target.kind === 'pr') {
       const { owner, repo } = await gh.repoRefFor(projectId)
-      // A PR's headRefOid changes each time the author pushes, so it's
-      // fetched fresh here rather than reused.
+      // A PR's headRefOid changes each time the author pushes.
       const { headRefOid, baseRefOid } = await gh.viewPrHeadBase(owner, repo, target.pr)
       return git.checkoutTarget(projectId, { kind: 'pr', pr: target.pr, headRefOid, baseRefOid })
     }
     return git.checkoutTarget(projectId, target)
+  },
+
+  'pr.branches': ({ projectId }) => git.listBranches(projectId),
+
+  'pr.create': async ({ projectId, base, head, title, body }) => {
+    const { owner, repo } = await gh.repoRefFor(projectId)
+    return gh.createPr(owner, repo, { base, head, title, body })
   },
 
   'commits.list': ({ projectId, search, path, limit }) =>

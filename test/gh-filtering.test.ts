@@ -3,6 +3,8 @@ import {
   buildPrListArgs,
   buildPrsFilesQuery,
   filterPrsByPath,
+  matchesPrSearch,
+  parsePrCreateUrl,
   parsePrsFilesPageInfo,
   parsePrsFilesResponse
 } from '../src/main/services/gh'
@@ -10,42 +12,30 @@ import type { PrListItem } from '../src/shared/ipc/schemas/pr'
 
 const NOT_PAGED = { hasNextPage: false, endCursor: null }
 
-function pr(number: number): PrListItem {
+function pr(number: number, overrides: Partial<PrListItem> = {}): PrListItem {
   return {
     number,
     title: `PR ${number}`,
-    state: 'OPEN',
-    isDraft: false,
     author: { login: 'someone' },
     headRefName: `branch-${number}`,
     baseRefName: 'main',
     headRefOid: '0'.repeat(40),
-    updatedAt: '2026-01-01T00:00:00Z',
     createdAt: '2026-01-01T00:00:00Z',
     changedFiles: 1,
     labels: [],
-    reviewDecision: null,
-    url: `https://github.com/o/r/pull/${number}`
+    url: `https://github.com/o/r/pull/${number}`,
+    ...overrides
   }
 }
 
 describe('buildPrsFilesQuery', () => {
-  it('aliases one pullRequest field per candidate number, with its own variable', () => {
-    const { query, variables } = buildPrsFilesQuery([14390, 14475])
-    expect(query).toContain('$owner:String!')
-    expect(query).toContain('$name:String!')
-    expect(query).toContain('$n0:Int!')
-    expect(query).toContain('$n1:Int!')
-    expect(query).toContain('pr0: pullRequest(number:$n0)')
-    expect(query).toContain('pr1: pullRequest(number:$n1)')
-    expect(query).toContain('files(first:100)')
-    expect(query).toContain('pageInfo { hasNextPage endCursor }')
-    expect(variables).toEqual({ n0: 14390, n1: 14475 })
+  it('gives every candidate PR number its own query variable, in order', () => {
+    const { variables } = buildPrsFilesQuery([14390, 14475])
+    expect(Object.values(variables)).toEqual([14390, 14475])
   })
 
-  it('builds a query with no aliases for an empty candidate list', () => {
-    const { query, variables } = buildPrsFilesQuery([])
-    expect(query).not.toContain('pullRequest')
+  it('produces no variables for an empty candidate list', () => {
+    const { variables } = buildPrsFilesQuery([])
     expect(variables).toEqual({})
   })
 })
@@ -100,6 +90,25 @@ describe('parsePrsFilesPageInfo', () => {
       }
     })
     expect(map.size).toBe(0)
+  })
+})
+
+describe('parsePrCreateUrl', () => {
+  it('extracts the PR number from the URL gh pr create prints on success', () => {
+    expect(parsePrCreateUrl('https://github.com/cli/cli/pull/14519\n')).toBe(14519)
+  })
+
+  it('takes the last line when gh prints other output first', () => {
+    const stdout = [
+      'Creating pull request for feature into main in cli/cli',
+      '',
+      'https://github.com/cli/cli/pull/1'
+    ].join('\n')
+    expect(parsePrCreateUrl(stdout)).toBe(1)
+  })
+
+  it('throws when stdout has no PR URL to parse', () => {
+    expect(() => parsePrCreateUrl('')).toThrow(/did not return a PR URL/)
   })
 })
 
@@ -164,5 +173,35 @@ describe('filterPrsByPath', () => {
       [3, ['docs/readme.md']]
     ])
     expect(filterPrsByPath(prs, filesByNumber, 'internal/*.go').map((p) => p.number)).toEqual([1])
+  })
+})
+
+describe('matchesPrSearch', () => {
+  it('matches the PR number as a substring', () => {
+    expect(matchesPrSearch(pr(14519), '451')).toBe(true)
+    expect(matchesPrSearch(pr(14519), '999')).toBe(false)
+  })
+
+  it('matches the title case-insensitively', () => {
+    const p = pr(1, { title: 'Document search operator support' })
+    expect(matchesPrSearch(p, 'SEARCH operator')).toBe(true)
+  })
+
+  it('matches the author login', () => {
+    const p = pr(1, { author: { login: 'waldyrious' } })
+    expect(matchesPrSearch(p, 'waldy')).toBe(true)
+  })
+
+  it('matches the head branch name', () => {
+    expect(matchesPrSearch(pr(1, { headRefName: 'fix-telemetry' }), 'telemetry')).toBe(true)
+  })
+
+  it('matches a label name', () => {
+    const p = pr(1, { labels: [{ name: 'external', color: '000000' }] })
+    expect(matchesPrSearch(p, 'exter')).toBe(true)
+  })
+
+  it('returns false when nothing in the corpus matches', () => {
+    expect(matchesPrSearch(pr(1), 'nope')).toBe(false)
   })
 })

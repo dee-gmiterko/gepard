@@ -1,9 +1,11 @@
 import styled from 'styled-components'
 import { useState } from 'react'
+import { FormattedMessage, useIntl } from 'react-intl'
+import { defineMessages } from '../../i18n/defineMessages'
 import { Accordion } from '../../components/Accordion'
 import { Checkbox } from '../../components/Checkbox'
 import { Inline, Stack } from '../../components/Layout'
-import { PathLabel } from '../../components/PathLabel'
+import { PathAndLine } from '../../components/PathAndLine'
 import { Message } from '../../components/Message'
 import { ScopeToggle, type SearchScope } from '../../components/ScopeToggle'
 import { useDefinition } from '../../queries/search'
@@ -14,6 +16,29 @@ import type { LineSymbolsResult } from '@shared/ipc/schemas/index'
 import type { RefAnchor } from './anchorLine'
 
 type LineSymbol = LineSymbolsResult['symbols'][number]
+
+const messages = defineMessages({
+  title: {
+    id: 'commentEditor.symbolDefinition.title',
+    defaultMessage: 'Symbol definition'
+  },
+  resolving: {
+    id: 'commentEditor.symbolDefinition.resolving',
+    defaultMessage: '{name}…'
+  },
+  loading: {
+    id: 'commentEditor.symbolDefinition.loading',
+    defaultMessage: 'Loading symbols…'
+  },
+  empty: {
+    id: 'commentEditor.symbolDefinition.empty',
+    defaultMessage: 'No symbols on this line.'
+  },
+  addReference: {
+    id: 'commentEditor.symbolDefinition.addReference',
+    defaultMessage: 'Add {symbol} reference at {path}:{line}'
+  }
+})
 
 const SymbolName = styled.span`
   font-family: ${({ theme }) => theme.font.mono};
@@ -38,10 +63,16 @@ function DefinitionRow({
   selected: CommentReference[]
   onToggleRef: (ref: CommentReference) => void
 }): React.JSX.Element | null {
+  const intl = useIntl()
   const pos = { line: symbol.range.start.line, col: symbol.range.start.col }
   const { data, isFetching } = useDefinition(projectId, refAnchor.sha, refAnchor.path, pos)
 
-  if (isFetching) return <Message layout="inline">{symbol.name}…</Message>
+  if (isFetching)
+    return (
+      <Message layout="inline">
+        <FormattedMessage {...messages.resolving} values={{ name: symbol.name }} />
+      </Message>
+    )
 
   const targets = (data?.definitions ?? []).filter(
     (d) => !d.external && (scope === 'all' || isTargeted(d.location.path, targetedPaths))
@@ -59,11 +90,17 @@ function DefinitionRow({
         const checked = selected.some((r) => sameRef(r, ref))
         return (
           <Inline key={`${symbol.name}-${i}`}>
-            <Checkbox checked={checked} onChange={() => onToggleRef(ref)} />
+            <Checkbox
+              checked={checked}
+              ariaLabel={intl.formatMessage(messages.addReference, {
+                symbol: symbol.name,
+                path: t.location.path,
+                line: t.location.range.start.line
+              })}
+              onChange={() => onToggleRef(ref)}
+            />
             <SymbolName>{symbol.name}</SymbolName>
-            <PathLabel>
-              {t.location.path}:{t.location.range.start.line}
-            </PathLabel>
+            <PathAndLine path={t.location.path} line={t.location.range.start.line} />
           </Inline>
         )
       })}
@@ -94,22 +131,38 @@ export function SymbolDefinitionSection({
   open: boolean
   onOpenChange: (open: boolean) => void
 }): React.JSX.Element {
+  const intl = useIntl()
   const [scope, setScope] = useState<SearchScope>('all')
-  const disabled = !loading && !error && symbols.length === 0
+  const empty = !loading && !error && symbols.length === 0
 
   return (
     <Accordion
       open={open}
-      disabled={disabled}
+      disabled={empty}
       onToggle={() => onOpenChange(!open)}
-      leading={<Checkbox checked={open} disabled={disabled} onChange={() => onOpenChange(!open)} />}
-      title="Symbol definition"
+      leading={
+        <Checkbox
+          checked={open}
+          disabled={empty}
+          ariaLabel={intl.formatMessage(messages.title)}
+          onChange={() => onOpenChange(!open)}
+        />
+      }
+      title={<FormattedMessage {...messages.title} />}
+      trailing={
+        empty ? (
+          <Message layout="inline">
+            <FormattedMessage {...messages.empty} />
+          </Message>
+        ) : undefined
+      }
     >
       <Stack $gap={1}>
         <ScopeToggle value={scope} onChange={setScope} />
-        {loading && <Message layout="inline">Loading symbols…</Message>}
-        {!loading && !error && symbols.length === 0 && (
-          <Message layout="inline">No symbols on this line.</Message>
+        {loading && (
+          <Message layout="inline">
+            <FormattedMessage {...messages.loading} />
+          </Message>
         )}
         {symbols.map((symbol, i) => (
           <DefinitionRow

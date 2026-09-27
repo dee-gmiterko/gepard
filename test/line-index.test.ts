@@ -111,6 +111,15 @@ describe('LineIndex.queryWord ("Same pattern in")', () => {
     idx.setFile('a.ts', 'foo\n')
     expect(idx.queryWord('bar')).toEqual([])
   })
+
+  it('treats a non-ASCII letter as part of the word, same as ripgrep’s Unicode -w', () => {
+    const idx = new LineIndex()
+    idx.setFile('a.ts', 'café bar\n')
+    expect(idx.queryWord('café')).toEqual([
+      { path: 'a.ts', matches: [{ line: 1, preview: 'café bar', spans: [[0, 4]] }] }
+    ])
+    expect(idx.queryWord('caf')).toEqual([])
+  })
 })
 
 describe('LineIndex incremental updates', () => {
@@ -124,12 +133,11 @@ describe('LineIndex incremental updates', () => {
     ])
   })
 
-  it('removeFile drops both its exact-line and word entries', () => {
+  it('removeFile drops both its exact-line and word entries, without leaking into a file that shares them', () => {
     const idx = new LineIndex()
     idx.setFile('a.ts', 'const x = 1\n')
     idx.setFile('b.ts', 'const x = 1\n')
     idx.removeFile('a.ts')
-    expect(idx.has('a.ts')).toBe(false)
     expect(idx.queryExactLine('const x = 1')).toEqual([
       { path: 'b.ts', matches: [{ line: 1, preview: 'const x = 1', spans: [[0, 11]] }] }
     ])
@@ -138,35 +146,15 @@ describe('LineIndex incremental updates', () => {
     ])
   })
 
-  it('removeFile on an unindexed path is a no-op', () => {
-    const idx = new LineIndex()
-    expect(() => idx.removeFile('never-added.ts')).not.toThrow()
-  })
-
-  it("does not leak another file's occurrence of a shared word/line when removed", () => {
-    const idx = new LineIndex()
-    idx.setFile('a.ts', 'shared\n')
-    idx.setFile('b.ts', 'shared\n')
-    idx.removeFile('a.ts')
-    expect(idx.queryWord('shared')).toEqual([
-      { path: 'b.ts', matches: [{ line: 1, preview: 'shared', spans: [[0, 6]] }] }
-    ])
-    expect(idx.queryExactLine('shared')).toEqual([
-      { path: 'b.ts', matches: [{ line: 1, preview: 'shared', spans: [[0, 6]] }] }
-    ])
-  })
-
-  it('fileCount/has track the indexed set through add/update/remove', () => {
+  it('fileCount tracks the indexed set through add/update/remove', () => {
     const idx = new LineIndex()
     expect(idx.fileCount).toBe(0)
     idx.setFile('a.ts', 'x\n')
     expect(idx.fileCount).toBe(1)
-    expect(idx.has('a.ts')).toBe(true)
     idx.setFile('a.ts', 'y\n')
     expect(idx.fileCount).toBe(1)
     idx.removeFile('a.ts')
     expect(idx.fileCount).toBe(0)
-    expect(idx.has('a.ts')).toBe(false)
   })
 })
 

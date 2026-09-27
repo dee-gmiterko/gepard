@@ -1,17 +1,24 @@
 import { z } from 'zod'
 import { IsoDate, Login } from './pr'
 
+export const ProjectId = z
+  .string()
+  .min(1)
+  .max(200)
+  .regex(/^[A-Za-z0-9._-]+$/, 'invalid project id')
+  .refine((id) => id !== '.' && id !== '..', { message: 'invalid project id' })
+
 export const Project = z.object({
-  id: z.string(),
+  id: ProjectId,
   url: z.url(),
   owner: z.string(),
   repo: z.string(),
   addedAt: IsoDate,
-  cloned: z.boolean()
+  cloned: z.boolean(),
+  trustWorkspaceToolchain: z.boolean().default(false)
 })
 export type Project = z.infer<typeof Project>
 
-// Matches the combined shape of `gh auth status` and `gh api user` output.
 export const Viewer = z.object({
   login: Login,
   name: z.string().nullable(),

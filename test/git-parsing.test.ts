@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
-  looksBinary,
   mimeForPath,
+  parseBranchNames,
   parseCloneProgressLine,
   parseDiffTreeStdinFiles,
   parseNameStatus,
   parseNumstat,
-  parseUnifiedDiff
+  parseUnifiedDiff,
+  selectDiffSection
 } from '../src/main/services/git'
+import { looksBinary } from '../src/main/services/binary'
 
 describe('parseCloneProgressLine', () => {
   it('parses a local progress line into phase + percent', () => {
@@ -145,7 +147,7 @@ describe('parseDiffTreeStdinFiles', () => {
   const B = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
 
   it('groups each oid with the files its diff-tree output lists below it', () => {
-    const stdout = `${A}\nsrc/a.ts\nsrc/b.ts\n${B}\ndocs/readme.md\n`
+    const stdout = `${A}\0\nsrc/a.ts\0src/b.ts\0${B}\0\ndocs/readme.md\0`
     expect(parseDiffTreeStdinFiles(stdout, [A, B])).toEqual(
       new Map([
         [A, ['src/a.ts', 'src/b.ts']],
@@ -155,7 +157,7 @@ describe('parseDiffTreeStdinFiles', () => {
   })
 
   it('maps a given oid to no files when it touched nothing (e.g. an empty merge)', () => {
-    const stdout = `${A}\n${B}\ndocs/readme.md\n`
+    const stdout = `${A}\0${B}\0\ndocs/readme.md\0`
     expect(parseDiffTreeStdinFiles(stdout, [A, B])).toEqual(
       new Map([
         [A, []],
@@ -165,13 +167,34 @@ describe('parseDiffTreeStdinFiles', () => {
   })
 
   it('omits a root commit entirely (diff-tree never emits one)', () => {
-    expect(parseDiffTreeStdinFiles(`${B}\nsrc/a.ts\n`, [A, B])).toEqual(
+    expect(parseDiffTreeStdinFiles(`${B}\0\nsrc/a.ts\0`, [A, B])).toEqual(
       new Map([[B, ['src/a.ts']]])
     )
   })
 
   it('returns an empty map for empty stdout', () => {
     expect(parseDiffTreeStdinFiles('', [A, B])).toEqual(new Map())
+  })
+})
+
+describe('parseBranchNames', () => {
+  it('strips the origin/ prefix from remote-tracking branches', () => {
+    const stdout = ['main', 'origin/main', 'origin/feature-x'].join('\n')
+    expect(parseBranchNames(stdout)).toEqual(['feature-x', 'main'])
+  })
+
+  it('drops the symbolic origin/HEAD entry', () => {
+    const stdout = ['origin/HEAD', 'origin/main'].join('\n')
+    expect(parseBranchNames(stdout)).toEqual(['main'])
+  })
+
+  it('sorts the result and ignores blank lines', () => {
+    const stdout = ['origin/zeta', '', 'alpha', ''].join('\n')
+    expect(parseBranchNames(stdout)).toEqual(['alpha', 'zeta'])
+  })
+
+  it('returns an empty list for empty stdout', () => {
+    expect(parseBranchNames('')).toEqual([])
   })
 })
 
@@ -185,6 +208,44 @@ describe('mimeForPath', () => {
   it('returns null for non-image or extension-less paths', () => {
     expect(mimeForPath('README.md')).toBeNull()
     expect(mimeForPath('Makefile')).toBeNull()
+  })
+})
+
+describe('selectDiffSection', () => {
+  it("isolates a copy target's section when its source also has its own diff", () => {
+    const diffText = [
+      'diff --git a/old.txt b/old.txt',
+      'index 111..222 100644',
+      '--- a/old.txt',
+      '+++ b/old.txt',
+      '@@ -1,1 +1,1 @@',
+      '-original old content',
+      '+changed old content',
+      'diff --git a/old.txt b/new.txt',
+      'similarity index 90%',
+      'copy from old.txt',
+      'copy to new.txt',
+      'index 111..333 100644',
+      '--- a/old.txt',
+      '+++ b/new.txt',
+      '@@ -1,1 +1,1 @@',
+      '-original old content',
+      '+copied new content',
+      ''
+    ].join('\n')
+
+    const section = selectDiffSection(diffText, 'old.txt', 'new.txt')
+    const rows = parseUnifiedDiff(section)
+    expect(rows).toEqual([
+      { kind: 'hunk', oldLine: null, newLine: null, text: '@@ -1,1 +1,1 @@' },
+      { kind: 'delete', oldLine: 1, newLine: null, text: 'original old content' },
+      { kind: 'add', oldLine: null, newLine: 1, text: 'copied new content' }
+    ])
+  })
+
+  it('returns the whole text unchanged when the marker is not found', () => {
+    const diffText = '@@ -1,1 +1,1 @@\n-a\n+b\n'
+    expect(selectDiffSection(diffText, 'old.txt', 'new.txt')).toBe(diffText)
   })
 })
 

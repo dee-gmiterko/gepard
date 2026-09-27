@@ -1,16 +1,25 @@
-// React discards the whole crashed subtree on a render error, so a single
-// top-level boundary is needed to show a fallback instead of a blank app.
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import styled from 'styled-components'
+import { FormattedMessage } from 'react-intl'
+import { defineMessages } from '../i18n/defineMessages'
 import { Button } from '../components/Button'
-import { Message } from '../components/Message'
+import { Message, centerLayout } from '../components/Message'
 import { Stack } from '../components/Layout'
 import { reportError } from './report'
 
+const messages = defineMessages({
+  crashed: {
+    id: 'errors.errorBoundary.crashed',
+    defaultMessage: 'This view crashed and could not continue.'
+  },
+  reload: {
+    id: 'errors.errorBoundary.reload',
+    defaultMessage: 'Reload'
+  }
+})
+
 const Centered = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  ${centerLayout}
   height: 100vh;
 `
 
@@ -41,10 +50,12 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.crashed) return this.props.children
     return (
       <Centered>
-        <Stack $gap={3} style={{ alignItems: 'center' }}>
-          <Message tone="danger">This view crashed and could not continue.</Message>
+        <Stack $gap={3} $align="center">
+          <Message tone="danger">
+            <FormattedMessage {...messages.crashed} />
+          </Message>
           <Button variant="primary" onClick={() => window.location.reload()}>
-            Reload
+            <FormattedMessage {...messages.reload} />
           </Button>
         </Stack>
       </Centered>

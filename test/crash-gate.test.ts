@@ -23,14 +23,6 @@ describe('CrashGate.guard', () => {
     await expect(gate.guard(Promise.resolve('ok'))).resolves.toBe('ok')
   })
 
-  it('rejects a request still pending when the incarnation crashes, with an AbortError', async () => {
-    const gate = new CrashGate()
-    const pending = new Promise<string>(() => {})
-    const guarded = gate.guard(pending)
-    gate.crash()
-    await expect(guarded).rejects.toMatchObject({ name: 'AbortError' })
-  })
-
   it('rejects every request in flight, not just one', async () => {
     const gate = new CrashGate()
     const never = (): Promise<never> => new Promise(() => {})

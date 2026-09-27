@@ -8,6 +8,6 @@ export interface TmpDir {
 }
 
 export async function makeTmpDir(prefix: string): Promise<TmpDir> {
-  const path = await mkdtemp(join(tmpdir(), `ghlr-${prefix}-`))
+  const path = await mkdtemp(join(tmpdir(), `gepard-${prefix}-`))
   return { path, cleanup: () => rm(path, { recursive: true, force: true }) }
 }

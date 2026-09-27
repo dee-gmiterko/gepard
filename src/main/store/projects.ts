@@ -1,10 +1,9 @@
-import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
-import { randomUUID } from 'node:crypto'
-import { join } from 'node:path'
+import { mkdir, readdir, rm, stat } from 'node:fs/promises'
 import { z } from 'zod'
 import { Project } from '@shared/ipc/schemas/project'
 import { PersistedTargeting } from '@shared/ipc/schemas/pr'
 import { AppError } from '../ipc/registry'
+import { readJsonFile, writeJsonFile } from './jsonFile'
 import {
   projectDir,
   projectId as makeProjectId,
@@ -21,8 +20,8 @@ type ProjectFile = z.infer<typeof ProjectFile>
 const NO_TARGETING: PersistedTargeting = { pr: null, commit: null, path: null }
 
 function toProject(file: ProjectFile, cloned: boolean): Project {
-  const { id, url, owner, repo, addedAt } = file
-  return { id, url, owner, repo, addedAt, cloned }
+  const { id, url, owner, repo, addedAt, trustWorkspaceToolchain } = file
+  return { id, url, owner, repo, addedAt, cloned, trustWorkspaceToolchain }
 }
 
 async function pathExists(path: string): Promise<boolean> {
@@ -39,40 +38,11 @@ export async function isCloned(id: string): Promise<boolean> {
 }
 
 async function readProjectFile(id: string): Promise<ProjectFile | null> {
-  let raw: string
-  try {
-    raw = await readFile(projectJsonPath(id), 'utf8')
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null
-    throw e
-  }
-  let json: unknown
-  try {
-    json = JSON.parse(raw)
-  } catch (e) {
-    throw new AppError(
-      'STORE_CORRUPT',
-      `project.json for ${id} is not valid JSON: ${(e as Error).message}`
-    )
-  }
-  const parsed = ProjectFile.safeParse(json)
-  if (!parsed.success) {
-    throw new AppError(
-      'STORE_CORRUPT',
-      `project.json for ${id} is invalid: ${z.prettifyError(parsed.error)}`
-    )
-  }
-  return parsed.data
+  return readJsonFile(projectJsonPath(id), ProjectFile, () => null)
 }
 
-// Write tmp -> rename: POSIX rename is atomic, so a crash mid-write never
-// leaves a corrupt project.json.
 async function writeProjectFile(id: string, data: ProjectFile): Promise<void> {
-  const dir = projectDir(id)
-  await mkdir(dir, { recursive: true })
-  const tmpPath = join(dir, `.project.json.${randomUUID()}.tmp`)
-  await writeFile(tmpPath, JSON.stringify(data, null, 2) + '\n', 'utf8')
-  await rename(tmpPath, projectJsonPath(id))
+  await writeJsonFile(projectJsonPath(id), data)
 }
 
 export async function listProjects(): Promise<Project[]> {
@@ -104,6 +74,13 @@ export async function setLastTargeting(id: string, targeting: PersistedTargeting
   const file = await readProjectFile(id)
   if (!file) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${id}`)
   await writeProjectFile(id, { ...file, lastTargeting: targeting })
+}
+
+export async function setTrustWorkspaceToolchain(id: string, trust: boolean): Promise<Project> {
+  const file = await readProjectFile(id)
+  if (!file) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${id}`)
+  await writeProjectFile(id, { ...file, trustWorkspaceToolchain: trust })
+  return toProject({ ...file, trustWorkspaceToolchain: trust }, await isCloned(id))
 }
 
 const NAME_RE = /^[A-Za-z0-9_.-]+$/
@@ -140,7 +117,8 @@ export async function addProject(url: string): Promise<Project> {
     url: `https://github.com/${owner}/${repo}`,
     owner,
     repo,
-    addedAt: new Date().toISOString()
+    addedAt: new Date().toISOString(),
+    trustWorkspaceToolchain: false
   }
   await writeProjectFile(id, data)
   return { ...data, cloned: false }

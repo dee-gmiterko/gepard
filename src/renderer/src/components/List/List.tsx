@@ -1,12 +1,10 @@
 import styled, { css } from 'styled-components'
 import type { Theme } from '../../theme/tokens'
-
-type Gap = keyof Theme['space']
+import type { Gap } from '../Layout'
+import { listReset } from './listReset'
 
 export const List = styled.ul`
-  list-style: none;
-  margin: 0;
-  padding: 0;
+  ${listReset}
   border-top: 1px solid ${({ theme }) => theme.colors.border};
 `
 
@@ -26,4 +24,11 @@ export const ListRow = styled.li<{ $gap?: Gap; $padding?: Gap; $clickable?: bool
         background: ${theme.colors.bgHover};
       }
     `}
+`
+
+type FontSize = keyof Theme['font']['size']
+
+export const RowTitle = styled.div<{ $size?: FontSize }>`
+  font-size: ${({ theme, $size = 'md' }) => theme.font.size[$size]};
+  color: ${({ theme }) => theme.colors.fg};
 `

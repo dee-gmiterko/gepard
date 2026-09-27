@@ -11,18 +11,15 @@ export const extensionsHandlers: Pick<
   'extensions.setEnabled': ({ id, enabled }) => extensionRegistry.setEnabled(id, enabled),
   'extensions.dir': () => extensionsDir(),
 
-  'extensions.install': async (_input, { window }) => {
+  'extensions.install': async ({ dialogTitle, filterName }, { window }) => {
+    const filters = [{ name: filterName, extensions: ['js', 'mjs', 'cjs'] }]
     const { canceled, filePaths } = window
       ? await dialog.showOpenDialog(window, {
-          title: 'Add extension',
+          title: dialogTitle,
           properties: ['openFile'],
-          filters: [{ name: 'Extension module', extensions: ['js', 'mjs', 'cjs'] }]
+          filters
         })
-      : await dialog.showOpenDialog({
-          title: 'Add extension',
-          properties: ['openFile'],
-          filters: [{ name: 'Extension module', extensions: ['js', 'mjs', 'cjs'] }]
-        })
+      : await dialog.showOpenDialog({ title: dialogTitle, properties: ['openFile'], filters })
     if (canceled || filePaths.length === 0) return extensionRegistry.list()
     return extensionRegistry.install(filePaths[0])
   }

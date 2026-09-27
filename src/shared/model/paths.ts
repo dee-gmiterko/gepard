@@ -9,36 +9,55 @@ export function isGlob(target: string): boolean {
   return GLOB_CHARS.test(target)
 }
 
-export function globToRegExp(glob: string): RegExp {
-  let out = '^'
-  for (let i = 0; i < glob.length; i++) {
-    const c = glob[i]
+function segmentToRegExp(segment: string): string {
+  let out = ''
+  for (let i = 0; i < segment.length; i++) {
+    const c = segment[i]
     if (c === '*') {
-      if (glob[i + 1] === '*') {
-        out += '.*'
-        i++
-      } else {
-        out += '[^/]*'
-      }
+      out += '[^/]*'
     } else if (c === '?') {
       out += '[^/]'
     } else if (c === '[') {
-      const end = glob.indexOf(']', i + 1)
+      const end = segment.indexOf(']', i + 1)
       if (end === -1) {
         out += '\\['
       } else {
-        out += `[${glob.slice(i + 1, end)}]`
+        let body = segment.slice(i + 1, end)
+        if (body.startsWith('!')) body = `^${body.slice(1)}`
+        out += `[${body}]`
         i = end
       }
     } else {
       out += c.replace(/[.+^${}()|\\]/g, '\\$&')
     }
   }
-  return new RegExp(`${out}$`)
+  return out
 }
 
-/** Safe to pass to git as a literal pathspec: it names a real ancestor
- * directory, so it always matches a superset of what the glob matches. */
+export function globToRegExp(glob: string): RegExp {
+  const segments = glob.split('/')
+  let out = ''
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i]
+    if (segment === '**') {
+      if (segments.length === 1) out += '.*'
+      // A leading or trailing `**` absorbs the one separator next to it, so
+      // that segment alone can also match zero path components.
+      else if (i === 0) out += '(?:.*/)?'
+      else if (i === segments.length - 1) out += '(?:/.*)?'
+      // A `**` in the middle matches whole path components only: it must
+      // still be followed by the separator required before the next
+      // segment, so it never merges into, or drops, a component boundary.
+      else out += '(?:/.*)?'
+      continue
+    }
+    const prev = segments[i - 1]
+    if (i > 0 && !(prev === '**' && i === 1)) out += '/'
+    out += segmentToRegExp(segment)
+  }
+  return new RegExp(`^${out}$`)
+}
+
 export function staticPrefixOf(target: string): string {
   const globIdx = target.search(GLOB_CHARS)
   if (globIdx === -1) return target

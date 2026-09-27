@@ -1,15 +1,35 @@
 import { useMemo } from 'react'
 import styled from 'styled-components'
+import { FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl'
+import { defineMessages } from '../../../../i18n/defineMessages'
 import type { ImageData } from '@shared/ipc/schemas/pr'
 import { Image } from '../../../../components/Image'
 import { Message } from '../../../../components/Message'
+import { ViewerFrame } from '../ViewerFrame'
 import { imageSrc } from '../imageSrc'
 
-const Frame = styled.div`
-  display: flex;
-  height: 100%;
-  overflow: auto;
-`
+const messages = defineMessages({
+  before: {
+    id: 'content.imageDiffViewer.before',
+    defaultMessage: 'Before'
+  },
+  after: {
+    id: 'content.imageDiffViewer.after',
+    defaultMessage: 'After'
+  },
+  noImage: {
+    id: 'content.imageDiffViewer.noImage',
+    defaultMessage: 'No image'
+  },
+  beforeAlt: {
+    id: 'content.imageDiffViewer.beforeAlt',
+    defaultMessage: 'Before: {path}'
+  },
+  afterAlt: {
+    id: 'content.imageDiffViewer.afterAlt',
+    defaultMessage: 'After: {path}'
+  }
+})
 
 const Side = styled.div`
   flex: 1 1 50%;
@@ -34,23 +54,28 @@ const Label = styled.div`
 
 function ImageSide({
   label,
+  alt,
   path,
   image
 }: {
-  label: string
+  label: MessageDescriptor
+  alt: MessageDescriptor
   path: string
   image: ImageData | null
 }): React.JSX.Element {
+  const intl = useIntl()
   const url = useMemo(() => (image ? imageSrc(image) : null), [image])
 
   return (
     <Side>
-      <Label>{label}</Label>
+      <Label>
+        <FormattedMessage {...label} />
+      </Label>
       {url ? (
-        <Image src={url} alt={`${label}: ${path}`} />
+        <Image src={url} alt={intl.formatMessage(alt, { path })} />
       ) : (
         <Message tone="subtle" layout="inline">
-          No image
+          <FormattedMessage {...messages.noImage} />
         </Message>
       )}
     </Side>
@@ -67,9 +92,9 @@ export function ImageDiffViewer({
   after: ImageData | null
 }): React.JSX.Element {
   return (
-    <Frame>
-      <ImageSide label="Before" path={path} image={before} />
-      <ImageSide label="After" path={path} image={after} />
-    </Frame>
+    <ViewerFrame>
+      <ImageSide label={messages.before} alt={messages.beforeAlt} path={path} image={before} />
+      <ImageSide label={messages.after} alt={messages.afterAlt} path={path} image={after} />
+    </ViewerFrame>
   )
 }

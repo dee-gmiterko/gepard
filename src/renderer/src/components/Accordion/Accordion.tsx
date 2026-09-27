@@ -1,27 +1,27 @@
 import type { ReactNode } from 'react'
 import styled from 'styled-components'
 import { ChevronDown, ChevronRight } from 'react-feather'
+import { Surface } from '../Surface'
+import { disabledInteractive } from '../Checkbox'
+import { focusVisible } from '../IconButton'
 
-const Wrapper = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radius.md};
-  background: ${({ theme }) => theme.colors.bgElevated};
-`
+const Wrapper = styled(Surface).attrs({ $elevation: 'flat' as const })``
 
 const Header = styled.div<{ $disabled?: boolean }>`
   display: flex;
   align-items: center;
   gap: ${({ theme }) => theme.space[2]};
   padding: ${({ theme }) => theme.space[2]};
-  cursor: ${({ $disabled }) => ($disabled ? 'default' : 'pointer')};
-  opacity: ${({ $disabled }) => ($disabled ? 0.55 : 1)};
   user-select: none;
   font-size: ${({ theme }) => theme.font.size.sm};
   color: ${({ theme }) => theme.colors.fg};
+  ${disabledInteractive}
 
   &:hover {
     background: ${({ $disabled, theme }) => ($disabled ? 'transparent' : theme.colors.bgHover)};
   }
+
+  ${focusVisible}
 `
 
 const Leading = styled.span`
@@ -73,11 +73,20 @@ export function Accordion({
     <Wrapper>
       <Header
         role="button"
+        tabIndex={disabled ? -1 : 0}
         aria-expanded={open}
         aria-disabled={disabled}
         $disabled={disabled}
         onClick={() => {
           if (!disabled) onToggle()
+        }}
+        onKeyDown={(e) => {
+          if (disabled) return
+          // A `role="button"` element gets no native Space/Enter activation.
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onToggle()
+          }
         }}
       >
         {leading && <Leading onClick={(e) => e.stopPropagation()}>{leading}</Leading>}

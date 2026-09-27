@@ -1,34 +1,38 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { lineNumbers } from '@codemirror/view'
+import { FormattedMessage } from 'react-intl'
 import { useAppState } from '../../../../state/AppContext'
 import { useFileContent } from '../../../../queries/files'
-import { useComments } from '../../../../queries/comments'
 import { useReadOnlyEditor } from '../../../../codemirror/useReadOnlyEditor'
-import {
-  CommentPortals,
-  codeViewCommentEntries,
-  commentAffordanceGutter,
-  commentBlockDecorations
-} from '../../../../codemirror/commentWidgets'
+import { revealDocLine } from '../../../../codemirror/revealLine'
 import { EditorHost } from '../../../../components/EditorHost'
 import { Message } from '../../../../components/Message'
-import { CommentPortalHost } from '../CommentPortalHost'
 import { ImageViewer } from '../image/ImageViewer'
 import { MissingViewer } from '../missing/MissingViewer'
+import { viewerMessages } from '../messages'
 
 export function CodeViewer({ path, sha }: { path: string; sha: string }): React.JSX.Element {
   const state = useAppState()
   const projectId = state.projectId ?? ''
   const { data } = useFileContent(projectId, sha, path)
 
-  if (!data) return <Message layout="center">Loading…</Message>
+  if (!data)
+    return (
+      <Message layout="center">
+        <FormattedMessage {...viewerMessages.loading} />
+      </Message>
+    )
   switch (data.kind) {
     case 'missing':
       return <MissingViewer path={path} />
     case 'image':
       return <ImageViewer path={path} image={data.image} />
     case 'binary':
-      return <Message layout="center">Binary file not shown</Message>
+      return (
+        <Message layout="center">
+          <FormattedMessage {...viewerMessages.binaryNotShown} />
+        </Message>
+      )
     case 'text':
       return <CodeText path={path} text={data.text} />
   }
@@ -36,50 +40,13 @@ export function CodeViewer({ path, sha }: { path: string; sha: string }): React.
 
 function CodeText({ path, text }: { path: string; text: string }): React.JSX.Element {
   const state = useAppState()
-  const projectId = state.projectId ?? ''
-  const pr = state.targeting.pr
-  const { data: threads } = useComments(projectId, pr ?? NaN)
-  const { containerRef, view, comments, commentGutter } = useReadOnlyEditor(
-    path,
-    text,
-    lineNumbers()
-  )
-  const [draftLine, setDraftLine] = useState<number | null>(null)
-  const portals = useMemo(() => new CommentPortals(), [])
+  const extensions = useMemo(() => lineNumbers(), [])
+  const { containerRef, view } = useReadOnlyEditor(path, text, extensions)
 
   useEffect(() => {
-    if (!view) return
-    view.dispatch({
-      effects: commentGutter.reconfigure(
-        pr !== null
-          ? commentAffordanceGutter(
-              () => true,
-              (docLine) => setDraftLine(docLine)
-            )
-          : []
-      )
-    })
-  }, [pr, view, commentGutter])
+    if (!view || state.activeFile !== path || state.revealLine == null) return
+    revealDocLine(view, state.revealLine.line)
+  }, [view, path, state.activeFile, state.revealLine])
 
-  useEffect(() => {
-    if (!view) return
-    const entries = pr !== null ? codeViewCommentEntries(threads ?? [], path, draftLine) : []
-    view.dispatch({
-      effects: comments.reconfigure(commentBlockDecorations(view.state.doc, entries, portals))
-    })
-  }, [threads, draftLine, pr, path, view, comments, portals])
-
-  return (
-    <>
-      <EditorHost ref={containerRef} />
-      {pr !== null && (
-        <CommentPortalHost
-          portals={portals}
-          projectId={projectId}
-          pr={pr}
-          onCloseDraft={() => setDraftLine(null)}
-        />
-      )}
-    </>
-  )
+  return <EditorHost ref={containerRef} />
 }

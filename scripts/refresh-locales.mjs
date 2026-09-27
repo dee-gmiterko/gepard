@@ -1,0 +1,149 @@
+#!/usr/bin/env node
+import { execFileSync } from 'node:child_process'
+import { createRequire } from 'node:module'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const ROOT_DIR = path.resolve(__dirname, '..')
+const RENDERER_SRC_GLOB = path.join(ROOT_DIR, 'src/renderer/src/**/*.{ts,tsx}')
+const LOCALES_DIR = path.join(ROOT_DIR, 'src/renderer/src/locales')
+const STALE_DIR = path.join(LOCALES_DIR, '.stale')
+const SOURCE_LOCALE = 'en'
+
+export function mergeLocaleCatalog(existing, extracted, oldSource, { isSource }) {
+  const ids = Object.keys(extracted).sort()
+  const catalog = {}
+  const staleIds = []
+
+  for (const id of ids) {
+    const defaultText = extracted[id].defaultMessage
+
+    if (isSource) {
+      catalog[id] = defaultText
+      continue
+    }
+
+    const current = existing[id]
+    if (current === undefined) {
+      catalog[id] = defaultText
+      continue
+    }
+
+    const previousSourceText = oldSource[id]
+    const sourceChanged = previousSourceText !== undefined && previousSourceText !== defaultText
+    const wasTranslated = previousSourceText !== undefined && current !== previousSourceText
+    if (sourceChanged && wasTranslated) {
+      staleIds.push(id)
+    }
+    catalog[id] = current
+  }
+
+  return { catalog, staleIds }
+}
+
+export function refreshCatalogs(extracted, localeFiles, readCatalog, localeOf) {
+  const sourceFile = localeFiles.find((file) => localeOf(file) === SOURCE_LOCALE)
+  const oldSource = sourceFile ? readCatalog(sourceFile) : {}
+
+  return localeFiles.map((file) => {
+    const locale = localeOf(file)
+    const existing = readCatalog(file)
+    const { catalog, staleIds } = mergeLocaleCatalog(existing, extracted, oldSource, {
+      isSource: locale === SOURCE_LOCALE
+    })
+    return { file, locale, catalog, staleIds }
+  })
+}
+
+function resolveFormatjsBin() {
+  const require = createRequire(import.meta.url)
+  return require.resolve('@formatjs/cli/bin/formatjs')
+}
+
+function extractMessages() {
+  const tmpDir = mkdtempSync(path.join(tmpdir(), 'gepard-intl-'))
+  const outFile = path.join(tmpDir, 'extracted.json')
+  try {
+    execFileSync(
+      process.execPath,
+      [
+        resolveFormatjsBin(),
+        'extract',
+        RENDERER_SRC_GLOB,
+        '--ignore',
+        '**/*.d.ts',
+        '--out-file',
+        outFile
+      ],
+      { stdio: ['ignore', 'inherit', 'inherit'] }
+    )
+    return JSON.parse(readFileSync(outFile, 'utf8'))
+  } finally {
+    rmSync(tmpDir, { recursive: true, force: true })
+  }
+}
+
+function localeFileOf(fileName) {
+  return fileName.replace(/\.json$/, '')
+}
+
+function readCatalogFile(file) {
+  let raw
+  try {
+    raw = readFileSync(file, 'utf8')
+  } catch (error) {
+    if (error.code === 'ENOENT') return {}
+    throw error
+  }
+  try {
+    return JSON.parse(raw)
+  } catch (error) {
+    throw new Error(`${file} is not valid JSON, refusing to overwrite it: ${error.message}`)
+  }
+}
+
+function main() {
+  const extracted = extractMessages()
+  const localeFileNames = readdirSync(LOCALES_DIR).filter((name) => name.endsWith('.json'))
+  const localeFiles = localeFileNames.map((name) => path.join(LOCALES_DIR, name))
+
+  const refreshed = refreshCatalogs(extracted, localeFiles, readCatalogFile, (file) =>
+    localeFileOf(path.basename(file))
+  )
+
+  for (const { file, locale, catalog, staleIds } of refreshed) {
+    writeFileSync(file, `${JSON.stringify(catalog, null, 2)}\n`)
+    if (locale === SOURCE_LOCALE) continue
+    const staleFile = path.join(STALE_DIR, `${locale}.json`)
+    if (staleIds.length > 0) {
+      mkdirSync(STALE_DIR, { recursive: true })
+      writeFileSync(staleFile, `${JSON.stringify(staleIds, null, 2)}\n`)
+    } else {
+      rmSync(staleFile, { force: true })
+    }
+  }
+
+  if (existsSync(STALE_DIR) && readdirSync(STALE_DIR).length === 0) {
+    rmSync(STALE_DIR, { recursive: true, force: true })
+  }
+
+  console.log(
+    `Refreshed ${refreshed.length} locale file(s) from ${Object.keys(extracted).length} message(s).`
+  )
+}
+
+const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+if (isMain) {
+  main()
+}

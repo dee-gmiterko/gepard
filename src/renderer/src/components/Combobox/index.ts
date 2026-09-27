@@ -1,3 +1,2 @@
-export { Combobox } from './Combobox'
-export type { ComboboxProps } from './Combobox'
+export { Combobox, NO_HIGHLIGHT } from './Combobox'
 export { fuzzyRanges } from './fuzzy'

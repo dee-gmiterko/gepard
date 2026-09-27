@@ -1,11 +1,12 @@
 import styled from 'styled-components'
 import type { Theme } from '../../theme/tokens'
 
-type Gap = keyof Theme['space']
+export type Gap = keyof Theme['space']
 
-export const Stack = styled.div<{ $gap?: Gap }>`
+export const Stack = styled.div<{ $gap?: Gap; $align?: 'stretch' | 'center' | 'flex-start' }>`
   display: flex;
   flex-direction: column;
+  align-items: ${({ $align = 'stretch' }) => $align};
   gap: ${({ theme, $gap = 2 }) => theme.space[$gap]};
 `
 

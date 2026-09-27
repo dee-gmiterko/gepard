@@ -17,17 +17,22 @@ describe('store/review', () => {
 
   const ctx = {
     prId: 'PR_1',
-    headRefOid: '1111111111111111111111111111111111111111',
-    viewerLogin: 'tester'
+    commitOid: '1111111111111111111111111111111111111111'
   }
 
   it('loadReview returns an empty store when no file exists yet, and saveReview round-trips it', async () => {
     const empty = await review.loadReview('proj-a', 1)
-    expect(empty).toEqual({ threads: [], viewed: [], lastSuccessfulSyncAt: null })
+    expect(empty).toEqual({
+      threads: [],
+      viewed: [],
+      pendingReviewId: null,
+      lastSuccessfulSyncAt: null
+    })
 
     await review.saveReview('proj-a', 1, {
       threads: [],
       viewed: [],
+      pendingReviewId: null,
       lastSuccessfulSyncAt: '2024-01-01T00:00:00Z'
     })
     const reloaded = await review.loadReview('proj-a', 2)
@@ -80,7 +85,7 @@ describe('store/review', () => {
     expect(threads[0].comments.map((c) => c.body)).toEqual(['edited root comment', 'a reply'])
   })
 
-  it('rejects editing a comment that is no longer a local draft', async () => {
+  it('allows editing a synced comment authored by the viewer, marking it edited', async () => {
     const root = await review.upsertLocalComment('proj-c', 20, ctx, {
       id: null,
       threadId: null,
@@ -100,15 +105,85 @@ describe('store/review', () => {
     store.threads[0].local = undefined
     await review.saveReview('proj-c', 20, store)
 
+    const edited = await review.upsertLocalComment('proj-c', 20, ctx, {
+      id: root.id,
+      threadId: null,
+      anchor: null,
+      body: 'edited after sync',
+      references: []
+    })
+    expect(edited.body).toBe('edited after sync')
+    expect(edited.local?.status).toBe('edited')
+  })
+
+  it('rejects editing a comment marked for deletion', async () => {
+    const root = await review.upsertLocalComment('proj-c', 21, ctx, {
+      id: null,
+      threadId: null,
+      anchor: {
+        path: 'a.ts',
+        subjectType: 'LINE',
+        side: 'RIGHT',
+        line: 1,
+        startLine: null,
+        startSide: null
+      },
+      body: 'root',
+      references: []
+    })
+    const store = await review.loadReview('proj-c', 21)
+    store.threads[0].comments[0].local = undefined
+    store.threads[0].local = undefined
+    await review.saveReview('proj-c', 21, store)
+    await review.deleteLocalComment('proj-c', 21, root.id)
+
     await expect(
-      review.upsertLocalComment('proj-c', 20, ctx, {
+      review.upsertLocalComment('proj-c', 21, ctx, {
         id: root.id,
         threadId: null,
         anchor: null,
         body: 'too late',
         references: []
       })
-    ).rejects.toThrow()
+    ).rejects.toMatchObject({ code: 'NOT_EDITABLE' })
+  })
+
+  it('refuses to delete a synced thread root that still has a live reply', async () => {
+    const root = await review.upsertLocalComment('proj-c', 22, ctx, {
+      id: null,
+      threadId: null,
+      anchor: {
+        path: 'a.ts',
+        subjectType: 'LINE',
+        side: 'RIGHT',
+        line: 1,
+        startLine: null,
+        startSide: null
+      },
+      body: 'root',
+      references: []
+    })
+    const reply = await review.upsertLocalComment('proj-c', 22, ctx, {
+      id: null,
+      threadId: root.threadId,
+      anchor: null,
+      body: 'a reply',
+      references: []
+    })
+    let store = await review.loadReview('proj-c', 22)
+    store.threads[0].local = undefined
+    store.threads[0].comments[0].local = undefined
+    store.threads[0].comments[1].local = undefined
+    await review.saveReview('proj-c', 22, store)
+
+    await expect(review.deleteLocalComment('proj-c', 22, root.id)).rejects.toMatchObject({
+      code: 'NOT_DELETABLE'
+    })
+
+    await review.deleteLocalComment('proj-c', 22, reply.id)
+    await review.deleteLocalComment('proj-c', 22, root.id)
+    store = await review.loadReview('proj-c', 22)
+    expect(store.threads[0].local).toEqual({ status: 'deleted', updatedAt: expect.any(String) })
   })
 
   it('deleteLocalComment drops unsynced drafts outright and marks synced ones pending deletion', async () => {

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useAppDispatch, useAppState } from '../../state/AppContext'
 import { useCheckoutTarget } from '../../queries/prs'
 import { useOpenProject } from '../../queries/projects'
@@ -22,24 +22,28 @@ export function useTargetCheckoutEffect(): TargetCheckoutStatus {
 
   const checkoutRef = useRef(checkout)
   const syncRef = useRef(sync)
+  const openRef = useRef(open)
   useLayoutEffect(() => {
     checkoutRef.current = checkout
     syncRef.current = sync
+    openRef.current = open
   })
 
-  const restoredFor = useRef<string | null>(null)
+  const [restoredProjectId, setRestoredProjectId] = useState<string | null>(null)
+  const ready = projectId !== null && restoredProjectId === projectId
 
   useEffect(() => {
-    if (!projectId || !open.data) return
-
-    if (restoredFor.current !== projectId) {
-      restoredFor.current = projectId
-      const persisted = open.data.targeting
-      if (persisted.pr !== null || persisted.commit !== null || persisted.path !== null) {
-        dispatch({ type: 'target/restore', targeting: persisted })
-        return
-      }
+    if (!projectId || restoredProjectId === projectId) return
+    if (open.isFetching || !openRef.current.data) return
+    const persisted = openRef.current.data.targeting
+    if (persisted.pr !== null || persisted.commit !== null || persisted.path !== null) {
+      dispatch({ type: 'target/restore', targeting: persisted })
     }
+    setRestoredProjectId(projectId)
+  }, [projectId, open.isFetching, restoredProjectId, dispatch])
+
+  useEffect(() => {
+    if (!ready) return
 
     const active = activeTargetRef({ pr, commit })
     const target: TargetRef = active ?? { kind: 'default' }
@@ -60,7 +64,7 @@ export function useTargetCheckoutEffect(): TargetCheckoutStatus {
     return () => {
       cancelled = true
     }
-  }, [projectId, open.data, pr, commit, dispatch])
+  }, [ready, pr, commit, dispatch])
 
   return { pending: checkout.isPending || sync.isPending }
 }

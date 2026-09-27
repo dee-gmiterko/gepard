@@ -2,10 +2,10 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { invoke } from '../ipc/client'
 import { useAppState } from '../state/AppContext'
+import { useCurrentHead } from './projects'
 import { qk } from './keys'
 import { matchesTarget } from '@shared/model/paths'
 
-// Git content addressed by a sha never changes, so it can be cached forever.
 const immutable = { staleTime: Infinity, gcTime: 10 * 60 * 1000 } as const
 
 export function useTree(projectId: string, sha: string) {
@@ -53,12 +53,15 @@ export function useTargetedPaths(): string[] {
     state.checkout?.base ?? '',
     state.checkout?.head ?? ''
   )
+  const head = useCurrentHead(state.projectId)
+  const tree = useTree(projectId, head ?? '')
 
   return useMemo(() => {
     if (changed) {
       const paths = changed.map((f) => f.path)
       return path ? paths.filter((p) => matchesTarget(p, path)) : paths
     }
-    return path ? [path] : []
-  }, [changed, path])
+    if (!path) return []
+    return (tree.data ?? []).filter((p) => matchesTarget(p, path))
+  }, [changed, path, tree.data])
 }

@@ -18,6 +18,7 @@ interface ProjectState {
   lineIndexUnavailable: boolean
   sessionUnavailable: boolean
   latest: { sha: string; fileCount: number } | null
+  initialHead: string
 }
 
 const projects = new Map<string, ProjectState>()
@@ -42,7 +43,7 @@ function makeSink(projectId: string, extensionId: string, state: ProjectState): 
       if (isNotifiableLevel(level)) notifyMainFailure(scope, msg)
       else if (level === 'warn') log.warn(scope, msg)
       // LSP servers send frequent $/progress and window/logMessage notifications
-      // at 'info' level, so those are dropped here.
+      // at 'info' level.
     }
   }
 }
@@ -64,14 +65,21 @@ async function disposeLineIndex(projectId: string): Promise<void> {
 }
 
 export const indexer: {
-  open(projectId: string, repoRoot: string, files: string[], head: string): Promise<void>
+  open(
+    projectId: string,
+    repoRoot: string,
+    files: string[],
+    head: string,
+    trustWorkspaceToolchain: boolean
+  ): Promise<void>
   onCheckout(projectId: string, changes: FileChange[], newSha: string, fileCount: number): void
   close(projectId: string): Promise<void>
   status(projectId: string): IndexStatus
   session(projectId: string): LanguageSession | null
   lineIndex(projectId: string): LineIndexHandle | null
+  currentSha(projectId: string): string | null
 } = {
-  async open(projectId, repoRoot, files, head): Promise<void> {
+  async open(projectId, repoRoot, files, head, trustWorkspaceToolchain): Promise<void> {
     await disposeSession(projectId)
     await disposeLineIndex(projectId)
     const state: ProjectState = {
@@ -82,7 +90,8 @@ export const indexer: {
       pendingSessionChanges: [],
       lineIndexUnavailable: false,
       sessionUnavailable: false,
-      latest: null
+      latest: null,
+      initialHead: head
     }
     projects.set(projectId, state)
     setStatus(projectId, { state: 'indexing', phase: 'files', done: 0, total: files.length })
@@ -103,19 +112,16 @@ export const indexer: {
       }
     )
     if (!isCurrent(projectId, state)) {
-      await lineIndex.dispose()
+      await lineIndex?.dispose()
       return
     }
-    state.lineIndex = lineIndex
-    if (state.pendingIndexChanges.length > 0) {
-      lineIndex.applyChanges(state.pendingIndexChanges)
-      state.pendingIndexChanges = []
+    if (lineIndex) {
+      state.lineIndex = lineIndex
+      if (state.pendingIndexChanges.length > 0) {
+        lineIndex.applyChanges(state.pendingIndexChanges)
+        state.pendingIndexChanges = []
+      }
     }
-
-    const idleTree = (): { commit: string; files: number } =>
-      state.latest
-        ? { commit: state.latest.sha, files: state.latest.fileCount }
-        : { commit: head, files: files.length }
 
     const extensions = await extensionRegistry.enabledExtensions()
     if (!isCurrent(projectId, state)) return
@@ -124,20 +130,17 @@ export const indexer: {
     if (!extension) {
       state.pendingSessionChanges = []
       state.sessionUnavailable = true
-      const tree = idleTree()
-      setStatus(projectId, { state: 'idle', commit: tree.commit, files: tree.files })
+      setStatus(projectId, { state: 'idle' })
       return
     }
 
     setStatus(projectId, { state: 'indexing', phase: 'language', done: 0 })
     try {
       const sink = makeSink(projectId, extension.id, state)
-      const plan = await extension.resolve({ root: repoRoot })
+      const plan = await extension.resolve({ root: repoRoot, trustWorkspaceToolchain })
       const session = await extension.start(plan, sink)
-      // Language servers load a project lazily on the first request for one
-      // of its files; until then workspace/symbol answers nothing. Touching
-      // one file here forces early load; a failure here just means the first
-      // real query loads it instead.
+      // Language servers load a project on the first request for one of its
+      // files, and workspace/symbol returns nothing until then.
       const probe = files.find((f) => extension.matches(f) && !f.endsWith('.d.ts'))
       if (probe) {
         await session.lineSymbols(probe, 1).catch((e: Error) => {
@@ -159,8 +162,7 @@ export const indexer: {
         state.pendingSessionChanges = []
       }
       log.info('lsp', `projectId=${projectId} extension=${extension.id} session started`)
-      const tree = idleTree()
-      setStatus(projectId, { state: 'idle', commit: tree.commit, files: tree.files })
+      setStatus(projectId, { state: 'idle' })
     } catch (e) {
       const message = (e as Error).message
       log.error(
@@ -177,8 +179,6 @@ export const indexer: {
     }
   },
 
-  // ripgrep is spawned fresh per query and reads the current disk state
-  // directly, so search needs no update on checkout.
   onCheckout(projectId, changes, newSha, fileCount): void {
     const state = projects.get(projectId)
     if (!state) return
@@ -187,13 +187,12 @@ export const indexer: {
     else if (!state.sessionUnavailable) state.pendingSessionChanges.push(...changes)
     if (state.lineIndex) state.lineIndex.applyChanges(changes)
     else if (!state.lineIndexUnavailable) state.pendingIndexChanges.push(...changes)
-    if (state.status.state === 'idle')
-      setStatus(projectId, { state: 'idle', commit: newSha, files: fileCount })
+    if (state.status.state === 'idle') setStatus(projectId, { state: 'idle' })
   },
 
   async close(projectId): Promise<void> {
-    await disposeSession(projectId)
-    await disposeLineIndex(projectId)
+    await disposeSession(projectId).catch(() => {})
+    await disposeLineIndex(projectId).catch(() => {})
     projects.delete(projectId)
   },
 
@@ -207,5 +206,11 @@ export const indexer: {
 
   lineIndex(projectId: string): LineIndexHandle | null {
     return projects.get(projectId)?.lineIndex ?? null
+  },
+
+  currentSha(projectId: string): string | null {
+    const state = projects.get(projectId)
+    if (!state) return null
+    return state.latest?.sha ?? state.initialHead
   }
 }

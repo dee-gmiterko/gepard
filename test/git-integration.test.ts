@@ -10,9 +10,7 @@ import { makeTmpDir, type TmpDir } from './support/tmp'
 
 const execFileP = promisify(execFile)
 
-// Overrides the local/global git config so commits don't depend on the
-// machine's identity or gpg-signing settings.
-const GIT_ENV = {
+const MACHINE_INDEPENDENT_GIT_ENV = {
   ...process.env,
   GIT_AUTHOR_NAME: 'Test',
   GIT_AUTHOR_EMAIL: 'test@example.com',
@@ -24,7 +22,7 @@ const GIT_ENV = {
 }
 
 async function git(cwd: string, args: string[]): Promise<string> {
-  const { stdout } = await execFileP('git', args, { cwd, env: GIT_ENV })
+  const { stdout } = await execFileP('git', args, { cwd, env: MACHINE_INDEPENDENT_GIT_ENV })
   return stdout
 }
 
@@ -61,8 +59,7 @@ async function buildFixtureRepo(dir: string): Promise<Fixture> {
   await git(dir, ['commit', '-m', 'feature: change files'])
   const featureHeadSha = (await git(dir, ['rev-parse', 'HEAD'])).trim()
 
-  // git sets a clone's origin/HEAD from whichever branch is checked out in
-  // the source repo, so HEAD must be back on main before cloning.
+  // git sets a clone's origin/HEAD from the branch checked out in the source repository.
   await git(dir, ['checkout', 'main'])
 
   return { rootSha, baseSha, featureHeadSha }
@@ -71,28 +68,31 @@ async function buildFixtureRepo(dir: string): Promise<Fixture> {
 describe('git service (integration)', () => {
   let origin: TmpDir
   let userData: TmpDir
+  let fixture: Fixture
+  const projectId = 'acme__widgets'
+  const EMPTY_TREE_SHA = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
 
   beforeAll(async () => {
     origin = await makeTmpDir('git-origin')
     userData = await makeTmpDir('git-userdata')
     __setUserDataDir(userData.path)
-  })
+    __clearEmittedEvents()
+    fixture = await buildFixtureRepo(origin.path)
+    await cloneProject(projectId, `file://${origin.path}`)
+  }, 30_000)
 
   afterAll(async () => {
     await origin.cleanup()
     await userData.cleanup()
   })
 
-  it('clones, checks out pr/commit/root-commit targets, and diffs/lists the tree', async () => {
-    __clearEmittedEvents()
-    const { rootSha, baseSha, featureHeadSha } = await buildFixtureRepo(origin.path)
-    const projectId = 'acme__widgets'
-
-    await cloneProject(projectId, `file://${origin.path}`)
+  it('disables hooks on the clone (core.hooksPath -> the empty nohooks dir)', async () => {
     const repoRoot = projectRepoDir(projectId)
     const hooksPath = (await git(repoRoot, ['config', '--get', 'core.hooksPath'])).trim()
     expect(hooksPath).toBe(nohooksDir())
+  })
 
+  it('emits clone.progress events, ending in phase: done', () => {
     const progressEvents = emittedEvents.filter((e) => e.channel === 'clone.progress')
     expect(progressEvents.length).toBeGreaterThan(0)
     expect(progressEvents.at(-1)?.payload).toMatchObject({
@@ -100,24 +100,30 @@ describe('git service (integration)', () => {
       phase: 'done',
       percent: 100
     })
+  })
 
-    const prResult = await checkoutTarget(projectId, {
+  it('checkoutTarget: a PR-like target resolves base to the merge-base of head/base', async () => {
+    const result = await checkoutTarget(projectId, {
       kind: 'pr',
       pr: 1,
-      headRefOid: featureHeadSha,
-      baseRefOid: baseSha
+      headRefOid: fixture.featureHeadSha,
+      baseRefOid: fixture.baseSha
     })
-    expect(prResult).toEqual({ base: baseSha, head: featureHeadSha })
+    expect(result).toEqual({ base: fixture.baseSha, head: fixture.featureHeadSha })
+  })
 
-    const commitResult = await checkoutTarget(projectId, { kind: 'commit', sha: baseSha })
-    expect(commitResult).toEqual({ base: rootSha, head: baseSha })
+  it('checkoutTarget: a commit resolves base to its parent', async () => {
+    const result = await checkoutTarget(projectId, { kind: 'commit', sha: fixture.baseSha })
+    expect(result).toEqual({ base: fixture.rootSha, head: fixture.baseSha })
+  })
 
-    // git's well-known empty tree SHA
-    const EMPTY_TREE_SHA = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
-    const rootResult = await checkoutTarget(projectId, { kind: 'commit', sha: rootSha })
-    expect(rootResult).toEqual({ base: EMPTY_TREE_SHA, head: rootSha })
+  it('checkoutTarget: a root commit resolves base to the empty tree', async () => {
+    const result = await checkoutTarget(projectId, { kind: 'commit', sha: fixture.rootSha })
+    expect(result).toEqual({ base: EMPTY_TREE_SHA, head: fixture.rootSha })
+  })
 
-    const changes = await changedFiles(projectId, baseSha, featureHeadSha)
+  it('changedFiles reports the modify, rename, delete, and added-binary between base and head', async () => {
+    const changes = await changedFiles(projectId, fixture.baseSha, fixture.featureHeadSha)
     const byPath = new Map(changes.map((c) => [c.path, c]))
     expect(byPath.get('a.txt')).toMatchObject({ changeType: 'MODIFIED', previousPath: null })
     expect(byPath.get('sub/c.txt')).toMatchObject({
@@ -127,12 +133,13 @@ describe('git service (integration)', () => {
     expect(byPath.get('README.md')).toMatchObject({ changeType: 'DELETED' })
     expect(byPath.get('image.png')).toMatchObject({
       changeType: 'ADDED',
-      isBinary: true,
       additions: 0,
       deletions: 0
     })
+  })
 
-    const tree = await listTree(projectId, featureHeadSha)
+  it('listTree lists every tracked path at the feature head', async () => {
+    const tree = await listTree(projectId, fixture.featureHeadSha)
     expect([...tree].sort()).toEqual(['a.txt', 'image.png', 'sub/c.txt'])
-  }, 30_000)
+  })
 })

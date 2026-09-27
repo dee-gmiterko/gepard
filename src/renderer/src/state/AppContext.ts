@@ -1,5 +1,3 @@
-// The provider component lives in AppProvider.tsx, not here, because React
-// Fast Refresh requires a file to export only components.
 import { createContext, useContext, type Dispatch } from 'react'
 import type { AppAction, AppState } from './reducer'
 

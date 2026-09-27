@@ -18,20 +18,21 @@ export function useGlobalKeys(): void {
       if (e.key === 'Enter' && target && isInteractiveControlTarget(target)) return
 
       const cmds = commandsRef.current
+      let acted: boolean
       switch (e.key) {
         case 'Enter':
-          cmds.toggleViewed()
+          acted = cmds.toggleViewed()
           break
         case 'ArrowDown':
-          cmds.nextFile()
+          acted = cmds.nextFile()
           break
         case 'ArrowUp':
-          cmds.prevFile()
+          acted = cmds.prevFile()
           break
         default:
           return
       }
-      e.preventDefault()
+      if (acted) e.preventDefault()
     }
 
     window.addEventListener('keydown', onKeyDown)

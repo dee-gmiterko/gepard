@@ -1,11 +1,7 @@
 out
 dist
-pnpm-lock.yaml
-LICENSE.md
 tsconfig.json
 tsconfig.*.json
 
-# Hand-authored spec/reports and captured gh fixtures are kept verbatim;
-# .yarnrc.yml is owned by yarn.
 docs
 .yarnrc.yml

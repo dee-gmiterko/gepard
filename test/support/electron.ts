@@ -1,4 +1,4 @@
-let userDataDir = '/tmp'
+let userDataDir: string | null = null
 
 export interface EmittedEvent {
   channel: string
@@ -27,7 +27,11 @@ const fakeWindow = {
 export const app = {
   isPackaged: true,
   getPath(name: string): string {
-    if (name === 'userData') return userDataDir
+    if (userDataDir === null) {
+      throw new Error(
+        `electron mock: app.getPath('${name}') called before __setUserDataDir() (test/support/electron.ts)`
+      )
+    }
     return userDataDir
   },
   setName: (): void => undefined

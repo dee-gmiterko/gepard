@@ -9,12 +9,13 @@ import { Comment, CommentDraft, LocalViewedState, ReviewThread } from '@shared/i
 const ReviewStoreFile = z.object({
   threads: z.array(ReviewThread),
   viewed: z.array(LocalViewedState),
+  pendingReviewId: z.string().nullable().default(null),
   lastSuccessfulSyncAt: z.iso.datetime({ offset: true }).nullable()
 })
 export type ReviewStoreFile = z.infer<typeof ReviewStoreFile>
 
 function emptyStore(): ReviewStoreFile {
-  return { threads: [], viewed: [], lastSuccessfulSyncAt: null }
+  return { threads: [], viewed: [], pendingReviewId: null, lastSuccessfulSyncAt: null }
 }
 
 export function nowIso(): string {
@@ -23,6 +24,25 @@ export function nowIso(): string {
 
 const cache = new Map<string, ReviewStoreFile>()
 const cacheKey = (projectId: string, pr: number): string => `${projectId}:${pr}`
+
+const locks = new Map<string, Promise<unknown>>()
+
+export function withReviewLock<T>(projectId: string, pr: number, fn: () => Promise<T>): Promise<T> {
+  const key = cacheKey(projectId, pr)
+  const settledPrior = (locks.get(key) ?? Promise.resolve()).then(
+    () => undefined,
+    () => undefined
+  )
+  const result = settledPrior.then(fn)
+  locks.set(
+    key,
+    result.then(
+      () => undefined,
+      () => undefined
+    )
+  )
+  return result
+}
 
 async function readStoreFile(projectId: string, pr: number): Promise<ReviewStoreFile> {
   let raw: string
@@ -60,8 +80,7 @@ export async function loadReview(projectId: string, pr: number): Promise<ReviewS
   return store
 }
 
-// Write tmp -> rename: POSIX rename is atomic, so a crash mid-write never
-// leaves a corrupt file; then refresh the in-memory copy.
+// POSIX rename replaces the target file atomically.
 export async function saveReview(
   projectId: string,
   pr: number,
@@ -85,8 +104,7 @@ export async function listThreads(projectId: string, pr: number): Promise<Review
 
 export interface UpsertContext {
   prId: string
-  headRefOid: string
-  viewerLogin: string
+  commitOid: string
 }
 
 export type CommentDraftInput = Omit<z.output<typeof CommentDraft>, 'projectId' | 'pr'>
@@ -102,7 +120,7 @@ function findComment(
   return null
 }
 
-export async function upsertLocalComment(
+async function upsertLocalCommentLocked(
   projectId: string,
   pr: number,
   ctx: UpsertContext,
@@ -114,15 +132,17 @@ export async function upsertLocalComment(
   if (draft.id !== null) {
     const found = findComment(store, draft.id)
     if (!found) throw new AppError('NOT_FOUND', `comment ${draft.id} not found`)
-    if (found.comment.local?.status !== 'new') {
-      throw new AppError(
-        'NOT_EDITABLE',
-        `comment ${draft.id} is already synced and cannot be edited locally`
-      )
+    const status = found.comment.local?.status
+    if (status === 'deleted' || found.thread.local?.status === 'deleted') {
+      throw new AppError('NOT_EDITABLE', `comment ${draft.id} is marked for deletion`)
     }
+    if (status === undefined && !found.comment.viewerDidAuthor) {
+      throw new AppError('NOT_EDITABLE', `comment ${draft.id} can only be edited by its author`)
+    }
+    const nextStatus = status === 'new' ? 'new' : 'edited'
     found.comment.body = draft.body
     found.comment.updatedAt = now
-    found.comment.local = { status: 'new', updatedAt: now, references: draft.references }
+    found.comment.local = { status: nextStatus, updatedAt: now, references: draft.references }
     await saveReview(projectId, pr, store)
     return found.comment
   }
@@ -133,11 +153,10 @@ export async function upsertLocalComment(
     const root = thread.comments[0]
     const comment: Comment = {
       id: `local:${randomUUID()}`,
-      databaseId: null,
       threadId: thread.id,
       reviewId: null,
       reviewState: null,
-      author: { login: ctx.viewerLogin, isBot: false },
+      author: null,
       body: draft.body,
       createdAt: now,
       updatedAt: now,
@@ -158,11 +177,10 @@ export async function upsertLocalComment(
   const threadId = `local:${randomUUID()}`
   const comment: Comment = {
     id: `local:${randomUUID()}`,
-    databaseId: null,
     threadId,
     reviewId: null,
     reviewState: null,
-    author: { login: ctx.viewerLogin, isBot: false },
+    author: null,
     body: draft.body,
     createdAt: now,
     updatedAt: now,
@@ -186,13 +204,12 @@ export async function upsertLocalComment(
       startSide: draft.anchor.startSide,
       originalLine: draft.anchor.line,
       originalStartLine: draft.anchor.startLine,
-      commitOid: ctx.headRefOid,
-      originalCommitOid: ctx.headRefOid
+      commitOid: ctx.commitOid,
+      originalCommitOid: ctx.commitOid
     },
     isResolved: false,
     isOutdated: false,
     comments: [comment],
-    remoteUpdatedAt: now,
     local: { status: 'new', updatedAt: now }
   }
   store.threads.push(thread)
@@ -200,10 +217,16 @@ export async function upsertLocalComment(
   return comment
 }
 
-// GitHub refuses to delete the root of a thread that has replies for
-// non-admins, so deleting a thread's root here only marks the whole thread
-// `deleted` locally; Sync surfaces GitHub's failure when it pushes that.
-export async function deleteLocalComment(
+export function upsertLocalComment(
+  projectId: string,
+  pr: number,
+  ctx: UpsertContext,
+  draft: CommentDraftInput
+): Promise<Comment> {
+  return withReviewLock(projectId, pr, () => upsertLocalCommentLocked(projectId, pr, ctx, draft))
+}
+
+async function deleteLocalCommentLocked(
   projectId: string,
   pr: number,
   commentId: string
@@ -219,11 +242,26 @@ export async function deleteLocalComment(
     if (thread.local?.status === 'new') {
       store.threads = store.threads.filter((t) => t.id !== thread.id)
     } else {
+      const hasLiveReplies = thread.comments.some(
+        (c) => c.id !== commentId && c.local?.status !== 'deleted'
+      )
+      if (hasLiveReplies) {
+        throw new AppError(
+          'NOT_DELETABLE',
+          `comment ${commentId} is a thread root with replies and cannot be deleted`
+        )
+      }
+      if (!comment.viewerCanDelete) {
+        throw new AppError('NOT_DELETABLE', `comment ${commentId} cannot be deleted`)
+      }
       thread.local = { status: 'deleted', updatedAt: now }
     }
   } else if (comment.local?.status === 'new') {
     thread.comments = thread.comments.filter((c) => c.id !== commentId)
   } else {
+    if (!comment.viewerCanDelete) {
+      throw new AppError('NOT_DELETABLE', `comment ${commentId} cannot be deleted`)
+    }
     comment.local = {
       status: 'deleted',
       updatedAt: now,
@@ -231,6 +269,14 @@ export async function deleteLocalComment(
     }
   }
   await saveReview(projectId, pr, store)
+}
+
+export function deleteLocalComment(
+  projectId: string,
+  pr: number,
+  commentId: string
+): Promise<void> {
+  return withReviewLock(projectId, pr, () => deleteLocalCommentLocked(projectId, pr, commentId))
 }
 
 export async function listViewed(projectId: string, pr: number): Promise<LocalViewedState[]> {
@@ -242,7 +288,7 @@ export async function knownPrId(projectId: string, pr: number): Promise<string |
   return store.viewed[0]?.prId ?? store.threads[0]?.prId ?? null
 }
 
-export async function setLocalViewed(
+async function setLocalViewedLocked(
   projectId: string,
   pr: number,
   prId: string,
@@ -269,4 +315,16 @@ export async function setLocalViewed(
   }
   await saveReview(projectId, pr, store)
   return store.viewed
+}
+
+export function setLocalViewed(
+  projectId: string,
+  pr: number,
+  prId: string,
+  paths: string[],
+  viewed: boolean
+): Promise<LocalViewedState[]> {
+  return withReviewLock(projectId, pr, () =>
+    setLocalViewedLocked(projectId, pr, prId, paths, viewed)
+  )
 }

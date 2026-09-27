@@ -1,4 +1,4 @@
-import { appendFileSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { appendFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { app } from 'electron'
 import { logsDir } from './paths'
@@ -8,54 +8,57 @@ const LOG_FILE_NAME = 'main.log'
 
 export type LogLevel = 'info' | 'warn' | 'error'
 
-let initialized = false
-
 function logFilePath(): string {
   return join(logsDir(), LOG_FILE_NAME)
 }
 
-function capIfTooLarge(): void {
+let dirReady: Promise<void> | null = null
+
+function ensureDir(): Promise<void> {
+  if (!dirReady) {
+    dirReady = mkdir(logsDir(), { recursive: true }).then(
+      () => undefined,
+      () => undefined
+    )
+  }
+  return dirReady
+}
+
+async function capIfTooLarge(): Promise<void> {
   const path = logFilePath()
   let size: number
   try {
-    size = statSync(path).size
+    size = (await stat(path)).size
   } catch {
     return
   }
   if (size <= MAX_BYTES) return
   try {
-    const content = readFileSync(path, 'utf8')
+    const content = await readFile(path, 'utf8')
     const half = content.slice(Math.floor(content.length / 2))
     const firstNewline = half.indexOf('\n')
     const trimmed = firstNewline >= 0 ? half.slice(firstNewline + 1) : half
-    writeFileSync(path, trimmed)
+    await writeFile(path, trimmed)
   } catch {
-    // Logging must never throw into the caller.
+    void 0
   }
 }
 
-function ensureInitialized(): void {
-  if (initialized) return
-  initialized = true
-  try {
-    mkdirSync(logsDir(), { recursive: true })
-    capIfTooLarge()
-  } catch {
-    // Logging must never throw into the caller.
-  }
+let queue: Promise<void> = Promise.resolve()
+
+function enqueue(task: () => Promise<void>): void {
+  queue = queue.then(task, task)
 }
 
-// Writes are synchronous so a message logged right before a crash isn't
-// lost to a pending async flush.
-function write(level: LogLevel, scope: string, message: string): void {
-  ensureInitialized()
+async function write(level: LogLevel, scope: string, message: string): Promise<void> {
+  await ensureDir()
+  await capIfTooLarge()
   const line = `${new Date().toISOString()} ${level} ${scope} ${message}\n`
   try {
-    appendFileSync(logFilePath(), line)
+    await appendFile(logFilePath(), line)
   } catch {
-    // Logging must never throw into the caller.
+    void 0
   }
-  // Electron's app.isPackaged is false in dev and true in a packaged build.
   if (!app.isPackaged) {
     process.stderr.write(line)
   }
@@ -63,12 +66,12 @@ function write(level: LogLevel, scope: string, message: string): void {
 
 export const log = {
   info(scope: string, message: string): void {
-    write('info', scope, message)
+    enqueue(() => write('info', scope, message))
   },
   warn(scope: string, message: string): void {
-    write('warn', scope, message)
+    enqueue(() => write('warn', scope, message))
   },
   error(scope: string, message: string): void {
-    write('error', scope, message)
+    enqueue(() => write('error', scope, message))
   }
 }

@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react'
 import styled from 'styled-components'
+import { disabledInteractive } from './disabledInteractive'
 
 export interface CheckboxProps {
   checked: boolean
   indeterminate?: boolean
   onChange: (checked: boolean) => void
   label?: string
+  ariaLabel?: string
   disabled?: boolean
 }
 
@@ -15,8 +17,7 @@ const Label = styled.label<{ $disabled?: boolean }>`
   gap: ${({ theme }) => theme.space[1]};
   font-size: ${({ theme }) => theme.font.size.sm};
   color: ${({ theme }) => theme.colors.fg};
-  cursor: ${({ $disabled }) => ($disabled ? 'default' : 'pointer')};
-  opacity: ${({ $disabled }) => ($disabled ? 0.5 : 1)};
+  ${disabledInteractive}
 `
 
 const Input = styled.input`
@@ -31,6 +32,7 @@ export function Checkbox({
   indeterminate,
   onChange,
   label,
+  ariaLabel,
   disabled
 }: CheckboxProps): React.JSX.Element {
   const ref = useRef<HTMLInputElement>(null)
@@ -46,6 +48,7 @@ export function Checkbox({
         type="checkbox"
         checked={checked}
         disabled={disabled}
+        aria-label={label ? undefined : ariaLabel}
         onChange={(e) => onChange(e.target.checked)}
       />
       {label && <span>{label}</span>}

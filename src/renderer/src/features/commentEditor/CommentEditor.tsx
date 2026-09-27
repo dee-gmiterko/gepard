@@ -1,12 +1,37 @@
 import { useState } from 'react'
 import styled from 'styled-components'
+import { FormattedMessage, useIntl } from 'react-intl'
+import { defineMessages } from '../../i18n/defineMessages'
 import { ReferencesPanel } from './ReferencesPanel'
-import { useDeleteComment, useUpsertComment } from '../../queries/comments'
+import { useUpsertComment } from '../../queries/comments'
 import { Button } from '../../components/Button'
 import { Stack } from '../../components/Layout'
 import { TextArea } from '../../components/TextInput'
 import type { CommentDraft, CommentReference, DraftAnchor } from '@shared/ipc/schemas/comment'
 import type { RefAnchor } from './anchorLine'
+
+const messages = defineMessages({
+  placeholder: {
+    id: 'commentEditor.placeholder',
+    defaultMessage: 'Leave a comment…'
+  },
+  cancel: {
+    id: 'commentEditor.cancel',
+    defaultMessage: 'Cancel'
+  },
+  save: {
+    id: 'commentEditor.save',
+    defaultMessage: 'Save'
+  },
+  reply: {
+    id: 'commentEditor.reply',
+    defaultMessage: 'Reply'
+  },
+  submit: {
+    id: 'commentEditor.submit',
+    defaultMessage: 'Submit'
+  }
+})
 
 export type CommentEditorTarget =
   | { kind: 'thread'; anchor: DraftAnchor }
@@ -44,14 +69,19 @@ export function CommentEditor({
   onSubmitted,
   onCancel
 }: CommentEditorProps): React.JSX.Element {
+  const intl = useIntl()
   const [body, setBody] = useState(target.kind === 'edit' ? target.initialBody : '')
   const [references, setReferences] = useState<CommentReference[]>(
     target.kind === 'edit' ? target.initialReferences : []
   )
   const upsert = useUpsertComment(projectId, pr)
-  const del = useDeleteComment(projectId, pr)
 
-  const submitLabel = target.kind === 'edit' ? 'Save' : target.kind === 'reply' ? 'Reply' : 'Submit'
+  const submitMessage =
+    target.kind === 'edit'
+      ? messages.save
+      : target.kind === 'reply'
+        ? messages.reply
+        : messages.submit
 
   function handleSubmit(): void {
     const trimmed = body.trim()
@@ -76,17 +106,12 @@ export function CommentEditor({
     })
   }
 
-  function handleDelete(): void {
-    if (target.kind !== 'edit') return
-    del.mutate(target.id, { onSuccess: onSubmitted })
-  }
-
   return (
     <Stack>
       <TextArea
         value={body}
         onChange={(e) => setBody(e.target.value)}
-        placeholder="Leave a comment…"
+        placeholder={intl.formatMessage(messages.placeholder)}
         rows={3}
       />
       <ReferencesPanel
@@ -97,10 +122,9 @@ export function CommentEditor({
         onChange={setReferences}
       />
       <Actions>
-        {onCancel && <Button onClick={onCancel}>Cancel</Button>}
-        {target.kind === 'edit' && (
-          <Button variant="danger" onClick={handleDelete} disabled={del.isPending}>
-            Delete
+        {onCancel && (
+          <Button onClick={onCancel}>
+            <FormattedMessage {...messages.cancel} />
           </Button>
         )}
         <Button
@@ -108,7 +132,7 @@ export function CommentEditor({
           onClick={handleSubmit}
           disabled={!body.trim() || upsert.isPending}
         >
-          {submitLabel}
+          <FormattedMessage {...submitMessage} />
         </Button>
       </Actions>
     </Stack>
