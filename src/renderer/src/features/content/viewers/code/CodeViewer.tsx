@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { lineNumbers } from '@codemirror/view'
 import { FormattedMessage } from 'react-intl'
 import { useAppState } from '../../../../state/AppContext'
+import { useCurrentHead } from '../../../../queries/projects'
 import { useFileContent } from '../../../../queries/files'
 import { useReadOnlyEditor } from '../../../../codemirror/useReadOnlyEditor'
 import { revealDocLine } from '../../../../codemirror/revealLine'
@@ -11,10 +12,9 @@ import { ImageViewer } from '../image/ImageViewer'
 import { MissingViewer } from '../missing/MissingViewer'
 import { viewerMessages } from '../messages'
 
-export function CodeViewer({ path, sha }: { path: string; sha: string }): React.JSX.Element {
-  const state = useAppState()
-  const projectId = state.projectId ?? ''
-  const { data } = useFileContent(projectId, sha, path)
+export function CodeViewer({ path }: { path: string }): React.JSX.Element {
+  const sha = useCurrentHead() ?? ''
+  const { data } = useFileContent(sha, path)
 
   if (!data)
     return (

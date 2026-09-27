@@ -1,13 +1,9 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
-import { useCommands, type Commands } from './commands'
+import { useEffect } from 'react'
+import { useCommands } from './commands'
 import { describeTarget, isInteractiveControlTarget, isTextEntryTarget } from './keyTargets'
 
 export function useGlobalKeys(): void {
   const commands = useCommands()
-  const commandsRef = useRef<Commands>(commands)
-  useLayoutEffect(() => {
-    commandsRef.current = commands
-  })
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
@@ -17,17 +13,16 @@ export function useGlobalKeys(): void {
       if (target && isTextEntryTarget(target)) return
       if (e.key === 'Enter' && target && isInteractiveControlTarget(target)) return
 
-      const cmds = commandsRef.current
       let acted: boolean
       switch (e.key) {
         case 'Enter':
-          acted = cmds.toggleViewed()
+          acted = commands.toggleViewed()
           break
         case 'ArrowDown':
-          acted = cmds.nextFile()
+          acted = commands.nextFile()
           break
         case 'ArrowUp':
-          acted = cmds.prevFile()
+          acted = commands.prevFile()
           break
         default:
           return
@@ -37,5 +32,5 @@ export function useGlobalKeys(): void {
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
+  }, [commands])
 }

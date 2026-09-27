@@ -15,6 +15,7 @@ export const qk = {
     [...qk.prsAll(p), search, commit, path] as const,
   branches: (p: string) => [...qk.project(p), 'branches'] as const,
   pr: (p: string, pr: number) => [...qk.project(p), 'pr', pr] as const,
+  prSummary: (p: string, pr: number) => [...qk.pr(p, pr), 'summary'] as const,
   prCommits: (p: string, pr: number, path?: string) => [...qk.pr(p, pr), 'commits', path] as const,
   comments: (p: string, pr: number) => [...qk.pr(p, pr), 'comments'] as const,
   viewed: (p: string, pr: number) => [...qk.pr(p, pr), 'viewed'] as const,

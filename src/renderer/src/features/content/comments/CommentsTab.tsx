@@ -75,11 +75,10 @@ const messages = defineMessages({
 export function CommentsTab(): React.JSX.Element {
   const state = useAppState()
   const dispatch = useAppDispatch()
-  const projectId = state.projectId ?? ''
   const pr = state.targeting.pr
   const viewer = useViewer().data ?? null
 
-  const { data: threads = [], isLoading } = useComments(projectId, pr ?? NaN)
+  const { data: threads = [], isLoading } = useComments()
 
   const ordered = useMemo(() => sortThreadsChronologically(threads), [threads])
 

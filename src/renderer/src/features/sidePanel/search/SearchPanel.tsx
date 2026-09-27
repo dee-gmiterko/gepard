@@ -1,18 +1,16 @@
-import { useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useMemo, useState } from 'react'
 import styled from 'styled-components'
 import { AtSign, Hash } from 'react-feather'
 import { FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl'
 import { defineMessages } from '../../../i18n/defineMessages'
 import { useAppState, useAppDispatch } from '../../../state/AppContext'
 import { useCurrentHead } from '../../../queries/projects'
-import { useTargetedPaths } from '../../../queries/files'
-import { useSearch, useWorkspaceSymbols } from '../../../queries/search'
+import { useTargetedFiles } from '../../../queries/files'
+import { useSearch, useWorkspaceSymbols, type SearchParams } from '../../../queries/search'
 import { IconButton } from '../../../components/IconButton'
-import { Tree, buildTree, buildFlatList, type TreeNode } from '../../../components/Tree'
-import { fuzzyRanges, NO_HIGHLIGHT } from '../../../components/Combobox'
+import { Tree, TreeLabel, buildTree, buildFlatList, type TreeNode } from '../../../components/Tree'
+import { Combobox, fuzzyRanges } from '../../../components/Combobox'
 import { HighlightedText } from '../../../components/HighlightedText'
-import { Menu, MenuAnchor, MenuItem } from '../../../components/Menu'
-import { TextInput } from '../../../components/TextInput'
 import { Toolbar } from '../../../components/Toolbar'
 import { ScopeToggle, type SearchScope } from '../../../components/ScopeToggle'
 import { ViewModeToggle, type ViewMode } from '../../../components/ViewModeToggle'
@@ -21,10 +19,9 @@ import { Caption } from '../../../components/Caption'
 import { Inline } from '../../../components/Layout'
 import { Message } from '../../../components/Message'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
-import { useOutsideClick } from '../../../hooks/useOutsideClick'
 import { FileRowMarks } from '../fileRows/FileRowMarks'
 import { useRowData } from '../fileRows/rowData'
-import type { GroupedResult, SearchQuery, WorkspaceSymbol } from '@shared/ipc/schemas/search'
+import type { GroupedResult, WorkspaceSymbol } from '@shared/ipc/schemas/search'
 
 type FileMatches = GroupedResult['files'][number]
 type MatchItem = FileMatches['matches'][number]
@@ -109,8 +106,6 @@ const InputArea = styled.div`
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 `
 
-const InputAnchor = MenuAnchor
-
 const Results = styled.div`
   flex: 1;
   min-height: 0;
@@ -126,7 +121,7 @@ function toSearchTree(nodes: TreeNode<FileMatches>[]): TreeNode<SearchRowData>[]
     return {
       path: n.path,
       name: n.name,
-      isFolder: true,
+      isFolder: false,
       data: { kind: 'file', file },
       children: file.matches.map((match, i) => ({
         path: `${n.path}#${i}`,
@@ -143,9 +138,8 @@ export function SearchPanel(): React.JSX.Element {
   const intl = useIntl()
   const state = useAppState()
   const dispatch = useAppDispatch()
-  const projectId = state.projectId ?? ''
-  const sha = useCurrentHead(state.projectId) ?? ''
-  const targetedPaths = useTargetedPaths()
+  const sha = useCurrentHead() ?? ''
+  const targetedPaths = useTargetedFiles()
 
   const [text, setText] = useState('')
   const [regex, setRegex] = useState(false)
@@ -156,62 +150,28 @@ export function SearchPanel(): React.JSX.Element {
     path: string
     pos: { line: number; col: number }
   } | null>(null)
-  const [suggestOpen, setSuggestOpen] = useState(false)
-  const [suggestHighlight, setSuggestHighlight] = useState(NO_HIGHLIGHT)
 
   const debouncedText = useDebouncedValue(text)
-  const suggestions = useWorkspaceSymbols(projectId, sha, debouncedText, 8)
-  const suggestionList = suggestions.data ?? []
-  const suggestActive = Math.min(suggestHighlight, Math.max(suggestionList.length - 1, 0))
-  const suggestRef = useRef<HTMLDivElement>(null)
-  const { pr, rowFor } = useRowData()
-
-  useOutsideClick(suggestRef, () => setSuggestOpen(false))
+  const suggestions = useWorkspaceSymbols(debouncedText, 8)
+  const suggestionList = text.length > 0 ? (suggestions.data ?? []) : []
+  const { rowFor } = useRowData()
 
   function pickSymbol(symbol: WorkspaceSymbol): void {
     setText(symbol.name)
     if (symbolFlag) setSelectedAt({ path: symbol.location.path, pos: symbol.location.range.start })
-    setSuggestOpen(false)
   }
 
-  function handleSuggestKeyDown(e: KeyboardEvent<HTMLInputElement>): void {
-    if (!suggestOpen || suggestionList.length === 0) return
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      setSuggestHighlight(Math.max(0, Math.min(suggestActive + 1, suggestionList.length - 1)))
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setSuggestHighlight(Math.max(suggestActive - 1, NO_HIGHLIGHT))
-    } else if (e.key === 'Enter') {
-      if (suggestActive === NO_HIGHLIGHT) return
-      const symbol = suggestionList[suggestActive]
-      if (symbol) {
-        e.preventDefault()
-        pickSymbol(symbol)
-      }
-    } else if (e.key === 'Escape') {
-      setSuggestOpen(false)
-    }
-  }
-
-  const query = useMemo<SearchQuery | null>(() => {
-    if (!projectId || !sha || !debouncedText) return null
+  const params = useMemo<SearchParams | null>(() => {
+    if (!debouncedText) return null
     if (symbolFlag && selectedAt) {
-      return {
-        kind: 'references',
-        projectId,
-        sha,
-        scope,
-        targetedPaths,
-        text: debouncedText,
-        at: selectedAt
-      }
+      return { kind: 'references', scope, targetedPaths, text: debouncedText, at: selectedAt }
     }
-    if (regex) return { kind: 'regex', projectId, sha, scope, targetedPaths, text: debouncedText }
-    return { kind: 'pattern', projectId, sha, scope, targetedPaths, text: debouncedText }
-  }, [projectId, sha, symbolFlag, selectedAt, regex, scope, targetedPaths, debouncedText])
+    if (regex) return { kind: 'regex', scope, targetedPaths, text: debouncedText }
+    return { kind: 'pattern', scope, targetedPaths, text: debouncedText }
+  }, [symbolFlag, selectedAt, regex, scope, targetedPaths, debouncedText])
 
-  const { data: result, isFetching } = useSearch(query)
+  const { data: result, isFetching } = useSearch(sha, params)
+  const active = Boolean(params) && Boolean(sha)
 
   const items = useMemo(
     () => (result?.files ?? []).map((f) => ({ path: f.path, data: f })),
@@ -226,42 +186,33 @@ export function SearchPanel(): React.JSX.Element {
   return (
     <Container>
       <InputArea>
-        <InputAnchor ref={suggestRef}>
-          <TextInput
-            value={text}
-            placeholder={intl.formatMessage(messages.placeholder)}
-            onChange={(e) => {
-              setText(e.target.value)
+        <Combobox<WorkspaceSymbol>
+          items={suggestionList}
+          value={null}
+          freeText={{
+            text,
+            onTextChange: (next) => {
+              setText(next)
               setSelectedAt(null)
-              setSuggestOpen(true)
-              setSuggestHighlight(NO_HIGHLIGHT)
-            }}
-            onFocus={() => {
-              setSuggestOpen(true)
-              setSuggestHighlight(NO_HIGHLIGHT)
-            }}
-            onKeyDown={handleSuggestKeyDown}
-          />
-          {suggestOpen && text.length > 0 && suggestionList.length > 0 && (
-            <Menu>
-              {suggestionList.map((symbol, i) => (
-                <MenuItem
-                  key={`${symbol.location.path}:${symbol.location.range.start.line}:${i}`}
-                  $active={i === suggestActive}
-                  onClick={() => pickSymbol(symbol)}
-                  onMouseEnter={() => setSuggestHighlight(i)}
-                >
-                  <Inline $gap={1}>
-                    <span>
-                      <HighlightedText text={symbol.name} ranges={fuzzyRanges(text, symbol.name)} />
-                    </span>
-                    <Caption>{intl.formatMessage(symbolKindMessages[symbol.kind])}</Caption>
-                  </Inline>
-                </MenuItem>
-              ))}
-            </Menu>
+            },
+            searchText: debouncedText
+          }}
+          onSelect={(symbol) => symbol && pickSymbol(symbol)}
+          getKey={(symbol) =>
+            `${symbol.location.path}:${symbol.location.range.start.line}:${symbol.location.range.start.col}`
+          }
+          getLabel={(symbol) => symbol.name}
+          placeholder={intl.formatMessage(messages.placeholder)}
+          loading={suggestions.isFetching}
+          renderOption={(symbol, { searchText }) => (
+            <Inline $gap={1}>
+              <span>
+                <HighlightedText text={symbol.name} ranges={fuzzyRanges(searchText, symbol.name)} />
+              </span>
+              <Caption>{intl.formatMessage(symbolKindMessages[symbol.kind])}</Caption>
+            </Inline>
           )}
-        </InputAnchor>
+        />
       </InputArea>
 
       <Toolbar>
@@ -294,34 +245,38 @@ export function SearchPanel(): React.JSX.Element {
       </Toolbar>
 
       <Results>
-        {!query && (
+        {!active && (
           <Message>
             <FormattedMessage {...messages.typeToSearch} />
           </Message>
         )}
-        {query && isFetching && (
+        {active && isFetching && (
           <Message>
             <FormattedMessage {...messages.searching} />
           </Message>
         )}
-        {query && !isFetching && (result?.totalMatches ?? 0) === 0 && (
+        {active && !isFetching && (result?.totalMatches ?? 0) === 0 && (
           <Message>
             <FormattedMessage {...messages.noMatches} />
           </Message>
         )}
-        {query && !isFetching && (result?.totalMatches ?? 0) > 0 && (
+        {active && !isFetching && (result?.totalMatches ?? 0) > 0 && (
           <Tree<SearchRowData>
             nodes={nodes}
+            selectedPath={state.activeFile}
             isSelected={(node) =>
               node.data?.kind === 'match' && node.data.filePath === state.activeFile
             }
             onSelectFile={(node) => {
-              if (node.data?.kind === 'match')
+              if (node.data?.kind === 'match') {
                 dispatch({
                   type: 'file/open',
                   path: node.data.filePath,
                   line: node.data.match.line
                 })
+              } else if (node.data?.kind === 'file') {
+                dispatch({ type: 'file/open', path: node.path })
+              }
             }}
             renderFile={(node) =>
               node.data?.kind === 'match' ? (
@@ -330,13 +285,11 @@ export function SearchPanel(): React.JSX.Element {
                   preview={node.data.match.preview}
                   spans={node.data.match.spans}
                 />
-              ) : null
-            }
-            renderFolder={(node) =>
-              node.data?.kind === 'file' ? (
+              ) : node.data?.kind === 'file' ? (
                 <>
+                  <TreeLabel title={node.path}>{node.name}</TreeLabel>
                   <Caption>{node.data.file.matches.length}</Caption>
-                  <FileRowMarks data={rowFor(node.path)} paths={[node.path]} pr={pr} />
+                  <FileRowMarks data={rowFor(node.path)} paths={[node.path]} />
                 </>
               ) : null
             }

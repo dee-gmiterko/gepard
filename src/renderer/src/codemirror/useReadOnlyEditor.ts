@@ -19,7 +19,7 @@ const messages = defineMessages({
   }
 })
 
-export interface ReadOnlyEditor {
+interface ReadOnlyEditor {
   containerRef: RefObject<HTMLDivElement | null>
   view: EditorView | null
   comments: Compartment
@@ -56,21 +56,16 @@ export function useReadOnlyEditor(
     []
   )
 
-  const initial = useRef({ doc, extensions, theme })
-  const skipNextSync = useRef(true)
-
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
 
-    skipNextSync.current = true
     const newView = new EditorView({
       state: EditorState.create({
-        doc: initial.current.doc,
         extensions: [
           readOnlyExtensions(),
-          compartments.extensions.of(initial.current.extensions),
-          compartments.theme.of(editorTheme(initial.current.theme)),
+          compartments.extensions.of([]),
+          compartments.theme.of([]),
           compartments.language.of([]),
           compartments.comments.of([]),
           compartments.commentGutter.of([]),
@@ -90,14 +85,13 @@ export function useReadOnlyEditor(
   useEffect(() => {
     if (!view) return
 
-    if (skipNextSync.current) {
-      skipNextSync.current = false
-    } else {
-      view.dispatch({
-        changes: { from: 0, to: view.state.doc.length, insert: doc },
-        effects: compartments.extensions.reconfigure(extensions)
-      })
-    }
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: doc },
+      effects: [
+        compartments.extensions.reconfigure(extensions),
+        compartments.theme.reconfigure(editorTheme(theme))
+      ]
+    })
 
     let cancelled = false
     const desc = LanguageDescription.matchFilename(languages, path)
@@ -121,11 +115,7 @@ export function useReadOnlyEditor(
     return () => {
       cancelled = true
     }
-  }, [path, doc, extensions, view, compartments])
-
-  useEffect(() => {
-    view?.dispatch({ effects: compartments.theme.reconfigure(editorTheme(theme)) })
-  }, [theme, view, compartments])
+  }, [path, doc, extensions, theme, view, compartments])
 
   return {
     containerRef,

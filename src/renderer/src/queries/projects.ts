@@ -24,7 +24,8 @@ export function useAddProject() {
   })
 }
 
-export function useOpenProject(projectId: string | null) {
+export function useOpenProject() {
+  const projectId = useAppState().projectId
   return useQuery({
     queryKey: qk.open(projectId ?? ''),
     queryFn: () => invoke('projects.open', { projectId: projectId! }),
@@ -33,7 +34,8 @@ export function useOpenProject(projectId: string | null) {
   })
 }
 
-export function useSetTargeting(projectId: string) {
+export function useSetTargeting() {
+  const projectId = useAppState().projectId ?? ''
   return useMutation({
     mutationFn: (targeting: ChannelInput<'projects.setTargeting'>['targeting']) =>
       invoke('projects.setTargeting', { projectId, targeting })
@@ -67,7 +69,8 @@ export function useRemoveProject() {
   })
 }
 
-export function useIndexStatus(projectId: string) {
+export function useIndexStatus() {
+  const projectId = useAppState().projectId ?? ''
   const qc = useQueryClient()
   useIpcEvent('index.status', (payload) => {
     if (payload.projectId !== projectId) return
@@ -86,8 +89,8 @@ export function useIndexStatus(projectId: string) {
   })
 }
 
-export function useCurrentHead(projectId: string | null): string | null {
+export function useCurrentHead(): string | null {
   const state = useAppState()
-  const open = useOpenProject(projectId)
+  const open = useOpenProject()
   return state.checkout?.head ?? open.data?.head ?? null
 }

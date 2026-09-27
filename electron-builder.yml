@@ -20,6 +20,10 @@ files:
   - '!**/node_modules/@electron/get{,/**/*}'
   - '!**/node_modules/@electron-internal/extract-zip{,/**/*}'
   - '!**/node_modules/@types/node{,/**/*}'
+  # react is a devDependency, but markdown-to-jsx declares it as a peerDependency,
+  # so electron-builder's module collector treats react and react-dom as production
+  # dependencies too.
+  - '!**/node_modules/{react,react-dom}{,/**/*}'
 # Electron cannot execute binaries from inside an asar archive.
 asarUnpack:
   - '**/@vscode/ripgrep-*/bin/**'

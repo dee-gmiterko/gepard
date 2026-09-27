@@ -1,7 +1,25 @@
 import type { HandlerMap } from '../registry'
-import * as gh from '../../services/gh'
+import { AppError } from '../registry'
 import * as git from '../../services/git'
 import * as review from '../../store/review'
+
+// The caller supplies the targeted PR's node id (from its own PR summary);
+// falling back to a previously synced copy keeps this a local, offline-safe
+// lookup rather than a `gh` call.
+async function resolvePrId(
+  projectId: string,
+  pr: number,
+  requested: string | null
+): Promise<string> {
+  const prId = requested ?? (await review.knownPrId(projectId, pr))
+  if (!prId) {
+    throw new AppError(
+      'BAD_INPUT',
+      `no known PR node id for ${projectId}#${pr}; open this PR online at least once first`
+    )
+  }
+  return prId
+}
 
 export const commentsHandlers: Pick<
   HandlerMap,
@@ -10,17 +28,16 @@ export const commentsHandlers: Pick<
   'comments.list': ({ projectId, pr }) => review.listThreads(projectId, pr),
 
   'comments.upsert': async (draft) => {
-    const { projectId, pr, id, threadId, anchor, body, references } = draft
+    const { projectId, pr, id, threadId, anchor, body, references, prId } = draft
     const isNewThread = id === null && threadId === null && anchor !== null
 
     let ctx: review.UpsertContext = { prId: '', commitOid: '' }
     if (isNewThread) {
-      const [{ owner, repo }, { head: commitOid }] = await Promise.all([
-        gh.repoRefFor(projectId),
-        git.workingTree(projectId)
+      const [{ head: commitOid }, resolvedPrId] = await Promise.all([
+        git.workingTree(projectId),
+        resolvePrId(projectId, pr, prId)
       ])
-      const { id: prId } = await gh.viewPr(owner, repo, pr)
-      ctx = { prId, commitOid }
+      ctx = { prId: resolvedPrId, commitOid }
     }
 
     return review.upsertLocalComment(projectId, pr, ctx, { id, threadId, anchor, body, references })
@@ -31,12 +48,8 @@ export const commentsHandlers: Pick<
 
   'viewed.list': ({ projectId, pr }) => review.listViewed(projectId, pr),
 
-  'viewed.set': async ({ projectId, pr, paths, viewed }) => {
-    let prId = await review.knownPrId(projectId, pr)
-    if (!prId) {
-      const { owner, repo } = await gh.repoRefFor(projectId)
-      prId = (await gh.viewPr(owner, repo, pr)).id
-    }
-    return review.setLocalViewed(projectId, pr, prId, paths, viewed)
+  'viewed.set': async ({ projectId, pr, paths, viewed, prId }) => {
+    const resolvedPrId = await resolvePrId(projectId, pr, prId)
+    return review.setLocalViewed(projectId, pr, resolvedPrId, paths, viewed)
   }
 }

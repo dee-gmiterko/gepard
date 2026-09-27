@@ -3,8 +3,10 @@ import { AlertTriangle, X } from 'react-feather'
 import { useIntl } from 'react-intl'
 import { defineMessages } from '../../i18n/defineMessages'
 import { IconButton } from '../IconButton'
+import { Stack } from '../Layout'
 import { Surface } from '../Surface'
 import type { ReportTone } from '../../errors/report'
+import type { Toast } from '../../state/reducer'
 
 const messages = defineMessages({
   notifications: {
@@ -19,20 +21,11 @@ const messages = defineMessages({
 
 export type ToastTone = ReportTone
 
-export interface ToastItem {
-  id: string
-  tone: ToastTone
-  message: string
-}
-
-const Viewport = styled.div`
+const Viewport = styled(Stack)`
   position: fixed;
   top: ${({ theme }) => theme.space[3]};
   right: ${({ theme }) => theme.space[3]};
   z-index: ${({ theme }) => theme.z.popover};
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.space[2]};
   width: 320px;
   max-width: calc(100vw - ${({ theme }) => theme.space[6]});
 `
@@ -66,7 +59,7 @@ export function ToastViewport({
   toasts,
   onDismiss
 }: {
-  toasts: ToastItem[]
+  toasts: Toast[]
   onDismiss: (id: string) => void
 }): React.JSX.Element | null {
   const intl = useIntl()

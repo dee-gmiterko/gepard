@@ -9,6 +9,7 @@ import { isCancelledError, subscribe } from './ipc/client'
 import { ErrorBoundary } from './errors/ErrorBoundary'
 import { reportError, reportQueryError } from './errors/report'
 import { IntlRoot } from './i18n/IntlRoot'
+import type { MessageDescriptor } from 'react-intl'
 import { intl } from './i18n/intl'
 import { defineMessages } from './i18n/defineMessages'
 
@@ -16,8 +17,32 @@ const messages = defineMessages({
   cloneFailed: {
     id: 'main.cloneFailed',
     defaultMessage: 'Clone failed.'
+  },
+  indexFailed: {
+    id: 'main.indexFailed',
+    defaultMessage: 'Indexing failed.'
+  },
+  appErrorHeadlineApp: {
+    id: 'main.appErrorHeadline.app',
+    defaultMessage: 'Application error.'
+  },
+  appErrorHeadlineLsp: {
+    id: 'main.appErrorHeadline.lsp',
+    defaultMessage: 'Language server error.'
+  },
+  appErrorHeadlineDefault: {
+    id: 'main.appErrorHeadline.default',
+    defaultMessage: 'Background error.'
   }
 })
+
+// `scope` is a free-form main-process label (e.g. "lsp", "lsp:<projectId>");
+// pick a localized headline for it and keep the raw text as detail.
+function appErrorHeadline(scope: string): MessageDescriptor {
+  if (scope === 'app' || scope.startsWith('app:')) return messages.appErrorHeadlineApp
+  if (scope === 'lsp' || scope.startsWith('lsp:')) return messages.appErrorHeadlineLsp
+  return messages.appErrorHeadlineDefault
+}
 
 window.addEventListener('error', (event) => {
   reportError({
@@ -37,7 +62,12 @@ window.addEventListener('unhandledrejection', (event) => {
 })
 
 subscribe('app.error', ({ scope, message }) => {
-  reportError({ scope, message, loggedByMain: true })
+  reportError({
+    scope,
+    message: intl.formatMessage(appErrorHeadline(scope)),
+    detail: message,
+    loggedByMain: true
+  })
 })
 
 subscribe('clone.progress', (payload) => {
@@ -51,7 +81,12 @@ subscribe('clone.progress', (payload) => {
 })
 subscribe('index.status', ({ projectId, status }) => {
   if (status.state !== 'error') return
-  reportError({ scope: `index:${projectId}`, message: status.message, loggedByMain: true })
+  reportError({
+    scope: `index:${projectId}`,
+    message: intl.formatMessage(messages.indexFailed),
+    detail: status.message,
+    loggedByMain: true
+  })
 })
 
 function mutationScope(mutation: {

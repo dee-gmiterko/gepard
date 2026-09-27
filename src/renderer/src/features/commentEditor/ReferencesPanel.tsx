@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl'
 import { defineMessages } from '../../i18n/defineMessages'
 import { Accordion } from '../../components/Accordion'
@@ -9,14 +9,12 @@ import { MatchLine } from '../../components/MatchLine'
 import { Message } from '../../components/Message'
 import { ScopeToggle, type SearchScope } from '../../components/ScopeToggle'
 import { Select } from '../../components/Select'
-import { SymbolDefinitionSection } from './SymbolDefinitionSection'
-import { useLineSymbols } from '../../queries/search'
-import { useFileContent } from '../../queries/files'
-import { clearKindIn, toggleRefIn } from './refs'
+import { SymbolDefinitionSection, type LineSymbol } from './SymbolDefinitionSection'
+import { toggleRefIn } from './refs'
 import type { CommentReference } from '@shared/ipc/schemas/comment'
-import type { SearchQuery } from '@shared/ipc/schemas/search'
-import { useSearch } from '../../queries/search'
+import type { GroupedResult } from '@shared/ipc/schemas/search'
 import type { RefAnchor } from './anchorLine'
+import type { ReferenceChoices } from './referenceChoices'
 
 const messages = defineMessages({
   searching: {
@@ -55,9 +53,10 @@ interface SearchRefsSectionProps {
   onOpenChange: (open: boolean) => void
   disabled?: boolean
   disabledHint?: MessageDescriptor
-  refKind: 'exact' | 'pattern'
-  onRefsChange: (refs: CommentReference[]) => void
-  buildQuery: (scope: SearchScope) => SearchQuery | null
+  scope: SearchScope
+  onScopeChange: (scope: SearchScope) => void
+  data: GroupedResult | undefined
+  isFetching: boolean
   extra?: ReactNode
 }
 
@@ -67,25 +66,13 @@ function SearchRefsSection({
   onOpenChange,
   disabled,
   disabledHint,
-  refKind,
-  onRefsChange,
-  buildQuery,
+  scope,
+  onScopeChange,
+  data,
+  isFetching,
   extra
 }: SearchRefsSectionProps): React.JSX.Element {
   const intl = useIntl()
-  const [scope, setScope] = useState<SearchScope>('all')
-  const query = open && !disabled ? buildQuery(scope) : null
-  const { data, isFetching } = useSearch(query)
-
-  useEffect(() => {
-    if (!open) return
-    const refs: CommentReference[] = data
-      ? data.files.flatMap((f) =>
-          f.matches.map((m) => ({ path: f.path, line: m.line, kind: refKind }))
-        )
-      : []
-    onRefsChange(refs)
-  }, [open, data, refKind, onRefsChange])
 
   return (
     <Accordion
@@ -110,7 +97,7 @@ function SearchRefsSection({
       }
     >
       <Stack>
-        <ScopeToggle value={scope} onChange={setScope} />
+        <ScopeToggle value={scope} onChange={onScopeChange} />
         {extra}
         {isFetching && (
           <Message layout="inline">
@@ -135,64 +122,61 @@ function SearchRefsSection({
   )
 }
 
-export interface ReferencesPanelProps {
-  projectId: string
+interface ReferencesPanelProps {
   refAnchor: RefAnchor | null
-  targetedPaths: string[]
-  references: CommentReference[]
-  onChange: React.Dispatch<React.SetStateAction<CommentReference[]>>
+  choices: ReferenceChoices
+  onChoicesChange: React.Dispatch<React.SetStateAction<ReferenceChoices>>
+  symbols: LineSymbol[]
+  symbolsLoading: boolean
+  symbolsError: Error | null
+  exactDisabled: boolean
+  exactData: GroupedResult | undefined
+  exactFetching: boolean
+  patternDisabled: boolean
+  patternData: GroupedResult | undefined
+  patternFetching: boolean
+  effectivePatternSymbol: string
 }
 
 export function ReferencesPanel({
-  projectId,
   refAnchor,
-  targetedPaths,
-  references,
-  onChange
+  choices,
+  onChoicesChange,
+  symbols,
+  symbolsLoading,
+  symbolsError,
+  exactDisabled,
+  exactData,
+  exactFetching,
+  patternDisabled,
+  patternData,
+  patternFetching,
+  effectivePatternSymbol
 }: ReferencesPanelProps): React.JSX.Element {
-  const [symbolOpen, setSymbolOpen] = useState(() => references.some((r) => r.kind === 'symbol'))
-  const [alsoInOpen, setAlsoInOpen] = useState(() => references.some((r) => r.kind === 'exact'))
-  const [patternOpen, setPatternOpen] = useState(() => references.some((r) => r.kind === 'pattern'))
-  const [patternSymbol, setPatternSymbol] = useState<string>('')
-
-  const lineSymbols = useLineSymbols(
-    projectId,
-    refAnchor?.symbolsResolvable ? refAnchor.sha : '',
-    refAnchor?.path ?? '',
-    refAnchor?.line ?? 1
-  )
-  const fileContent = useFileContent(projectId, refAnchor?.sha ?? '', refAnchor?.path ?? '')
-  const symbols = useMemo(() => lineSymbols.data?.symbols ?? [], [lineSymbols.data])
-
-  const effectivePatternSymbol = patternSymbol || symbols[0]?.name || ''
-
-  const lineText = useMemo(() => {
-    if (!refAnchor) return null
-    const c = fileContent.data
-    if (!c || c.kind !== 'text') return null
-    return c.text.split('\n')[refAnchor.line - 1] ?? null
-  }, [fileContent.data, refAnchor])
-
-  function toggleRef(ref: CommentReference): void {
-    onChange((prev) => toggleRefIn(prev, ref))
-  }
-  function closeAndClearKind(kind: CommentReference['kind'], setOpen: (v: boolean) => void) {
-    return (open: boolean): void => {
-      setOpen(open)
-      if (!open) onChange((prev) => clearKindIn(prev, kind))
-    }
+  function toggleSymbolRef(symbolRef: CommentReference): void {
+    onChoicesChange((prev) => ({ ...prev, symbols: toggleRefIn(prev.symbols, symbolRef) }))
   }
 
-  const setExactRefs = useCallback(
-    (refs: CommentReference[]) =>
-      onChange((prev) => [...prev.filter((r) => r.kind !== 'exact'), ...refs]),
-    [onChange]
-  )
-  const setPatternRefs = useCallback(
-    (refs: CommentReference[]) =>
-      onChange((prev) => [...prev.filter((r) => r.kind !== 'pattern'), ...refs]),
-    [onChange]
-  )
+  function setSymbolOpen(open: boolean): void {
+    onChoicesChange((prev) =>
+      open ? { ...prev, symbolOpen: true } : { ...prev, symbolOpen: false, symbols: [] }
+    )
+  }
+  function setExactOpen(open: boolean): void {
+    onChoicesChange((prev) => ({ ...prev, exactOpen: open }))
+  }
+  function setPatternOpen(open: boolean): void {
+    onChoicesChange((prev) => ({ ...prev, patternOpen: open }))
+  }
+  function setExactScope(scope: SearchScope): void {
+    onChoicesChange((prev) => ({ ...prev, exactScope: scope }))
+  }
+  function setPatternScope(scope: SearchScope): void {
+    onChoicesChange((prev) => ({ ...prev, patternScope: scope }))
+  }
+  function setPatternSymbol(symbol: string): void {
+    onChoicesChange((prev) => ({ ...prev, patternSymbol: symbol }))
+  }
 
   if (!refAnchor) {
     return (
@@ -205,49 +189,38 @@ export function ReferencesPanel({
   return (
     <Stack>
       <SymbolDefinitionSection
-        projectId={projectId}
         refAnchor={refAnchor}
         symbols={symbols}
-        loading={lineSymbols.isLoading}
-        error={lineSymbols.error}
-        targetedPaths={targetedPaths}
-        selected={references.filter((r) => r.kind === 'symbol')}
-        onToggleRef={toggleRef}
-        open={symbolOpen}
-        onOpenChange={closeAndClearKind('symbol', setSymbolOpen)}
+        loading={symbolsLoading}
+        error={symbolsError}
+        selected={choices.symbols}
+        onToggleRef={toggleSymbolRef}
+        open={choices.symbolOpen}
+        onOpenChange={setSymbolOpen}
       />
 
       <SearchRefsSection
         title={messages.alsoIn}
-        open={alsoInOpen}
-        onOpenChange={closeAndClearKind('exact', setAlsoInOpen)}
-        disabled={!lineText || !lineText.trim()}
+        open={choices.exactOpen}
+        onOpenChange={setExactOpen}
+        disabled={exactDisabled}
         disabledHint={messages.alsoInDisabledHint}
-        refKind="exact"
-        onRefsChange={setExactRefs}
-        buildQuery={(scope) =>
-          lineText && lineText.trim()
-            ? {
-                projectId,
-                sha: refAnchor.sha,
-                scope,
-                targetedPaths,
-                kind: 'exactLine',
-                text: lineText.trim(),
-                origin: { path: refAnchor.path, line: refAnchor.line }
-              }
-            : null
-        }
+        scope={choices.exactScope}
+        onScopeChange={setExactScope}
+        data={exactData}
+        isFetching={exactFetching}
       />
 
       <SearchRefsSection
         title={messages.samePatternIn}
-        open={patternOpen}
-        onOpenChange={closeAndClearKind('pattern', setPatternOpen)}
-        disabled={symbols.length === 0}
+        open={choices.patternOpen}
+        onOpenChange={setPatternOpen}
+        disabled={patternDisabled}
         disabledHint={messages.samePatternDisabledHint}
-        refKind="pattern"
-        onRefsChange={setPatternRefs}
+        scope={choices.patternScope}
+        onScopeChange={setPatternScope}
+        data={patternData}
+        isFetching={patternFetching}
         extra={
           symbols.length > 1 ? (
             <Select
@@ -261,19 +234,6 @@ export function ReferencesPanel({
               ))}
             </Select>
           ) : undefined
-        }
-        buildQuery={(scope) =>
-          effectivePatternSymbol
-            ? {
-                projectId,
-                sha: refAnchor.sha,
-                scope,
-                targetedPaths,
-                kind: 'pattern',
-                text: effectivePatternSymbol,
-                word: true
-              }
-            : null
         }
       />
     </Stack>

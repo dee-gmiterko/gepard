@@ -1,13 +1,14 @@
 import { useState } from 'react'
-import styled from 'styled-components'
 import { FormattedMessage, useIntl } from 'react-intl'
 import { defineMessages } from '../../i18n/defineMessages'
 import { ReferencesPanel } from './ReferencesPanel'
-import { useUpsertComment } from '../../queries/comments'
+import { initialReferenceChoices, type ReferenceChoices } from './referenceChoices'
+import { useDerivedReferences } from './useDerivedReferences'
+import { useUpsertComment, type CommentDraftBody } from '../../queries/comments'
 import { Button } from '../../components/Button'
-import { Stack } from '../../components/Layout'
+import { ActionRow, Stack } from '../../components/Layout'
 import { TextArea } from '../../components/TextInput'
-import type { CommentDraft, CommentReference, DraftAnchor } from '@shared/ipc/schemas/comment'
+import type { CommentReference, DraftAnchor } from '@shared/ipc/schemas/comment'
 import type { RefAnchor } from './anchorLine'
 
 const messages = defineMessages({
@@ -33,7 +34,7 @@ const messages = defineMessages({
   }
 })
 
-export type CommentEditorTarget =
+type CommentEditorTarget =
   | { kind: 'thread'; anchor: DraftAnchor }
   | { kind: 'reply'; threadId: string }
   | {
@@ -44,37 +45,26 @@ export type CommentEditorTarget =
       initialReferences: CommentReference[]
     }
 
-export interface CommentEditorProps {
-  projectId: string
-  pr: number
+interface CommentEditorProps {
   refAnchor: RefAnchor | null
-  targetedPaths: string[]
   target: CommentEditorTarget
   onSubmitted: () => void
   onCancel?: () => void
 }
 
-const Actions = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: ${({ theme }) => theme.space[2]};
-`
-
 export function CommentEditor({
-  projectId,
-  pr,
   refAnchor,
-  targetedPaths,
   target,
   onSubmitted,
   onCancel
 }: CommentEditorProps): React.JSX.Element {
   const intl = useIntl()
   const [body, setBody] = useState(target.kind === 'edit' ? target.initialBody : '')
-  const [references, setReferences] = useState<CommentReference[]>(
-    target.kind === 'edit' ? target.initialReferences : []
+  const [choices, setChoices] = useState<ReferenceChoices>(() =>
+    initialReferenceChoices(target.kind === 'edit' ? target.initialReferences : [])
   )
-  const upsert = useUpsertComment(projectId, pr)
+  const derivedReferences = useDerivedReferences(choices, refAnchor)
+  const upsert = useUpsertComment()
 
   const submitMessage =
     target.kind === 'edit'
@@ -86,9 +76,8 @@ export function CommentEditor({
   function handleSubmit(): void {
     const trimmed = body.trim()
     if (!trimmed) return
-    const draft: CommentDraft = {
-      projectId,
-      pr,
+    const references: CommentReference[] = derivedReferences.references
+    const draft: CommentDraftBody = {
       id: target.kind === 'edit' ? target.id : null,
       threadId: target.kind === 'reply' || target.kind === 'edit' ? target.threadId : null,
       anchor: target.kind === 'thread' ? target.anchor : null,
@@ -99,7 +88,7 @@ export function CommentEditor({
       onSuccess: () => {
         if (target.kind !== 'edit') {
           setBody('')
-          setReferences([])
+          setChoices(initialReferenceChoices([]))
         }
         onSubmitted()
       }
@@ -115,13 +104,21 @@ export function CommentEditor({
         rows={3}
       />
       <ReferencesPanel
-        projectId={projectId}
         refAnchor={refAnchor}
-        targetedPaths={targetedPaths}
-        references={references}
-        onChange={setReferences}
+        choices={choices}
+        onChoicesChange={setChoices}
+        symbols={derivedReferences.symbols}
+        symbolsLoading={derivedReferences.symbolsLoading}
+        symbolsError={derivedReferences.symbolsError}
+        exactDisabled={derivedReferences.exactDisabled}
+        exactData={derivedReferences.exactData}
+        exactFetching={derivedReferences.exactFetching}
+        patternDisabled={derivedReferences.patternDisabled}
+        patternData={derivedReferences.patternData}
+        patternFetching={derivedReferences.patternFetching}
+        effectivePatternSymbol={derivedReferences.effectivePatternSymbol}
       />
-      <Actions>
+      <ActionRow>
         {onCancel && (
           <Button onClick={onCancel}>
             <FormattedMessage {...messages.cancel} />
@@ -134,7 +131,7 @@ export function CommentEditor({
         >
           <FormattedMessage {...submitMessage} />
         </Button>
-      </Actions>
+      </ActionRow>
     </Stack>
   )
 }

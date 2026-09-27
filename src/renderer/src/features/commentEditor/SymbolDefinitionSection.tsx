@@ -9,13 +9,14 @@ import { PathAndLine } from '../../components/PathAndLine'
 import { Message } from '../../components/Message'
 import { ScopeToggle, type SearchScope } from '../../components/ScopeToggle'
 import { useDefinition } from '../../queries/search'
+import { useTargetedFiles } from '../../queries/files'
 import { sameRef } from './refs'
 import { isTargeted } from '@shared/model/paths'
 import type { CommentReference } from '@shared/ipc/schemas/comment'
 import type { LineSymbolsResult } from '@shared/ipc/schemas/index'
 import type { RefAnchor } from './anchorLine'
 
-type LineSymbol = LineSymbolsResult['symbols'][number]
+export type LineSymbol = LineSymbolsResult['symbols'][number]
 
 const messages = defineMessages({
   title: {
@@ -47,25 +48,22 @@ const SymbolName = styled.span`
 `
 
 function DefinitionRow({
-  projectId,
   refAnchor,
   symbol,
   scope,
-  targetedPaths,
   selected,
   onToggleRef
 }: {
-  projectId: string
   refAnchor: RefAnchor
   symbol: LineSymbol
   scope: SearchScope
-  targetedPaths: string[]
   selected: CommentReference[]
   onToggleRef: (ref: CommentReference) => void
 }): React.JSX.Element | null {
   const intl = useIntl()
+  const targetedPaths = useTargetedFiles()
   const pos = { line: symbol.range.start.line, col: symbol.range.start.col }
-  const { data, isFetching } = useDefinition(projectId, refAnchor.sha, refAnchor.path, pos)
+  const { data, isFetching } = useDefinition(refAnchor.sha, refAnchor.path, pos)
 
   if (isFetching)
     return (
@@ -109,23 +107,19 @@ function DefinitionRow({
 }
 
 export function SymbolDefinitionSection({
-  projectId,
   refAnchor,
   symbols,
   loading,
   error,
-  targetedPaths,
   selected,
   onToggleRef,
   open,
   onOpenChange
 }: {
-  projectId: string
   refAnchor: RefAnchor
   symbols: LineSymbol[]
   loading: boolean
   error: Error | null
-  targetedPaths: string[]
   selected: CommentReference[]
   onToggleRef: (ref: CommentReference) => void
   open: boolean
@@ -167,11 +161,9 @@ export function SymbolDefinitionSection({
         {symbols.map((symbol, i) => (
           <DefinitionRow
             key={`${symbol.name}-${symbol.range.start.line}-${symbol.range.start.col}-${i}`}
-            projectId={projectId}
             refAnchor={refAnchor}
             symbol={symbol}
             scope={scope}
-            targetedPaths={targetedPaths}
             selected={selected}
             onToggleRef={onToggleRef}
           />

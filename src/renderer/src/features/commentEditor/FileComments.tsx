@@ -4,6 +4,7 @@ import { Plus } from 'react-feather'
 import { FormattedMessage } from 'react-intl'
 import { defineMessages } from '../../i18n/defineMessages'
 import type { ReviewThread } from '@shared/ipc/schemas/comment'
+import { useAppState } from '../../state/AppContext'
 import { Accordion } from '../../components/Accordion'
 import { Button } from '../../components/Button'
 import { Caption } from '../../components/Caption'
@@ -38,9 +39,7 @@ const messages = defineMessages({
   }
 })
 
-export interface FileCommentsProps {
-  projectId: string
-  pr: number
+interface FileCommentsProps {
   path: string
 }
 
@@ -71,21 +70,27 @@ function ThreadSummary({ thread }: { thread: ReviewThread }): React.JSX.Element 
   )
 }
 
-export function FileComments({ projectId, pr, path }: FileCommentsProps): React.JSX.Element {
-  const { data: threads = [] } = useComments(projectId, pr)
+export function FileComments({ path }: FileCommentsProps): React.JSX.Element {
+  const state = useAppState()
+  const checkedOutHead = state.checkout?.head ?? null
+  const { data: threads = [] } = useComments()
   const [openId, setOpenId] = useState<string | null>(null)
   const [addingNew, setAddingNew] = useState(false)
 
+  // Matches the inline gutter rule (codemirror/commentWidgets.ts): only
+  // threads anchored at the checked-out commit, and not outdated.
   const fileThreads = useMemo(
     () =>
       threads
-        .filter((t) => t.anchor.path === path)
+        .filter(
+          (t) => t.anchor.path === path && !t.isOutdated && t.anchor.commitOid === checkedOutHead
+        )
         .sort(
           (a, b) =>
             (a.anchor.line ?? Number.POSITIVE_INFINITY) -
             (b.anchor.line ?? Number.POSITIVE_INFINITY)
         ),
-    [threads, path]
+    [threads, path, checkedOutHead]
   )
 
   return (
@@ -103,14 +108,12 @@ export function FileComments({ projectId, pr, path }: FileCommentsProps): React.
           onToggle={() => setOpenId(openId === thread.id ? null : thread.id)}
           title={<ThreadSummary thread={thread} />}
         >
-          <ThreadWidget projectId={projectId} pr={pr} thread={thread} />
+          <ThreadWidget thread={thread} />
         </Accordion>
       ))}
 
       {addingNew ? (
         <ThreadWidget
-          projectId={projectId}
-          pr={pr}
           draftAnchor={{
             path,
             subjectType: 'FILE',

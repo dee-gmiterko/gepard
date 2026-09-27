@@ -15,7 +15,7 @@ const messages = defineMessages({
   }
 })
 
-export interface RepoUrlComboboxProps {
+interface RepoUrlComboboxProps {
   value: string
   onChange: (value: string) => void
   repos: readonly ViewerRepo[]

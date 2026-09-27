@@ -11,15 +11,13 @@ const messages = defineMessages({
 
 export function PathAndLine({
   path,
-  line,
-  small
+  line
 }: {
   path: string
   line: number | null
-  small?: boolean
 }): React.JSX.Element {
   return (
-    <PathLabel $small={small}>
+    <PathLabel>
       {line != null ? <FormattedMessage {...messages.pathAndLine} values={{ path, line }} /> : path}
     </PathLabel>
   )

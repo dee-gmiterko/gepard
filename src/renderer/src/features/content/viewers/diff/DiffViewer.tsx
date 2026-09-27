@@ -5,7 +5,6 @@ import { defineMessages } from '../../../../i18n/defineMessages'
 import { useAppState } from '../../../../state/AppContext'
 import { useFileDiff } from '../../../../queries/files'
 import { useComments } from '../../../../queries/comments'
-import { usePrCommentScope } from '../../commentScope'
 import { useReadOnlyEditor } from '../../../../codemirror/useReadOnlyEditor'
 import {
   buildDiffDoc,
@@ -38,18 +37,8 @@ const messages = defineMessages({
   }
 })
 
-export function DiffViewer({
-  path,
-  base,
-  head
-}: {
-  path: string
-  base: string
-  head: string
-}): React.JSX.Element {
-  const state = useAppState()
-  const projectId = state.projectId ?? ''
-  const { data } = useFileDiff(projectId, base, head, path)
+export function DiffViewer({ path }: { path: string }): React.JSX.Element {
+  const { data } = useFileDiff(path)
 
   if (!data)
     return (
@@ -77,24 +66,17 @@ export function DiffViewer({
             />
           </Message>
         )
-      return <DiffText path={path} head={head} rows={data.rows} />
+      return <DiffText path={path} rows={data.rows} />
   }
 }
 
-function DiffText({
-  path,
-  head,
-  rows
-}: {
-  path: string
-  head: string
-  rows: DiffRow[]
-}): React.JSX.Element {
+function DiffText({ path, rows }: { path: string; rows: DiffRow[] }): React.JSX.Element {
   const state = useAppState()
-  const projectId = state.projectId ?? ''
-  const { enabled: commentsEnabled, pr } = usePrCommentScope(path)
-  const { data: threads } = useComments(projectId, pr ?? NaN)
-  const singleCommitInPr = state.targeting.pr !== null && state.targeting.commit !== null
+  const pr = state.targeting.pr
+  const commentsEnabled = pr !== null
+  const { data: threads } = useComments()
+  const head = state.checkout?.head ?? ''
+  const singleCommitInPr = pr !== null && state.targeting.commit !== null
 
   const { doc, infos } = useMemo(() => buildDiffDoc(rows), [rows])
   const extensions = useMemo(
@@ -103,11 +85,7 @@ function DiffText({
   )
   const { containerRef, view, comments, commentGutter } = useReadOnlyEditor(path, doc, extensions)
   const [draft, setDraft] = useState<{ docLine: number; side: 'LEFT' | 'RIGHT' } | null>(null)
-  const [wasCommentsEnabled, setWasCommentsEnabled] = useState(commentsEnabled)
-  if (commentsEnabled !== wasCommentsEnabled) {
-    setWasCommentsEnabled(commentsEnabled)
-    if (!commentsEnabled) setDraft(null)
-  }
+  const activeDraft = commentsEnabled ? draft : null
   const portals = useMemo(() => new CommentPortals(), [])
 
   useEffect(() => {
@@ -134,12 +112,12 @@ function DiffText({
   useEffect(() => {
     if (!view) return
     const entries = commentsEnabled
-      ? diffViewCommentEntries(threads ?? [], path, infos, draft, head)
+      ? diffViewCommentEntries(threads ?? [], path, infos, activeDraft, head)
       : []
     view.dispatch({
       effects: comments.reconfigure(commentBlockDecorations(view.state.doc, entries, portals))
     })
-  }, [threads, draft, commentsEnabled, path, infos, head, view, comments, portals])
+  }, [threads, activeDraft, commentsEnabled, path, infos, head, view, comments, portals])
 
   useEffect(() => {
     if (!view || state.activeFile !== path || state.revealLine == null) return
@@ -150,13 +128,8 @@ function DiffText({
   return (
     <>
       <EditorHost ref={containerRef} />
-      {commentsEnabled && pr !== null && (
-        <CommentPortalHost
-          portals={portals}
-          projectId={projectId}
-          pr={pr}
-          onCloseDraft={() => setDraft(null)}
-        />
+      {commentsEnabled && (
+        <CommentPortalHost portals={portals} onCloseDraft={() => setDraft(null)} />
       )}
     </>
   )

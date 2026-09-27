@@ -1,9 +1,8 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
-import { join } from 'node:path'
 import { z } from 'zod'
 import { AppError } from '../ipc/registry'
-import { projectReviewDir, reviewJsonPath } from '../paths'
+import { readJsonFile, writeJsonFile } from './jsonFile'
+import { reviewJsonPath } from '../paths'
 import { Comment, CommentDraft, LocalViewedState, ReviewThread } from '@shared/ipc/schemas/comment'
 
 const ReviewStoreFile = z.object({
@@ -20,6 +19,10 @@ function emptyStore(): ReviewStoreFile {
 
 export function nowIso(): string {
   return new Date().toISOString()
+}
+
+function cloneStore(store: ReviewStoreFile): ReviewStoreFile {
+  return structuredClone(store)
 }
 
 const cache = new Map<string, ReviewStoreFile>()
@@ -45,53 +48,25 @@ export function withReviewLock<T>(projectId: string, pr: number, fn: () => Promi
 }
 
 async function readStoreFile(projectId: string, pr: number): Promise<ReviewStoreFile> {
-  let raw: string
-  try {
-    raw = await readFile(reviewJsonPath(projectId, pr), 'utf8')
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return emptyStore()
-    throw e
-  }
-  let json: unknown
-  try {
-    json = JSON.parse(raw)
-  } catch (e) {
-    throw new AppError(
-      'STORE_CORRUPT',
-      `review/${pr}.json for ${projectId} is not valid JSON: ${(e as Error).message}`
-    )
-  }
-  const parsed = ReviewStoreFile.safeParse(json)
-  if (!parsed.success) {
-    throw new AppError(
-      'STORE_CORRUPT',
-      `review/${pr}.json for ${projectId} is invalid: ${z.prettifyError(parsed.error)}`
-    )
-  }
-  return parsed.data
+  return readJsonFile(reviewJsonPath(projectId, pr), ReviewStoreFile, emptyStore)
 }
 
 export async function loadReview(projectId: string, pr: number): Promise<ReviewStoreFile> {
   const key = cacheKey(projectId, pr)
   const cached = cache.get(key)
-  if (cached) return cached
+  if (cached) return cloneStore(cached)
   const store = await readStoreFile(projectId, pr)
   cache.set(key, store)
-  return store
+  return cloneStore(store)
 }
 
-// POSIX rename replaces the target file atomically.
 export async function saveReview(
   projectId: string,
   pr: number,
   store: ReviewStoreFile
 ): Promise<void> {
-  const dir = projectReviewDir(projectId)
-  await mkdir(dir, { recursive: true })
-  const tmpPath = join(dir, `.${pr}.json.${randomUUID()}.tmp`)
-  await writeFile(tmpPath, JSON.stringify(store, null, 2) + '\n', 'utf8')
-  await rename(tmpPath, reviewJsonPath(projectId, pr))
-  cache.set(cacheKey(projectId, pr), store)
+  await writeJsonFile(reviewJsonPath(projectId, pr), store)
+  cache.set(cacheKey(projectId, pr), cloneStore(store))
 }
 
 export async function listThreads(projectId: string, pr: number): Promise<ReviewThread[]> {
@@ -107,7 +82,7 @@ export interface UpsertContext {
   commitOid: string
 }
 
-export type CommentDraftInput = Omit<z.output<typeof CommentDraft>, 'projectId' | 'pr'>
+export type CommentDraftInput = Omit<z.output<typeof CommentDraft>, 'projectId' | 'pr' | 'prId'>
 
 function findComment(
   store: ReviewStoreFile,
@@ -162,7 +137,6 @@ async function upsertLocalCommentLocked(
       updatedAt: now,
       lastEditedAt: null,
       replyToId: root?.id ?? null,
-      url: null,
       outdated: false,
       viewerDidAuthor: true,
       viewerCanDelete: true,
@@ -186,7 +160,6 @@ async function upsertLocalCommentLocked(
     updatedAt: now,
     lastEditedAt: null,
     replyToId: null,
-    url: null,
     outdated: false,
     viewerDidAuthor: true,
     viewerCanDelete: true,

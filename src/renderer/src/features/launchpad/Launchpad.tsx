@@ -13,7 +13,7 @@ import { Inline } from '../../components/Layout'
 import { List, ListRow, RowTitle } from '../../components/List'
 import { Message } from '../../components/Message'
 import { SectionHeading } from '../../components/SectionHeading'
-import { useIpcEvent } from '../../ipc/client'
+import { invoke, useIpcEvent } from '../../ipc/client'
 import { qk } from '../../queries/keys'
 import {
   useAddProject,
@@ -280,10 +280,19 @@ export function Launchpad(): React.JSX.Element {
     )
   }
 
-  function handleOpen(projectId: string): void {
+  async function handleOpen(projectId: string): Promise<void> {
     qc.invalidateQueries({ queryKey: qk.project(projectId) })
     qc.removeQueries({ queryKey: qk.open(projectId) })
-    dispatch({ type: 'project/open', projectId })
+    try {
+      const opened = await qc.fetchQuery({
+        queryKey: qk.open(projectId),
+        queryFn: () => invoke('projects.open', { projectId }),
+        staleTime: Infinity
+      })
+      dispatch({ type: 'project/open', projectId, targeting: opened.targeting })
+    } catch {
+      // Reported via the query cache's global error handler.
+    }
   }
 
   function handleRemove(projectId: string): void {

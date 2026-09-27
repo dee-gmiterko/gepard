@@ -182,6 +182,9 @@ export const CommentDraft = z
     id: NodeId.nullable().default(null),
     threadId: NodeId.nullable().default(null),
     anchor: DraftAnchor.nullable().default(null),
+    // The targeted PR's node id, required to start a brand-new thread; the
+    // renderer already has it from the PR's summary once a PR is targeted.
+    prId: NodeId.nullable().default(null),
     body: z.string().min(1),
     references: z.array(CommentReference).default([])
   })

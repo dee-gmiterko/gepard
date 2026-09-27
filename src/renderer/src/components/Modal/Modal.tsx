@@ -60,6 +60,9 @@ export function Modal({
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>): void {
     e.stopPropagation()
     if (e.key === 'Escape') {
+      // A native <select>'s own open dropdown consumes Escape to close
+      // itself; that keydown still bubbles and must not also close the modal.
+      if ((e.target as HTMLElement).tagName === 'SELECT') return
       onClose()
       return
     }

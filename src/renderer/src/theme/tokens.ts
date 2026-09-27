@@ -6,7 +6,7 @@ export interface Theme {
     size: { xs: string; sm: string; md: string; lg: string }
     lineHeight: number
   }
-  space: { 0: string; 1: string; 2: string; 3: string; 4: string; 5: string; 6: string }
+  space: { 1: string; 2: string; 3: string; 4: string; 5: string; 6: string }
   radius: { sm: string; md: string }
   z: { floating: number; modal: number; popover: number }
   shadow: { popover: string; floating: string }
@@ -48,15 +48,14 @@ export interface Theme {
   }
 }
 
-export const font: Theme['font'] = {
+const font: Theme['font'] = {
   ui: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
   mono: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace',
   size: { xs: '11px', sm: '12px', md: '13px', lg: '15px' },
   lineHeight: 1.45
 }
 
-export const space: Theme['space'] = {
-  0: '0',
+const space: Theme['space'] = {
   1: '4px',
   2: '8px',
   3: '12px',
@@ -64,8 +63,8 @@ export const space: Theme['space'] = {
   5: '24px',
   6: '32px'
 }
-export const radius: Theme['radius'] = { sm: '3px', md: '6px' }
-export const z: Theme['z'] = { floating: 20, modal: 25, popover: 30 }
+const radius: Theme['radius'] = { sm: '3px', md: '6px' }
+const z: Theme['z'] = { floating: 20, modal: 25, popover: 30 }
 
 export interface ThemeTemplate {
   id: string

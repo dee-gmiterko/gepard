@@ -7,8 +7,8 @@ import { Combobox } from '../../components/Combobox'
 import { IconField } from '../../components/IconField'
 import { IconButton } from '../../components/IconButton'
 import { useChangedFiles, useTree } from '../../queries/files'
-import { useCurrentHead } from '../../queries/projects'
-import { useAppDispatch, useAppState } from '../../state/AppContext'
+import { useAppState } from '../../state/AppContext'
+import { useTargetActions } from './useTargetActions'
 import { activeTargetRef, folderSourcePaths, foldersOf } from '../../state/selectors'
 
 const messages = defineMessages({
@@ -26,14 +26,49 @@ const KeydownCatcher = styled.div`
   display: contents;
 `
 
+interface PathTargetInputProps {
+  committed: string | null
+  folders: string[]
+  isFetching: boolean
+  placeholder: string
+  onCommit: (raw: string) => void
+}
+
+function PathTargetInput({
+  committed,
+  folders,
+  isFetching,
+  placeholder,
+  onCommit
+}: PathTargetInputProps): React.JSX.Element {
+  const [text, setText] = useState(committed ?? '')
+
+  return (
+    <KeydownCatcher
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && !e.defaultPrevented) onCommit(text)
+      }}
+    >
+      <Combobox<string>
+        items={folders}
+        value={null}
+        getKey={(f) => f}
+        getLabel={(f) => f}
+        loading={isFetching}
+        placeholder={placeholder}
+        onSelect={(folder) => onCommit(folder ?? '')}
+        freeText={{ text, onTextChange: setText }}
+      />
+    </KeydownCatcher>
+  )
+}
+
 export function PathTarget(): React.JSX.Element {
   const intl = useIntl()
   const state = useAppState()
-  const dispatch = useAppDispatch()
-  const projectId = state.projectId ?? ''
-  const head = useCurrentHead(state.projectId)
-  const tree = useTree(projectId, head ?? '')
-  const changed = useChangedFiles(projectId, state.checkout?.base ?? '', state.checkout?.head ?? '')
+  const { setPath } = useTargetActions()
+  const tree = useTree()
+  const changed = useChangedFiles()
   const scoped = activeTargetRef(state.targeting) !== null
 
   const folders = useMemo(() => {
@@ -43,38 +78,20 @@ export function PathTarget(): React.JSX.Element {
   }, [state.targeting, changed.data, tree.data])
   const isFetching = scoped ? changed.isFetching : tree.isFetching
 
-  const [text, setText] = useState(state.targeting.path ?? '')
-  const [lastCommitted, setLastCommitted] = useState(state.targeting.path)
-  if (state.targeting.path !== lastCommitted) {
-    setLastCommitted(state.targeting.path)
-    setText(state.targeting.path ?? '')
-  }
-
   function commit(raw: string): void {
-    const path = raw.trim() || null
-    setLastCommitted(path)
-    setText(path ?? '')
-    dispatch({ type: 'target/path', path })
+    setPath(raw.trim() || null)
   }
 
   return (
     <IconField icon={Folder} width={220}>
-      <KeydownCatcher
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.defaultPrevented) commit(text)
-        }}
-      >
-        <Combobox<string>
-          items={folders}
-          value={null}
-          getKey={(f) => f}
-          getLabel={(f) => f}
-          loading={isFetching}
-          placeholder={intl.formatMessage(messages.placeholder)}
-          onSelect={(folder) => commit(folder ?? '')}
-          freeText={{ text, onTextChange: setText }}
-        />
-      </KeydownCatcher>
+      <PathTargetInput
+        key={state.targeting.path ?? ''}
+        committed={state.targeting.path}
+        folders={folders}
+        isFetching={isFetching}
+        placeholder={intl.formatMessage(messages.placeholder)}
+        onCommit={commit}
+      />
       {state.targeting.path !== null && (
         <IconButton
           icon={X}

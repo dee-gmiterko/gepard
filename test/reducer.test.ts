@@ -33,24 +33,39 @@ describe('targeting behaviors', () => {
     const s = state({ targeting: { pr: 7, commit: null, path: null } })
     expect(appReducer(s, { type: 'target/pr', pr: 7 })).toBe(s)
   })
+})
 
-  it('restores a persisted targeting in one dispatch and switches to the targeted panel', () => {
-    const s = state({ sidePanelTab: 'files' })
+describe('opening a project', () => {
+  it('resets everything, including pinned files', () => {
+    const s = state({ pinnedFiles: ['a.ts'], projectId: 'proj-a' })
     const next = appReducer(s, {
-      type: 'target/restore',
+      type: 'project/open',
+      projectId: 'proj-b',
+      targeting: { pr: null, commit: null, path: null }
+    })
+    expect(next).toEqual({ ...initialAppState, projectId: 'proj-b' })
+  })
+
+  it('applies its persisted targeting in the same dispatch and switches to the targeted panel', () => {
+    const s = state({ pinnedFiles: ['a.ts'], projectId: 'proj-a' })
+    const next = appReducer(s, {
+      type: 'project/open',
+      projectId: 'proj-b',
       targeting: { pr: 7, commit: 'deadbeef', path: 'src' }
     })
     expect(next.targeting).toEqual({ pr: 7, commit: 'deadbeef', path: 'src' })
     expect(next.sidePanelTab).toBe('targeted')
+    expect(next.pinnedFiles).toEqual([])
   })
 
-  it('restoring an empty persisted targeting does not force the side panel to targeted', () => {
-    const s = state({ sidePanelTab: 'search' })
+  it('does not force the side panel to targeted when there is no persisted targeting', () => {
+    const s = state({ projectId: 'proj-a' })
     const next = appReducer(s, {
-      type: 'target/restore',
+      type: 'project/open',
+      projectId: 'proj-b',
       targeting: { pr: null, commit: null, path: null }
     })
-    expect(next.sidePanelTab).toBe('search')
+    expect(next.sidePanelTab).toBe('files')
   })
 })
 
@@ -59,12 +74,6 @@ describe('pinned files', () => {
     const s = state({ pinnedFiles: ['a.ts', 'b.ts'] })
     const next = appReducer(s, { type: 'target/pr', pr: 3 })
     expect(next.pinnedFiles).toEqual(['a.ts', 'b.ts'])
-  })
-
-  it('project/open resets everything, including pinned files', () => {
-    const s = state({ pinnedFiles: ['a.ts'], projectId: 'proj-a' })
-    const next = appReducer(s, { type: 'project/open', projectId: 'proj-b' })
-    expect(next).toEqual({ ...initialAppState, projectId: 'proj-b' })
   })
 })
 
@@ -138,9 +147,13 @@ describe('toast slice', () => {
 
   it('keeps toasts across project open/close (they are not project state)', () => {
     const withToast = state({ projectId: 'p', toasts: [toast('1')] })
-    expect(appReducer(withToast, { type: 'project/open', projectId: 'q' }).toasts).toEqual([
-      toast('1')
-    ])
+    expect(
+      appReducer(withToast, {
+        type: 'project/open',
+        projectId: 'q',
+        targeting: { pr: null, commit: null, path: null }
+      }).toasts
+    ).toEqual([toast('1')])
     expect(appReducer(withToast, { type: 'project/close' }).toasts).toEqual([toast('1')])
   })
 })

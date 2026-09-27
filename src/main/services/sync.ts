@@ -1,11 +1,11 @@
 import { AppError } from '../ipc/registry'
 import { log } from '../log'
 import * as gh from './gh'
+import { ExecError } from './exec'
 import * as review from '../store/review'
 import { nowIso, withReviewLock, type ReviewStoreFile } from '../store/review'
 import type {
   Comment,
-  GqlError,
   GqlReviewCommentRaw,
   GqlReviewThreadRaw,
   LocalViewedState,
@@ -68,6 +68,10 @@ function mergeOneThread(localThread: ReviewThread, remoteThread: ReviewThread): 
       continue
     }
     if (localComment.local?.status === 'new' || localComment.local?.status === 'edited') continue
+    if (localComment.local?.status === 'deleted') {
+      merged.push(localComment)
+      continue
+    }
     merged.push(remoteComment.updatedAt > localComment.updatedAt ? remoteComment : localComment)
   }
   merged.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
@@ -158,11 +162,12 @@ export function composeBody(comment: Comment): string {
 }
 
 // GitHub errors a mutation on a comment someone else already deleted with a
-// GraphQL NOT_FOUND partial error rather than a benign no-op.
+// GraphQL NOT_FOUND partial error rather than a benign no-op. `gh api
+// graphql` exits non-zero on that response and prints "gh: <message>
+// (<type>)" to stderr, so the failure surfaces as an ExecError before any
+// JSON body is parsed.
 function isRemoteNotFoundError(e: unknown): boolean {
-  if (!(e instanceof AppError) || e.code !== 'GRAPHQL_ERROR') return false
-  const errors = e.details as GqlError[] | undefined
-  return Array.isArray(errors) && errors.some((err) => err.type === 'NOT_FOUND')
+  return e instanceof ExecError && /\(NOT_FOUND\)/.test(e.stderr)
 }
 
 interface PushOutcome {

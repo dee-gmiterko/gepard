@@ -15,6 +15,7 @@ const NOT_PAGED = { hasNextPage: false, endCursor: null }
 function pr(number: number, overrides: Partial<PrListItem> = {}): PrListItem {
   return {
     number,
+    id: `PR_${number}`,
     title: `PR ${number}`,
     author: { login: 'someone' },
     headRefName: `branch-${number}`,

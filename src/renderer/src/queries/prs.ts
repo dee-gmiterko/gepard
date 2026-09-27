@@ -1,10 +1,27 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { invoke } from '../ipc/client'
 import { qk } from './keys'
-import type { ChannelInput, ChannelOutput } from '@shared/ipc/contract'
-import type { TargetRef } from '@shared/ipc/schemas/pr'
+import { useAppState } from '../state/AppContext'
+import type { ChannelInput } from '@shared/ipc/contract'
+import type { PrSummary, TargetRef } from '@shared/ipc/schemas/pr'
 
-export function usePrList(projectId: string, search?: string, commit?: string, path?: string) {
+export function unionByKey<T>(a: readonly T[], b: readonly T[], getKey: (item: T) => string): T[] {
+  const seen = new Set<string>()
+  const result: T[] = []
+  for (const item of [...a, ...b]) {
+    const key = getKey(item)
+    if (seen.has(key)) continue
+    seen.add(key)
+    result.push(item)
+  }
+  return result
+}
+
+export function usePrList(search?: string) {
+  const state = useAppState()
+  const projectId = state.projectId ?? ''
+  const commit = state.targeting.commit ?? undefined
+  const path = state.targeting.path ?? undefined
   return useQuery({
     queryKey: qk.prs(projectId, search, commit, path),
     queryFn: () => invoke('pr.list', { projectId, search, commit, path }),
@@ -12,27 +29,32 @@ export function usePrList(projectId: string, search?: string, commit?: string, p
   })
 }
 
-export function usePrCommits(projectId: string, pr: number, path?: string) {
+export function usePrCommits() {
+  const state = useAppState()
+  const projectId = state.projectId ?? ''
+  const pr = state.targeting.pr
+  const path = state.targeting.path ?? undefined
   return useQuery({
-    queryKey: qk.prCommits(projectId, pr, path),
-    queryFn: () => invoke('pr.commits', { projectId, pr, path }),
-    enabled: Boolean(projectId) && Number.isFinite(pr)
+    queryKey: qk.prCommits(projectId, pr ?? NaN, path),
+    queryFn: () => invoke('pr.commits', { projectId, pr: pr as number, path }),
+    enabled: Boolean(projectId) && pr !== null
   })
 }
 
-export function useCommits(
-  projectId: string,
-  opts: { search?: string; path?: string },
-  enabled: boolean
-) {
+export function useCommits(search?: string) {
+  const state = useAppState()
+  const projectId = state.projectId ?? ''
+  const path = state.targeting.path ?? undefined
+  const usingPr = state.targeting.pr !== null
   return useQuery({
-    queryKey: qk.commits(projectId, opts.search, opts.path),
-    queryFn: () => invoke('commits.list', { projectId, ...opts }),
-    enabled: enabled && Boolean(projectId)
+    queryKey: qk.commits(projectId, search, path),
+    queryFn: () => invoke('commits.list', { projectId, search, path }),
+    enabled: !usingPr && Boolean(projectId)
   })
 }
 
-export function useBranches(projectId: string) {
+export function useBranches() {
+  const projectId = useAppState().projectId ?? ''
   return useQuery({
     queryKey: qk.branches(projectId),
     queryFn: () => invoke('pr.branches', { projectId }),
@@ -40,7 +62,8 @@ export function useBranches(projectId: string) {
   })
 }
 
-export function useCreatePr(projectId: string) {
+export function useCreatePr() {
+  const projectId = useAppState().projectId ?? ''
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: Omit<ChannelInput<'pr.create'>, 'projectId'>) =>
@@ -49,14 +72,23 @@ export function useCreatePr(projectId: string) {
   })
 }
 
-export function useCheckoutTarget(projectId: string) {
+export function useCheckoutTarget() {
+  const projectId = useAppState().projectId ?? ''
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (target: TargetRef) => invoke('pr.checkout', { projectId, target }),
-    onSuccess: (result) =>
-      qc.setQueryData(qk.open(projectId), (prev: ChannelOutput<'projects.open'> | undefined) =>
-        prev ? { ...prev, head: result.head } : prev
-      ),
     onSettled: () => qc.invalidateQueries({ queryKey: qk.index(projectId) })
   })
+}
+
+export function useTargetedPr(): PrSummary | null {
+  const state = useAppState()
+  const projectId = state.projectId ?? ''
+  const pr = state.targeting.pr
+  const { data } = useQuery({
+    queryKey: qk.prSummary(projectId, pr ?? NaN),
+    queryFn: () => invoke('pr.view', { projectId, pr: pr as number }),
+    enabled: Boolean(projectId) && pr !== null
+  })
+  return data ?? null
 }

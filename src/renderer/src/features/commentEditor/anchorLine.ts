@@ -10,20 +10,17 @@ export interface RefAnchor {
 type Checkout = { base: string; head: string } | null
 
 export function refAnchorFromThread(anchor: Anchor, checkout: Checkout): RefAnchor | null {
+  // Matches the inline gutter rule (codemirror/commentWidgets.ts): only
+  // resolve a thread anchored at the checked-out commit. `base` is only the
+  // right ancestor for a LEFT-side line when it belongs to that commit.
+  if (!checkout || anchor.commitOid !== checkout.head) return null
   const line = anchor.line ?? anchor.originalLine
   if (line == null) return null
-  const sha =
-    anchor.side === 'LEFT'
-      ? (checkout?.base ?? null)
-      : anchor.line != null
-        ? (anchor.commitOid ?? anchor.originalCommitOid)
-        : anchor.originalCommitOid
-  if (!sha) return null
   return {
-    sha,
+    sha: anchor.side === 'LEFT' ? checkout.base : checkout.head,
     path: anchor.path,
     line,
-    symbolsResolvable: anchor.side === 'RIGHT' && sha === checkout?.head
+    symbolsResolvable: anchor.side === 'RIGHT'
   }
 }
 

@@ -1,9 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { invoke } from '../ipc/client'
 import { qk } from './keys'
+import { useAppState } from '../state/AppContext'
+import { useTargetedPr } from './prs'
 import type { CommentDraft, LocalViewedState } from '@shared/ipc/schemas/comment'
 
-export function useComments(projectId: string, pr: number) {
+export function useComments() {
+  const state = useAppState()
+  const projectId = state.projectId ?? ''
+  const pr = state.targeting.pr ?? NaN
   return useQuery({
     queryKey: qk.comments(projectId, pr),
     queryFn: () => invoke('comments.list', { projectId, pr }),
@@ -11,7 +16,10 @@ export function useComments(projectId: string, pr: number) {
   })
 }
 
-export function useViewed(projectId: string, pr: number) {
+export function useViewed() {
+  const state = useAppState()
+  const projectId = state.projectId ?? ''
+  const pr = state.targeting.pr ?? NaN
   return useQuery({
     queryKey: qk.viewed(projectId, pr),
     queryFn: () => invoke('viewed.list', { projectId, pr }),
@@ -19,10 +27,17 @@ export function useViewed(projectId: string, pr: number) {
   })
 }
 
-export function useUpsertComment(projectId: string, pr: number) {
+export type CommentDraftBody = Omit<CommentDraft, 'projectId' | 'pr' | 'prId'>
+
+export function useUpsertComment() {
+  const state = useAppState()
+  const projectId = state.projectId ?? ''
+  const pr = state.targeting.pr ?? NaN
+  const prId = useTargetedPr()?.id ?? null
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (draft: CommentDraft) => invoke('comments.upsert', draft),
+    mutationFn: (draft: CommentDraftBody) =>
+      invoke('comments.upsert', { ...draft, projectId, pr, prId }),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: qk.comments(projectId, pr) })
       qc.invalidateQueries({ queryKey: qk.pendingCount(projectId, pr) })
@@ -30,7 +45,10 @@ export function useUpsertComment(projectId: string, pr: number) {
   })
 }
 
-export function useDeleteComment(projectId: string, pr: number) {
+export function useDeleteComment() {
+  const state = useAppState()
+  const projectId = state.projectId ?? ''
+  const pr = state.targeting.pr ?? NaN
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (commentId: string) => invoke('comments.delete', { projectId, pr, commentId }),
@@ -41,13 +59,17 @@ export function useDeleteComment(projectId: string, pr: number) {
   })
 }
 
-export function useSetViewed(projectId: string, pr: number) {
+export function useSetViewed() {
+  const state = useAppState()
+  const projectId = state.projectId ?? ''
+  const pr = state.targeting.pr ?? NaN
+  const prId = useTargetedPr()?.id ?? null
   const qc = useQueryClient()
   const key = qk.viewed(projectId, pr)
   return useMutation({
     mutationKey: [...key, 'set'] as const,
     mutationFn: (input: { paths: string[]; viewed: boolean }) =>
-      invoke('viewed.set', { projectId, pr, paths: input.paths, viewed: input.viewed }),
+      invoke('viewed.set', { projectId, pr, paths: input.paths, viewed: input.viewed, prId }),
     onMutate: async (input) => {
       await qc.cancelQueries({ queryKey: key })
       const previous = qc.getQueryData<LocalViewedState[]>(key)
@@ -86,7 +108,10 @@ export function useSetViewed(projectId: string, pr: number) {
   })
 }
 
-export function useSync(projectId: string, pr: number) {
+export function useSync() {
+  const state = useAppState()
+  const projectId = state.projectId ?? ''
+  const pr = state.targeting.pr ?? NaN
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (mode: 'full' | 'pull' = 'full') => invoke('sync.run', { projectId, pr, mode }),
@@ -94,7 +119,10 @@ export function useSync(projectId: string, pr: number) {
   })
 }
 
-export function usePendingCount(projectId: string, pr: number) {
+export function usePendingCount() {
+  const state = useAppState()
+  const projectId = state.projectId ?? ''
+  const pr = state.targeting.pr ?? NaN
   return useQuery({
     queryKey: qk.pendingCount(projectId, pr),
     queryFn: () => invoke('sync.pendingCount', { projectId, pr }),

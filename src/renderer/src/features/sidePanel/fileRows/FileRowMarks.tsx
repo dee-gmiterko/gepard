@@ -4,6 +4,7 @@ import { defineMessages } from '../../../i18n/defineMessages'
 import { useAppState } from '../../../state/AppContext'
 import { useSetViewed } from '../../../queries/comments'
 import { Checkbox } from '../../../components/Checkbox'
+import { Inline } from '../../../components/Layout'
 import type { RowData } from './rowData'
 
 const messages = defineMessages({
@@ -21,10 +22,7 @@ const messages = defineMessages({
   }
 })
 
-const Marks = styled.span`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.space[2]};
+const Marks = styled(Inline)`
   flex-shrink: 0;
 `
 
@@ -45,18 +43,16 @@ const Del = styled.span`
 
 export function FileRowMarks({
   data,
-  paths,
-  pr
+  paths
 }: {
   data: RowData
   paths: string[]
-  pr: number | null
 }): React.JSX.Element | null {
   const intl = useIntl()
   const state = useAppState()
-  const { mutate: setViewed } = useSetViewed(state.projectId ?? '', pr ?? NaN)
+  const { mutate: setViewed } = useSetViewed()
   const hasCounts = data.additions > 0 || data.deletions > 0
-  const hasViewed = pr !== null && data.totalCount > 0
+  const hasViewed = state.targeting.pr !== null && data.totalCount > 0
   if (!hasCounts && !hasViewed) return null
 
   return (

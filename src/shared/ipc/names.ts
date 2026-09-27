@@ -11,6 +11,7 @@ export const channelNames = [
   'projects.remove',
   'clone.start',
   'pr.list',
+  'pr.view',
   'pr.commits',
   'pr.checkout',
   'pr.branches',

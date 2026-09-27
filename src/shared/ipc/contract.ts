@@ -6,6 +6,7 @@ import {
   Commit,
   FileContent,
   FileDiff,
+  NodeId,
   PersistedTargeting,
   PrListItem,
   PrSummary,
@@ -67,6 +68,7 @@ export const channels = {
     }),
     z.array(PrListItem)
   ),
+  'pr.view': ch(z.object(PrRef), PrSummary),
   'pr.commits': ch(z.object({ ...PrRef, path: RepoPath.optional() }), z.array(Commit)),
   'pr.checkout': ch(z.object({ ...ProjectRef, target: TargetRef }), CheckoutResult),
   'pr.branches': ch(
@@ -120,7 +122,14 @@ export const channels = {
   'comments.delete': ch(z.object({ ...PrRef, commentId: z.string() }), z.void()),
   'viewed.list': ch(z.object(PrRef), z.array(LocalViewedState)),
   'viewed.set': ch(
-    z.object({ ...PrRef, paths: z.array(RepoPath).min(1), viewed: z.boolean() }),
+    z.object({
+      ...PrRef,
+      paths: z.array(RepoPath).min(1),
+      viewed: z.boolean(),
+      // The targeted PR's node id; the renderer already has it from the PR's
+      // summary once a PR is targeted.
+      prId: NodeId.nullable().default(null)
+    }),
     z.array(LocalViewedState)
   ),
 

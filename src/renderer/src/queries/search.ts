@@ -1,6 +1,8 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { invoke, isCancelledError } from '../ipc/client'
 import { qk } from './keys'
+import { useAppState } from '../state/AppContext'
+import { useCurrentHead } from './projects'
 import type { SearchQuery } from '@shared/ipc/schemas/search'
 
 // React Query keeps `data` at its last successful value when a fetch fails.
@@ -16,10 +18,16 @@ function ignoreCancelled<TData, TError>(
   } as UseQueryResult<TData, TError>
 }
 
-export function useSearch(query: SearchQuery | null) {
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
+
+export type SearchParams = DistributiveOmit<SearchQuery, 'projectId' | 'sha'>
+
+export function useSearch(sha: string, params: SearchParams | null) {
+  const projectId = useAppState().projectId ?? ''
+  const query = params && projectId && sha ? ({ ...params, projectId, sha } as SearchQuery) : null
   return ignoreCancelled(
     useQuery({
-      queryKey: qk.search(query?.projectId ?? '', query?.sha ?? '', query?.text ?? '', query),
+      queryKey: qk.search(projectId, sha, params?.text ?? '', params),
       queryFn: () => invoke('search.run', query as SearchQuery),
       enabled: Boolean(query),
       staleTime: Infinity
@@ -27,7 +35,9 @@ export function useSearch(query: SearchQuery | null) {
   )
 }
 
-export function useWorkspaceSymbols(projectId: string, sha: string, query: string, limit?: number) {
+export function useWorkspaceSymbols(query: string, limit?: number) {
+  const projectId = useAppState().projectId ?? ''
+  const sha = useCurrentHead() ?? ''
   return ignoreCancelled(
     useQuery({
       queryKey: [...qk.commit(projectId, sha), 'workspaceSymbols', query, limit] as const,
@@ -37,7 +47,8 @@ export function useWorkspaceSymbols(projectId: string, sha: string, query: strin
   )
 }
 
-export function useLineSymbols(projectId: string, sha: string, path: string, line: number) {
+export function useLineSymbols(sha: string, path: string, line: number) {
+  const projectId = useAppState().projectId ?? ''
   return ignoreCancelled(
     useQuery({
       queryKey: [...qk.file(projectId, sha, path), 'lineSymbols', line] as const,
@@ -48,11 +59,11 @@ export function useLineSymbols(projectId: string, sha: string, path: string, lin
 }
 
 export function useDefinition(
-  projectId: string,
   sha: string,
   path: string,
   pos: { line: number; col: number } | null
 ) {
+  const projectId = useAppState().projectId ?? ''
   return ignoreCancelled(
     useQuery({
       queryKey: [...qk.file(projectId, sha, path), 'definition', pos] as const,

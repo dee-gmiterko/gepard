@@ -7,7 +7,7 @@ import { useOutsideClick } from '../../hooks/useOutsideClick'
 import { IconButton } from '../IconButton'
 import { Menu, MenuAnchor, MenuItem, MenuMessage } from '../Menu'
 import { HighlightedText } from '../HighlightedText'
-import { textFieldBase } from '../TextInput'
+import { fieldChrome, textFieldBase } from '../TextInput'
 import { fuzzyFilter, fuzzyRanges } from './fuzzy'
 
 const messages = defineMessages({
@@ -41,12 +41,12 @@ export interface ComboboxProps<T> {
   loading?: boolean
   loadingLabel?: string
   emptyLabel?: string
-  clearLabel?: string
   freeText?: {
     text: string
     onTextChange: (text: string) => void
     searchText?: string
   }
+  renderOption?: (item: T, ctx: { searchText: string }) => React.ReactNode
 }
 
 const Container = styled(MenuAnchor)`
@@ -57,14 +57,8 @@ const InputRow = styled.div`
   display: flex;
   align-items: center;
   gap: 2px;
-  background: ${({ theme }) => theme.colors.bg};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radius.sm};
   padding: 0 2px 0 ${({ theme }) => theme.space[2]};
-
-  &:focus-within {
-    border-color: ${({ theme }) => theme.colors.accent};
-  }
+  ${fieldChrome}
 `
 
 const Input = styled.input`
@@ -95,13 +89,13 @@ export function Combobox<T>({
   loading,
   loadingLabel,
   emptyLabel,
-  clearLabel,
-  freeText
+  freeText,
+  renderOption
 }: ComboboxProps<T>): React.JSX.Element {
   const intl = useIntl()
   const resolvedLoadingLabel = loadingLabel ?? intl.formatMessage(messages.loading)
   const resolvedEmptyLabel = emptyLabel ?? intl.formatMessage(messages.noMatches)
-  const resolvedClearLabel = clearLabel ?? intl.formatMessage(messages.clear)
+  const resolvedClearLabel = intl.formatMessage(messages.clear)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [highlight, setHighlight] = useState(NO_HIGHLIGHT)
@@ -116,7 +110,7 @@ export function Combobox<T>({
     [items, searchText, getFilterText]
   )
 
-  const active = Math.min(highlight, Math.max(filtered.length - 1, 0))
+  const active = filtered.length === 0 ? NO_HIGHLIGHT : Math.min(highlight, filtered.length - 1)
 
   function resetQuery(): void {
     setQuery('')
@@ -220,10 +214,14 @@ export function Combobox<T>({
                   if (i === active) el?.scrollIntoView({ block: 'nearest' })
                 }}
               >
-                <HighlightedText
-                  text={getLabel(item)}
-                  ranges={fuzzyRanges(searchText, getLabel(item))}
-                />
+                {renderOption ? (
+                  renderOption(item, { searchText })
+                ) : (
+                  <HighlightedText
+                    text={getLabel(item)}
+                    ranges={fuzzyRanges(searchText, getLabel(item))}
+                  />
+                )}
               </MenuItem>
             ))}
         </Menu>

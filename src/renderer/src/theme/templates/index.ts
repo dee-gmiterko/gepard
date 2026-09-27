@@ -3,7 +3,6 @@ import { lightTemplate } from './light'
 import { darkTemplate } from './dark'
 
 export type { ThemeTemplate }
-export { lightTemplate, darkTemplate }
 
 export const themeTemplates: ThemeTemplate[] = [lightTemplate, darkTemplate]
 

@@ -45,7 +45,7 @@ const messages = defineMessages({
   },
   loadFailed: {
     id: 'launchpad.extensions.loadFailed',
-    defaultMessage: 'Failed to load'
+    defaultMessage: 'Failed to load: {error}'
   },
   builtin: {
     id: 'launchpad.extensions.builtin',
@@ -143,7 +143,7 @@ export function ExtensionsPanel(): React.JSX.Element {
                 </Inline>
                 {ext.error && (
                   <RowError>
-                    <FormattedMessage {...messages.loadFailed} />: {ext.error}
+                    <FormattedMessage {...messages.loadFailed} values={{ error: ext.error }} />
                   </RowError>
                 )}
               </Stack>

@@ -9,14 +9,9 @@ import { Message } from '../../../components/Message'
 import { viewerMessages } from './messages'
 
 export function FileViewer({ path }: { path: string }): React.JSX.Element {
-  const state = useAppState()
-  const checkout = state.checkout
-  const head = useCurrentHead(state.projectId)
-  const { data: changedFiles } = useChangedFiles(
-    state.projectId ?? '',
-    checkout?.base ?? '',
-    checkout?.head ?? ''
-  )
+  const checkout = useAppState().checkout
+  const head = useCurrentHead()
+  const { data: changedFiles } = useChangedFiles()
   const isChangedFile = useIsCheckedOutChangedFile(path)
 
   if (checkout) {
@@ -26,8 +21,8 @@ export function FileViewer({ path }: { path: string }): React.JSX.Element {
           <FormattedMessage {...viewerMessages.loading} />
         </Message>
       )
-    if (isChangedFile) return <DiffViewer path={path} base={checkout.base} head={checkout.head} />
-    return <CodeViewer path={path} sha={checkout.head} />
+    if (isChangedFile) return <DiffViewer path={path} />
+    return <CodeViewer path={path} />
   }
 
   if (!head)
@@ -36,5 +31,5 @@ export function FileViewer({ path }: { path: string }): React.JSX.Element {
         <FormattedMessage {...viewerMessages.loading} />
       </Message>
     )
-  return <CodeViewer path={path} sha={head} />
+  return <CodeViewer path={path} />
 }

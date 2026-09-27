@@ -55,7 +55,7 @@ export async function repoRefFor(projectId: string): Promise<RepoRef> {
 }
 
 const PR_LIST_FIELDS =
-  'number,title,author,headRefName,baseRefName,headRefOid,createdAt,changedFiles,labels,url'
+  'number,id,title,author,headRefName,baseRefName,headRefOid,createdAt,changedFiles,labels,url'
 
 // `gh pr list --limit N` fetches 100 PRs per request and stops at the first
 // short page.

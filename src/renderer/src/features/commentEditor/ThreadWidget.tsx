@@ -7,7 +7,7 @@ import type { Comment, DraftAnchor, ReviewThread } from '@shared/ipc/schemas/com
 import { useAppState } from '../../state/AppContext'
 import { IconButton } from '../../components/IconButton'
 import { Button } from '../../components/Button'
-import { Inline } from '../../components/Layout'
+import { Inline, Stack } from '../../components/Layout'
 import { Caption } from '../../components/Caption'
 import { PathAndLine } from '../../components/PathAndLine'
 import { OutdatedBadge, ResolvedBadge } from '../../components/StatusBadge'
@@ -16,7 +16,6 @@ import { Surface } from '../../components/Surface'
 import { fieldChrome, textFieldBase } from '../../components/TextInput'
 import { Markdown } from '../../components/Markdown'
 import { useDeleteComment } from '../../queries/comments'
-import { useTargetedPaths } from '../../queries/files'
 import { useViewer } from '../../queries/projects'
 import { authorDisplayName } from '@shared/model/actor'
 import { refAnchorFromDraft, refAnchorFromThread } from './anchorLine'
@@ -49,18 +48,13 @@ const messages = defineMessages({
   }
 })
 
-export interface ThreadWidgetProps {
-  projectId: string
-  pr: number
+interface ThreadWidgetProps {
   thread?: ReviewThread
   draftAnchor?: DraftAnchor
   onClose?: () => void
 }
 
 const Wrapper = styled(Surface)`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.space[2]};
   padding: ${({ theme }) => theme.space[2]};
   width: 100%;
   max-width: 480px;
@@ -100,19 +94,16 @@ const ReplyPlaceholder = styled.button`
 `
 
 export function ThreadWidget({
-  projectId,
-  pr,
   thread,
   draftAnchor,
   onClose
 }: ThreadWidgetProps): React.JSX.Element | null {
   const intl = useIntl()
   const state = useAppState()
-  const targetedPaths = useTargetedPaths()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [replyOpen, setReplyOpen] = useState(false)
-  const del = useDeleteComment(projectId, pr)
+  const del = useDeleteComment()
   const viewer = useViewer().data ?? null
 
   const anchor = thread?.anchor ?? draftAnchor
@@ -126,10 +117,7 @@ export function ThreadWidget({
       return (
         <CommentEditor
           key={comment.id}
-          projectId={projectId}
-          pr={pr}
           refAnchor={refAnchor}
-          targetedPaths={targetedPaths}
           target={{
             kind: 'edit',
             id: comment.id,
@@ -143,7 +131,7 @@ export function ThreadWidget({
       )
     }
     const isLocalDraft = comment.local?.status === 'new'
-    const canEdit = comment.viewerDidAuthor && comment.local?.status !== 'deleted'
+    const canEdit = comment.viewerDidAuthor
     const canDelete = comment.viewerCanDelete || isLocalDraft
     const confirming = confirmDeleteId === comment.id
     return (
@@ -200,49 +188,45 @@ export function ThreadWidget({
 
   return (
     <Wrapper>
-      <Inline>
-        <PathAndLine path={anchor.path} line={anchor.line} />
-        {thread?.isResolved && <ResolvedBadge />}
-        {thread?.isOutdated && <OutdatedBadge />}
-        {!thread && onClose && (
-          <IconButton
-            icon={X}
-            label={intl.formatMessage(messages.close)}
-            size={14}
-            onClick={onClose}
+      <Stack>
+        <Inline>
+          <PathAndLine path={anchor.path} line={anchor.line} />
+          {thread?.isResolved && <ResolvedBadge />}
+          {thread?.isOutdated && <OutdatedBadge />}
+          {!thread && onClose && (
+            <IconButton
+              icon={X}
+              label={intl.formatMessage(messages.close)}
+              size={14}
+              onClick={onClose}
+            />
+          )}
+        </Inline>
+
+        {thread && thread.comments.map((c) => renderComment(c))}
+
+        {thread ? (
+          replyOpen ? (
+            <CommentEditor
+              refAnchor={refAnchor}
+              target={{ kind: 'reply', threadId: thread.id }}
+              onSubmitted={() => setReplyOpen(false)}
+              onCancel={() => setReplyOpen(false)}
+            />
+          ) : (
+            <ReplyPlaceholder type="button" onClick={() => setReplyOpen(true)}>
+              <FormattedMessage {...messages.replyPlaceholder} />
+            </ReplyPlaceholder>
+          )
+        ) : (
+          <CommentEditor
+            refAnchor={refAnchor}
+            target={{ kind: 'thread', anchor }}
+            onSubmitted={() => onClose?.()}
+            onCancel={() => onClose?.()}
           />
         )}
-      </Inline>
-
-      {thread && thread.comments.map((c) => renderComment(c))}
-
-      {thread ? (
-        replyOpen ? (
-          <CommentEditor
-            projectId={projectId}
-            pr={pr}
-            refAnchor={refAnchor}
-            targetedPaths={targetedPaths}
-            target={{ kind: 'reply', threadId: thread.id }}
-            onSubmitted={() => setReplyOpen(false)}
-            onCancel={() => setReplyOpen(false)}
-          />
-        ) : (
-          <ReplyPlaceholder type="button" onClick={() => setReplyOpen(true)}>
-            <FormattedMessage {...messages.replyPlaceholder} />
-          </ReplyPlaceholder>
-        )
-      ) : (
-        <CommentEditor
-          projectId={projectId}
-          pr={pr}
-          refAnchor={refAnchor}
-          targetedPaths={targetedPaths}
-          target={{ kind: 'thread', anchor }}
-          onSubmitted={() => onClose?.()}
-          onCancel={() => onClose?.()}
-        />
-      )}
+      </Stack>
     </Wrapper>
   )
 }

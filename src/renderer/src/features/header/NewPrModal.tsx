@@ -7,7 +7,7 @@ import { Message } from '../../components/Message'
 import { Modal } from '../../components/Modal'
 import { Select } from '../../components/Select'
 import { TextArea, TextInput } from '../../components/TextInput'
-import { Stack } from '../../components/Layout'
+import { ActionRow, Stack } from '../../components/Layout'
 import { useBranches, useCreatePr } from '../../queries/prs'
 import { localizedErrorMessage } from '../../errors/errorMessage'
 import type { PrSummary } from '@shared/ipc/schemas/pr'
@@ -69,10 +69,7 @@ const Field = styled.label`
   color: ${({ theme }) => theme.colors.fgMuted};
 `
 
-const Actions = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: ${({ theme }) => theme.space[2]};
+const Actions = styled(ActionRow)`
   margin-top: ${({ theme }) => theme.space[4]};
 `
 
@@ -108,17 +105,16 @@ function BranchSelect({
   )
 }
 
-export interface NewPrModalProps {
-  projectId: string
+interface NewPrModalProps {
   onClose: () => void
   onCreated: (pr: PrSummary) => void
 }
 
-export function NewPrModal({ projectId, onClose, onCreated }: NewPrModalProps): React.JSX.Element {
+export function NewPrModal({ onClose, onCreated }: NewPrModalProps): React.JSX.Element {
   const intl = useIntl()
-  const { data, isLoading: branchesLoading } = useBranches(projectId)
+  const { data, isLoading: branchesLoading } = useBranches()
   const branches = data?.branches
-  const createPr = useCreatePr(projectId)
+  const createPr = useCreatePr()
 
   const [base, setBase] = useState('')
   const [head, setHead] = useState('')

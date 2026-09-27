@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { FormattedMessage } from 'react-intl'
 import { defineMessages } from '../../../i18n/defineMessages'
-import { useAppState } from '../../../state/AppContext'
 import { useCurrentHead } from '../../../queries/projects'
 import { useTree } from '../../../queries/files'
 import { buildTree } from '../../../components/Tree'
@@ -25,11 +24,9 @@ const messages = defineMessages({
 })
 
 export function FileTree(): React.JSX.Element {
-  const state = useAppState()
-  const projectId = state.projectId ?? ''
-  const head = useCurrentHead(state.projectId)
-  const { data: paths, isLoading } = useTree(projectId, head ?? '')
-  const { pr, rowFor } = useRowData()
+  const head = useCurrentHead()
+  const { data: paths, isLoading } = useTree()
+  const { rowFor } = useRowData()
 
   const nodes = useMemo(
     () =>
@@ -59,5 +56,5 @@ export function FileTree(): React.JSX.Element {
       </Message>
     )
 
-  return <ReviewTree nodes={nodes} pr={pr} />
+  return <ReviewTree nodes={nodes} />
 }

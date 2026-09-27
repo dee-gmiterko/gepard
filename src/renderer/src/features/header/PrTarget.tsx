@@ -6,8 +6,10 @@ import { Combobox } from '../../components/Combobox'
 import { IconButton } from '../../components/IconButton'
 import { IconField } from '../../components/IconField'
 import { Inline } from '../../components/Layout'
-import { usePrList } from '../../queries/prs'
-import { useAppDispatch, useAppState } from '../../state/AppContext'
+import { usePrList, unionByKey } from '../../queries/prs'
+import { useDebouncedValue } from '../../hooks/useDebouncedValue'
+import { useAppState } from '../../state/AppContext'
+import { useTargetActions } from './useTargetActions'
 import { NewPrModal } from './NewPrModal'
 import type { PrListItem } from '@shared/ipc/schemas/pr'
 
@@ -43,14 +45,19 @@ function prFilterText(pr: PrListItem): string {
 export function PrTarget(): React.JSX.Element {
   const intl = useIntl()
   const state = useAppState()
-  const dispatch = useAppDispatch()
-  const projectId = state.projectId ?? ''
+  const { setPr } = useTargetActions()
 
-  const commit = state.targeting.commit ?? undefined
-  const path = state.targeting.path ?? undefined
-  const { data: prs, isFetching } = usePrList(projectId, undefined, commit, path)
+  const { data: basePrs, isFetching: baseFetching } = usePrList()
 
-  const [selected, setSelected] = useState<PrListItem | null>(null)
+  const [queryText, setQueryText] = useState('')
+  const debouncedQuery = useDebouncedValue(queryText)
+  const { data: searchPrs, isFetching: searchFetching } = usePrList(debouncedQuery || undefined)
+  const prs = useMemo(
+    () => unionByKey(basePrs ?? [], searchPrs ?? [], (pr) => String(pr.number)),
+    [basePrs, searchPrs]
+  )
+  const isFetching = baseFetching || searchFetching
+
   const [newPrOpen, setNewPrOpen] = useState(false)
 
   const getPrLabel = useCallback(
@@ -59,11 +66,13 @@ export function PrTarget(): React.JSX.Element {
     [intl]
   )
 
-  const value = useMemo(() => {
-    if (state.targeting.pr === null) return null
-    if (selected?.number === state.targeting.pr) return selected
-    return prs?.find((pr) => pr.number === state.targeting.pr) ?? selected
-  }, [state.targeting.pr, selected, prs])
+  const value = useMemo(
+    () =>
+      state.targeting.pr === null
+        ? null
+        : (prs.find((pr) => pr.number === state.targeting.pr) ?? null),
+    [state.targeting.pr, prs]
+  )
 
   const unresolvedLabel =
     value === null && state.targeting.pr !== null
@@ -74,7 +83,7 @@ export function PrTarget(): React.JSX.Element {
     <Inline $gap={1}>
       <IconField icon={GitPullRequest} width={280}>
         <Combobox<PrListItem>
-          items={prs ?? []}
+          items={prs}
           value={value}
           getKey={(pr) => String(pr.number)}
           getLabel={getPrLabel}
@@ -82,10 +91,8 @@ export function PrTarget(): React.JSX.Element {
           loading={isFetching}
           placeholder={intl.formatMessage(messages.placeholder)}
           unresolvedLabel={unresolvedLabel}
-          onSelect={(pr) => {
-            setSelected(pr)
-            dispatch({ type: 'target/pr', pr: pr?.number ?? null })
-          }}
+          onQueryChange={setQueryText}
+          onSelect={(pr) => setPr(pr?.number ?? null)}
         />
       </IconField>
       <IconButton
@@ -95,11 +102,9 @@ export function PrTarget(): React.JSX.Element {
       />
       {newPrOpen && (
         <NewPrModal
-          projectId={projectId}
           onClose={() => setNewPrOpen(false)}
           onCreated={(pr) => {
-            setSelected(pr)
-            dispatch({ type: 'target/pr', pr: pr.number })
+            setPr(pr.number)
             setNewPrOpen(false)
           }}
         />

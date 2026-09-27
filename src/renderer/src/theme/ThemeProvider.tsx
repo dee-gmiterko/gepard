@@ -1,5 +1,3 @@
-// The `prefers-color-scheme` matchMedia `change` event can arrive late in a
-// background-throttled Electron window.
 import { useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { ThemeProvider as StyledThemeProvider, createGlobalStyle } from 'styled-components'
 import { useIpcEvent } from '../ipc/client'
@@ -19,7 +17,7 @@ function getSystemThemeSnapshot(): boolean {
   return window.matchMedia(DARK_QUERY).matches
 }
 
-export const GlobalStyle = createGlobalStyle`
+const GlobalStyle = createGlobalStyle`
   :root {
     color-scheme: ${({ theme }) => theme.mode};
   }
@@ -55,6 +53,9 @@ export function AppThemeProvider({ children }: { children: ReactNode }): React.J
     getSystemThemeSnapshot,
     () => false
   )
+  // The `prefers-color-scheme` matchMedia `change` event can arrive late in a
+  // background-throttled Electron window, so the main process's own dark-mode
+  // broadcast can override the system query result.
   const [mainDark, setMainDark] = useState<boolean | null>(null)
   const systemPrefersDark = mainDark ?? systemDark
 

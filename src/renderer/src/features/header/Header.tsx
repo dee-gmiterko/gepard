@@ -4,13 +4,13 @@ import { defineMessages } from '../../i18n/defineMessages'
 import { PrTarget } from './PrTarget'
 import { CommitTarget } from './CommitTarget'
 import { PathTarget } from './PathTarget'
-import { useTargetCheckoutEffect } from './useTargetCheckout'
-import { usePersistTargeting } from './usePersistTargeting'
+import { useTargetingEffects } from './useTargetingEffects'
 import { Grid } from 'react-feather'
 import { IconButton } from '../../components/IconButton'
 import { Ellipsis } from '../../components/Ellipsis'
+import { Inline } from '../../components/Layout'
 import { useIndexStatus } from '../../queries/projects'
-import { useAppDispatch, useAppState } from '../../state/AppContext'
+import { useAppDispatch } from '../../state/AppContext'
 
 const messages = defineMessages({
   projects: {
@@ -46,19 +46,11 @@ const Spacer = styled.div`
   flex: 1;
 `
 
-const Targets = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.space[5]};
-`
-
 export function Header(): React.JSX.Element {
   const intl = useIntl()
-  const { pending } = useTargetCheckoutEffect()
-  usePersistTargeting()
-  const state = useAppState()
+  const { pending } = useTargetingEffects()
   const dispatch = useAppDispatch()
-  const { data: index } = useIndexStatus(state.projectId ?? '')
+  const { data: index } = useIndexStatus()
 
   return (
     <Bar>
@@ -67,11 +59,11 @@ export function Header(): React.JSX.Element {
         label={intl.formatMessage(messages.projects)}
         onClick={() => dispatch({ type: 'project/close' })}
       />
-      <Targets>
+      <Inline $gap={5}>
         <PrTarget />
         <CommitTarget />
         <PathTarget />
-      </Targets>
+      </Inline>
       {pending && (
         <Status>
           <FormattedMessage {...messages.checkingOut} />

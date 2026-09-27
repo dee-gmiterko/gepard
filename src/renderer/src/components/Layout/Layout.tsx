@@ -16,3 +16,9 @@ export const Inline = styled.div<{ $gap?: Gap }>`
   gap: ${({ theme, $gap = 2 }) => theme.space[$gap]};
   min-width: 0;
 `
+
+export const ActionRow = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: ${({ theme }) => theme.space[2]};
+`

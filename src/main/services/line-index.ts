@@ -85,7 +85,11 @@ export class LineIndex {
       let m: RegExpExecArray | null
       while ((m = WORD_RE.exec(raw))) {
         wordKeys.add(m[0])
-        pushEntry(this.byWord, m[0], path, { line: lineNo, start: m.index, end: m.index + m[0].length })
+        pushEntry(this.byWord, m[0], path, {
+          line: lineNo,
+          start: m.index,
+          end: m.index + m[0].length
+        })
       }
     })
 

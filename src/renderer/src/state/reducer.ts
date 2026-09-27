@@ -42,12 +42,11 @@ export const initialAppState: AppState = {
 }
 
 export type AppAction =
-  | { type: 'project/open'; projectId: string }
+  | { type: 'project/open'; projectId: string; targeting: Targeting }
   | { type: 'project/close' }
   | { type: 'target/pr'; pr: number | null }
   | { type: 'target/commit'; sha: string | null }
   | { type: 'target/path'; path: string | null }
-  | { type: 'target/restore'; targeting: Targeting }
   | { type: 'target/checkoutResult'; checkout: { base: string; head: string } | null }
   | { type: 'sidePanel/setTab'; tab: SidePanelTab }
   | { type: 'file/open'; path: string; line?: number | null; side?: 'LEFT' | 'RIGHT' }
@@ -65,9 +64,12 @@ function withTarget(state: AppState, targeting: Targeting, set: boolean): AppSta
 
 export function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
-    case 'project/open':
+    case 'project/open': {
       if (state.projectId === action.projectId) return state
-      return { ...initialAppState, projectId: action.projectId, toasts: state.toasts }
+      const opened = { ...initialAppState, projectId: action.projectId, toasts: state.toasts }
+      const { pr, commit, path } = action.targeting
+      return withTarget(opened, action.targeting, pr !== null || commit !== null || path !== null)
+    }
     case 'project/close':
       return { ...initialAppState, toasts: state.toasts }
     case 'target/pr':
@@ -83,10 +85,6 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case 'target/path':
       if (state.targeting.path === action.path) return state
       return withTarget(state, { ...state.targeting, path: action.path }, action.path !== null)
-    case 'target/restore': {
-      const { pr, commit, path } = action.targeting
-      return withTarget(state, action.targeting, pr !== null || commit !== null || path !== null)
-    }
     case 'target/checkoutResult':
       return { ...state, checkout: action.checkout }
     case 'sidePanel/setTab':
@@ -105,7 +103,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           }
     }
     case 'file/focus':
-      return { ...state, activeFile: action.path, mainTab: 'files' }
+      return { ...state, activeFile: action.path, mainTab: 'files', revealLine: null }
     case 'file/pin':
       if (state.pinnedFiles.includes(action.path)) return state
       return {
@@ -120,7 +118,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         state.activeFile === action.path
           ? (state.previewFile ?? pinnedFiles.at(-1) ?? null)
           : state.activeFile
-      return { ...state, pinnedFiles, activeFile }
+      return { ...state, pinnedFiles, activeFile, revealLine: null }
     }
     case 'mainTab/set':
       return { ...state, mainTab: action.tab }

@@ -26,9 +26,8 @@ export function aggregateRows(children: RowData[]): RowData {
   )
 }
 
-export interface RowDataSource {
+interface RowDataSource {
   diffMode: boolean
-  pr: number | null
   changedFiles: ChangedFile[] | undefined
   changedLoading: boolean
   rowFor: (path: string) => RowData
@@ -36,11 +35,9 @@ export interface RowDataSource {
 
 export function useRowData(): RowDataSource {
   const state = useAppState()
-  const projectId = state.projectId ?? ''
-  const pr = state.targeting.pr
   const diffMode = isDiffView(state) && state.checkout !== null
-  const changed = useChangedFiles(projectId, state.checkout?.base ?? '', state.checkout?.head ?? '')
-  const { data: viewedList } = useViewed(projectId, pr ?? NaN)
+  const changed = useChangedFiles()
+  const { data: viewedList } = useViewed()
 
   const byPath = useMemo(() => {
     const viewed = new Set((viewedList ?? []).filter((v) => v.viewed).map((v) => v.path))
@@ -61,7 +58,6 @@ export function useRowData(): RowDataSource {
 
   return {
     diffMode,
-    pr,
     changedFiles: diffMode ? changed.data : undefined,
     changedLoading: diffMode && changed.isLoading,
     rowFor

@@ -51,7 +51,10 @@ const codeMessages = defineMessages({
     id: 'errors.code.noLanguageSession',
     defaultMessage: 'No language server is available for this file yet.'
   },
-  NOT_DELETABLE: { id: 'errors.code.notDeletable', defaultMessage: "This comment can't be deleted." },
+  NOT_DELETABLE: {
+    id: 'errors.code.notDeletable',
+    defaultMessage: "This comment can't be deleted."
+  },
   NOT_EDITABLE: { id: 'errors.code.notEditable', defaultMessage: "This comment can't be edited." },
   NOT_FOUND: { id: 'errors.code.notFound', defaultMessage: 'Not found.' },
   PROJECT_NOT_CLONED: {

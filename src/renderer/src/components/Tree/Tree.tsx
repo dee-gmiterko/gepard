@@ -24,6 +24,7 @@ export interface TreeProps<T> {
   selectedPath?: string | null
   isSelected?: (node: TreeNode<T>) => boolean
   onSelectFile?: (node: TreeNode<T>) => void
+  onEnterFile?: (node: TreeNode<T>) => void
   renderFile: (node: TreeNode<T>) => ReactNode
   renderFolder?: (node: TreeNode<T>) => ReactNode
 }
@@ -96,6 +97,7 @@ export function Tree<T>({
   selectedPath,
   isSelected,
   onSelectFile,
+  onEnterFile,
   renderFile,
   renderFolder
 }: TreeProps<T>): React.JSX.Element {
@@ -115,10 +117,23 @@ export function Tree<T>({
     })
   }
 
+  function onFileRowKeyDown(node: TreeNode<T>): (e: React.KeyboardEvent) => void {
+    return (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        ;(onEnterFile ?? onSelectFile)?.(node)
+      } else if (e.key === ' ') {
+        e.preventDefault()
+        onSelectFile?.(node)
+      }
+    }
+  }
+
   function renderNodes(list: TreeNode<T>[], depth: number): ReactNode {
     return list.map((node) => {
+      const hasChildren = node.children.length > 0
+      const expanded = !collapsed.has(node.path)
       if (node.isFolder) {
-        const expanded = !collapsed.has(node.path)
         return (
           <li key={node.path} role="none">
             <FolderRow
@@ -146,11 +161,16 @@ export function Tree<T>({
             $depth={depth}
             $selected={selected}
             aria-selected={selected}
+            aria-expanded={hasChildren ? expanded : undefined}
             onClick={() => onSelectFile?.(node)}
-            onKeyDown={onRowKeyDown(() => onSelectFile?.(node))}
+            onKeyDown={onFileRowKeyDown(node)}
           >
+            {hasChildren && <Chevron expanded={expanded} onToggle={() => toggle(node.path)} />}
             {renderFile(node)}
           </FileRow>
+          {hasChildren && expanded && (
+            <List role="group">{renderNodes(node.children, depth + 1)}</List>
+          )}
         </li>
       )
     })

@@ -4,11 +4,22 @@ import * as git from '../../services/git'
 
 export const prsHandlers: Pick<
   HandlerMap,
-  'pr.list' | 'pr.commits' | 'pr.checkout' | 'pr.branches' | 'pr.create' | 'commits.list'
+  | 'pr.list'
+  | 'pr.view'
+  | 'pr.commits'
+  | 'pr.checkout'
+  | 'pr.branches'
+  | 'pr.create'
+  | 'commits.list'
 > = {
   'pr.list': async ({ projectId, search, commit, path }) => {
     const { owner, repo } = await gh.repoRefFor(projectId)
     return gh.listPrsFiltered(owner, repo, { search, commit, path })
+  },
+
+  'pr.view': async ({ projectId, pr }) => {
+    const { owner, repo } = await gh.repoRefFor(projectId)
+    return gh.viewPr(owner, repo, pr)
   },
 
   'pr.commits': async ({ projectId, pr, path }) => {

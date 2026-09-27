@@ -12,10 +12,3 @@ export function toggleRefIn(
     ? references.filter((r) => !sameRef(r, ref))
     : [...references, ref]
 }
-
-export function clearKindIn(
-  references: CommentReference[],
-  kind: CommentReference['kind']
-): CommentReference[] {
-  return references.filter((r) => r.kind !== kind)
-}

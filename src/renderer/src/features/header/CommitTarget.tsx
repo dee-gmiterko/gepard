@@ -1,49 +1,69 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { GitCommit } from 'react-feather'
 import { useIntl } from 'react-intl'
 import { defineMessages } from '../../i18n/defineMessages'
 import { Combobox } from '../../components/Combobox'
 import { IconField } from '../../components/IconField'
-import { usePrCommits, useCommits } from '../../queries/prs'
-import { useAppDispatch, useAppState } from '../../state/AppContext'
+import { usePrCommits, useCommits, unionByKey } from '../../queries/prs'
+import { useDebouncedValue } from '../../hooks/useDebouncedValue'
+import { useAppState } from '../../state/AppContext'
+import { useTargetActions } from './useTargetActions'
 import type { Commit } from '@shared/ipc/schemas/pr'
 
 const messages = defineMessages({
   placeholder: {
     id: 'header.commitTarget.placeholder',
     defaultMessage: 'Commit…'
+  },
+  commitLabel: {
+    id: 'header.commitTarget.commitLabel',
+    defaultMessage: '{sha} {headline}'
   }
 })
-
-function commitLabel(commit: Commit): string {
-  return `${commit.oid.slice(0, 7)} ${commit.messageHeadline}`
-}
 
 export function CommitTarget(): React.JSX.Element {
   const intl = useIntl()
   const state = useAppState()
-  const dispatch = useAppDispatch()
-  const projectId = state.projectId ?? ''
-  const pr = state.targeting.pr
-  const path = state.targeting.path ?? undefined
-  const usingPr = pr !== null
+  const { setCommit } = useTargetActions()
+  const usingPr = state.targeting.pr !== null
 
-  const [selected, setSelected] = useState<Commit | null>(null)
+  const [queryText, setQueryText] = useState('')
+  const debouncedQuery = useDebouncedValue(queryText)
 
-  const prCommits = usePrCommits(projectId, pr ?? NaN, path)
-  const repoCommits = useCommits(projectId, { path }, !usingPr)
+  const prCommits = usePrCommits()
+  const repoCommits = useCommits()
+  // The fetched page only covers the repo's first commits; widen the
+  // candidate set with a server search for the typed text (pr.commits has no
+  // server search, so this only applies when browsing the full repo).
+  const repoCommitsSearch = useCommits(debouncedQuery || undefined)
 
   const items = useMemo(
-    () => (usingPr ? (prCommits.data ?? []) : (repoCommits.data ?? [])),
-    [usingPr, prCommits.data, repoCommits.data]
+    () =>
+      usingPr
+        ? (prCommits.data ?? [])
+        : unionByKey(repoCommits.data ?? [], repoCommitsSearch.data ?? [], (c) => c.oid),
+    [usingPr, prCommits.data, repoCommits.data, repoCommitsSearch.data]
   )
-  const isFetching = usingPr ? prCommits.isFetching : repoCommits.isFetching
+  const isFetching = usingPr
+    ? prCommits.isFetching
+    : repoCommits.isFetching || repoCommitsSearch.isFetching
 
-  const value = useMemo(() => {
-    if (state.targeting.commit === null) return null
-    if (selected?.oid === state.targeting.commit) return selected
-    return items.find((c) => c.oid === state.targeting.commit) ?? selected
-  }, [state.targeting.commit, selected, items])
+  const getCommitLabel = useCallback(
+    (commit: Commit) =>
+      intl.formatMessage(messages.commitLabel, {
+        sha: commit.oid.slice(0, 7),
+        headline: commit.messageHeadline
+      }),
+    [intl]
+  )
+
+  const value = useMemo(
+    () =>
+      state.targeting.commit === null
+        ? null
+        : (items.find((c) => c.oid === state.targeting.commit) ?? null),
+    [state.targeting.commit, items]
+  )
 
   const unresolvedLabel =
     value === null && state.targeting.commit !== null
@@ -56,14 +76,12 @@ export function CommitTarget(): React.JSX.Element {
         items={items}
         value={value}
         getKey={(c) => c.oid}
-        getLabel={commitLabel}
+        getLabel={getCommitLabel}
         loading={isFetching}
         placeholder={intl.formatMessage(messages.placeholder)}
         unresolvedLabel={unresolvedLabel}
-        onSelect={(commit) => {
-          setSelected(commit)
-          dispatch({ type: 'target/commit', sha: commit?.oid ?? null })
-        }}
+        onQueryChange={setQueryText}
+        onSelect={(commit) => setCommit(commit?.oid ?? null)}
       />
     </IconField>
   )

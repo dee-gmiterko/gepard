@@ -47,9 +47,7 @@ export interface DisabledExternalExtension {
 }
 
 type ScanEntry =
-  | { extension: LanguageExtension }
-  | { error: string }
-  | { disabled: extensionsStore.KnownFile }
+  { extension: LanguageExtension } | { error: string } | { disabled: extensionsStore.KnownFile }
 
 // Node never re-evaluates a module once it has imported its URL, whether that
 // import succeeded or failed, so a path already scanned is never imported

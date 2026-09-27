@@ -1,5 +1,18 @@
 import MarkdownToJsx from 'markdown-to-jsx/react'
-import styled from 'styled-components'
+import styled, { css } from 'styled-components'
+
+const linkAndCode = css`
+  a {
+    color: ${({ theme }) => theme.colors.accent};
+  }
+
+  code {
+    font-family: ${({ theme }) => theme.font.mono};
+    background: ${({ theme }) => theme.colors.bgSubtle};
+    border-radius: ${({ theme }) => theme.radius.sm};
+    padding: 0 3px;
+  }
+`
 
 const Prose = styled.div`
   color: ${({ theme }) => theme.colors.fg};
@@ -22,16 +35,10 @@ const Prose = styled.div`
     margin: ${({ theme }) => theme.space[2]} 0;
   }
 
-  a {
-    color: ${({ theme }) => theme.colors.accent};
-  }
+  ${linkAndCode}
 
   code {
-    font-family: ${({ theme }) => theme.font.mono};
     font-size: ${({ theme }) => theme.font.size.sm};
-    background: ${({ theme }) => theme.colors.bgSubtle};
-    border-radius: ${({ theme }) => theme.radius.sm};
-    padding: 0 3px;
   }
 
   pre code {
@@ -53,16 +60,7 @@ const InlineProse = styled.span`
   color: inherit;
   font: inherit;
 
-  a {
-    color: ${({ theme }) => theme.colors.accent};
-  }
-
-  code {
-    font-family: ${({ theme }) => theme.font.mono};
-    background: ${({ theme }) => theme.colors.bgSubtle};
-    border-radius: ${({ theme }) => theme.radius.sm};
-    padding: 0 3px;
-  }
+  ${linkAndCode}
 `
 
 export interface MarkdownProps {

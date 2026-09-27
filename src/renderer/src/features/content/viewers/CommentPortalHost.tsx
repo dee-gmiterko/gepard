@@ -5,13 +5,9 @@ import { ThreadWidget } from '../../commentEditor/ThreadWidget'
 
 export function CommentPortalHost({
   portals,
-  projectId,
-  pr,
   onCloseDraft
 }: {
   portals: CommentPortals
-  projectId: string
-  pr: number
   onCloseDraft: () => void
 }): React.JSX.Element {
   const mounted = useSyncExternalStore(portals.subscribe, portals.getSnapshot)
@@ -21,16 +17,10 @@ export function CommentPortalHost({
         createPortal(
           <>
             {entry.threads.map((thread) => (
-              <ThreadWidget key={thread.id} projectId={projectId} pr={pr} thread={thread} />
+              <ThreadWidget key={thread.id} thread={thread} />
             ))}
             {entry.draft && (
-              <ThreadWidget
-                key="draft"
-                projectId={projectId}
-                pr={pr}
-                draftAnchor={entry.draft}
-                onClose={onCloseDraft}
-              />
+              <ThreadWidget key="draft" draftAnchor={entry.draft} onClose={onCloseDraft} />
             )}
           </>,
           dom,
