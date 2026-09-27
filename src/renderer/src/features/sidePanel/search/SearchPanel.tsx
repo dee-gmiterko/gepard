@@ -1,7 +1,3 @@
-// Search - also called selection (spec): fuzzy prefill on detected symbols,
-// exact match or regex, a symbol flag; scrollable results grouped per file
-// with line previews (collapsible file row plus matches), tree or flat, and
-// an all-files / targeted-only toggle. Runs `search.run`.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import styled from 'styled-components'
 import { AtSign, Hash } from 'react-feather'
@@ -61,10 +57,6 @@ const Results = styled.div`
   overflow: auto;
 `
 
-/** Every "file" leaf from the generic tree/flat builders becomes a
- * collapsible folder-like node containing its matches as leaves (spec: search
- * results are "standard file row + all matches under it, collapsable") —
- * reuses Tree's own expand/collapse instead of a second, separate mechanism. */
 function toSearchTree(nodes: TreeNode<FileMatches>[]): TreeNode<SearchRowData>[] {
   return nodes.map((n) => {
     if (n.isFolder) {
@@ -127,9 +119,6 @@ export function SearchPanel(): React.JSX.Element {
 
   const query = useMemo<SearchQuery | null>(() => {
     if (!projectId || !sha || !debouncedText) return null
-    // Symbol flag on but no suggestion picked yet (`at` unknown): degrade to
-    // a plain pattern/regex search of the typed text rather than searching
-    // nothing.
     if (symbolFlag && selectedAt) {
       return {
         kind: 'references',

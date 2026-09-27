@@ -1,15 +1,8 @@
-// Minimal fuzzy subsequence matcher for the header's targeting comboboxes and
-// the search panel's symbol prefill. No dependency: the project's pinned
-// versions (report 04 §1.1) do not include a fuzzy-matching library, and the
-// lists here (PRs, commits, folders, symbols) are short enough not to need
-// one.
 export interface FuzzyMatch {
   score: number
   indices: number[]
 }
 
-/** Case-insensitive subsequence match: every character of `query`, in order,
- * somewhere in `text`. Score favors contiguous runs and an early first match. */
 export function fuzzyMatch(query: string, text: string): FuzzyMatch | null {
   if (query.length === 0) return { score: 0, indices: [] }
   const q = query.toLowerCase()
@@ -46,8 +39,6 @@ export function fuzzyFilter<T>(
   return scored.map((s) => s.item)
 }
 
-/** The characters of `text` that `query` fuzzy-matches, as contiguous
- * `[start, end)` ranges for HighlightedText; none when it does not match. */
 export function fuzzyRanges(query: string, text: string): [number, number][] {
   const match = query ? fuzzyMatch(query, text) : null
   const ranges: [number, number][] = []

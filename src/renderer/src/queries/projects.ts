@@ -1,4 +1,3 @@
-// Query functions are one-liners around invoke() (report 04 §5.1).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { invoke, useIpcEvent } from '../ipc/client'
 import { qk } from './keys'
@@ -7,6 +6,10 @@ import type { ChannelInput } from '@shared/ipc/contract'
 
 export function useViewer() {
   return useQuery({ queryKey: qk.viewer(), queryFn: () => invoke('app.viewer') })
+}
+
+export function useViewerRepos() {
+  return useQuery({ queryKey: qk.viewerRepos(), queryFn: () => invoke('app.viewerRepos') })
 }
 
 export function useProjects() {
@@ -21,7 +24,6 @@ export function useAddProject() {
   })
 }
 
-/** Opening a project starts its background index and yields the current head sha. */
 export function useOpenProject(projectId: string | null) {
   return useQuery({
     queryKey: qk.open(projectId ?? ''),
@@ -31,13 +33,19 @@ export function useOpenProject(projectId: string | null) {
   })
 }
 
+export function useSetTargeting(projectId: string) {
+  return useMutation({
+    mutationFn: (targeting: ChannelInput<'projects.setTargeting'>['targeting']) =>
+      invoke('projects.setTargeting', { projectId, targeting })
+  })
+}
+
 export function useCloneStart() {
   return useMutation({
     mutationFn: (projectId: string) => invoke('clone.start', { projectId })
   })
 }
 
-/** Launchpad remove. */
 export function useRemoveProject() {
   const qc = useQueryClient()
   return useMutation({
@@ -46,9 +54,6 @@ export function useRemoveProject() {
   })
 }
 
-/** Background index status: initial value from `index.get`, then live from
- * the `index.status` event. When indexing settles, queries that failed while
- * the language session was not up yet (symbols, references) are retried. */
 export function useIndexStatus(projectId: string) {
   const qc = useQueryClient()
   useIpcEvent('index.status', (payload) => {
@@ -60,9 +65,6 @@ export function useIndexStatus(projectId: string) {
         predicate: (q) => q.state.status === 'error'
       })
     }
-    // An 'error' status is toasted by the always-mounted subscription in
-    // main.tsx, not here: this hook only listens for the project currently
-    // shown, and a background index can fail after the user switched away.
   })
   return useQuery({
     queryKey: qk.index(projectId),
@@ -71,11 +73,6 @@ export function useIndexStatus(projectId: string) {
   })
 }
 
-/** The sha the file browser and folder-targeting combobox read at: the
- * checked-out target's head once one exists, else the project's initial open
- * head (report 04 §5.1: `projects.open` "the file browser uses before any
- * PR/commit is targeted"). Composes `useOpenProject` with AppContext's
- * `checkout`, so header and side-panel features share one head resolution. */
 export function useCurrentHead(projectId: string | null): string | null {
   const state = useAppState()
   const open = useOpenProject(projectId)

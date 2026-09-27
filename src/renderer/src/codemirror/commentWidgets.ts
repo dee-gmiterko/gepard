@@ -1,12 +1,3 @@
-// Inline comments shared by the code and diff viewers (spec: "Shows inline
-// comments"; a gutter affordance on hover starts a new thread at
-// {side, line} when a PR is targeted). Each commented line gets a block
-// widget whose DOM node is only a mount point: the viewer renders the thread
-// UI into it with a React portal (report 02: "Comment widgets as React
-// portals in block decorations"), so the widgets live inside the app's React
-// tree and see its providers (query client, theme, AppContext). The widgets
-// publish their mount points through `CommentPortals`, which the viewer
-// subscribes to.
 import type { Text, Extension } from '@codemirror/state'
 import { RangeSetBuilder } from '@codemirror/state'
 import { Decoration, EditorView, GutterMarker, WidgetType, gutter } from '@codemirror/view'
@@ -15,8 +6,6 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { Plus } from 'react-feather'
 import type { DraftAnchor, ReviewThread } from '@shared/ipc/schemas/comment'
 
-/** One document line (1-based) with the threads anchored there and/or an
- * in-progress draft for a new thread. */
 export interface LineCommentEntry {
   docLine: number
   threads: ReviewThread[]
@@ -29,9 +18,8 @@ export interface CommentPortal {
   entry: LineCommentEntry
 }
 
-/** Mount points of the currently drawn comment widgets, as an external store
- * for `useSyncExternalStore`. CodeMirror may draw one widget more than once
- * (a line scrolled out and back in), so entries are keyed by DOM node. */
+// CodeMirror may recreate a widget's DOM node when a line scrolls out of
+// view and back in, so entries are keyed by DOM node rather than by line.
 export class CommentPortals {
   private byDom = new Map<HTMLElement, CommentPortal>()
   private snapshot: CommentPortal[] = []
@@ -43,8 +31,6 @@ export class CommentPortals {
     this.emit()
   }
 
-  /** Same mount point, new content: the portal keeps its key, so React
-   * keeps the widget's state (e.g. a half-typed reply) across refetches. */
   update(dom: HTMLElement, entry: LineCommentEntry): boolean {
     const current = this.byDom.get(dom)
     if (!current) return false
@@ -91,9 +77,9 @@ class ThreadBlockWidget extends WidgetType {
   toDOM(view: EditorView): HTMLElement {
     const dom = document.createElement('div')
     dom.className = 'cm-comment-widget'
-    // The portal content renders after this returns and changes height as
-    // the user types or expands accordions; keep CodeMirror's height map in
-    // sync with it.
+    // CodeMirror caches each widget's height and does not detect the portal
+    // content resizing on its own, so requestMeasure() must be called
+    // explicitly when it does.
     const observer = new ResizeObserver(() => view.requestMeasure())
     observer.observe(dom)
     resizeObservers.set(dom, observer)
@@ -116,8 +102,6 @@ class ThreadBlockWidget extends WidgetType {
   }
 }
 
-/** Block widgets below each commented (or drafted) line, keyed to the
- * document's line numbers. */
 export function commentBlockDecorations(
   doc: Text,
   entries: readonly LineCommentEntry[],
@@ -135,8 +119,8 @@ export function commentBlockDecorations(
   return EditorView.decorations.of(builder.finish())
 }
 
-// Gutter markers are plain DOM built by CodeMirror, outside the React tree:
-// the feather icon (spec Styling) is rendered to markup once and reused.
+// CodeMirror gutter markers are plain DOM, not part of the React tree, so
+// the icon is rendered to static markup once and reused.
 let plusIconMarkup: string | null = null
 
 class AffordanceMarker extends GutterMarker {
@@ -152,9 +136,6 @@ class AffordanceMarker extends GutterMarker {
   }
 }
 
-/** The plus icon that appears on gutter hover to start a new thread (spec). Only
- * mounted when a PR is targeted; `isCommentable` excludes rows with no valid
- * anchor on either side (e.g. a diff hunk header). */
 export function commentAffordanceGutter(
   isCommentable: (docLine: number) => boolean,
   onClick: (docLine: number) => void
@@ -177,8 +158,6 @@ export function commentAffordanceGutter(
   })
 }
 
-/** Code-view mapping: threads/drafts always anchor RIGHT (the file has one
- * version, the current head). */
 export function codeViewCommentEntries(
   threads: readonly ReviewThread[],
   path: string,
@@ -213,10 +192,6 @@ export function codeViewCommentEntries(
   return entries
 }
 
-/** Diff-view mapping: a thread's `{side, line}` anchor is translated to the
- * combined document's line number via the row `oldLine`/`newLine` fields
- * (report 02: "mapping from a row back to LEFT/RIGHT line numbers ... is
- * correct"). */
 export function diffViewCommentEntries(
   threads: readonly ReviewThread[],
   path: string,

@@ -1,13 +1,9 @@
-// The only code that reads or writes project.json (report 04 §4.1):
-// `{ url, owner, repo, addedAt }`, id = lowercase "owner__repo". `cloned` is
-// derived at read time, never stored: `repo/` only exists once a clone
-// completed (services/git.ts clones into a temporary directory and renames
-// it at the end).
 import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { z } from 'zod'
 import { Project } from '@shared/ipc/schemas/project'
+import { PersistedTargeting } from '@shared/ipc/schemas/pr'
 import { AppError } from '../ipc/registry'
 import {
   projectDir,
@@ -17,9 +13,17 @@ import {
   projectsDir
 } from '../paths'
 
-// project.json on disk = Project minus the derived `cloned` flag.
-const ProjectFile = Project.omit({ cloned: true })
+const ProjectFile = Project.omit({ cloned: true }).extend({
+  lastTargeting: PersistedTargeting.optional()
+})
 type ProjectFile = z.infer<typeof ProjectFile>
+
+const NO_TARGETING: PersistedTargeting = { pr: null, commit: null, path: null }
+
+function toProject(file: ProjectFile, cloned: boolean): Project {
+  const { id, url, owner, repo, addedAt } = file
+  return { id, url, owner, repo, addedAt, cloned }
+}
 
 async function pathExists(path: string): Promise<boolean> {
   try {
@@ -61,8 +65,8 @@ async function readProjectFile(id: string): Promise<ProjectFile | null> {
   return parsed.data
 }
 
-/** Write tmp -> rename (report 04 §4.3's atomic-write pattern, applied here
- * too since this is the only code allowed to touch project.json). */
+// Write tmp -> rename: POSIX rename is atomic, so a crash mid-write never
+// leaves a corrupt project.json.
 async function writeProjectFile(id: string, data: ProjectFile): Promise<void> {
   const dir = projectDir(id)
   await mkdir(dir, { recursive: true })
@@ -79,7 +83,7 @@ export async function listProjects(): Promise<Project[]> {
     if (!entry.isDirectory()) continue
     const file = await readProjectFile(entry.name)
     if (!file) continue
-    projects.push({ ...file, cloned: await isCloned(entry.name) })
+    projects.push(toProject(file, await isCloned(entry.name)))
   }
   projects.sort((a, b) => a.addedAt.localeCompare(b.addedAt))
   return projects
@@ -88,15 +92,22 @@ export async function listProjects(): Promise<Project[]> {
 export async function getProject(id: string): Promise<Project | null> {
   const file = await readProjectFile(id)
   if (!file) return null
-  return { ...file, cloned: await isCloned(id) }
+  return toProject(file, await isCloned(id))
 }
 
-// GitHub owner / repository name characters.
+export async function getLastTargeting(id: string): Promise<PersistedTargeting> {
+  const file = await readProjectFile(id)
+  return file?.lastTargeting ?? NO_TARGETING
+}
+
+export async function setLastTargeting(id: string, targeting: PersistedTargeting): Promise<void> {
+  const file = await readProjectFile(id)
+  if (!file) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${id}`)
+  await writeProjectFile(id, { ...file, lastTargeting: targeting })
+}
+
 const NAME_RE = /^[A-Za-z0-9_.-]+$/
 
-/** Spec: a project is selected "from GitHub url" — only
- * `https://github.com/<owner>/<repo>` (optionally `.git` or a trailing
- * slash) is accepted. */
 function parseGitHubRepoUrl(url: string): { owner: string; repo: string } {
   let parsed: URL
   try {
@@ -119,13 +130,11 @@ function parseGitHubRepoUrl(url: string): { owner: string; repo: string } {
   return { owner, repo }
 }
 
-/** Registers the project (project.json); cloning is separate (clone.start).
- * Idempotent: adding an already-registered url returns the existing entry. */
 export async function addProject(url: string): Promise<Project> {
   const { owner, repo } = parseGitHubRepoUrl(url)
   const id = makeProjectId(owner, repo)
   const existing = await readProjectFile(id)
-  if (existing) return { ...existing, cloned: await isCloned(id) }
+  if (existing) return toProject(existing, await isCloned(id))
   const data: ProjectFile = {
     id,
     url: `https://github.com/${owner}/${repo}`,
@@ -137,7 +146,6 @@ export async function addProject(url: string): Promise<Project> {
   return { ...data, cloned: false }
 }
 
-/** Deletes the project directory (clone + review store + project.json). */
 export async function removeProject(id: string): Promise<void> {
   await rm(projectDir(id), { recursive: true, force: true })
 }

@@ -1,7 +1,3 @@
-// Pure reducer tests for the spec's Behaviors section (report 04 §5.1):
-// changing the PR clears the commit, setting any target switches the side
-// panel to "targeted", pinned files are preserved across target changes, and
-// the preview file slot is replaced (not stacked) on each navigation pick.
 import { describe, expect, it } from 'vitest'
 import { appReducer, initialAppState, type AppState } from '../src/renderer/src/state/reducer'
 
@@ -11,31 +7,50 @@ function state(overrides: Partial<AppState> = {}): AppState {
 
 describe('targeting behaviors', () => {
   it('changing the PR clears the commit and switches the side panel to targeted', () => {
-    const withCommit = state({ targeting: { pr: null, commit: 'deadbeef', folder: null } })
+    const withCommit = state({ targeting: { pr: null, commit: 'deadbeef', path: null } })
     const next = appReducer(withCommit, { type: 'target/pr', pr: 7 })
-    expect(next.targeting).toEqual({ pr: 7, commit: null, folder: null })
+    expect(next.targeting).toEqual({ pr: 7, commit: null, path: null })
     expect(next.sidePanelTab).toBe('targeted')
   })
 
   it('clearing the PR (pr: null) does not force the side panel to targeted', () => {
     const withPr = state({
-      targeting: { pr: 7, commit: null, folder: null },
+      targeting: { pr: 7, commit: null, path: null },
       sidePanelTab: 'search'
     })
     const next = appReducer(withPr, { type: 'target/pr', pr: null })
     expect(next.targeting.pr).toBeNull()
-    expect(next.sidePanelTab).toBe('search') // untouched, since nothing is targeted now
+    expect(next.sidePanelTab).toBe('search')
   })
 
-  it('setting a commit or a folder target also switches to the targeted panel', () => {
+  it('setting a commit or a path target also switches to the targeted panel', () => {
     const s = state({ sidePanelTab: 'files' })
     expect(appReducer(s, { type: 'target/commit', sha: 'abc123' }).sidePanelTab).toBe('targeted')
-    expect(appReducer(s, { type: 'target/folder', path: 'src' }).sidePanelTab).toBe('targeted')
+    expect(appReducer(s, { type: 'target/path', path: 'src' }).sidePanelTab).toBe('targeted')
   })
 
   it('is a no-op (same reference) when the target does not actually change', () => {
-    const s = state({ targeting: { pr: 7, commit: null, folder: null } })
+    const s = state({ targeting: { pr: 7, commit: null, path: null } })
     expect(appReducer(s, { type: 'target/pr', pr: 7 })).toBe(s)
+  })
+
+  it('restores a persisted targeting in one dispatch and switches to the targeted panel', () => {
+    const s = state({ sidePanelTab: 'files' })
+    const next = appReducer(s, {
+      type: 'target/restore',
+      targeting: { pr: 7, commit: 'deadbeef', path: 'src' }
+    })
+    expect(next.targeting).toEqual({ pr: 7, commit: 'deadbeef', path: 'src' })
+    expect(next.sidePanelTab).toBe('targeted')
+  })
+
+  it('restoring an empty persisted targeting does not force the side panel to targeted', () => {
+    const s = state({ sidePanelTab: 'search' })
+    const next = appReducer(s, {
+      type: 'target/restore',
+      targeting: { pr: null, commit: null, path: null }
+    })
+    expect(next.sidePanelTab).toBe('search')
   })
 })
 
@@ -63,7 +78,7 @@ describe('preview file', () => {
   it('opening another non-pinned file replaces the previous preview file', () => {
     const withPreview = state({ previewFile: 'a.ts', activeFile: 'a.ts' })
     const next = appReducer(withPreview, { type: 'file/open', path: 'b.ts' })
-    expect(next.previewFile).toBe('b.ts') // replaced, not stacked alongside 'a.ts'
+    expect(next.previewFile).toBe('b.ts')
     expect(next.activeFile).toBe('b.ts')
   })
 
@@ -75,7 +90,7 @@ describe('preview file', () => {
     })
     const next = appReducer(withPreview, { type: 'file/open', path: 'pinned.ts' })
     expect(next.activeFile).toBe('pinned.ts')
-    expect(next.previewFile).toBe('a.ts') // unchanged
+    expect(next.previewFile).toBe('a.ts')
   })
 
   it('pinning the currently previewed file clears the preview slot', () => {
@@ -102,7 +117,7 @@ describe('preview file', () => {
     })
     const next = appReducer(withoutPreview, { type: 'file/unpin', path: 'a.ts' })
     expect(next.pinnedFiles).toEqual(['b.ts'])
-    expect(next.activeFile).toBe('b.ts') // last remaining pinned file
+    expect(next.activeFile).toBe('b.ts')
   })
 })
 

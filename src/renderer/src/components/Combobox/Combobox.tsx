@@ -1,13 +1,10 @@
-// Leaf reusable fuzzy-search combo box (spec: header's "series of fuzzy
-// search select boxes"). Generic over the item type so the header (PR /
-// commit / folder) and the search panel's symbol prefill can all use it.
-// Styled locally; theme tokens only.
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import styled from 'styled-components'
 import { X } from 'react-feather'
 import { IconButton } from '../IconButton'
 import { Menu, MenuItem, MenuMessage } from '../Menu'
 import { HighlightedText } from '../HighlightedText'
+import { textFieldBase } from '../TextInput'
 import { fuzzyFilter, fuzzyRanges } from './fuzzy'
 
 export interface ComboboxProps<T> {
@@ -16,12 +13,7 @@ export interface ComboboxProps<T> {
   onSelect: (item: T | null) => void
   getKey: (item: T) => string
   getLabel: (item: T) => string
-  /** Text the typed query is fuzzy-matched against; defaults to the label
-   * (report 01 §1.2: a PR matches on number, title, author, branch, labels). */
   getFilterText?: (item: T) => string
-  /** Fires on every keystroke with the raw text, so the caller can also
-   * narrow `items` server-side (report 01 §1.2: `gh pr list --search`, then
-   * fuzzy-filter the result locally). */
   onQueryChange?: (query: string) => void
   placeholder?: string
   disabled?: boolean
@@ -50,19 +42,13 @@ const InputRow = styled.div`
 `
 
 const Input = styled.input`
+  ${textFieldBase}
   flex: 1;
   min-width: 0;
   border: none;
   outline: none;
   background: transparent;
-  color: ${({ theme }) => theme.colors.fg};
-  font: inherit;
-  font-size: ${({ theme }) => theme.font.size.sm};
   padding: 5px 0;
-
-  &::placeholder {
-    color: ${({ theme }) => theme.colors.fgSubtle};
-  }
 
   &:disabled {
     color: ${({ theme }) => theme.colors.fgSubtle};
@@ -93,7 +79,6 @@ export function Combobox<T>({
     [items, query, getFilterText]
   )
 
-  // Clamped at read time instead of reset from an effect.
   const active = Math.min(highlight, Math.max(filtered.length - 1, 0))
 
   useEffect(() => {

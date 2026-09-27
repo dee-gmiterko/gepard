@@ -11,10 +11,11 @@
 	- Symbols only if LSP is added as extension. Typescript one should be implemented and enabled by default, local loading matching vs code.
 ### Main window
 - Header panel - targeting:
-	- series of fuzzy search select boxes entering: PR, commit, folder
+	- series of fuzzy search select boxes entering: PR, commit, path
+		- path accepts a folder prefix or a glob; the select suggests folders
 - Side panel - navigation: vertical tabs:
 	- file browser - full tree.
-	- targeted file browser - limited to targeted files changed (or folder targeted). Tree or flat list.
+	- targeted file browser - limited to targeted files changed (or path targeted). Tree or flat list.
 	- search - also called selection - an input fuzzy prefill on detected symbols, exact match or regex (flags for regex and symbol); shows scrollable list of matched files locations with line previews. Tree or flat list. Button to either inclue all files or only targeted ones.
 - Main - content:
 	- Active file tabs (pinned ones + one switching active file picked from navigation). either file or diff view.
@@ -47,6 +48,7 @@
 - Pinned files are preserved open in UI, even when they don't exist in current state -> missing view.
 - Selecting a target switches side panel to targeted navigation.
 - Changing PR or commit checks out that version in working tree, indexes as needed, fetches remote comments and viewed state.
+- A project remembers its last targeting (PR, commit, path) and restores it on next open.
 - Any new comments and viewed state is prepared in local copy (timestamped on each entity), synced only on explicit button.
 - Comment references can be added by checking them, they get automatically appended to the text when syncing to github, empty newline separated.
 ### Controls

@@ -1,4 +1,3 @@
-// Verified pattern from report 04 §2.4.
 import { BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron'
 import { z } from 'zod'
 import {
@@ -17,7 +16,6 @@ export interface HandlerCtx {
   window: BrowserWindow | null
 }
 
-/** One handler per channel; a missing key is a compile error. */
 export type HandlerMap = {
   [C in ChannelName]: (
     input: ChannelParsedInput<C>,
@@ -25,7 +23,6 @@ export type HandlerMap = {
   ) => Promise<ChannelOutput<C>> | ChannelOutput<C>
 }
 
-/** Errors that should reach the renderer with a stable code. */
 export class AppError extends Error {
   constructor(
     public code: string,
@@ -64,18 +61,12 @@ export function registerHandlers(handlers: HandlerMap): void {
         const ctx: HandlerCtx = { event, window: BrowserWindow.fromWebContents(event.sender) }
         return { ok: true, value: await handler(parsed.data, ctx) }
       } catch (e) {
-        // Not logged here: every failed invoke is logged exactly once by the
-        // renderer (errors/report.ts, with channel, code and details), after
-        // TanStack Query's retries settle — logging here too would write one
-        // line per retry attempt plus the renderer's, and would log
-        // superseded CANCELLED results, which are not failures.
         return { ok: false, error: toIpcError(e) }
       }
     })
   }
 }
 
-/** Typed push to all windows. */
 export function emit<E extends EventName>(name: E, payload: EventPayload<E>): void {
   for (const w of BrowserWindow.getAllWindows())
     if (!w.isDestroyed()) w.webContents.send(name, payload)

@@ -1,13 +1,3 @@
-// Comment editor (spec Components): comment box, reference quick-selects,
-// Submit / Delete actions. Checked references go into `CommentDraft.references`
-// — they are appended to the text by main at sync, never rendered into the
-// body here (report 01 §8: "the references block is appended at push time").
-//
-// Three targets, matching `CommentDraft`'s three write shapes (schema file
-// header): a brand new thread (`anchor` set), a reply to an existing thread
-// (`threadId` set), or an edit of one of the viewer's own not-yet-synced
-// comments (`id` set — the only case `comments.upsert` treats as an edit;
-// remote/synced comments are never editable here, only deletable).
 import { useState } from 'react'
 import styled from 'styled-components'
 import { ReferencesPanel } from './ReferencesPanel'
@@ -32,8 +22,6 @@ export type CommentEditorTarget =
 export interface CommentEditorProps {
   projectId: string
   pr: number
-  /** Anchor line for the reference quick-selects; null hides the panel
-   * (FILE-level threads, or threads with no resolvable line). */
   refAnchor: RefAnchor | null
   targetedPaths: string[]
   target: CommentEditorTarget

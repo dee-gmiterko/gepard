@@ -1,6 +1,3 @@
-// Main - content (spec): active file tabs (pinned + one switching active
-// file) showing file or diff view with inline comments, a floating file
-// controls panel, and a Comments tab (chronological view of all threads).
 import styled from 'styled-components'
 import { useAppState } from '../../state/AppContext'
 import { FileTabs } from './tabs/FileTabs'
@@ -36,9 +33,6 @@ export function Content(): React.JSX.Element {
         </ViewerArea>
       ) : (
         <ViewerArea>
-          {/* FileViewer picks diff vs file view (spec Behaviors;
-              state.checkout) and, from the fetched content/diff `kind`, one of
-              the five viewers (code, code diff, image, image diff, missing). */}
           {state.activeFile ? (
             <FileViewer key={state.activeFile} path={state.activeFile} />
           ) : (

@@ -1,4 +1,3 @@
-// A fixed-width field with a leading icon (header targeting boxes).
 import type { ComponentType, ReactNode } from 'react'
 import styled from 'styled-components'
 

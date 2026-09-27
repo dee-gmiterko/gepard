@@ -1,14 +1,9 @@
-// Active file tabs: pinned ones + one switching active file picked from
-// navigation (spec), led by the Comments tab (spec: "Comments tab"). The non-pinned tab (`state.previewFile`) is styled like
-// an editor "preview" tab (italic) and is replaced whenever another file is
-// opened from navigation; double-clicking or clicking its pin icon promotes
-// it to a permanent, pinned tab. Pinned files stay open even when missing
-// from the current state (spec Behaviors) -> the missing viewer.
 import { Bookmark, MessageSquare, X } from 'react-feather'
 import styled from 'styled-components'
 import { useAppDispatch, useAppState } from '../../../state/AppContext'
 import { openTabs } from '../../../state/selectors'
 import { IconButton } from '../../../components/IconButton'
+import { Ellipsis } from '../../../components/Ellipsis'
 
 const TabStrip = styled.div`
   display: flex;
@@ -39,9 +34,7 @@ const Tab = styled.button<{ $active: boolean; $preview: boolean }>`
   }
 `
 
-const Label = styled.span`
-  overflow: hidden;
-  text-overflow: ellipsis;
+const Label = styled(Ellipsis)`
   max-width: 200px;
 `
 
@@ -57,7 +50,6 @@ export function FileTabs(): React.JSX.Element {
 
   return (
     <TabStrip>
-      {/* Comments tab (spec): chronological view of all threads and replies. */}
       <Tab
         type="button"
         $active={state.mainTab === 'comments'}

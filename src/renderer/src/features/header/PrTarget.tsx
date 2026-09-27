@@ -1,6 +1,3 @@
-// PR targeting combobox (spec: header "series of fuzzy search select boxes").
-// Typing narrows server-side through `pr.list`'s `search` and the result is
-// fuzzy-filtered locally (report 01 §1.2).
 import { useMemo, useState } from 'react'
 import { GitPullRequest } from 'react-feather'
 import { Combobox } from '../../components/Combobox'
@@ -14,7 +11,6 @@ function prLabel(pr: PrListItem): string {
   return `#${pr.number} ${pr.title}`
 }
 
-/** Report 01 §1.2's fuzzy corpus: number, title, author, head branch, labels. */
 function prFilterText(pr: PrListItem): string {
   return [
     `#${pr.number}`,
@@ -32,10 +28,10 @@ export function PrTarget(): React.JSX.Element {
 
   const [rawQuery, setRawQuery] = useState('')
   const search = useDebouncedValue(rawQuery)
-  const { data: prs, isFetching } = usePrList(projectId, search || undefined)
+  const commit = state.targeting.commit ?? undefined
+  const path = state.targeting.path ?? undefined
+  const { data: prs, isFetching } = usePrList(projectId, search || undefined, commit, path)
 
-  // Keeps the selected PR's label visible even once a later search narrows
-  // it out of `prs`.
   const [selected, setSelected] = useState<PrListItem | null>(null)
 
   const value = useMemo(() => {

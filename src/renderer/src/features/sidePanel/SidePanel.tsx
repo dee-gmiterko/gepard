@@ -1,6 +1,3 @@
-// Side panel - navigation: vertical tabs (spec): file browser (full tree),
-// targeted file browser (limited to targeted files/folder), search. Wires
-// the vertical-tab switching to AppContext's `sidePanelTab`.
 import styled from 'styled-components'
 import { FileText, Layers, Search } from 'react-feather'
 import { useAppDispatch, useAppState } from '../../state/AppContext'
@@ -15,6 +12,7 @@ const Panel = styled.div`
   grid-template-columns: 32px 1fr;
   grid-template-rows: minmax(0, 1fr);
   min-width: 0;
+  min-height: 0;
   border-right: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.bgSubtle};
 `
@@ -62,9 +60,6 @@ export function SidePanel(): React.JSX.Element {
           />
         ))}
       </TabRail>
-      {/* All tabs stay mounted: the targeted list publishes the Up/Down
-          order (keyboard/targetedOrder.ts) even while another tab is shown,
-          and the search keeps its input and results. */}
       <TabContent hidden={state.sidePanelTab !== 'files'}>
         <FileTree />
       </TabContent>

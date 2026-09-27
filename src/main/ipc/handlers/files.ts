@@ -1,5 +1,3 @@
-// Files domain: changed-file lists, file content, diff rows, trees.
-// All from local git at the given shas; delegates entirely to services/git.ts.
 import type { HandlerMap } from '../registry'
 import * as git from '../../services/git'
 

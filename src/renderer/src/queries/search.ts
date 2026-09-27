@@ -3,15 +3,9 @@ import { invoke, isCancelledError } from '../ipc/client'
 import { qk } from './keys'
 import type { SearchQuery } from '@shared/ipc/schemas/search'
 
-/** `search.run`/`symbols.*` requests are latest-wins per project on the main
- * side (coordinator cancellation spec): the search box fires `search.run`/
- * `symbols.workspace` per keystroke and the comment editor fires symbol
- * lookups per anchor, so a superseded in-flight request resolves to a
- * `CANCELLED` error. That is not a real failure — the newer request already
- * carries the answer that matters — so it must not surface as an error state
- * here; React Query already leaves `data` at its last successful value on a
- * failed fetch, so nulling out `error` is enough to "keep the previous data
- * and not surface an error". */
+/** A superseded request resolves to a `CANCELLED` error rather than a real
+ * failure. React Query already leaves `data` at its last successful value on
+ * a failed fetch, so clearing `error` is enough to hide it. */
 function ignoreCancelled<TData, TError>(
   result: UseQueryResult<TData, TError>
 ): UseQueryResult<TData, TError> {
@@ -24,9 +18,6 @@ function ignoreCancelled<TData, TError>(
   } as UseQueryResult<TData, TError>
 }
 
-/** Every grouped search (side panel, comment-editor "Also in" / "Same
- * pattern in", symbol references) goes through search.run. The whole query
- * is part of the key, so scope/targetedPaths/flags changes refetch. */
 export function useSearch(query: SearchQuery | null) {
   return ignoreCancelled(
     useQuery({

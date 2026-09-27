@@ -1,7 +1,3 @@
-// The only code that reads or writes review/<pr>.json (report 04 §4.3):
-// { threads: ReviewThread[], viewed: LocalViewedState[], lastSuccessfulSyncAt }.
-// Read at PR open, validated with zod, kept in memory, written atomically
-// (write tmp -> rename) on every local change.
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
@@ -25,8 +21,6 @@ export function nowIso(): string {
   return new Date().toISOString()
 }
 
-// In-memory cache: comments/viewed state only exist while a PR is targeted
-// (report 04 §4.3), one entry per (project, pr) pair open at a time.
 const cache = new Map<string, ReviewStoreFile>()
 const cacheKey = (projectId: string, pr: number): string => `${projectId}:${pr}`
 
@@ -57,7 +51,6 @@ async function readStoreFile(projectId: string, pr: number): Promise<ReviewStore
   return parsed.data
 }
 
-/** Read at PR open, kept in memory afterwards (report 04 §4.3). */
 export async function loadReview(projectId: string, pr: number): Promise<ReviewStoreFile> {
   const key = cacheKey(projectId, pr)
   const cached = cache.get(key)
@@ -67,8 +60,8 @@ export async function loadReview(projectId: string, pr: number): Promise<ReviewS
   return store
 }
 
-/** Write tmp -> rename (report 04 §4.3's atomic-write pattern), then refresh
- * the in-memory copy. */
+// Write tmp -> rename: POSIX rename is atomic, so a crash mid-write never
+// leaves a corrupt file; then refresh the in-memory copy.
 export async function saveReview(
   projectId: string,
   pr: number,
@@ -82,14 +75,8 @@ export async function saveReview(
   cache.set(cacheKey(projectId, pr), store)
 }
 
-// ---------------------------------------------------------------------------
-// comments.* handlers (report 04 §2.3, comment.ts's `CommentDraft` doc)
-// ---------------------------------------------------------------------------
-
 export async function listThreads(projectId: string, pr: number): Promise<ReviewThread[]> {
   const store = await loadReview(projectId, pr)
-  // Locally deleted threads/comments stay in the store until Sync pushes the
-  // deletion; the UI never shows them.
   return store.threads
     .filter((t) => t.local?.status !== 'deleted')
     .map((t) => ({ ...t, comments: t.comments.filter((c) => c.local?.status !== 'deleted') }))
@@ -102,7 +89,6 @@ export interface UpsertContext {
   viewerLogin: string
 }
 
-/** `comments.upsert`'s parsed input minus the routing fields. */
 export type CommentDraftInput = Omit<z.output<typeof CommentDraft>, 'projectId' | 'pr'>
 
 function findComment(
@@ -116,9 +102,6 @@ function findComment(
   return null
 }
 
-/** Local-only write (report 01 §8, report 04 §4.3): creates a `new` thread,
- * a `new` reply, or edits a still-`new` draft's body/references. Sync (not
- * this store) is what talks to GitHub. */
 export async function upsertLocalComment(
   projectId: string,
   pr: number,
@@ -217,11 +200,9 @@ export async function upsertLocalComment(
   return comment
 }
 
-/** Local delete (contract `comments.delete`): drops a local `new` comment
- * outright, marks a synced one `deleted` for the next Sync to push. Deleting
- * a thread's root marks the whole thread `deleted` (report 01 §8: "Deleting
- * the root of a thread with replies is refused by GitHub for non-admins" —
- * Sync surfaces that failure, this store only stages the intent). */
+// GitHub refuses to delete the root of a thread that has replies for
+// non-admins, so deleting a thread's root here only marks the whole thread
+// `deleted` locally; Sync surfaces GitHub's failure when it pushes that.
 export async function deleteLocalComment(
   projectId: string,
   pr: number,
@@ -252,24 +233,15 @@ export async function deleteLocalComment(
   await saveReview(projectId, pr, store)
 }
 
-// ---------------------------------------------------------------------------
-// viewed.* handlers
-// ---------------------------------------------------------------------------
-
 export async function listViewed(projectId: string, pr: number): Promise<LocalViewedState[]> {
   return (await loadReview(projectId, pr)).viewed
 }
 
-/** The PR node id, if already known from a previous viewed row or a synced
- * thread — lets `viewed.set` (an Enter-key, high-frequency, local-only
- * toggle per spec) skip a `gh pr view` round trip once it has been fetched
- * once for this PR. */
 export async function knownPrId(projectId: string, pr: number): Promise<string | null> {
   const store = await loadReview(projectId, pr)
   return store.viewed[0]?.prId ?? store.threads[0]?.prId ?? null
 }
 
-/** Batched so a folder checkbox applies to every file under it (spec). */
 export async function setLocalViewed(
   projectId: string,
   pr: number,

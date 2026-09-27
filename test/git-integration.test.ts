@@ -1,13 +1,3 @@
-// The one integration test for git.ts: the real risk here is in the git
-// plumbing itself (clone flags, ref/commit resolution, name-status/numstat
-// diffing against a real object database) — not worth mocking. Pure parsing
-// logic (diff rows, name-status, clone-progress lines, mime/binary
-// detection) is unit-tested directly in test/git-parsing.test.ts instead.
-//
-// Builds a tiny local "origin" repo with a base branch and a feature branch
-// that modifies, renames, deletes, and adds a binary file; clones it through
-// cloneProject from a file:// URL; then drives checkoutTarget for a PR-like
-// target, a plain commit, and a root commit, plus changedFiles and listTree.
 import { execFile } from 'node:child_process'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -20,8 +10,8 @@ import { makeTmpDir, type TmpDir } from './support/tmp'
 
 const execFileP = promisify(execFile)
 
-// Isolated from the developer's/CI's global git config (no gpg signing, a
-// fixed identity) so building the fixture is reproducible anywhere.
+// Overrides the local/global git config so commits don't depend on the
+// machine's identity or gpg-signing settings.
 const GIT_ENV = {
   ...process.env,
   GIT_AUTHOR_NAME: 'Test',
@@ -44,9 +34,6 @@ interface Fixture {
   featureHeadSha: string
 }
 
-/** root commit (README.md) -> base commit (a.txt, sub/b.txt) on `main`, then
- * a `feature` branch off the base commit that modifies a.txt, renames
- * sub/b.txt -> sub/c.txt, deletes README.md, and adds a binary image.png. */
 async function buildFixtureRepo(dir: string): Promise<Fixture> {
   await git(dir, ['init', '-b', 'main'])
 
@@ -74,7 +61,9 @@ async function buildFixtureRepo(dir: string): Promise<Fixture> {
   await git(dir, ['commit', '-m', 'feature: change files'])
   const featureHeadSha = (await git(dir, ['rev-parse', 'HEAD'])).trim()
 
-  await git(dir, ['checkout', 'main']) // leave HEAD on main: the clone's origin/HEAD must follow it
+  // git sets a clone's origin/HEAD from whichever branch is checked out in
+  // the source repo, so HEAD must be back on main before cloning.
+  await git(dir, ['checkout', 'main'])
 
   return { rootSha, baseSha, featureHeadSha }
 }
@@ -99,7 +88,6 @@ describe('git service (integration)', () => {
     const { rootSha, baseSha, featureHeadSha } = await buildFixtureRepo(origin.path)
     const projectId = 'acme__widgets'
 
-    // --- clone: hooks disabled, progress events fired ---
     await cloneProject(projectId, `file://${origin.path}`)
     const repoRoot = projectRepoDir(projectId)
     const hooksPath = (await git(repoRoot, ['config', '--get', 'core.hooksPath'])).trim()
@@ -113,7 +101,6 @@ describe('git service (integration)', () => {
       percent: 100
     })
 
-    // --- checkoutTarget: PR-like target -> base is the merge-base ---
     const prResult = await checkoutTarget(projectId, {
       kind: 'pr',
       pr: 1,
@@ -122,16 +109,14 @@ describe('git service (integration)', () => {
     })
     expect(prResult).toEqual({ base: baseSha, head: featureHeadSha })
 
-    // --- checkoutTarget: a commit -> base is its parent ---
     const commitResult = await checkoutTarget(projectId, { kind: 'commit', sha: baseSha })
     expect(commitResult).toEqual({ base: rootSha, head: baseSha })
 
-    // --- checkoutTarget: the root commit -> base is the empty tree ---
-    const EMPTY_TREE_SHA = '4b825dc642cb6eb9a060e54bf8d69288fbee4904' // git's well-known empty tree
+    // git's well-known empty tree SHA
+    const EMPTY_TREE_SHA = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
     const rootResult = await checkoutTarget(projectId, { kind: 'commit', sha: rootSha })
     expect(rootResult).toEqual({ base: EMPTY_TREE_SHA, head: rootSha })
 
-    // --- changedFiles: modify, rename, delete, added binary ---
     const changes = await changedFiles(projectId, baseSha, featureHeadSha)
     const byPath = new Map(changes.map((c) => [c.path, c]))
     expect(byPath.get('a.txt')).toMatchObject({ changeType: 'MODIFIED', previousPath: null })
@@ -147,7 +132,6 @@ describe('git service (integration)', () => {
       deletions: 0
     })
 
-    // --- listTree: every tracked path at the feature head ---
     const tree = await listTree(projectId, featureHeadSha)
     expect([...tree].sort()).toEqual(['a.txt', 'image.png', 'sub/c.txt'])
   }, 30_000)

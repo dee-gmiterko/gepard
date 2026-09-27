@@ -1,8 +1,6 @@
-// One matched line: line number + monospace preview with the match spans
-// marked (spec: search results "all matches under" the file row; the
-// reference quick-selects preview the same grouped results).
 import styled from 'styled-components'
 import { HighlightedText, type TextRange } from '../HighlightedText'
+import { truncate } from '../Ellipsis'
 
 const Row = styled.div`
   display: flex;
@@ -24,8 +22,7 @@ const LineNo = styled.span`
 const Preview = styled.span`
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  ${truncate}
   white-space: pre;
   font-family: ${({ theme }) => theme.font.mono};
   font-size: ${({ theme }) => theme.font.size.xs};

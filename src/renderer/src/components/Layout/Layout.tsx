@@ -1,5 +1,3 @@
-// Flex layout primitives: a vertical stack and a horizontal row with a
-// theme-token gap, instead of one ad-hoc flex block per feature.
 import styled from 'styled-components'
 import type { Theme } from '../../theme/tokens'
 

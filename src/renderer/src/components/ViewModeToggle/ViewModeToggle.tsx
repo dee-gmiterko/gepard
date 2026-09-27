@@ -1,5 +1,3 @@
-// Tree / flat list switch (spec: targeted browser and search results are
-// "Tree or flat list").
 import { Layers, List } from 'react-feather'
 import { IconButton } from '../IconButton'
 

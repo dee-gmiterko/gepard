@@ -1,8 +1,3 @@
-// "Symbol definition" reference quick-select: each symbol on the anchor line
-// (`symbols.line`), its definition (`symbols.definition`), added as a
-// file:line reference (coordinator spec / report 03 §7 mapping). Each symbol
-// can resolve to more than one definition target; each target is its own
-// checkable row.
 import styled from 'styled-components'
 import { useState } from 'react'
 import { Accordion } from '../../components/Accordion'
@@ -44,9 +39,6 @@ function DefinitionRow({
   onToggleRef: (ref: CommentReference) => void
 }): React.JSX.Element | null {
   const pos = { line: symbol.range.start.line, col: symbol.range.start.col }
-  // A failed `symbols.definition` reaches the unified toast surface via the
-  // global query cache (main.tsx); with no data this row just contributes no
-  // targets rather than duplicating that error inline.
   const { data, isFetching } = useDefinition(projectId, refAnchor.sha, refAnchor.path, pos)
 
   if (isFetching) return <Message layout="inline">{symbol.name}…</Message>

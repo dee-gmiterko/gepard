@@ -1,9 +1,3 @@
-// Minimal token set (report 04 §6). Light `colors` values are report 04's
-// verbatim table; `shadow` and `syntax` are added so no component or
-// CodeMirror extension needs a raw color (GitHub's own light/dark palette). Report 04 says only "dark analogues exist" without giving
-// values — the dark palette below is constructed to the same GitHub-like
-// convention as the light one (spec: "minimalist interface like similar
-// software"); flagged in the handback as not verbatim.
 export interface Theme {
   mode: 'light' | 'dark'
   font: {
@@ -15,7 +9,6 @@ export interface Theme {
   space: { 0: string; 1: string; 2: string; 3: string; 4: string; 5: string; 6: string }
   radius: { sm: string; md: string }
   z: { panel: number; floating: number; popover: number }
-  /** Elevation of popovers (dropdowns) and floating panels. */
   shadow: { popover: string; floating: string }
   colors: {
     bg: string
@@ -40,7 +33,6 @@ export interface Theme {
     diffHunk: string
     commentBg: string
   }
-  /** Code syntax highlighting (CodeMirror highlight style, codemirror/theme.ts). */
   syntax: {
     keyword: string
     string: string
@@ -126,7 +118,6 @@ export const lightTheme: Theme = {
   }
 }
 
-// Not verbatim from report 04 (see file header) — constructed dark analogue.
 export const darkTheme: Theme = {
   mode: 'dark',
   font,

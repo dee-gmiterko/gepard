@@ -1,7 +1,6 @@
-// Report 04 §2.5, full file. Allow-list bridge, no logic: with sandbox:
-// true, electron-vite externalizes `dependencies` by default, so any import
-// beyond `electron` and this zod-free names list would bundle `require(...)`
-// calls the sandboxed preload cannot satisfy (report 04 §2.2).
+// With sandbox: true, electron-vite externalizes `dependencies` by default,
+// so importing anything beyond `electron` and this zod-free names list would
+// bundle `require(...)` calls the sandboxed preload cannot satisfy.
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import { channelNames, eventNames } from '@shared/ipc/names'
 

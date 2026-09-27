@@ -1,8 +1,9 @@
-// Dropdown list under an input (Combobox options, search symbol prefill).
-// The parent must be `position: relative`.
+// The parent must be `position: relative`, since this positions itself absolutely.
 import styled from 'styled-components'
+import { ellipsis } from '../Ellipsis'
+import { Surface } from '../Surface'
 
-export const Menu = styled.ul`
+export const Menu = styled(Surface).attrs({ as: 'ul' as const })`
   position: absolute;
   top: calc(100% + 2px);
   left: 0;
@@ -13,10 +14,6 @@ export const Menu = styled.ul`
   margin: 0;
   padding: ${({ theme }) => theme.space[1]} 0;
   list-style: none;
-  background: ${({ theme }) => theme.colors.bgElevated};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radius.md};
-  box-shadow: ${({ theme }) => theme.shadow.popover};
 `
 
 export const MenuItem = styled.li<{ $active?: boolean }>`
@@ -25,9 +22,7 @@ export const MenuItem = styled.li<{ $active?: boolean }>`
   color: ${({ theme }) => theme.colors.fg};
   background: ${({ $active, theme }) => ($active ? theme.colors.bgHover : 'transparent')};
   cursor: pointer;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  ${ellipsis}
 
   &:hover {
     background: ${({ theme }) => theme.colors.bgHover};

@@ -1,11 +1,7 @@
-// The one visible surface for every failure in the app (coordinator spec:
-// "one unified toast surface over the shared app context"), instead of the
-// Message(tone="danger") blocks that used to be repeated per panel. Purely
-// presentational — state/ToastHost.tsx owns the toast list (AppContext) and
-// wires reportError() (errors/report.ts) into it.
 import styled from 'styled-components'
 import { AlertTriangle, X } from 'react-feather'
 import { IconButton } from '../IconButton'
+import { Surface } from '../Surface'
 
 export type ToastTone = 'danger' | 'warning'
 
@@ -27,16 +23,13 @@ const Viewport = styled.div`
   max-width: calc(100vw - ${({ theme }) => theme.space[6]});
 `
 
-const Card = styled.div<{ $tone: ToastTone }>`
+const Card = styled(Surface)<{ $tone: ToastTone }>`
   display: flex;
   align-items: flex-start;
   gap: ${({ theme }) => theme.space[2]};
   padding: ${({ theme }) => theme.space[3]};
-  border: 1px solid
-    ${({ theme, $tone }) => ($tone === 'danger' ? theme.colors.danger : theme.colors.warning)};
-  border-radius: ${({ theme }) => theme.radius.md};
-  background: ${({ theme }) => theme.colors.bgElevated};
-  box-shadow: ${({ theme }) => theme.shadow.popover};
+  border-color: ${({ theme, $tone }) =>
+    $tone === 'danger' ? theme.colors.danger : theme.colors.warning};
 `
 
 const StyledIcon = styled(AlertTriangle)<{ $tone: ToastTone }>`

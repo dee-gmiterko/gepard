@@ -1,9 +1,10 @@
-// Pure unit tests for sync.ts's timestamp-merge rules (report 01 §8) and
-// body composition — plain ReviewThread/Comment/LocalViewedState objects in,
-// no `gh` process, no filesystem. This is where the real risk lives: the
-// push/pull plumbing around it is thin glue over gh.ts and store/review.ts.
 import { describe, expect, it } from 'vitest'
-import { composeBody, mergeThreads, mergeViewed } from '../src/main/services/sync'
+import {
+  composeBody,
+  countPendingChanges,
+  mergeThreads,
+  mergeViewed
+} from '../src/main/services/sync'
 import type {
   Comment,
   LocalViewedState,
@@ -147,15 +148,12 @@ describe('mergeThreads', () => {
     const remote = makeThread({
       id: 'PRRT_2',
       comments: [
-        // C1 edited remotely (newer updatedAt) -> remote wins.
         makeComment({
           id: 'C1',
           body: 'new body',
           createdAt: '2024-01-01T00:00:00Z',
           updatedAt: '2024-01-02T00:00:00Z'
         }),
-        // C2 is gone (deleted remotely) -> dropped, not carried over.
-        // C3 is new on the remote -> inserted.
         makeComment({
           id: 'C3',
           body: 'brand new',
@@ -254,11 +252,10 @@ describe('mergeViewed', () => {
         remoteFetchedAt: null
       }
     ]
-    // lastSuccessfulSyncAt: null -> "never synced" -> local always wins.
     const [row] = mergeViewed(local, [remoteFile('c.ts', 'UNVIEWED')], 'PR_1', null)
-    expect(row.viewed).toBe(true) // survives the pull
-    expect(row.remote).toBe('UNVIEWED') // last-known remote value still recorded
-    expect(row.localUpdatedAt).toBe('2024-01-01T00:00:00Z') // untouched
+    expect(row.viewed).toBe(true)
+    expect(row.remote).toBe('UNVIEWED')
+    expect(row.localUpdatedAt).toBe('2024-01-01T00:00:00Z')
   })
 
   it('lets the remote win once the local change is older than the last successful sync', () => {
@@ -280,5 +277,135 @@ describe('mergeViewed', () => {
     )
     expect(row.viewed).toBe(false)
     expect(row.remote).toBe('DISMISSED')
+  })
+})
+
+describe('countPendingChanges', () => {
+  function viewedRow(overrides: Partial<LocalViewedState> & { path: string }): LocalViewedState {
+    return {
+      prId: 'PR_1',
+      viewed: true,
+      remote: null,
+      localUpdatedAt: null,
+      remoteFetchedAt: null,
+      ...overrides
+    }
+  }
+
+  it('is zero for a store with nothing pending', () => {
+    const synced = makeThread({ id: 'PRRT_1', comments: [makeComment({ id: 'C1' })] })
+    expect(countPendingChanges({ threads: [synced], viewed: [], lastSuccessfulSyncAt: null })).toBe(
+      0
+    )
+  })
+
+  it('counts a new (not yet synced) thread as one', () => {
+    const draft = makeThread({
+      id: 'local:t1',
+      local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z' },
+      comments: [
+        makeComment({
+          id: 'local:c1',
+          local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z', references: [] }
+        })
+      ]
+    })
+    expect(countPendingChanges({ threads: [draft], viewed: [], lastSuccessfulSyncAt: null })).toBe(
+      1
+    )
+  })
+
+  it('counts a new reply once, and never double-counts its thread root', () => {
+    const thread = makeThread({
+      id: 'PRRT_1',
+      comments: [
+        makeComment({ id: 'C1' }),
+        makeComment({
+          id: 'local:reply',
+          local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z', references: [] }
+        })
+      ]
+    })
+    expect(countPendingChanges({ threads: [thread], viewed: [], lastSuccessfulSyncAt: null })).toBe(
+      1
+    )
+  })
+
+  it('counts a whole-thread deletion once, regardless of its reply count', () => {
+    const thread = makeThread({
+      id: 'PRRT_1',
+      local: { status: 'deleted', updatedAt: '2024-01-01T00:00:00Z' },
+      comments: [makeComment({ id: 'C1' }), makeComment({ id: 'C2' }), makeComment({ id: 'C3' })]
+    })
+    expect(countPendingChanges({ threads: [thread], viewed: [], lastSuccessfulSyncAt: null })).toBe(
+      1
+    )
+  })
+
+  it('counts a single deleted reply in an otherwise-synced thread', () => {
+    const thread = makeThread({
+      id: 'PRRT_1',
+      comments: [
+        makeComment({ id: 'C1' }),
+        makeComment({
+          id: 'C2',
+          local: { status: 'deleted', updatedAt: '2024-01-01T00:00:00Z', references: [] }
+        })
+      ]
+    })
+    expect(countPendingChanges({ threads: [thread], viewed: [], lastSuccessfulSyncAt: null })).toBe(
+      1
+    )
+  })
+
+  it('counts a viewed row touched since the last successful sync, and ignores one that is not', () => {
+    const dirty = viewedRow({
+      path: 'a.ts',
+      localUpdatedAt: '2024-01-02T00:00:00Z',
+      remoteFetchedAt: '2024-01-01T00:00:00Z'
+    })
+    const clean = viewedRow({
+      path: 'b.ts',
+      localUpdatedAt: '2024-01-01T00:00:00Z',
+      remoteFetchedAt: '2024-01-02T00:00:00Z'
+    })
+    const untouched = viewedRow({ path: 'c.ts', localUpdatedAt: null, remoteFetchedAt: null })
+    expect(
+      countPendingChanges({
+        threads: [],
+        viewed: [dirty, clean, untouched],
+        lastSuccessfulSyncAt: null
+      })
+    ).toBe(1)
+  })
+
+  it('sums pending threads, comments and viewed rows together', () => {
+    const newThread = makeThread({
+      id: 'local:t1',
+      local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z' },
+      comments: [
+        makeComment({
+          id: 'local:c1',
+          local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z', references: [] }
+        })
+      ]
+    })
+    const deletedThread = makeThread({
+      id: 'PRRT_2',
+      local: { status: 'deleted', updatedAt: '2024-01-01T00:00:00Z' },
+      comments: [makeComment({ id: 'C1' })]
+    })
+    const dirtyViewed = viewedRow({
+      path: 'a.ts',
+      localUpdatedAt: '2024-01-02T00:00:00Z',
+      remoteFetchedAt: null
+    })
+    expect(
+      countPendingChanges({
+        threads: [newThread, deletedThread],
+        viewed: [dirtyViewed],
+        lastSuccessfulSyncAt: null
+      })
+    ).toBe(3)
   })
 })

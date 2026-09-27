@@ -1,22 +1,21 @@
-// Report 04 §5.2 (plus `open`, `commits`, `index`). Everything under a sha is immutable
-// (staleTime: Infinity); diff endpoints: PR target -> base = merge-base
-// (baseRefOid, headRefOid), head = headRefOid; commit target -> base =
-// <sha>^, head = <sha>.
 export const qk = {
   all: ['ghlr'] as const,
   viewer: () => [...qk.all, 'viewer'] as const,
+  viewerRepos: () => [...qk.all, 'viewerRepos'] as const,
   projects: () => [...qk.all, 'projects'] as const,
+  extensions: () => [...qk.all, 'extensions'] as const,
+  extensionsDir: () => [...qk.all, 'extensionsDir'] as const,
   project: (projectId: string) => [...qk.all, 'project', projectId] as const,
-  /** `projects.open` result: the working tree's head (updated by checkouts). */
   open: (p: string) => [...qk.project(p), 'open'] as const,
   commits: (p: string, search?: string, path?: string) =>
     [...qk.project(p), 'commits', search, path] as const,
-  prs: (p: string, search?: string) => [...qk.project(p), 'prs', search] as const,
+  prs: (p: string, search?: string, commit?: string, path?: string) =>
+    [...qk.project(p), 'prs', search, commit, path] as const,
   pr: (p: string, pr: number) => [...qk.project(p), 'pr', pr] as const,
-  prCommits: (p: string, pr: number) => [...qk.pr(p, pr), 'commits'] as const,
+  prCommits: (p: string, pr: number, path?: string) => [...qk.pr(p, pr), 'commits', path] as const,
   comments: (p: string, pr: number) => [...qk.pr(p, pr), 'comments'] as const,
   viewed: (p: string, pr: number) => [...qk.pr(p, pr), 'viewed'] as const,
-  // immutable, keyed by sha -> staleTime: Infinity
+  pendingCount: (p: string, pr: number) => [...qk.pr(p, pr), 'pendingCount'] as const,
   commit: (p: string, sha: string) => [...qk.project(p), 'commit', sha] as const,
   tree: (p: string, sha: string) => [...qk.commit(p, sha), 'tree'] as const,
   file: (p: string, sha: string, path: string) => [...qk.commit(p, sha), 'file', path] as const,

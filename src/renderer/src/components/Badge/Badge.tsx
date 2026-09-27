@@ -1,4 +1,3 @@
-// Small outlined status label (thread resolved / outdated).
 import styled from 'styled-components'
 
 export const Badge = styled.span<{ $tone?: 'success' | 'warning' | 'muted' }>`

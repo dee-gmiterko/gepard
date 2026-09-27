@@ -1,11 +1,3 @@
-// Comment / thread / viewed-state schemas — report 01 §7 verbatim (ported to
-// the zod 4.6.5 idiom decided in report 04 §1.1: z.url(), z.int(),
-// z.iso.datetime(); functionally identical to the v3 syntax in the report).
-//
-// Raw GraphQL schemas keep report 01's `z.number()` exactly.
-//
-// CommentReference / DraftAnchor / CommentDraft are constructed: report 04
-// §2.3 names `CommentDraft` with `references: .default([])` but not the rest.
 import { z } from 'zod'
 import {
   Actor,
@@ -20,9 +12,8 @@ import {
   ViewedState
 } from './pr'
 
-// ---------- viewed state ----------
+// Matches GitHub's GraphQL PullRequestChangedFile shape.
 export const RemoteViewedFile = z.object({
-  // GraphQL PullRequestChangedFile
   path: z.string(),
   additions: z.number(),
   deletions: z.number(),
@@ -32,38 +23,40 @@ export const RemoteViewedFile = z.object({
 export type RemoteViewedFile = z.infer<typeof RemoteViewedFile>
 
 export const LocalViewedState = z.object({
-  // what we persist per (pr, path)
   prId: NodeId,
   path: z.string(),
   viewed: z.boolean(),
-  remote: ViewedState.nullable(), // last known remote value
-  localUpdatedAt: IsoDate.nullable(), // null => never touched locally
+  remote: ViewedState.nullable(),
+  localUpdatedAt: IsoDate.nullable(),
   remoteFetchedAt: IsoDate.nullable()
 })
 export type LocalViewedState = z.infer<typeof LocalViewedState>
 
-// ---------- comment ----------
+// GitHub review comment ids start with PRRC_.
 export const Comment = z.object({
-  id: NodeId, // PRRC_…  (local drafts: "local:<uuid>")
+  id: NodeId,
   databaseId: z.int().nullable(),
-  threadId: NodeId, // PRRT_… (or local thread id)
-  reviewId: NodeId.nullable(), // PRR_…
-  reviewState: ReviewState.nullable(), // PENDING => draft on GitHub, only viewer sees it
+  // GitHub review thread ids start with PRRT_.
+  threadId: NodeId,
+  // GitHub review ids start with PRR_.
+  reviewId: NodeId.nullable(),
+  // PENDING means the review is a draft on GitHub, visible only to its author.
+  reviewState: ReviewState.nullable(),
   author: Actor,
   body: z.string(),
   createdAt: IsoDate,
   updatedAt: IsoDate,
   lastEditedAt: IsoDate.nullable(),
-  replyToId: NodeId.nullable(), // always the thread root on GitHub
+  // GitHub replies always reference the thread root, not their immediate parent.
+  replyToId: NodeId.nullable(),
   url: z.url().nullable(),
   outdated: z.boolean(),
   viewerDidAuthor: z.boolean(),
   viewerCanDelete: z.boolean(),
-  // local-only bookkeeping (never sent)
   local: z
     .object({
       status: z.enum(['synced', 'new', 'deleted']),
-      updatedAt: IsoDate, // local timestamp for merge
+      updatedAt: IsoDate,
       references: z
         .array(
           z.object({
@@ -72,35 +65,35 @@ export const Comment = z.object({
             kind: z.enum(['symbol', 'exact', 'pattern'])
           })
         )
-        .default([]) // = CommentReference
+        .default([])
     })
     .optional()
 })
 export type Comment = z.infer<typeof Comment>
 
-// ---------- review thread ----------
 export const Anchor = z.object({
   path: z.string(),
   subjectType: SubjectType,
-  side: DiffSide, // side of `line`
-  line: z.int().nullable(), // null: FILE thread or outdated
+  side: DiffSide,
+  line: z.int().nullable(),
   startLine: z.int().nullable(),
   startSide: DiffSide.nullable(),
   originalLine: z.int().nullable(),
   originalStartLine: z.int().nullable(),
-  commitOid: Sha.nullable(), // commit `line` refers to (head at last placement)
-  originalCommitOid: Sha.nullable() // commit `originalLine` refers to
+  commitOid: Sha.nullable(),
+  originalCommitOid: Sha.nullable()
 })
 export type Anchor = z.infer<typeof Anchor>
 
+// GitHub review thread ids start with PRRT_.
 export const ReviewThread = z.object({
-  id: NodeId, // PRRT_… (local drafts: "local:<uuid>")
+  id: NodeId,
   prId: NodeId,
   anchor: Anchor,
   isResolved: z.boolean(),
   isOutdated: z.boolean(),
-  comments: z.array(Comment).min(1), // [0] is the root, sorted by createdAt
-  remoteUpdatedAt: IsoDate, // max(comments.updatedAt) as seen remotely
+  comments: z.array(Comment).min(1),
+  remoteUpdatedAt: IsoDate,
   local: z
     .object({
       status: z.enum(['synced', 'new', 'deleted']),
@@ -110,7 +103,6 @@ export const ReviewThread = z.object({
 })
 export type ReviewThread = z.infer<typeof ReviewThread>
 
-// ---------- raw GraphQL boundary (validate before mapping) ----------
 export const GqlPageInfo = z.object({
   hasNextPage: z.boolean(),
   endCursor: z.string().nullable()
@@ -125,7 +117,7 @@ export const GqlReviewCommentRaw = z.object({
   id: NodeId,
   databaseId: z.number().nullable(),
   url: z.string(),
-  author: z.object({ login: z.string().min(1) }).nullable(), // null for deleted users
+  author: z.object({ login: z.string().min(1) }).nullable(), // GitHub returns null when the user account was deleted
   body: z.string(),
   createdAt: IsoDate,
   updatedAt: IsoDate,
@@ -186,8 +178,6 @@ export const GqlReviewThreadsPage = z.object({
 })
 export type GqlReviewThreadsPage = z.infer<typeof GqlReviewThreadsPage>
 
-// ---------- comment draft (constructed; see file header) ----------
-// Same shape as report 01 §7 `Comment.local.references[]`.
 export const CommentReference = z.object({
   path: z.string(),
   line: z.int(),
@@ -195,9 +185,6 @@ export const CommentReference = z.object({
 })
 export type CommentReference = z.infer<typeof CommentReference>
 
-/** Where a new thread goes: the subset of `Anchor` the editor knows. Main
- * fills `original*` and `commitOid` (current PR head) when storing. FILE
- * threads (spec "File comments accordion") have line/startLine null. */
 export const DraftAnchor = z.object({
   path: RepoPath,
   subjectType: SubjectType,
@@ -208,11 +195,6 @@ export const DraftAnchor = z.object({
 })
 export type DraftAnchor = z.infer<typeof DraftAnchor>
 
-/** comments.upsert input. Local-only write (report 01 §8): creates a `new`
- * comment, or edits one that is still `new` locally. Sync pushes it.
- * - id null + threadId null + anchor  -> new thread
- * - id null + threadId                -> reply in that thread
- * - id set                            -> edit that local draft's body/references */
 export const CommentDraft = z
   .object({
     projectId: z.string(),

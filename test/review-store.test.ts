@@ -1,8 +1,3 @@
-// store/review.ts is the only code allowed to touch review/<pr>.json (report
-// 04 §4.3): read-at-open, atomic write-tmp-then-rename, in-memory cache, and
-// the local-only comment/viewed mutations that Sync (tested separately, as
-// pure merge rules in sync-merge.test.ts) later pushes. Exercised here
-// against a real temp directory through the electron mock.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { __setUserDataDir } from './support/electron'
 import { makeTmpDir, type TmpDir } from './support/tmp'
@@ -35,9 +30,8 @@ describe('store/review', () => {
       viewed: [],
       lastSuccessfulSyncAt: '2024-01-01T00:00:00Z'
     })
-    // Force a re-read from disk (loadReview would otherwise serve the cache).
     const reloaded = await review.loadReview('proj-a', 2)
-    expect(reloaded.lastSuccessfulSyncAt).toBeNull() // different pr, still empty
+    expect(reloaded.lastSuccessfulSyncAt).toBeNull()
 
     const roundTripped = await review.loadReview('proj-a', 1)
     expect(roundTripped.lastSuccessfulSyncAt).toBe('2024-01-01T00:00:00Z')
@@ -101,7 +95,6 @@ describe('store/review', () => {
       body: 'root',
       references: []
     })
-    // Simulate what Sync does once pushed: clear the `local` marker directly.
     const store = await review.loadReview('proj-c', 20)
     store.threads[0].comments[0].local = undefined
     store.threads[0].local = undefined
@@ -141,17 +134,14 @@ describe('store/review', () => {
       references: []
     })
 
-    // Deleting a brand-new (never-synced) reply removes it outright.
     await review.deleteLocalComment('proj-d', 30, reply.id)
     let store = await review.loadReview('proj-d', 30)
     expect(store.threads[0].comments).toHaveLength(1)
 
-    // Deleting a brand-new root removes the whole thread.
     await review.deleteLocalComment('proj-d', 30, root.id)
     store = await review.loadReview('proj-d', 30)
     expect(store.threads).toHaveLength(0)
 
-    // A synced thread's root is instead marked pending deletion.
     const syncedRoot = await review.upsertLocalComment('proj-d', 31, ctx, {
       id: null,
       threadId: null,
@@ -174,7 +164,6 @@ describe('store/review', () => {
     await review.deleteLocalComment('proj-d', 31, syncedRoot.id)
     store = await review.loadReview('proj-d', 31)
     expect(store.threads[0].local).toEqual({ status: 'deleted', updatedAt: expect.any(String) })
-    // listThreads hides threads pending deletion from the UI.
     expect(await review.listThreads('proj-d', 31)).toEqual([])
   })
 
@@ -187,6 +176,6 @@ describe('store/review', () => {
     const aRow = updated.find((r) => r.path === 'a.ts')!
     const bRow = updated.find((r) => r.path === 'b.ts')!
     expect(aRow.viewed).toBe(false)
-    expect(bRow.viewed).toBe(true) // untouched by the second call
+    expect(bRow.viewed).toBe(true)
   })
 })

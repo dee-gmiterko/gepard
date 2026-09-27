@@ -1,15 +1,9 @@
-// CodeMirror theme extension, switched alongside the styled-components theme
-// on the `theme.changed` event (report 04 §6). Semantic tokens only (spec
-// Styling: "no raw colors" applies here too — everything comes from the
-// styled-components `Theme`, never a literal hex).
 import type { Extension } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { tags as t } from '@lezer/highlight'
 import type { Theme } from '../theme/tokens'
 
-/** Syntax colors from the theme's `syntax` tokens, so highlighting follows
- * light/dark like everything else. */
 function highlightStyle(theme: Theme): HighlightStyle {
   const s = theme.syntax
   return HighlightStyle.define([
@@ -30,8 +24,8 @@ function highlightStyle(theme: Theme): HighlightStyle {
   ])
 }
 
-/** Rebuilt on every theme change and swapped into a Compartment by the
- * viewer, so switching light/dark does not rebuild the document. */
+// Swapped into a Compartment on theme change so switching light/dark does
+// not rebuild the document.
 export function editorTheme(theme: Theme): Extension {
   const c = theme.colors
   const view = EditorView.theme(

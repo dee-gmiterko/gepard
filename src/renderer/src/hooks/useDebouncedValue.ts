@@ -1,5 +1,3 @@
-// Small debounce for typed searches (header comboboxes, side-panel search):
-// typing shouldn't fire an IPC search on every keystroke.
 import { useEffect, useState } from 'react'
 
 export function useDebouncedValue<T>(value: T, delayMs = 250): T {

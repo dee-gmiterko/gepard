@@ -1,5 +1,3 @@
-// Image viewer: <img> from a data: URL built from the base64 payload
-// `files.content` returns (schemas/pr.ts `ImageData`; report 04 §6).
 import { useMemo } from 'react'
 import styled from 'styled-components'
 import type { ImageData } from '@shared/ipc/schemas/pr'

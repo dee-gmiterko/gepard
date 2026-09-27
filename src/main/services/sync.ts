@@ -1,7 +1,3 @@
-// The explicit push/pull Sync flow and the timestamp merge (report 01 §8).
-// `mode: 'pull'` runs only step 4 (pull + merge); `mode: 'full'` runs the
-// push steps (2, 3) first. Talks to GitHub through services/gh.ts and
-// reads/writes the local store through store/review.ts.
 import { AppError } from '../ipc/registry'
 import { log } from '../log'
 import * as gh from './gh'
@@ -15,11 +11,6 @@ import type {
   RemoteViewedFile,
   ReviewThread
 } from '@shared/ipc/schemas/comment'
-
-// ---------------------------------------------------------------------------
-// `fromGql*` mappers (report 01 §7: "thin fromGql* mappers do the
-// conversion" from the raw boundary schemas to the normalized model).
-// ---------------------------------------------------------------------------
 
 function mapComment(raw: GqlReviewCommentRaw, threadId: string): Comment {
   return {
@@ -40,7 +31,6 @@ function mapComment(raw: GqlReviewCommentRaw, threadId: string): Comment {
     outdated: raw.outdated,
     viewerDidAuthor: raw.viewerDidAuthor,
     viewerCanDelete: raw.viewerCanDelete
-    // no `local`: fully remote-sourced, nothing pending.
   }
 }
 
@@ -75,27 +65,16 @@ function mapThread(raw: GqlReviewThreadRaw, prId: string): ReviewThread {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Merge rules (report 01 §8, pull side)
-// ---------------------------------------------------------------------------
-
 function mergeOneThread(localThread: ReviewThread, remoteThread: ReviewThread): ReviewThread {
-  // Stored comments missing from the remote copy were deleted remotely and
-  // simply vanish (report 01 §8): only local `new` drafts and remote comments
-  // survive below. A thread whose root was deleted remotely is absent from
-  // the remote list altogether and is dropped by mergeThreads.
   const localById = new Map(localThread.comments.map((c) => [c.id, c]))
   const merged: Comment[] = []
-  // Local drafts (new replies) have no remote id yet; pull never touches them.
   for (const c of localThread.comments) if (c.local?.status === 'new') merged.push(c)
   for (const remoteComment of remoteThread.comments) {
     const localComment = localById.get(remoteComment.id)
     if (!localComment) {
-      merged.push(remoteComment) // unknown locally -> insert
+      merged.push(remoteComment)
       continue
     }
-    // Newer remote copy wins; otherwise keep the local copy (which may carry
-    // a pending `local.status: 'deleted'` still to be pushed).
     merged.push(remoteComment.updatedAt > localComment.updatedAt ? remoteComment : localComment)
   }
   merged.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
@@ -112,15 +91,12 @@ export function mergeThreads(local: ReviewThread[], remote: ReviewThread[]): Rev
   const remoteById = new Map(remote.map((t) => [t.id, t]))
   const result: ReviewThread[] = []
 
-  // Local `new` threads have no remote id yet; pull never touches them.
   for (const t of local) if (t.local?.status === 'new') result.push(t)
 
   for (const [id, remoteThread] of remoteById) {
     const localThread = localById.get(id)
     result.push(localThread ? mergeOneThread(localThread, remoteThread) : remoteThread)
   }
-  // A stored (previously synced) thread absent from `remoteById` is simply
-  // not re-added here -> deleted remotely, per report 01 §8.
   return result
 }
 
@@ -133,7 +109,9 @@ export function mergeViewed(
   const byPath = new Map(local.map((v) => [v.path, v]))
   const now = nowIso()
   for (const file of remote) {
-    const remoteViewed = file.viewerViewedState === 'VIEWED' // DISMISSED -> false, per report 01 §8
+    // GitHub's viewerViewedState has a third state, DISMISSED, which is
+    // treated as not-viewed here, same as UNVIEWED.
+    const remoteViewed = file.viewerViewedState === 'VIEWED'
     const existing = byPath.get(file.path)
     if (!existing) {
       byPath.set(file.path, {
@@ -146,8 +124,6 @@ export function mergeViewed(
       })
       continue
     }
-    // Local wins when touched since the last successful (pushing) sync,
-    // including "never synced yet": that change has not been pushed.
     const localWins =
       existing.localUpdatedAt !== null &&
       (lastSuccessfulSyncAt === null || existing.localUpdatedAt > lastSuccessfulSyncAt)
@@ -156,24 +132,20 @@ export function mergeViewed(
       existing.viewed = remoteViewed
       existing.remoteFetchedAt = now
     }
-    // When local wins, remoteFetchedAt stays behind localUpdatedAt so the
-    // next full Sync still sees the row as dirty and pushes it.
   }
   return Array.from(byPath.values())
 }
 
-// ---------------------------------------------------------------------------
-// Push (report 01 §8, steps 2-3)
-// ---------------------------------------------------------------------------
+function isViewedDirty(v: LocalViewedState): boolean {
+  return (
+    v.localUpdatedAt !== null &&
+    (v.remoteFetchedAt === null || v.localUpdatedAt > v.remoteFetchedAt)
+  )
+}
 
-/** Returns how many viewed rows were pushed (sync start/end logging). */
 async function pushViewed(store: ReviewStoreFile, prId: string): Promise<number> {
   const now = nowIso()
-  const dirty = store.viewed.filter(
-    (v) =>
-      v.localUpdatedAt !== null &&
-      (v.remoteFetchedAt === null || v.localUpdatedAt > v.remoteFetchedAt)
-  )
+  const dirty = store.viewed.filter(isViewedDirty)
   if (dirty.length === 0) return 0
   await gh.setFilesViewed(
     prId,
@@ -186,10 +158,6 @@ async function pushViewed(store: ReviewStoreFile, prId: string): Promise<number>
   return dirty.length
 }
 
-/** Spec: checked references "get automatically appended to the text when
- * syncing to github, empty newline separated"; report 01 §8: appended at
- * push time as `body + "\n\n" + refs`, one `file:line` per line. The local
- * body stays raw. */
 export function composeBody(comment: Comment): string {
   const refs = comment.local?.references ?? []
   if (refs.length === 0) return comment.body
@@ -204,10 +172,6 @@ function hasPendingComments(store: ReviewStoreFile): boolean {
   )
 }
 
-/** Pushes new threads, new replies (sequentially, in local order, per report
- * 01 §8: "not in parallel"), then deletions, then submits the review — one
- * review, one notification burst. Returns how many items were pushed (sync
- * start/end logging). */
 async function pushComments(
   owner: string,
   repo: string,
@@ -221,7 +185,6 @@ async function pushComments(
 
   const reviewId = await gh.ensurePendingReview(owner, repo, prNumber, prId, headRefOid)
 
-  // New threads.
   for (const thread of store.threads) {
     if (thread.local?.status !== 'new') continue
     const root = thread.comments[0]
@@ -258,7 +221,6 @@ async function pushComments(
     pushedCount++
   }
 
-  // New replies, sequentially per thread in local order.
   for (const thread of store.threads) {
     const root = thread.comments[0]
     for (const comment of thread.comments) {
@@ -278,8 +240,8 @@ async function pushComments(
     }
   }
 
-  // Deletions (report 01 §8: "only viewerCanDelete"; deleting a root with
-  // replies is refused by GitHub for non-admins — left pending locally).
+  // GitHub refuses to delete a thread root that has replies unless you're an
+  // admin, so that thread is left pending locally when it happens.
   const remainingThreads: ReviewThread[] = []
   for (const thread of store.threads) {
     if (thread.local?.status === 'deleted') {
@@ -287,7 +249,7 @@ async function pushComments(
       if (root?.viewerCanDelete) {
         await gh.deleteReviewComment(root.id)
         pushedCount++
-        continue // whole thread dropped
+        continue
       }
       remainingThreads.push(thread)
       continue
@@ -310,9 +272,22 @@ async function pushComments(
   return pushedCount
 }
 
-// ---------------------------------------------------------------------------
-// Entry point
-// ---------------------------------------------------------------------------
+export function countPendingChanges(store: ReviewStoreFile): number {
+  let count = 0
+  for (const thread of store.threads) {
+    if (thread.local?.status === 'new') count += 1
+    if (thread.local?.status === 'deleted') {
+      count += 1
+      continue
+    }
+    const root = thread.comments[0]
+    for (const comment of thread.comments) {
+      if (comment === root) continue
+      if (comment.local?.status === 'new' || comment.local?.status === 'deleted') count += 1
+    }
+  }
+  return count + store.viewed.filter(isViewedDirty).length
+}
 
 export interface SyncResult {
   syncedAt: string
@@ -323,7 +298,6 @@ export interface SyncContext {
   repo: string
 }
 
-/** report 01 §8's Sync flow. `mode: 'pull'` runs only step 4. */
 export async function runSync(
   projectId: string,
   pr: number,
@@ -333,7 +307,6 @@ export async function runSync(
   log.info('sync', `projectId=${projectId} pr=${pr} mode=${mode} start`)
   const store = await review.loadReview(projectId, pr)
 
-  // Step 1: `headRefOid` is the commitOID for the review.
   const { id: prId, headRefOid } = await gh.viewPr(ctx.owner, ctx.repo, pr)
 
   let pushedViewed = 0
@@ -343,13 +316,10 @@ export async function runSync(
       pushedViewed = await pushViewed(store, prId)
       pushedComments = await pushComments(ctx.owner, ctx.repo, pr, store, prId, headRefOid)
     } finally {
-      // Persist whatever was pushed (ids rewritten) even when a later step
-      // failed, so a retry does not push the same comment twice.
       await review.saveReview(projectId, pr, store)
     }
   }
 
-  // Step 4: pull + merge.
   const [threadsResult, viewedResult] = await Promise.all([
     gh.fetchReviewThreads(ctx.owner, ctx.repo, pr),
     gh.fetchViewedFiles(ctx.owner, ctx.repo, pr)
@@ -367,8 +337,6 @@ export async function runSync(
   const finalStore: ReviewStoreFile = {
     threads: mergedThreads,
     viewed: mergedViewed,
-    // Only a full Sync pushes local changes; a pull must not advance the mark
-    // the viewed merge uses to recognise unpushed local edits (report 01 §8).
     lastSuccessfulSyncAt: mode === 'full' ? syncedAt : store.lastSuccessfulSyncAt
   }
   await review.saveReview(projectId, pr, finalStore)

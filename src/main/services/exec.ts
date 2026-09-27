@@ -1,10 +1,10 @@
-// Single spawn point for `gh`/`git`/`rg` (report 04 §3.1). `spawn` (not
-// `execFile`) so stderr can be streamed line-by-line for progress.
+// `spawn` (not `execFile`) is used so stderr can be streamed line-by-line
+// for progress, rather than collected only after the process exits.
 import { spawn } from 'node:child_process'
 import { z } from 'zod'
 import { AppError } from '../ipc/registry'
 
-const DEFAULT_MAX_BYTES = 256 * 1024 * 1024 // 256 MB; large diffs
+const DEFAULT_MAX_BYTES = 256 * 1024 * 1024
 
 export class ExecError extends AppError {
   constructor(
@@ -41,12 +41,11 @@ export interface RunBufferResult {
   exitCode: number
 }
 
-/** Last few lines of stderr, so the error message stays short. */
 function stderrTail(stderr: string): string {
   return stderr.trim().split(/\r?\n/).slice(-5).join('\n')
 }
 
-/** Splits a stream of chunks on `\r\n|\r|\n` (git progress uses bare `\r`). */
+// git progress output uses bare `\r`, not always `\n`.
 function makeLineSplitter(onLine: (line: string) => void): (chunk: Buffer | string) => void {
   let buf = ''
   return (chunk) => {
@@ -60,10 +59,6 @@ function makeLineSplitter(onLine: (line: string) => void): (chunk: Buffer | stri
   }
 }
 
-/** Shared spawn/collect core for `run`/`runBuffer`: stdout is kept as raw
- * `Buffer` chunks (never decoded) so binary-sensitive callers (git blob
- * content: images, binary files) get exact bytes; `run` decodes to UTF-8 on
- * top of this. */
 function spawnCollect(
   cmd: string,
   args: string[],
@@ -125,9 +120,9 @@ function spawnCollect(
       }
       if (exitCode === 0)
         return resolve({ stdout: Buffer.concat(stdoutChunks), stderr, exitCode: 0 })
-      // exitCode is null when the process was killed by a signal — including
-      // spawn's own `timeout`/`killSignal` firing — which is a failure, not a
-      // clean exit; do not treat it as success.
+      // exitCode is null when the process was killed by a signal, including
+      // Node's own `timeout`/`killSignal` option firing; that's a failure,
+      // not a clean exit.
       if (signal) {
         return reject(
           new ExecError(
@@ -140,7 +135,6 @@ function spawnCollect(
           )
         )
       }
-      // Report 04 §3.2: "On failure show gh's stderr" (same for git/rg).
       const detail = stderrTail(stderr)
       reject(
         new ExecError(
@@ -167,9 +161,8 @@ export async function run(cmd: string, args: string[], opts: RunOptions = {}): P
   return { stdout: stdout.toString('utf8'), stderr, exitCode }
 }
 
-/** Like `run`, but returns raw stdout bytes instead of decoding them as
- * UTF-8, which would corrupt arbitrary binary content (e.g. `git cat-file
- * blob` for images/binary files). Same hardening/options as `run`. */
+// Returns raw stdout bytes instead of decoding as UTF-8, which would corrupt
+// binary content (e.g. image blobs from `git cat-file blob`).
 export function runBuffer(
   cmd: string,
   args: string[],
@@ -178,7 +171,6 @@ export function runBuffer(
   return spawnCollect(cmd, args, opts)
 }
 
-/** All external JSON enters through this function. */
 export async function runJson<T extends z.ZodType>(
   schema: T,
   cmd: string,

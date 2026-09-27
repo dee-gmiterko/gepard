@@ -1,11 +1,9 @@
-// Pure-function tests for git.ts's text parsers: no git process, no temp
-// dirs — plain strings/buffers in, structured data out. The one thing that
-// needs a real git repo (checkout/diff plumbing) is test/git-integration.test.ts.
 import { describe, expect, it } from 'vitest'
 import {
   looksBinary,
   mimeForPath,
   parseCloneProgressLine,
+  parseDiffTreeStdinFiles,
   parseNameStatus,
   parseNumstat,
   parseUnifiedDiff
@@ -139,6 +137,41 @@ describe('parseUnifiedDiff', () => {
     expect(rows.filter((r) => r.kind === 'hunk')).toHaveLength(2)
     expect(rows).toContainEqual({ kind: 'delete', oldLine: 10, newLine: null, text: 'z' })
     expect(rows).toContainEqual({ kind: 'add', oldLine: null, newLine: 10, text: 'Z' })
+  })
+})
+
+describe('parseDiffTreeStdinFiles', () => {
+  const A = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+  const B = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+
+  it('groups each oid with the files its diff-tree output lists below it', () => {
+    const stdout = `${A}\nsrc/a.ts\nsrc/b.ts\n${B}\ndocs/readme.md\n`
+    expect(parseDiffTreeStdinFiles(stdout, [A, B])).toEqual(
+      new Map([
+        [A, ['src/a.ts', 'src/b.ts']],
+        [B, ['docs/readme.md']]
+      ])
+    )
+  })
+
+  it('maps a given oid to no files when it touched nothing (e.g. an empty merge)', () => {
+    const stdout = `${A}\n${B}\ndocs/readme.md\n`
+    expect(parseDiffTreeStdinFiles(stdout, [A, B])).toEqual(
+      new Map([
+        [A, []],
+        [B, ['docs/readme.md']]
+      ])
+    )
+  })
+
+  it('omits a root commit entirely (diff-tree never emits one)', () => {
+    expect(parseDiffTreeStdinFiles(`${B}\nsrc/a.ts\n`, [A, B])).toEqual(
+      new Map([[B, ['src/a.ts']]])
+    )
+  })
+
+  it('returns an empty map for empty stdout', () => {
+    expect(parseDiffTreeStdinFiles('', [A, B])).toEqual(new Map())
   })
 })
 

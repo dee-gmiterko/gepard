@@ -1,17 +1,12 @@
-// Zod-free channel/event name lists. The preload runs with sandbox: true and
-// must be a self-contained bundle that requires nothing but `electron`, so it
-// imports only this file. contract.ts `satisfies` these lists, so adding a
-// channel in one place without the other is a compile error.
-//
-// This is the FULL contract for the spec (docs/gh-large-review.md), not the
-// report 04 §2.3 prototype subset: projects/clone, PR list/commits,
-// changed files, file content, file diff rows, trees, search,
-// symbols/definitions/references, comments, viewed, sync, index status.
+// The preload runs with sandbox: true and must be a self-contained bundle
+// that imports nothing but `electron`, so this file has no zod dependency.
 export const channelNames = [
   'app.viewer',
+  'app.viewerRepos',
   'projects.list',
   'projects.add',
   'projects.open',
+  'projects.setTargeting',
   'projects.remove',
   'clone.start',
   'pr.list',
@@ -32,8 +27,13 @@ export const channelNames = [
   'viewed.list',
   'viewed.set',
   'sync.run',
+  'sync.pendingCount',
   'index.get',
-  'log.write'
+  'log.write',
+  'extensions.list',
+  'extensions.setEnabled',
+  'extensions.install',
+  'extensions.dir'
 ] as const
 
 export const eventNames = ['clone.progress', 'index.status', 'theme.changed', 'app.error'] as const

@@ -1,7 +1,3 @@
-// Pure tree-building helpers shared by the file browser, targeted browser and
-// search results (spec: "Tree or flat list" in all three). No React; safe to
-// reason about independent of rendering.
-
 export interface TreeNode<T> {
   path: string
   name: string
@@ -16,10 +12,6 @@ interface Item<T> {
 }
 
 interface BuildTreeOptions<T> {
-  /** Combines the data of a folder's direct children (files and
-   * already-aggregated subfolders) into that folder's own data, bottom-up.
-   * Omit to leave folder nodes without data (plain grouping, e.g. the full
-   * file tree). */
   aggregateFolder?: (childData: T[]) => T
 }
 
@@ -36,7 +28,6 @@ function compareNodes<T>(a: TreeNode<T>, b: TreeNode<T>): number {
   return a.name.localeCompare(b.name)
 }
 
-/** Nests a flat list of repo-relative paths into a folder tree. */
 export function buildTree<T>(items: Item<T>[], options: BuildTreeOptions<T> = {}): TreeNode<T>[] {
   const root: MutableNode<T> = { path: '', name: '', isFolder: true, children: new Map() }
 
@@ -73,8 +64,6 @@ export function buildTree<T>(items: Item<T>[], options: BuildTreeOptions<T> = {}
   return [...root.children.values()].map(toNode).sort(compareNodes)
 }
 
-/** Same items, no folder nesting: one row per file, named by its full path
- * (spec: "Tree or flat list"). */
 export function buildFlatList<T>(items: Item<T>[]): TreeNode<T>[] {
   return [...items]
     .sort((a, b) => a.path.localeCompare(b.path))
@@ -87,9 +76,6 @@ export function buildFlatList<T>(items: Item<T>[]): TreeNode<T>[] {
     }))
 }
 
-/** File paths in a tree's display order (pre-order, folders before their
- * children, independent of expand/collapse) — used to publish the targeted
- * list's order for Up/Down navigation (keyboard/targetedOrder.ts). */
 export function flattenLeafPaths<T>(nodes: TreeNode<T>[]): string[] {
   const out: string[] = []
   function walk(list: TreeNode<T>[]): void {

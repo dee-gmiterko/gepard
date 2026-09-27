@@ -1,6 +1,3 @@
-// PRs domain: PR list and commits, repository commits, and checking out a
-// target (PR head, a single commit, or the default branch head). Delegates to services/gh.ts (`gh`
-// calls, report 01) and services/git.ts (`checkoutTarget`/`listCommits`).
 import type { HandlerMap } from '../registry'
 import * as gh from '../../services/gh'
 import * as git from '../../services/git'
@@ -9,23 +6,26 @@ export const prsHandlers: Pick<
   HandlerMap,
   'pr.list' | 'pr.commits' | 'pr.checkout' | 'commits.list'
 > = {
-  'pr.list': async ({ projectId, search }) => {
+  'pr.list': async ({ projectId, search, commit, path }) => {
     const { owner, repo } = await gh.repoRefFor(projectId)
-    return gh.listPrs(owner, repo, search)
+    return gh.listPrsFiltered(owner, repo, { search, commit, path })
   },
 
-  'pr.commits': async ({ projectId, pr }) => {
+  'pr.commits': async ({ projectId, pr, path }) => {
     const { owner, repo } = await gh.repoRefFor(projectId)
-    return gh.viewPrCommits(owner, repo, pr)
+    const commits = await gh.viewPrCommits(owner, repo, pr)
+    if (!path) return commits
+    const oids = commits.map((c) => c.oid)
+    await git.ensurePrCommitsFetched(projectId, pr, oids)
+    const touching = await git.commitsTouchingPath(projectId, oids, path)
+    return commits.filter((c) => touching.has(c.oid))
   },
 
-  /** `kind: 'pr'` first fetches the current head/base (report 01 §1.3:
-   * `headRefOid` moves when the author pushes) via `gh pr view`, then hands
-   * off to `checkoutTarget` (git.ts) for the actual checkout + reindex.
-   * `commit` and `default` (no PR/commit targeted) go straight to git. */
   'pr.checkout': async ({ projectId, target }) => {
     if (target.kind === 'pr') {
       const { owner, repo } = await gh.repoRefFor(projectId)
+      // A PR's headRefOid changes each time the author pushes, so it's
+      // fetched fresh here rather than reused.
       const { headRefOid, baseRefOid } = await gh.viewPrHeadBase(owner, repo, target.pr)
       return git.checkoutTarget(projectId, { kind: 'pr', pr: target.pr, headRefOid, baseRefOid })
     }

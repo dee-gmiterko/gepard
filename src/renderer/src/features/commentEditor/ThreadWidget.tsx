@@ -1,7 +1,3 @@
-// Inline thread widget the viewers mount (coordinator spec): shows an
-// existing thread with its replies and a reply editor, or a new-thread
-// editor at the draft anchor. Exactly one of `thread` / `draftAnchor` is
-// expected to be set by the caller.
 import { useState } from 'react'
 import styled from 'styled-components'
 import { Edit2, Trash2, X } from 'react-feather'
@@ -12,6 +8,7 @@ import { Badge } from '../../components/Badge'
 import { Inline } from '../../components/Layout'
 import { PathLabel } from '../../components/PathLabel'
 import { Byline } from '../../components/Byline'
+import { Surface } from '../../components/Surface'
 import { useDeleteComment } from '../../queries/comments'
 import { useTargetedPaths } from '../../queries/files'
 import { refAnchorFromDraft, refAnchorFromThread } from './anchorLine'
@@ -25,14 +22,11 @@ export interface ThreadWidgetProps {
   onClose: () => void
 }
 
-const Wrapper = styled.div`
+const Wrapper = styled(Surface)`
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.space[2]};
   padding: ${({ theme }) => theme.space[2]};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radius.md};
-  background: ${({ theme }) => theme.colors.bgElevated};
   width: 100%;
   max-width: 480px;
 `

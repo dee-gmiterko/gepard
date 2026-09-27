@@ -1,4 +1,3 @@
-// Small secondary text next to a title: timestamps, counts.
 import styled from 'styled-components'
 
 export const Caption = styled.span`

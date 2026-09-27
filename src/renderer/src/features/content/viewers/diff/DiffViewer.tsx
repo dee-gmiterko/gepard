@@ -1,9 +1,3 @@
-// Code diff viewer: unified, combined single-document model (report 02
-// decision) — one CodeMirror document built from `DiffRow[]`, dual old/new
-// line-number gutters, add/del/hunk line decorations, no `@codemirror/merge`.
-// Mounted for a changed file while a PR/commit is targeted (routing in
-// ../FileViewer.tsx). Inline comments map a thread's `{side, line}` anchor to
-// the combined document's line via the row's old/new line numbers.
 import { useEffect, useMemo, useState } from 'react'
 import type { DiffRow } from '@shared/ipc/schemas/pr'
 import { useAppState } from '../../../../state/AppContext'
@@ -38,9 +32,6 @@ export function DiffViewer({
 }): React.JSX.Element {
   const state = useAppState()
   const projectId = state.projectId ?? ''
-  // A failed `files.diff` reaches the unified toast surface via the global
-  // query cache (main.tsx); with no data this viewer just stays in its
-  // loading state rather than duplicating that error.
   const { data } = useFileDiff(projectId, base, head, path)
 
   if (!data) return <Message layout="center">Loading…</Message>
@@ -52,7 +43,6 @@ export function DiffViewer({
     case 'image':
       return <ImageDiffViewer path={path} before={data.before} after={data.after} />
     case 'text':
-      // Like GitHub: a pure rename (or mode-only change) has no hunks.
       if (data.rows.length === 0)
         return (
           <Message layout="center">

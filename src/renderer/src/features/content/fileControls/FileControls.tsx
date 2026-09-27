@@ -1,19 +1,15 @@
-// File controls floating panel, default close to top right (spec) and
-// movable by its grip: viewed checkbox, file comments accordion, Sync
-// button. Comments/viewed exist only while a PR is targeted (report 04 §4.3:
-// "With only a commit or folder targeted there is no comment editor, no
-// viewed checkbox and no Sync") — the whole panel is hidden otherwise.
 import { useRef, useState, type PointerEvent } from 'react'
 import styled, { css, keyframes } from 'styled-components'
 import { Move, RefreshCw } from 'react-feather'
 import { useAppState } from '../../../state/AppContext'
-import { useSetViewed, useSync, useViewed } from '../../../queries/comments'
+import { usePendingCount, useSetViewed, useSync, useViewed } from '../../../queries/comments'
 import { Checkbox } from '../../../components/Checkbox'
 import { Accordion } from '../../../components/Accordion'
 import { Button } from '../../../components/Button'
+import { Surface } from '../../../components/Surface'
 import { FileComments } from '../../commentEditor/FileComments'
 
-const Floating = styled.div`
+const Floating = styled(Surface).attrs({ $elevation: 'floating' as const })`
   position: absolute;
   top: ${({ theme }) => theme.space[3]};
   right: ${({ theme }) => theme.space[3]};
@@ -25,10 +21,6 @@ const Floating = styled.div`
   gap: ${({ theme }) => theme.space[2]};
   overflow: auto;
   padding: ${({ theme }) => theme.space[2]};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radius.md};
-  background: ${({ theme }) => theme.colors.bgElevated};
-  box-shadow: ${({ theme }) => theme.shadow.floating};
   font-size: ${({ theme }) => theme.font.size.sm};
 `
 
@@ -67,7 +59,6 @@ const Spinning = styled(RefreshCw)<{ $spinning: boolean }>`
     `}
 `
 
-/** Offset from the default top-right position, changed by dragging the grip. */
 function useDragOffset(): {
   offset: { x: number; y: number }
   onPointerDown: (e: PointerEvent<HTMLElement>) => void
@@ -106,6 +97,7 @@ export function FileControls(): React.JSX.Element | null {
   const { data: viewed } = useViewed(projectId, pr ?? NaN)
   const { mutate: setViewed } = useSetViewed(projectId, pr ?? NaN)
   const { mutate: runSync, isPending: syncing } = useSync(projectId, pr ?? NaN)
+  const { data: pendingCount } = usePendingCount(projectId, pr ?? NaN)
 
   if (pr === null) return null
 
@@ -138,7 +130,7 @@ export function FileControls(): React.JSX.Element | null {
 
       <Button block disabled={syncing} onClick={() => runSync('full')}>
         <Spinning size={14} $spinning={syncing} />
-        Sync
+        Sync{Boolean(pendingCount) && ` +${pendingCount}`}
       </Button>
     </Floating>
   )

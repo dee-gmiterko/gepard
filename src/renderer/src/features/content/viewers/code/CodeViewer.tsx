@@ -1,9 +1,3 @@
-// Code viewer: plain read-only CodeMirror with language highlighting from
-// `@codemirror/language-data` (spec Behaviors), used when no target is
-// active or the active file is not one of the changed files (state/selectors
-// isDiffView; routing lives in ../FileViewer.tsx). Inline comments and the
-// new-thread gutter affordance are wired here for the file's RIGHT side
-// (report 04 §4.3: comments only exist while a PR is targeted).
 import { useEffect, useMemo, useState } from 'react'
 import { lineNumbers } from '@codemirror/view'
 import { useAppState } from '../../../../state/AppContext'
@@ -25,9 +19,6 @@ import { MissingViewer } from '../missing/MissingViewer'
 export function CodeViewer({ path, sha }: { path: string; sha: string }): React.JSX.Element {
   const state = useAppState()
   const projectId = state.projectId ?? ''
-  // A failed `files.content` reaches the unified toast surface via the
-  // global query cache (main.tsx); with no data this viewer just stays in
-  // its loading state rather than duplicating that error.
   const { data } = useFileContent(projectId, sha, path)
 
   if (!data) return <Message layout="center">Loading…</Message>

@@ -1,9 +1,3 @@
-// Pure-function tests for notify.ts: the decision/formatting logic behind
-// forwarding main-process failures that are not the result of a renderer
-// request to the toast surface (coordinator spec: logged once, shown once).
-// No Electron, no filesystem — notifyMainFailure itself (which logs and
-// emits) needs Electron and is not covered here; we only cover the pure
-// pieces new to this change.
 import { describe, expect, it } from 'vitest'
 import { AppErrorGate, formatCaughtError, isNotifiableLevel } from '../src/main/notify'
 
@@ -37,11 +31,8 @@ describe('formatCaughtError', () => {
   })
 })
 
-// AppErrorGate: the gap-1 fix. `emit` (registry.ts) only reaches windows that
-// exist right now, over a listener the renderer has already registered — a
-// fire-and-forget push, not a queue — so a failure before any window exists,
-// or before that window's renderer has subscribed, must be buffered instead
-// of dropped, then delivered exactly once when the renderer becomes ready.
+// IPC `emit` only reaches windows and renderer listeners that already exist;
+// it is a fire-and-forget push, not a queue.
 describe('AppErrorGate', () => {
   const payload = (n: number): { scope: string; message: string } => ({
     scope: `s${n}`,
@@ -59,8 +50,6 @@ describe('AppErrorGate', () => {
     gate.notify(payload(1))
     gate.notify(payload(2))
     expect(gate.open()).toEqual([payload(1), payload(2)])
-    // A second open() (e.g. a dev-mode reload's second did-finish-load) must
-    // not re-deliver anything.
     expect(gate.open()).toEqual([])
   })
 
@@ -68,7 +57,7 @@ describe('AppErrorGate', () => {
     const gate = new AppErrorGate()
     gate.open()
     expect(gate.notify(payload(1))).toEqual([payload(1)])
-    expect(gate.open()).toEqual([]) // nothing left buffered
+    expect(gate.open()).toEqual([])
   })
 
   it('is a no-op to open an already-empty, never-notified gate', () => {

@@ -1,12 +1,8 @@
-// Leaf reusable checkbox (spec Components: "File in sidebar" viewed checkbox,
-// folder sums checkbox). Styled locally; theme tokens only.
 import { useEffect, useRef } from 'react'
 import styled from 'styled-components'
 
 export interface CheckboxProps {
   checked: boolean
-  /** Some-but-not-all state for a folder row summing its files (spec: "Folders
-   * show sums & view is applied to all under"). */
   indeterminate?: boolean
   onChange: (checked: boolean) => void
   label?: string
@@ -44,8 +40,6 @@ export function Checkbox({
   }, [indeterminate, checked])
 
   return (
-    // Stops the click from also bubbling into an ancestor row's onClick (file
-    // select / folder collapse) — checkboxes live inside clickable Tree rows.
     <Label $disabled={disabled} onClick={(e) => e.stopPropagation()}>
       <Input
         ref={ref}

@@ -1,11 +1,9 @@
 import { resolve } from 'node:path'
 import { defineConfig } from 'vitest/config'
 
-// Main-process modules only import `electron` for `app.getPath` and
-// `webContents.send` (report 04 §4.1 userData layout, ipc/registry.ts's
-// `emit`); alias it to a small mock (test/support/electron.ts) so tests run
-// under plain Node, with userData pointed at a temp directory per test file
-// and emitted events recorded for assertions.
+// The `electron` module can only be loaded inside the Electron runtime, so
+// it's aliased to a mock (test/support/electron.ts) to run tests under plain
+// Node.
 export default defineConfig({
   resolve: {
     alias: {

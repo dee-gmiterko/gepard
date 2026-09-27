@@ -1,17 +1,15 @@
-// Comments tab (spec): chronological view of all threads and replies for the
-// targeted PR, each opening the file at its anchor via `file/open`. Mounted
-// with no props by Content.tsx (state/mainTab === 'comments'); reads
-// projectId/pr straight from AppContext, matching that call site.
 import { useMemo } from 'react'
-import styled from 'styled-components'
-import type { Comment, ReviewThread } from '@shared/ipc/schemas/comment'
+import styled, { css } from 'styled-components'
+import type { ReviewThread } from '@shared/ipc/schemas/comment'
 import { useAppDispatch, useAppState } from '../../../state/AppContext'
 import { useComments } from '../../../queries/comments'
 import { Badge } from '../../../components/Badge'
+import { Ellipsis } from '../../../components/Ellipsis'
 import { Inline } from '../../../components/Layout'
 import { PathLabel } from '../../../components/PathLabel'
 import { Byline } from '../../../components/Byline'
 import { Message } from '../../../components/Message'
+import { sortThreadsChronologically } from './sortThreads'
 
 const List = styled.div`
   display: flex;
@@ -20,16 +18,17 @@ const List = styled.div`
   overflow: auto;
 `
 
-const Entry = styled.button`
+const ThreadGroup = styled.div`
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+`
+
+const entryStyle = css`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.space[1]};
   align-items: stretch;
   text-align: left;
   width: 100%;
-  padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[3]};
   border: none;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   background: transparent;
   color: inherit;
   font: inherit;
@@ -40,17 +39,26 @@ const Entry = styled.button`
   }
 `
 
-const Snippet = styled.p`
-  margin: 0;
-  color: ${({ theme }) => theme.colors.fg};
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+const ThreadHeader = styled.button`
+  ${entryStyle}
+  gap: ${({ theme }) => theme.space[1]};
+  padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[3]};
 `
 
-interface CommentEntry {
-  thread: ReviewThread
-  comment: Comment
+const Reply = styled.button`
+  ${entryStyle}
+  gap: ${({ theme }) => theme.space[1]};
+  padding: ${({ theme }) => theme.space[1]} ${({ theme }) => theme.space[3]}
+    ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[6]};
+`
+
+function ThreadAnchor({ thread }: { thread: ReviewThread }): React.JSX.Element {
+  return (
+    <PathLabel>
+      {thread.anchor.path}
+      {thread.anchor.line != null ? `:${thread.anchor.line}` : ''}
+    </PathLabel>
+  )
 }
 
 export function CommentsTab(): React.JSX.Element {
@@ -61,38 +69,46 @@ export function CommentsTab(): React.JSX.Element {
 
   const { data: threads = [], isLoading } = useComments(projectId, pr ?? NaN)
 
-  // comments.list already leaves out locally deleted threads/comments.
-  const entries = useMemo<CommentEntry[]>(
-    () =>
-      threads
-        .flatMap((thread) => thread.comments.map((comment) => ({ thread, comment })))
-        .sort((a, b) => a.comment.createdAt.localeCompare(b.comment.createdAt)),
-    [threads]
-  )
+  const ordered = useMemo(() => sortThreadsChronologically(threads), [threads])
 
   if (pr == null) return <Message>Target a PR to see its comments.</Message>
   if (isLoading) return <Message>Loading comments…</Message>
-  if (entries.length === 0) return <Message>No comments yet.</Message>
+  if (ordered.length === 0) return <Message>No comments yet.</Message>
+
+  function openThread(thread: ReviewThread): void {
+    dispatch({ type: 'file/open', path: thread.anchor.path })
+  }
 
   return (
     <List>
-      {entries.map(({ thread, comment }) => (
-        <Entry
-          key={comment.id}
-          type="button"
-          onClick={() => dispatch({ type: 'file/open', path: thread.anchor.path })}
-        >
-          <Inline>
-            <Byline author={comment.author.name ?? comment.author.login} time={comment.createdAt} />
-            <PathLabel>
-              {thread.anchor.path}
-              {thread.anchor.line != null ? `:${thread.anchor.line}` : ''}
-            </PathLabel>
-            {comment.outdated && <Badge $tone="warning">outdated</Badge>}
-          </Inline>
-          <Snippet>{comment.body}</Snippet>
-        </Entry>
-      ))}
+      {ordered.map((thread) => {
+        const [root, ...replies] = thread.comments
+        return (
+          <ThreadGroup key={thread.id}>
+            <ThreadHeader type="button" onClick={() => openThread(thread)}>
+              <Inline>
+                <Byline author={root.author.name ?? root.author.login} time={root.createdAt} />
+                <ThreadAnchor thread={thread} />
+                {root.outdated && <Badge $tone="warning">outdated</Badge>}
+                {thread.isResolved && <Badge $tone="success">resolved</Badge>}
+              </Inline>
+              <Ellipsis>{root.body}</Ellipsis>
+            </ThreadHeader>
+            {replies.map((comment) => (
+              <Reply key={comment.id} type="button" onClick={() => openThread(thread)}>
+                <Inline>
+                  <Byline
+                    author={comment.author.name ?? comment.author.login}
+                    time={comment.createdAt}
+                  />
+                  {comment.outdated && <Badge $tone="warning">outdated</Badge>}
+                </Inline>
+                <Ellipsis>{comment.body}</Ellipsis>
+              </Reply>
+            ))}
+          </ThreadGroup>
+        )
+      })}
     </List>
   )
 }

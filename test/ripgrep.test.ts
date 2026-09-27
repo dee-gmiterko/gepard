@@ -1,9 +1,3 @@
-// utf16ByteBoundaries/byteOffsetToUtf16 are pure and carry the actual risk
-// (mapping ripgrep's byte offsets to CodeMirror's UTF-16 columns across
-// multi-byte/astral characters) — tested directly with in-memory strings.
-// ripgrepSearch itself is tested by really spawning ripgrep (report 03 §5's
-// verdict is to spawn per query, so that spawn/argv/exit-code plumbing is the
-// integration risk worth covering, kept to a handful of small cases).
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -18,19 +12,16 @@ describe('utf16ByteBoundaries / byteOffsetToUtf16', () => {
   })
 
   it('maps an astral character (surrogate pair, 4 UTF-8 bytes) to 2 UTF-16 units', () => {
-    // U+1F600 GRINNING FACE: 4 bytes in UTF-8, 2 code units in UTF-16.
     const text = '\u{1F600} smile'
     const boundaries = utf16ByteBoundaries(text)
-    // byte 5 is where "smile" starts (4 emoji bytes + 1 space byte).
-    expect(byteOffsetToUtf16(boundaries, 5)).toBe(3) // UTF-16 index 3 = 's' (surrogate pair + space)
-    expect(byteOffsetToUtf16(boundaries, 10)).toBe(8) // end of "smile"
+    expect(byteOffsetToUtf16(boundaries, 5)).toBe(3)
+    expect(byteOffsetToUtf16(boundaries, 10)).toBe(8)
   })
 
   it('maps a BMP multi-byte character (e.g. "é", 2 UTF-8 bytes, 1 UTF-16 unit)', () => {
-    const text = 'café bar' // "café bar"
+    const text = 'café bar'
     const boundaries = utf16ByteBoundaries(text)
-    // "café" is 3 ASCII bytes + 2 bytes for é = 5 bytes; " bar" starts right after.
-    expect(byteOffsetToUtf16(boundaries, 5)).toBe(4) // UTF-16 index 4 = the space after "café"
+    expect(byteOffsetToUtf16(boundaries, 5)).toBe(4)
   })
 })
 

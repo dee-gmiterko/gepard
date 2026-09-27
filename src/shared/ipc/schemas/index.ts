@@ -1,4 +1,3 @@
-// Symbol / index-status schemas — report 03 §7 verbatim.
 import { z } from 'zod'
 import { Location, Range, RepoPath, SymbolKind } from './search'
 
@@ -22,7 +21,7 @@ export const DefinitionTarget = z.object({
   name: z.string().optional(),
   kind: SymbolKind.optional(),
   containerName: z.string().optional(),
-  external: z.boolean().default(false) // outside repo -> not referenceable
+  external: z.boolean().default(false)
 })
 export const DefinitionResult = z.object({
   symbol: z.string(),

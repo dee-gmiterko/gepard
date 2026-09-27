@@ -1,6 +1,3 @@
-// Thin bar above a side-panel list. The last child is pushed to the right
-// edge, so a single child (e.g. a ViewModeToggle) sits right and two
-// children sit at both ends.
 import styled from 'styled-components'
 
 export const Toolbar = styled.div`

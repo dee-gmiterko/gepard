@@ -1,16 +1,4 @@
-// Reference quick-selects (coordinator spec, corrected): "checkbox + title,
-// marked ones show preview of what it includes opening accordion, then shows
-// button to either include all files or only targeted ones." So for "Also
-// in" (search.run kind exactLine) and "Same pattern in" (search.run kind
-// pattern, word match on a chosen symbol) the top checkbox *includes* every
-// match currently shown (report 03 §7's grouped-result shape) as a
-// reference; the accordion body is a read-only preview of exactly that set,
-// and the all-files/targeted-only toggle changes which matches are included
-// live. Only "Symbol definition" is a per-symbol picker (spec: "each symbol
-// used on the line - can be checked to add reference by file:line") — it
-// lives in its own file.
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import styled from 'styled-components'
 import { Accordion } from '../../components/Accordion'
 import { Checkbox } from '../../components/Checkbox'
 import { Stack } from '../../components/Layout'
@@ -18,6 +6,7 @@ import { PathLabel } from '../../components/PathLabel'
 import { MatchLine } from '../../components/MatchLine'
 import { Message } from '../../components/Message'
 import { ScopeToggle, type SearchScope } from '../../components/ScopeToggle'
+import { Select } from '../../components/Select'
 import { SymbolDefinitionSection } from './SymbolDefinitionSection'
 import { useLineSymbols } from '../../queries/search'
 import { useFileContent } from '../../queries/files'
@@ -27,16 +16,6 @@ import type { SearchQuery } from '@shared/ipc/schemas/search'
 import { useSearch } from '../../queries/search'
 import type { RefAnchor } from './anchorLine'
 
-const Select = styled.select`
-  align-self: flex-start;
-  font-size: ${({ theme }) => theme.font.size.sm};
-  background: ${({ theme }) => theme.colors.bg};
-  color: ${({ theme }) => theme.colors.fg};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radius.sm};
-  padding: 2px ${({ theme }) => theme.space[1]};
-`
-
 interface SearchRefsSectionProps {
   title: string
   open: boolean
@@ -44,9 +23,6 @@ interface SearchRefsSectionProps {
   disabled?: boolean
   disabledHint?: string
   refKind: 'exact' | 'pattern'
-  /** Replaces this section's whole contribution with the given refs — called
-   * whenever what's included changes (opened, closed, scope toggled, query
-   * results changed). */
   onRefsChange: (refs: CommentReference[]) => void
   buildQuery: (scope: SearchScope) => SearchQuery | null
   extra?: React.ReactNode
@@ -67,8 +43,6 @@ function SearchRefsSection({
   const query = open && !disabled ? buildQuery(scope) : null
   const { data, isFetching } = useSearch(query)
 
-  // The top checkbox includes every currently-previewed match; closing it
-  // (or losing its query) clears the section's contribution.
   useEffect(() => {
     if (!open) {
       onRefsChange([])
@@ -143,7 +117,6 @@ export function ReferencesPanel({
   const fileContent = useFileContent(projectId, refAnchor?.sha ?? '', refAnchor?.path ?? '')
   const symbols = useMemo(() => lineSymbols.data?.symbols ?? [], [lineSymbols.data])
 
-  // Defaults to the line's first symbol until the user picks another.
   const effectivePatternSymbol = patternSymbol || symbols[0]?.name || ''
 
   const lineText = useMemo(() => {
@@ -153,7 +126,6 @@ export function ReferencesPanel({
     return c.text.split('\n')[refAnchor.line - 1] ?? null
   }, [fileContent.data, refAnchor])
 
-  // Symbol definition: granular per-row toggle.
   function toggleRef(ref: CommentReference): void {
     onChange((prev) => toggleRefIn(prev, ref))
   }
@@ -164,8 +136,6 @@ export function ReferencesPanel({
     }
   }
 
-  // Also in / Same pattern in: whole-section replace, stable across renders
-  // so the section's effect only re-runs when what it should include changes.
   const setExactRefs = useCallback(
     (refs: CommentReference[]) =>
       onChange((prev) => [...prev.filter((r) => r.kind !== 'exact'), ...refs]),

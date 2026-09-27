@@ -1,7 +1,3 @@
-// Image diff viewer: two-up, old left / new right, same scale (report 04 §6:
-// "like GitHub's default"). Both sides render at natural pixel size (1:1) so
-// neither is independently stretched; the container scrolls if either image
-// is larger than the pane.
 import { useMemo } from 'react'
 import styled from 'styled-components'
 import type { ImageData } from '@shared/ipc/schemas/pr'

@@ -1,8 +1,3 @@
-// The marks of the spec's "File in sidebar" row: +/- counts and the viewed
-// checkbox (only while a PR is targeted). Folder rows pass the changed files
-// under them, so their checkbox applies to all of those (spec: "view is
-// applied to all under"). Shared by every file list: file browser, targeted
-// browser and search results ("standard file row").
 import styled from 'styled-components'
 import { useAppState } from '../../../state/AppContext'
 import { useSetViewed } from '../../../queries/comments'
@@ -37,7 +32,6 @@ export function FileRowMarks({
   pr
 }: {
   data: RowData
-  /** Changed files the viewed checkbox applies to. */
   paths: string[]
   pr: number | null
 }): React.JSX.Element | null {

@@ -1,6 +1,5 @@
-// Two contexts (state / dispatch) so dispatch-only components (rows,
-// buttons) do not re-render on state changes (report 04 §5.1). The provider
-// component lives in AppProvider.tsx (fast refresh wants component-only files).
+// The provider component lives in AppProvider.tsx, not here, because React
+// Fast Refresh requires a file to export only components.
 import { createContext, useContext, type Dispatch } from 'react'
 import type { AppAction, AppState } from './reducer'
 

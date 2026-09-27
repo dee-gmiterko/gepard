@@ -1,15 +1,7 @@
-// Latest-wins cancellation (src/main/ipc/cancellation.ts) and the
-// search.run cancellation key (handlers/search.ts#searchRunKey): a newer
-// request under the same key cancels the older one at once (its promise
-// rejects with an AbortError, which ipc/registry.ts maps to CANCELLED, and its
-// AbortSignal/CancellationToken fire), while requests under distinct keys —
-// concurrent distinct searches — never cancel each other.
 import { describe, expect, it } from 'vitest'
 import { withLatestWins, type CancellableRun } from '../src/main/ipc/cancellation'
 import { searchRunKey } from '../src/main/ipc/handlers/search'
 
-/** A unit of work that stays pending until `resolve` is called, exposing the
- * signal/token it was handed. */
 function deferredWork<T>(): {
   fn: (run: CancellableRun) => Promise<T>
   run: () => CancellableRun
@@ -37,7 +29,6 @@ describe('withLatestWins', () => {
     const p1 = withLatestWins('k-same', first.fn)
     const p2 = withLatestWins('k-same', second.fn)
 
-    // Superseded: rejects with AbortError without the first work ever settling.
     await expect(p1).rejects.toMatchObject({ name: 'AbortError' })
     expect(first.run().signal.aborted).toBe(true)
     expect(first.run().token.isCancellationRequested).toBe(true)

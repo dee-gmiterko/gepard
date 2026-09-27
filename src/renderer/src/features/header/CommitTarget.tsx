@@ -1,9 +1,3 @@
-// Commit targeting combobox (spec: header "series of fuzzy search select
-// boxes"). With a PR targeted, commits are limited to that PR's
-// (`pr.commits`; spec: "setting a PR limits commits to ones from it");
-// without one, commits come from `commits.list`, narrowed server-side by the
-// typed text and by the targeted folder. Either way the list is
-// fuzzy-filtered locally.
 import { useMemo, useState } from 'react'
 import { GitCommit } from 'react-feather'
 import { Combobox } from '../../components/Combobox'
@@ -22,15 +16,15 @@ export function CommitTarget(): React.JSX.Element {
   const dispatch = useAppDispatch()
   const projectId = state.projectId ?? ''
   const pr = state.targeting.pr
-  const folder = state.targeting.folder ?? undefined
+  const path = state.targeting.path ?? undefined
   const usingPr = pr !== null
 
   const [rawQuery, setRawQuery] = useState('')
   const search = useDebouncedValue(rawQuery)
   const [selected, setSelected] = useState<Commit | null>(null)
 
-  const prCommits = usePrCommits(projectId, pr ?? NaN)
-  const repoCommits = useCommits(projectId, { search: search || undefined, path: folder }, !usingPr)
+  const prCommits = usePrCommits(projectId, pr ?? NaN, path)
+  const repoCommits = useCommits(projectId, { search: search || undefined, path }, !usingPr)
 
   const items = useMemo(
     () => (usingPr ? (prCommits.data ?? []) : (repoCommits.data ?? [])),

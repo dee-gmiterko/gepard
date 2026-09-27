@@ -1,8 +1,6 @@
-// `gh` CLI calls (report 01), spawned through services/exec.ts's run/runJson.
-// Every spawn uses gh's own environment tweaks (report 04 §3.2) and a
-// timeout (services/exec.ts's `timeoutMs`); GraphQL pagination is our own
-// cursor loop, never `gh api --paginate` (report 01 §6: a cursor variable
-// not named exactly `$endCursor` makes `--paginate` hang forever).
+// GraphQL pagination here is our own cursor loop, never `gh api --paginate`:
+// `--paginate` hangs forever unless the query's cursor variable is named
+// exactly `$endCursor`.
 import { z } from 'zod'
 import { runJson, ExecError } from './exec'
 import { AppError } from '../ipc/registry'
@@ -26,11 +24,8 @@ import {
   GqlReviewThreadsPage,
   RemoteViewedFile
 } from '@shared/ipc/schemas/comment'
-import type { Viewer } from '@shared/ipc/schemas/project'
-
-// ---------------------------------------------------------------------------
-// Spawning `gh` (report 04 §3.2)
-// ---------------------------------------------------------------------------
+import type { Viewer, ViewerRepo } from '@shared/ipc/schemas/project'
+import { matchesTarget } from '@shared/model/paths'
 
 const GH_ENV: NodeJS.ProcessEnv = {
   ...process.env,
@@ -41,7 +36,6 @@ const GH_ENV: NodeJS.ProcessEnv = {
   CLICOLOR: '0'
 }
 
-/** Every `gh` spawn has a timeout (report 01 §6, report 04 §3.1). */
 const DEFAULT_TIMEOUT_MS = 30_000
 
 function ghOpts(extra: { stdin?: string } = {}): {
@@ -57,26 +51,38 @@ export interface RepoRef {
   repo: string
 }
 
-/** Resolves a project id to the `owner/repo` gh needs for `-R`. */
 export async function repoRefFor(projectId: string): Promise<RepoRef> {
   const project = await getProject(projectId)
   if (!project) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${projectId}`)
   return { owner: project.owner, repo: project.repo }
 }
 
-// ---------------------------------------------------------------------------
-// 1. Listing PRs and PR summary (report 01 §1)
-// ---------------------------------------------------------------------------
-
 const PR_LIST_FIELDS =
   'number,title,state,isDraft,author,headRefName,baseRefName,headRefOid,updatedAt,createdAt,changedFiles,labels,reviewDecision,url'
 
-/** `gh pr list` for the fuzzy-search combo box (report 01 §1.2): open PRs by
- * default, narrowed server-side with `--search` once the user types. */
-export async function listPrs(owner: string, repo: string, search?: string): Promise<PrListItem[]> {
-  const args = ['pr', 'list', '-R', `${owner}/${repo}`, '--limit', '100', '--json', PR_LIST_FIELDS]
+// `gh pr list --limit N` pages its own GraphQL calls internally (100 PRs per
+// request) and stops once a page comes back short of that, so a very high
+// limit is effectively "no cap" while staying just as cheap when there are
+// few open PRs.
+const OPEN_PR_LIST_LIMIT = 10_000
+
+export function buildPrListArgs(owner: string, repo: string, search?: string): string[] {
+  const args = [
+    'pr',
+    'list',
+    '-R',
+    `${owner}/${repo}`,
+    '--limit',
+    String(OPEN_PR_LIST_LIMIT),
+    '--json',
+    PR_LIST_FIELDS
+  ]
   if (search) args.push('--search', search)
-  return runJson(z.array(PrListItem), 'gh', args, ghOpts())
+  return args
+}
+
+export async function listPrs(owner: string, repo: string, search?: string): Promise<PrListItem[]> {
+  return runJson(z.array(PrListItem), 'gh', buildPrListArgs(owner, repo, search), ghOpts())
 }
 
 const PR_SUMMARY_FIELDS = [
@@ -102,9 +108,6 @@ const PR_SUMMARY_FIELDS = [
   'mergeCommit'
 ].join(',')
 
-/** `gh pr view` summary (report 01 §1.3); `files`/`commits` are deliberately
- * not requested here — files come from local git (report 01 §2.2), commits
- * from `viewPrCommits` below. */
 export async function viewPr(owner: string, repo: string, number: number): Promise<PrSummary> {
   return runJson(
     PrSummary,
@@ -116,7 +119,7 @@ export async function viewPr(owner: string, repo: string, number: number): Promi
 
 const PrCommitsResponse = z.object({ commits: z.array(Commit) })
 
-/** Commit list of a PR (report 01 §2.1), topological order, oldest first. */
+// gh returns a PR's commits in topological order, oldest first.
 export async function viewPrCommits(
   owner: string,
   repo: string,
@@ -133,8 +136,6 @@ export async function viewPrCommits(
 
 const PrHeadBase = z.object({ headRefOid: Sha, baseRefOid: Sha })
 
-/** For `pr.checkout` with `kind: 'pr'`: fetch the current head/base before
- * handing off to `checkoutTarget` (git.ts). */
 export async function viewPrHeadBase(
   owner: string,
   repo: string,
@@ -148,9 +149,191 @@ export async function viewPrHeadBase(
   )
 }
 
-// ---------------------------------------------------------------------------
-// Signed-in profile (report 04 §3.3)
-// ---------------------------------------------------------------------------
+const CommitPrRaw = z.object({ number: z.int().positive() })
+
+// `--paginate` concatenates REST pages into one array here; `--slurp` also
+// exists but is GraphQL-only.
+export async function listPrsForCommit(
+  owner: string,
+  repo: string,
+  sha: string
+): Promise<number[]> {
+  const items = await runJson(
+    z.array(CommitPrRaw),
+    'gh',
+    ['api', `repos/${owner}/${repo}/commits/${sha}/pulls`, '--paginate'],
+    ghOpts()
+  )
+  return items.map((i) => i.number)
+}
+
+const PrFilesNode = z.object({
+  number: z.int().positive(),
+  files: z.object({
+    pageInfo: GqlPageInfo,
+    nodes: z.array(z.object({ path: z.string() }))
+  })
+})
+
+const PrsFilesResponse = z.object({
+  data: z.object({ repository: z.record(z.string(), PrFilesNode.nullable()) }),
+  errors: z.array(GqlError).optional()
+})
+
+export function buildPrsFilesQuery(numbers: number[]): {
+  query: string
+  variables: Record<string, unknown>
+} {
+  const varDecls = ['$owner:String!', '$name:String!']
+  const fields: string[] = []
+  const variables: Record<string, unknown> = {}
+  numbers.forEach((n, i) => {
+    const v = `n${i}`
+    varDecls.push(`$${v}:Int!`)
+    variables[v] = n
+    fields.push(
+      `pr${i}: pullRequest(number:$${v}) { number files(first:100) { pageInfo { hasNextPage endCursor } nodes { path } } }`
+    )
+  })
+  const query = `query(${varDecls.join(', ')}) {\n  repository(owner:$owner, name:$name) {\n${fields.join('\n')}\n  }\n}`
+  return { query, variables }
+}
+
+// A null node means the number no longer resolves to a PR (deleted or
+// inaccessible), and is dropped.
+export function parsePrsFilesResponse(
+  repository: Record<string, z.infer<typeof PrFilesNode> | null>
+): Map<number, string[]> {
+  const map = new Map<number, string[]>()
+  for (const node of Object.values(repository)) {
+    if (node)
+      map.set(
+        node.number,
+        node.files.nodes.map((f) => f.path)
+      )
+  }
+  return map
+}
+
+export function parsePrsFilesPageInfo(
+  repository: Record<string, z.infer<typeof PrFilesNode> | null>
+): Map<number, string> {
+  const map = new Map<number, string>()
+  for (const node of Object.values(repository)) {
+    if (node?.files.pageInfo.hasNextPage && node.files.pageInfo.endCursor) {
+      map.set(node.number, node.files.pageInfo.endCursor)
+    }
+  }
+  return map
+}
+
+const PR_FILES_PAGE_QUERY = `
+query($owner:String!, $name:String!, $number:Int!, $endCursor:String) {
+  repository(owner:$owner, name:$name) {
+    pullRequest(number:$number) {
+      files(first:100, after:$endCursor) {
+        pageInfo { hasNextPage endCursor }
+        nodes { path }
+      }
+    }
+  }
+}`
+
+const PrFilesPageResponse = z.object({
+  data: z.object({
+    repository: z.object({
+      pullRequest: z
+        .object({
+          files: z.object({
+            pageInfo: GqlPageInfo,
+            nodes: z.array(z.object({ path: z.string() }))
+          })
+        })
+        .nullable()
+    })
+  }),
+  errors: z.array(GqlError).optional()
+})
+
+async function fetchRemainingPrFiles(
+  owner: string,
+  repo: string,
+  number: number,
+  after: string
+): Promise<string[]> {
+  const out: string[] = []
+  let cursor: string | null = after
+  for (;;) {
+    const page = await graphql(PrFilesPageResponse, PR_FILES_PAGE_QUERY, {
+      owner,
+      name: repo,
+      number,
+      endCursor: cursor
+    })
+    const files = page.data.repository.pullRequest?.files
+    if (!files) break
+    out.push(...files.nodes.map((f) => f.path))
+    if (!files.pageInfo.hasNextPage) break
+    cursor = files.pageInfo.endCursor
+  }
+  return out
+}
+
+export async function fetchPrsFiles(
+  owner: string,
+  repo: string,
+  numbers: number[]
+): Promise<Map<number, string[]>> {
+  if (numbers.length === 0) return new Map()
+  const { query, variables } = buildPrsFilesQuery(numbers)
+  const res = await graphql(PrsFilesResponse, query, { owner, name: repo, ...variables })
+  const map = parsePrsFilesResponse(res.data.repository)
+  const stragglers = parsePrsFilesPageInfo(res.data.repository)
+  for (const [number, cursor] of stragglers) {
+    const rest = await fetchRemainingPrFiles(owner, repo, number, cursor)
+    map.set(number, [...(map.get(number) ?? []), ...rest])
+  }
+  return map
+}
+
+export function filterPrsByPath(
+  prs: PrListItem[],
+  filesByNumber: Map<number, string[]>,
+  path: string
+): PrListItem[] {
+  return prs.filter((pr) =>
+    (filesByNumber.get(pr.number) ?? []).some((f) => matchesTarget(f, path))
+  )
+}
+
+export interface PrListFilter {
+  search?: string
+  commit?: string
+  path?: string
+}
+
+export async function listPrsFiltered(
+  owner: string,
+  repo: string,
+  filter: PrListFilter
+): Promise<PrListItem[]> {
+  let candidates: PrListItem[]
+  if (filter.commit) {
+    const numbers = await listPrsForCommit(owner, repo, filter.commit)
+    candidates = await Promise.all(numbers.map((n) => viewPr(owner, repo, n)))
+  } else {
+    candidates = await listPrs(owner, repo, filter.search)
+  }
+  if (filter.path && candidates.length > 0) {
+    const filesByNumber = await fetchPrsFiles(
+      owner,
+      repo,
+      candidates.map((c) => c.number)
+    )
+    candidates = filterPrsByPath(candidates, filesByNumber, filter.path)
+  }
+  return candidates
+}
 
 // `gh auth status --json` always exits 0; failure is inside the JSON as
 // `state !== 'success'`.
@@ -171,28 +354,66 @@ async function fetchUser(): Promise<z.infer<typeof GhUser>> {
   return runJson(GhUser, 'gh', ['api', 'user'], ghOpts())
 }
 
-/** The launchpad prefill: the signed-in `gh` profile, or null when `gh` has
- * no active signed-in account. */
-export async function viewer(): Promise<Viewer | null> {
+async function hasActiveAuth(): Promise<boolean> {
   const status = await runJson(
     GhAuthStatus,
     'gh',
     ['auth', 'status', '--active', '--json', 'hosts'],
     ghOpts()
   )
-  const active = Object.values(status.hosts)
+  return Object.values(status.hosts)
     .flat()
-    .find((h) => h.active && h.state === 'success')
-  if (!active) return null
+    .some((h) => h.active && h.state === 'success')
+}
+
+export async function viewer(): Promise<Viewer | null> {
+  if (!(await hasActiveAuth())) return null
   const user = await fetchUser()
   return { login: user.login, name: user.name, avatarUrl: user.avatar_url, htmlUrl: user.html_url }
 }
 
+const ViewerReposResponse = z.object({
+  data: z.object({
+    viewer: z.object({
+      repositories: z.object({
+        pageInfo: GqlPageInfo,
+        nodes: z.array(
+          z.object({ name: z.string(), url: z.url(), owner: z.object({ login: Login }) })
+        )
+      })
+    })
+  }),
+  errors: z.array(GqlError).optional()
+})
+
+const VIEWER_REPOS_QUERY = `
+query($endCursor:String) {
+  viewer {
+    repositories(first:50, after:$endCursor, ownerAffiliations:[OWNER, ORGANIZATION_MEMBER], orderBy:{field:UPDATED_AT, direction:DESC}) {
+      pageInfo { hasNextPage endCursor }
+      nodes { name url owner { login } }
+    }
+  }
+}`
+
+const MAX_VIEWER_REPOS = 200
+
+export async function listViewerRepos(): Promise<ViewerRepo[]> {
+  if (!(await hasActiveAuth())) return []
+  const repos: ViewerRepo[] = []
+  let cursor: string | null = null
+  for (;;) {
+    const page = await graphql(ViewerReposResponse, VIEWER_REPOS_QUERY, { endCursor: cursor })
+    const { nodes, pageInfo } = page.data.viewer.repositories
+    repos.push(...nodes.map((n) => ({ owner: n.owner.login, repo: n.name, url: n.url })))
+    if (!pageInfo.hasNextPage || repos.length >= MAX_VIEWER_REPOS) break
+    cursor = pageInfo.endCursor
+  }
+  return repos
+}
+
 let cachedViewerLogin: string | null = null
 
-/** The signed-in `gh` login, cached for the process lifetime. Used to author
- * local (not-yet-synced) comment drafts before Sync gives them a real GitHub
- * identity. */
 export async function currentUserLogin(): Promise<string> {
   if (cachedViewerLogin) return cachedViewerLogin
   const { login } = await fetchUser()
@@ -200,23 +421,17 @@ export async function currentUserLogin(): Promise<string> {
   return login
 }
 
-// ---------------------------------------------------------------------------
-// GraphQL plumbing (report 01 §3.2, §6)
-// ---------------------------------------------------------------------------
-
 function checkGqlErrors(errors: GqlError[] | undefined): void {
   if (errors && errors.length > 0) {
     throw new AppError('GRAPHQL_ERROR', errors.map((e) => e.message).join('; '), errors)
   }
 }
 
-/** `gh api graphql --input -` with a typed `{query, variables}` document fed
- * over stdin (report 01 §3.2/§4/§6: avoids shell quoting and argv limits).
- * A non-zero exit — including a GraphQL partial error, whose stdout still
- * carries `data`+`errors` (report 01 §6) — is already a thrown `ExecError`
- * from `runJson` before we ever see the body, which is the app's chosen
- * behaviour ("treat exit ≠ 0 as error even if stdout contains data", §0).
- * The `errors` check below is defensive for the exit-0-with-errors case. */
+// Fed over stdin (`--input -`) to avoid shell quoting and argv limits. A
+// GraphQL partial error still returns a non-zero exit code with `errors` in
+// the body, which `runJson` already throws as an `ExecError` before this
+// function sees it; the check below is defensive for the rare
+// exit-0-with-errors case.
 async function graphql<T extends { errors?: GqlError[] }>(
   schema: z.ZodType<T>,
   query: string,
@@ -241,11 +456,6 @@ const REVIEW_COMMENT_FIELDS = `
   pullRequestReview { id databaseId state }
   viewerDidAuthor viewerCanDelete
 `
-
-// ---------------------------------------------------------------------------
-// 3. Review threads (report 01 §3.2) — own cursor loop for both the outer
-// `reviewThreads` connection and each thread's nested `comments` connection.
-// ---------------------------------------------------------------------------
 
 const REVIEW_THREADS_QUERY = `
 query($owner:String!, $name:String!, $number:Int!, $endCursor:String) {
@@ -320,7 +530,6 @@ export interface ReviewThreadsResult {
   threads: GqlReviewThreadRaw[]
 }
 
-/** All review threads of a PR, fully paginated (outer + nested). */
 export async function fetchReviewThreads(
   owner: string,
   repo: string,
@@ -357,10 +566,6 @@ export async function fetchReviewThreads(
   }
   return { prId, headRefOid, baseRefOid, threads }
 }
-
-// ---------------------------------------------------------------------------
-// 4. Viewed state of files (report 01 §4)
-// ---------------------------------------------------------------------------
 
 const FilesViewedPage = z.object({
   data: z.object({
@@ -399,7 +604,6 @@ export interface FilesViewedResult {
   files: RemoteViewedFile[]
 }
 
-/** All files' viewed state for a PR, fully paginated. */
 export async function fetchViewedFiles(
   owner: string,
   repo: string,
@@ -436,8 +640,6 @@ export interface ViewedChange {
   viewed: boolean
 }
 
-/** One aliased mutation for every changed file (report 01 §4: "Batching: one
- * request with aliases"). */
 export async function setFilesViewed(
   pullRequestId: string,
   changes: ViewedChange[]
@@ -458,11 +660,6 @@ export async function setFilesViewed(
   const query = `mutation(${varDecls.join(', ')}) {\n${fields.join('\n')}\n}`
   await graphql(BatchMutationResponse, query, variables)
 }
-
-// ---------------------------------------------------------------------------
-// 5/8. Creating comments — pending review reuse, new thread (LINE→FILE
-// fallback), replies, delete, submit (report 01 §5, §8).
-// ---------------------------------------------------------------------------
 
 const PendingReviewResponse = z.object({
   data: z.object({
@@ -486,7 +683,6 @@ query($owner:String!, $name:String!, $number:Int!) {
   }
 }`
 
-/** The viewer's own pending review, if any (only the viewer's is visible). */
 export async function findPendingReview(
   owner: string,
   repo: string,
@@ -523,8 +719,8 @@ async function createPendingReview(pullRequestId: string, commitOid: string): Pr
   return res.data.addPullRequestReview.pullRequestReview.id
 }
 
-/** "One pending review per user per PR" (report 01 §8): reuse the viewer's
- * pending review if one exists, else create one pinned to `headRefOid`. */
+// GitHub allows only one pending review per user per PR: reuse it if one
+// exists, else create one pinned to `headRefOid`.
 export async function ensurePendingReview(
   owner: string,
   repo: string,
@@ -601,7 +797,6 @@ export interface NewThreadResult {
     diffSide: 'LEFT' | 'RIGHT'
   }
   rootComment: z.infer<typeof NewThreadComment>
-  /** true when this was pushed (or fell back) as a FILE thread. */
   isFile: boolean
 }
 
@@ -640,10 +835,9 @@ async function addThreadAsFile(
   return { thread, rootComment: root, isFile: true }
 }
 
-/** LINE first; on the 422 "must be part of the diff" (report 01 §5/§8),
- * retry as a FILE thread with the original `path:line` prepended to the
- * body as the first reference line. A caller-chosen FILE thread (`line:
- * null`, the editor's file-level comment) skips the LINE attempt. */
+// GitHub rejects a LINE-anchored review comment with a 422 "must be part of
+// the diff" error when the line isn't in the diff; this retries as a FILE
+// thread with the original `path:line` prepended to the body.
 export async function addReviewThread(input: NewThreadInput): Promise<NewThreadResult> {
   if (input.line === null) return addThreadAsFile(input.pullRequestReviewId, input.path, input.body)
   const line = input.line
@@ -681,8 +875,8 @@ mutation($threadId:ID!, $body:String!, $reviewId:ID) {
   }
 }`
 
-/** Only the thread root can be replied to (GitHub always points replies at
- * the root, report 01 §3.1). */
+// Only the thread root can be replied to: GitHub always points replies at
+// the root.
 export async function addReviewThreadReply(
   threadId: string,
   body: string,
@@ -730,8 +924,6 @@ mutation($reviewId:ID!, $body:String) {
   }
 }`
 
-/** One review → one notification for everything staged in steps 3.x
- * (report 01 §8). */
 export async function submitReview(reviewId: string, body?: string): Promise<void> {
   await graphql(SubmitReviewResponse, SUBMIT_REVIEW_QUERY, { reviewId, body: body ?? null })
 }

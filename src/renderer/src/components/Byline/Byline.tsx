@@ -1,4 +1,3 @@
-// Comment author + time (inline threads, Comments tab).
 import styled from 'styled-components'
 import { Caption } from '../Caption'
 
@@ -7,14 +6,7 @@ const Author = styled.span`
   color: ${({ theme }) => theme.colors.fg};
 `
 
-export function Byline({
-  author,
-  time
-}: {
-  author: string
-  /** ISO timestamp. */
-  time: string
-}): React.JSX.Element {
+export function Byline({ author, time }: { author: string; time: string }): React.JSX.Element {
   return (
     <>
       <Author>{author}</Author>

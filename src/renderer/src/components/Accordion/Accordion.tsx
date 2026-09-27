@@ -1,9 +1,3 @@
-// Generic disclosure primitive (spec Styling: "any duplication is sign of
-// missing component"). Used by the comment editor's reference quick-selects
-// (checkbox + title opening an accordion with a preview) and by the file
-// comments accordion (report 04 §6 folder structure lists `Accordion` as a
-// reusable leaf component). Fully controlled: the caller owns `open` state
-// so it can react to the toggle (e.g. clear selections on close).
 import type { ReactNode } from 'react'
 import styled from 'styled-components'
 import { ChevronDown, ChevronRight } from 'react-feather'
@@ -59,10 +53,8 @@ const Body = styled.div`
 export interface AccordionProps {
   open: boolean
   onToggle: () => void
-  /** Rendered before the title, e.g. a checkbox; clicks here never bubble to the toggle. */
   leading?: ReactNode
   title: ReactNode
-  /** Extra header content aligned before the chevron, e.g. a count badge. */
   trailing?: ReactNode
   children?: ReactNode
   disabled?: boolean

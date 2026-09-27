@@ -1,5 +1,3 @@
-// Wraps a react-feather icon once (report 04 §6: "Wrap once in an IconButton
-// component (spec lists it)").
 import type { ButtonHTMLAttributes, ComponentType } from 'react'
 import styled from 'styled-components'
 
@@ -31,7 +29,8 @@ export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
   icon: ComponentType<{ size?: number | string }>
   size?: number
   active?: boolean
-  /** Icon-only buttons need an accessible name. */
+  // Screen readers announce icon-only buttons by this label, since there is
+  // no text content for them to read.
   label: string
 }
 

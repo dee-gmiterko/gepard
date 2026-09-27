@@ -1,5 +1,3 @@
-// Text button (spec Components: comment editor actions, Sync, launchpad
-// add). Icon-only buttons are IconButton.
 import type { ButtonHTMLAttributes } from 'react'
 import styled, { css } from 'styled-components'
 
@@ -53,7 +51,6 @@ const StyledButton = styled.button<{ $variant: ButtonVariant; $block: boolean }>
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
-  /** Full width of the container. */
   block?: boolean
 }
 

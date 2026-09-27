@@ -1,9 +1,8 @@
-// Light/dark from system preference (report 04 §6): Electron keeps the
-// renderer's `prefers-color-scheme` in sync with `nativeTheme.shouldUseDarkColors`.
-// The renderer reads the initial value with useSyncExternalStore(matchMedia),
-// then main's `theme.changed` event (from `nativeTheme.on('updated')`) is the
-// live source of truth — the matchMedia `change` event alone can arrive late
-// in a background-throttled window (report 04 §6).
+// Electron keeps the renderer's `prefers-color-scheme` in sync with
+// `nativeTheme.shouldUseDarkColors`, but the matchMedia `change` event alone
+// can arrive late in a background-throttled window, so main's
+// `theme.changed` event (from `nativeTheme.on('updated')`) is treated as the
+// live source of truth once it has fired at least once.
 import { useState, useSyncExternalStore, type ReactNode } from 'react'
 import { ThemeProvider as StyledThemeProvider, createGlobalStyle } from 'styled-components'
 import { useIpcEvent } from '../ipc/client'
@@ -57,13 +56,9 @@ export function AppThemeProvider({ children }: { children: ReactNode }): React.J
     getSystemThemeSnapshot,
     () => false
   )
-  // null until main's first `theme.changed`; after that main wins.
   const [mainDark, setMainDark] = useState<boolean | null>(null)
   const dark = mainDark ?? systemDark
 
-  // Main is the live source of truth once the app is running (nativeTheme
-  // tracks the system setting more reliably than a throttled window's
-  // matchMedia listener).
   useIpcEvent('theme.changed', (payload) => setMainDark(payload.dark))
 
   const theme = dark ? darkTheme : lightTheme

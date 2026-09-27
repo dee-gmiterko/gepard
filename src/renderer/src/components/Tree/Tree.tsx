@@ -1,7 +1,3 @@
-// Leaf reusable tree/list renderer (spec Components: file browser tree,
-// targeted browser tree-or-flat, search results tree-or-flat). Structural
-// only — callers decide what a row shows via renderFile/renderFolder and how
-// the nodes were built (buildTree.ts). Styled locally; theme tokens only.
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import styled from 'styled-components'
 import { ChevronDown, ChevronRight } from 'react-feather'
@@ -12,12 +8,8 @@ import { TreeLabel } from './TreeLabel'
 export interface TreeProps<T> {
   nodes: TreeNode<T>[]
   selectedPath?: string | null
-  /** Selecting a file anywhere dispatches `file/open` (spec) — callers wire
-   * that dispatch here. */
   onSelectFile?: (node: TreeNode<T>) => void
   renderFile: (node: TreeNode<T>) => ReactNode
-  /** Extra content appended to a folder row (spec: folders show sums / bulk
-   * viewed checkbox). Return null/undefined for a plain folder row. */
   renderFolder?: (node: TreeNode<T>) => ReactNode
 }
 
@@ -82,13 +74,9 @@ export function Tree<T>({
   renderFile,
   renderFolder
 }: TreeProps<T>): React.JSX.Element {
-  // Uncontrolled: collapse is a purely visual concern of this component
-  // (keyboard/targetedOrder.ts publishes the full order regardless).
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set())
   const listRef = useRef<HTMLUListElement>(null)
 
-  // Keep the selected row visible when the selection moves by keyboard
-  // (Up/Down, report 04 §7 item 4).
   useEffect(() => {
     listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' })
   }, [selectedPath])

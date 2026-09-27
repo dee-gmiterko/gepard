@@ -1,19 +1,13 @@
-// Single- and multi-line text entry (launchpad URL, search box, comment box).
 import styled, { css } from 'styled-components'
+import { textFieldBase } from './textFieldBase'
 
 const field = css`
+  ${textFieldBase}
   width: 100%;
   padding: 6px ${({ theme }) => theme.space[2]};
-  font: inherit;
-  font-size: ${({ theme }) => theme.font.size.sm};
-  color: ${({ theme }) => theme.colors.fg};
   background: ${({ theme }) => theme.colors.bg};
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: ${({ theme }) => theme.radius.sm};
-
-  &::placeholder {
-    color: ${({ theme }) => theme.colors.fgSubtle};
-  }
 
   &:focus {
     outline: none;

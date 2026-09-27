@@ -1,12 +1,7 @@
-// A plain status line: placeholders ("Loading…", "No files."), empty states
-// and error text across panels and viewers (spec Styling: one component
-// instead of a Placeholder/Center/Empty/ErrorText block in every feature).
 import type { ReactNode } from 'react'
 import styled, { css } from 'styled-components'
 
 export type MessageTone = 'muted' | 'subtle' | 'danger'
-/** `block`: padded row (side panel, lists); `center`: fills and centers in
- * its container (viewers); `inline`: no spacing of its own. */
 export type MessageLayout = 'block' | 'center' | 'inline'
 
 const Box = styled.div<{ $tone: MessageTone; $layout: MessageLayout }>`

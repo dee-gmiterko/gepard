@@ -1,21 +1,3 @@
-// The TypeScript LanguageExtension (report 03 §2-4): resolves a workspace
-// TypeScript toolchain the same way VS Code's tsdk resolution does, or falls
-// back to the bundled TypeScript 7 native binary, and starts a generic
-// LspSession over the result.
-//
-// Three launch strategies (report 03 §3), chosen by `resolveWorkspaceTypeScript`
-// (verbatim from the report — do NOT switch this to `require.resolve`: Node
-// caches module resolution by realpath, so switching projects would keep
-// returning a previously-resolved workspace version):
-//   (a) workspace `node_modules/typescript` >= 7  -> spawn the workspace's own
-//       `node_modules/@typescript/typescript-<platform>-<arch>/lib/tsc --lsp --stdio`
-//   (b) workspace TypeScript 5.x -> spawn the bundled `typescript-language-server`
-//       with `initializationOptions.tsserver.path` pointing at the workspace's
-//       `lib/tsserver.js`
-//   (c) nothing usable in the workspace -> bundled TypeScript 7 native binary
-//       (this app's own `@typescript/typescript-<platform>-<arch>` dependency).
-// Since the app never installs dependencies in its clones, (c) is the common
-// path (report 03 §1, §8).
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import {
@@ -44,18 +26,104 @@ type WorkspaceResolution =
       tsserver: string | null
     }
 
-/** Verified resolver, report 03 §3: workspace `node_modules/typescript` ->
- * bundled. Uses `fs.existsSync`/`readFileSync`, never `require.resolve`. */
-function resolveWorkspaceTypeScript(workspaceRoot: string): WorkspaceResolution {
-  const pkgJsonPath = path.join(workspaceRoot, 'node_modules/typescript/package.json')
+/** Strips `//` and `/* *‍/` comments from VS Code's JSONC-flavored
+ * `.vscode/settings.json` well enough for `JSON.parse`. Trailing commas are
+ * not handled since only one known key is ever read here. */
+export function stripJsonComments(text: string): string {
+  let out = ''
+  let inString = false
+  let inLineComment = false
+  let inBlockComment = false
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]
+    const next = text[i + 1]
+    if (inLineComment) {
+      if (c === '\n') {
+        inLineComment = false
+        out += c
+      }
+      continue
+    }
+    if (inBlockComment) {
+      if (c === '*' && next === '/') {
+        inBlockComment = false
+        i++
+      }
+      continue
+    }
+    if (inString) {
+      out += c
+      if (c === '\\') {
+        if (next !== undefined) {
+          out += next
+          i++
+        }
+        continue
+      }
+      if (c === '"') inString = false
+      continue
+    }
+    if (c === '"') {
+      inString = true
+      out += c
+      continue
+    }
+    if (c === '/' && next === '/') {
+      inLineComment = true
+      i++
+      continue
+    }
+    if (c === '/' && next === '*') {
+      inBlockComment = true
+      i++
+      continue
+    }
+    out += c
+  }
+  return out
+}
+
+/** Reads `typescript.tsdk` from `<workspaceRoot>/.vscode/settings.json` —
+ * VS Code's own switch for using a workspace TypeScript instead of the
+ * bundled one. Returns `null` when the setting is absent or invalid so
+ * callers fall back to the bundled TypeScript, matching VS Code's default. */
+export function readTsdkSetting(workspaceRoot: string): string | null {
+  const settingsPath = path.join(workspaceRoot, '.vscode', 'settings.json')
+  let raw: string
+  try {
+    raw = fs.readFileSync(settingsPath, 'utf8')
+  } catch {
+    return null
+  }
+  let json: unknown
+  try {
+    json = JSON.parse(stripJsonComments(raw))
+  } catch {
+    return null
+  }
+  if (!json || typeof json !== 'object') return null
+  const tsdk = (json as Record<string, unknown>)['typescript.tsdk']
+  return typeof tsdk === 'string' && tsdk.trim().length > 0 ? tsdk : null
+}
+
+/** `tsdk` is a folder path (VS Code's convention: `.../typescript/lib`)
+ * relative to `workspaceRoot` unless absolute, with its package root one
+ * directory up. This uses `fs.existsSync`/`readFileSync` instead of
+ * `require.resolve`, since Node caches module resolution by realpath and
+ * switching workspaces would keep returning a previously resolved
+ * version. */
+export function resolveWorkspaceTypeScript(workspaceRoot: string): WorkspaceResolution {
+  const tsdk = readTsdkSetting(workspaceRoot)
+  if (!tsdk) return { source: 'bundled' }
+  const tsdkDir = path.isAbsolute(tsdk) ? tsdk : path.join(workspaceRoot, tsdk)
+  const pkgRoot = path.dirname(tsdkDir)
+  const pkgJsonPath = path.join(pkgRoot, 'package.json')
   if (!fs.existsSync(pkgJsonPath)) return { source: 'bundled' }
-  const dir = path.dirname(pkgJsonPath)
   const { version } = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8')) as { version: string }
   if (Number(version.split('.')[0]) >= 7) {
     const platformPkg = `@typescript/typescript-${process.platform}-${process.arch}`
     const exe = path.join(
-      workspaceRoot,
-      'node_modules',
+      path.dirname(pkgRoot),
       platformPkg,
       'lib',
       process.platform === 'win32' ? 'tsc.exe' : 'tsc'
@@ -68,8 +136,8 @@ function resolveWorkspaceTypeScript(workspaceRoot: string): WorkspaceResolution 
       lspArgs: ['--lsp', '--stdio']
     }
   }
-  const jsApi = path.join(dir, 'lib/typescript.js')
-  const tsserver = path.join(dir, 'lib/tsserver.js')
+  const jsApi = path.join(pkgRoot, 'lib/typescript.js')
+  const tsserver = path.join(pkgRoot, 'lib/tsserver.js')
   return {
     source: 'workspace',
     version,
@@ -79,9 +147,10 @@ function resolveWorkspaceTypeScript(workspaceRoot: string): WorkspaceResolution 
   }
 }
 
-/** This app's own bundled TS 7 native binary (`@typescript/typescript-<platform>-<arch>`,
- * a fixed dependency of this app, not the workspace's — `require.resolve` is
- * safe here, unlike for the workspace's own TypeScript above). */
+/** This app's own bundled `@typescript/typescript-<platform>-<arch>` native
+ * binary — a fixed dependency, not the workspace's, so `require.resolve`'s
+ * realpath-based caching (see `resolveWorkspaceTypeScript` above) is not a
+ * problem here. */
 function bundledNativeExe(): string {
   const platformPkg = `@typescript/typescript-${process.platform}-${process.arch}`
   let pkgJsonPath: string
@@ -98,12 +167,11 @@ function bundledNativeExe(): string {
     'lib',
     process.platform === 'win32' ? 'tsc.exe' : 'tsc'
   )
-  // Binaries cannot execute from inside an asar (report 03 §5.3/§8).
+  // Electron's asar packaging cannot execute binaries from inside the
+  // archive, so a path under app.asar is rewritten to its unpacked copy.
   return exe.includes('app.asar') ? exe.replace('app.asar', 'app.asar.unpacked') : exe
 }
 
-/** This app's own bundled `typescript-language-server` (strategy (b)'s
- * client), resolved the same way as the native binary above. */
 function bundledTypescriptLanguageServerBin(): string {
   let pkgJsonPath: string
   try {
@@ -126,7 +194,6 @@ async function resolveLaunchPlan(root: string): Promise<LaunchPlan> {
   const resolved = resolveWorkspaceTypeScript(root)
 
   if (resolved.source === 'workspace' && resolved.kind === 'native-lsp' && resolved.exe) {
-    // (a) workspace TypeScript 7 native binary.
     return {
       command: resolved.exe,
       args: resolved.lspArgs,
@@ -137,15 +204,15 @@ async function resolveLaunchPlan(root: string): Promise<LaunchPlan> {
   }
 
   if (resolved.source === 'workspace' && resolved.kind === 'js' && resolved.tsserver) {
-    // (b) workspace TypeScript 5.x -> bundled typescript-language-server,
-    // pointed at the workspace's own tsserver.js. Report 03 §2.1 pitfalls:
-    // useSyntaxServer must be 'never' (default 'auto' answers semantic
-    // requests from the syntax-only server before the project loads) and
-    // automatic typings acquisition must be disabled (it tries to hit the
-    // network and starts a third process). `typescript-language-server` is
-    // pure JS spawned with Node, but there is no system `node` in a packaged
-    // app: `process.execPath` inside Electron's main process is Electron's
-    // own binary, so it must run with `ELECTRON_RUN_AS_NODE=1` (report 03 §5.3).
+    // typescript-language-server's default useSyntaxServer ('auto') answers
+    // semantic requests from its syntax-only server before the project has
+    // loaded, so it must be set to 'never'. Automatic typings acquisition
+    // must also be disabled, since it reaches out to the network and spawns
+    // a third process.
+    // typescript-language-server is pure JS meant to run under Node, but a
+    // packaged Electron app has no system `node`: `process.execPath` in the
+    // main process is Electron's own binary, so it must be run with
+    // `ELECTRON_RUN_AS_NODE=1`.
     const tls = bundledTypescriptLanguageServerBin()
     return {
       command: process.execPath,
@@ -161,8 +228,6 @@ async function resolveLaunchPlan(root: string): Promise<LaunchPlan> {
     }
   }
 
-  // (c) bundled fallback: this app's own TypeScript 7 native binary. The
-  // common path — the app never installs dependencies in its clones.
   return {
     command: bundledNativeExe(),
     args: ['--lsp', '--stdio'],

@@ -3,9 +3,9 @@ import { useQuery } from '@tanstack/react-query'
 import { invoke } from '../ipc/client'
 import { useAppState } from '../state/AppContext'
 import { qk } from './keys'
-import { isWithin } from '@shared/model/paths'
+import { matchesTarget } from '@shared/model/paths'
 
-/** Rules (report 04 §5.2): everything under a sha is immutable. */
+// Git content addressed by a sha never changes, so it can be cached forever.
 const immutable = { staleTime: Infinity, gcTime: 10 * 60 * 1000 } as const
 
 export function useTree(projectId: string, sha: string) {
@@ -44,14 +44,10 @@ export function useFileDiff(projectId: string, base: string, head: string, path:
   })
 }
 
-/** The current targeting as repo paths, for search.run's `targetedPaths`
- * (side-panel search and the comment editor's reference quick-selects):
- * the changed files of the checked-out PR/commit, narrowed to the targeted
- * folder; with only a folder targeted, the folder itself. */
 export function useTargetedPaths(): string[] {
   const state = useAppState()
   const projectId = state.projectId ?? ''
-  const folder = state.targeting.folder
+  const path = state.targeting.path
   const { data: changed } = useChangedFiles(
     projectId,
     state.checkout?.base ?? '',
@@ -61,8 +57,8 @@ export function useTargetedPaths(): string[] {
   return useMemo(() => {
     if (changed) {
       const paths = changed.map((f) => f.path)
-      return folder ? paths.filter((p) => isWithin(p, folder)) : paths
+      return path ? paths.filter((p) => matchesTarget(p, path)) : paths
     }
-    return folder ? [folder] : []
-  }, [changed, folder])
+    return path ? [path] : []
+  }, [changed, path])
 }

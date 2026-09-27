@@ -1,7 +1,3 @@
-// Renders the inline comment threads of the code and diff viewers into the
-// mount points their CodeMirror block widgets publish (codemirror/
-// commentWidgets.ts). Portals keep the thread UI inside the app's React tree,
-// so it sees the query client, theme and AppContext providers.
 import { useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import type { CommentPortals } from '../../../codemirror/commentWidgets'

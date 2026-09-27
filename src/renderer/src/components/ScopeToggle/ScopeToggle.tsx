@@ -1,6 +1,3 @@
-// All-files / targeted-only toggle (spec: the search panel and every
-// reference quick-select show a "button to either include all files or only
-// targeted ones").
 import styled from 'styled-components'
 
 export type SearchScope = 'all' | 'targeted'

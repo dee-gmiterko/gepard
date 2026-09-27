@@ -1,6 +1,11 @@
-// Pure helpers shared by main (search scoping) and renderer (targeted lists).
 import { describe, expect, it } from 'vitest'
-import { isTargeted, isWithin } from '../src/shared/model/paths'
+import {
+  isGlob,
+  isTargeted,
+  isWithin,
+  matchesTarget,
+  staticPrefixOf
+} from '../src/shared/model/paths'
 
 describe('isWithin', () => {
   it('is true for the target path itself', () => {
@@ -33,5 +38,71 @@ describe('isTargeted', () => {
 
   it('is false for an empty targeting list', () => {
     expect(isTargeted('src/a.ts', [])).toBe(false)
+  })
+
+  it('matches a glob entry alongside a plain folder-prefix entry', () => {
+    expect(isTargeted('src/a.spec.ts', ['docs', '*.spec.ts'])).toBe(false)
+    expect(isTargeted('src/a.spec.ts', ['docs', 'src/*.spec.ts'])).toBe(true)
+  })
+})
+
+describe('isGlob', () => {
+  it('is false for a plain folder prefix or file path', () => {
+    expect(isGlob('src')).toBe(false)
+    expect(isGlob('src/a.ts')).toBe(false)
+  })
+
+  it('is true once the target carries a wildcard metacharacter', () => {
+    expect(isGlob('src/*.ts')).toBe(true)
+    expect(isGlob('src/?.ts')).toBe(true)
+    expect(isGlob('src/[ab].ts')).toBe(true)
+  })
+})
+
+describe('matchesTarget (the shared matcher)', () => {
+  it('falls back to isWithin’s prefix/exact semantics for a plain target', () => {
+    expect(matchesTarget('src/sub/b.ts', 'src')).toBe(true)
+    expect(matchesTarget('src-extra/b.ts', 'src')).toBe(false)
+  })
+
+  it('matches `*` against any run of characters within one path segment', () => {
+    expect(matchesTarget('src/a.ts', 'src/*.ts')).toBe(true)
+    expect(matchesTarget('src/sub/a.ts', 'src/*.ts')).toBe(false)
+  })
+
+  it('matches `**` across path separators', () => {
+    expect(matchesTarget('src/a.ts', 'src/**/*.ts')).toBe(false)
+    expect(matchesTarget('src/sub/a.ts', 'src/**/*.ts')).toBe(true)
+    expect(matchesTarget('src/sub/deep/a.ts', 'src/**/*.ts')).toBe(true)
+  })
+
+  it('matches `?` against exactly one non-slash character', () => {
+    expect(matchesTarget('src/a.ts', 'src/?.ts')).toBe(true)
+    expect(matchesTarget('src/ab.ts', 'src/?.ts')).toBe(false)
+  })
+
+  it('matches a `[...]` character class', () => {
+    expect(matchesTarget('src/a.ts', 'src/[ab].ts')).toBe(true)
+    expect(matchesTarget('src/c.ts', 'src/[ab].ts')).toBe(false)
+  })
+
+  it('does not implicitly include everything under a glob (unlike a folder prefix)', () => {
+    expect(matchesTarget('src/sub/a.ts', 'src/*.ts')).toBe(false)
+  })
+})
+
+describe('staticPrefixOf', () => {
+  it('is the target itself when there is no wildcard', () => {
+    expect(staticPrefixOf('src/sub')).toBe('src/sub')
+  })
+
+  it('is the ancestor directory before the first wildcard', () => {
+    expect(staticPrefixOf('src/*.ts')).toBe('src')
+    expect(staticPrefixOf('src/sub/**/*.ts')).toBe('src/sub')
+  })
+
+  it('is empty when the wildcard is in the first path segment', () => {
+    expect(staticPrefixOf('*.ts')).toBe('')
+    expect(staticPrefixOf('a*b/c.ts')).toBe('')
   })
 })

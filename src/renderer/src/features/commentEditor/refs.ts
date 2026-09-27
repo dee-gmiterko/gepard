@@ -1,4 +1,3 @@
-// Small helpers shared by the reference quick-selects.
 import type { CommentReference } from '@shared/ipc/schemas/comment'
 
 export function sameRef(a: CommentReference, b: CommentReference): boolean {

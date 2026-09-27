@@ -1,21 +1,3 @@
-// Generic LspSession over vscode-jsonrpc (report 03 §4): implements
-// LanguageSession for any LanguageExtension's LaunchPlan. A future extension
-// for another language only needs a LaunchPlan + matches(); this file never
-// mentions TypeScript.
-//
-// Client-side obligations implemented here (report 03 §4 design notes,
-// verified against a real `tsc --lsp --stdio` in the scratchpad spike):
-//  - window/workDoneProgress/create, client/registerCapability /
-//    unregisterCapability all answered with `null` (accept-everything).
-//  - workspace/configuration answered with one `{}` per requested item.
-//  - semanticTokens.tokenTypes/tokenModifiers declared in client capabilities
-//    (the standard LSP 3.17 lists) or the server returns an empty legend.
-//  - general.positionEncodings: ['utf-16'] negotiated explicitly.
-//  - Only the documents being queried are opened (didOpen with file text,
-//    didClose right after), serialized per absolute path so concurrent
-//    queries on the same file cannot interleave open/close pairs.
-//  - The child process is kept alive for the project's lifetime; on an
-//    unexpected exit the session transparently relaunches once.
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -51,15 +33,10 @@ export type Range = ReturnType<typeof RangeSchema.parse>
 export type SymbolKind = ReturnType<typeof SymbolKindSchema.parse>
 export type DefinitionTarget = ReturnType<typeof DefinitionTargetSchema.parse>
 
-/** How to launch one language server for one project (report 03 §4). */
 export interface LaunchPlan {
   command: string
   args: string[]
   cwd: string
-  /** Extra/overriding environment for the child process (e.g.
-   * `ELECTRON_RUN_AS_NODE: '1'` when `command` is Electron's own binary
-   * standing in for a system `node`, report 03 §5.3); merged over
-   * `process.env`. */
   env?: NodeJS.ProcessEnv
   initializationOptions?: unknown
   source: 'workspace' | 'bundled'
@@ -71,45 +48,39 @@ export interface ExtensionEvents {
   log(level: 'info' | 'warn' | 'error', msg: string): void
 }
 
-/** One "LSP extension" (report 03 §2-4). */
 export interface LanguageExtension {
   id: string
   displayName: string
-  /** which files this extension owns (drives the "Symbol definition" checkbox visibility) */
   matches(filePath: string): boolean
-  /** decide how to launch: workspace toolchain vs bundled; cheap, side-effect free */
   resolve(project: { root: string }): Promise<LaunchPlan>
   start(plan: LaunchPlan, sink: ExtensionEvents): Promise<LanguageSession>
 }
 
-/** One path changed by a checkout, in the LSP FileChangeType vocabulary. */
 export interface FileChange {
   path: string
   type: 'created' | 'changed' | 'deleted'
 }
 
 export interface LanguageSession {
-  /** semanticTokens/range → tokens on that line. `token`, when given, is
-   * forwarded to the LSP request so a superseded caller can cancel it
-   * (`$/cancelRequest`, coordinator cancellation spec). */
+  /** LSP `semanticTokens/range`. */
   lineSymbols(filePath: string, line: number, token?: CancellationToken): Promise<LineSymbol[]>
-  /** textDocument/definition */
+  /** LSP `textDocument/definition`. */
   definition(filePath: string, pos: Pos, token?: CancellationToken): Promise<DefinitionTarget[]>
-  /** textDocument/references, grouped per file */
+  /** LSP `textDocument/references`, grouped per file. */
   references(filePath: string, pos: Pos, token?: CancellationToken): Promise<FileMatches[]>
-  /** workspace/symbol (fuzzy prefill) */
+  /** LSP `workspace/symbol`. */
   workspaceSymbols(
     query: string,
     limit: number,
     token?: CancellationToken
   ): Promise<WorkspaceSymbol[]>
-  /** after checkout → didChangeWatchedFiles */
+  /** LSP `workspace/didChangeWatchedFiles`. */
   filesChanged(changes: FileChange[]): void
   dispose(): Promise<void>
 }
 
 // Standard LSP 3.17 semantic token legend the client declares support for;
-// servers otherwise report an empty legend (report 03 §4).
+// servers otherwise report an empty legend.
 const STANDARD_TOKEN_TYPES = [
   'namespace',
   'type',
@@ -165,7 +136,7 @@ function languageIdFor(filePath: string): string {
   if (filePath.endsWith('.jsx')) return 'javascriptreact'
   if (filePath.endsWith('.mjs') || filePath.endsWith('.cjs') || filePath.endsWith('.js'))
     return 'javascript'
-  return 'typescript' // .ts, .mts, .cts, .d.ts
+  return 'typescript'
 }
 
 function mapSemanticTokenType(type: string | undefined, readonly: boolean): SymbolKind {
@@ -258,7 +229,6 @@ function toRange(r: LspRange): Range {
   }
 }
 
-/** Generic LSP client over vscode-jsonrpc for any LaunchPlan (report 03 §4). */
 export class LspSession implements LanguageSession {
   private conn!: MessageConnection
   private child!: ChildProcessWithoutNullStreams
@@ -269,10 +239,6 @@ export class LspSession implements LanguageSession {
   private docQueue = new Map<string, Promise<unknown>>()
   private disposed = false
   private restarting = false
-  // Per-incarnation crash bookkeeping (crash-gate.ts): rejects requests still
-  // in flight when this incarnation crashes, and dedupes the crash's own
-  // log/toast when both 'error' and 'exit' fire for it. Reset at the top of
-  // every `launch()`, including a restart's relaunch.
   private crashGate = new CrashGate()
 
   private constructor(
@@ -287,8 +253,6 @@ export class LspSession implements LanguageSession {
   }
 
   private async launch(): Promise<void> {
-    // Fresh per incarnation: a restart must not carry over the previous
-    // incarnation's already-rejected requests or "already logged" flag.
     this.crashGate.reset()
 
     const child = spawn(this.plan.command, this.plan.args, {
@@ -298,16 +262,10 @@ export class LspSession implements LanguageSession {
     })
     this.child = child
     child.stderr.on('data', (d: Buffer) => this.sink.log('warn', d.toString('utf8').trim()))
-    // While launching, a process error (e.g. spawn ENOENT) or exit fails this
-    // launch() instead of being reported through the sink: its caller (the
-    // first start -> lsp/index.ts 'error' status, or handleExit's restart ->
-    // 'LSP restart failed') already logs and surfaces the rejection, so
-    // reporting it here too would log and toast one failure twice. It also
-    // keeps a server that dies mid-`initialize` from hanging launch()
-    // forever (vscode-jsonrpc does not reject pending requests on close).
+    // vscode-jsonrpc doesn't reject pending requests when the connection
+    // closes, so without this a server that dies mid-`initialize` would
+    // hang launch() forever.
     let failLaunch: ((e: Error) => void) | null = null
-    // Set once this launch has failed: the process it kills below is then
-    // already accounted for, so its exit is neither reported nor restarted.
     let abandoned = false
     const launchFailed = new Promise<never>((_, reject) => {
       failLaunch = reject
@@ -316,11 +274,8 @@ export class LspSession implements LanguageSession {
       if (abandoned) return
       const message = `LSP process error: ${err.message}`
       if (failLaunch) failLaunch(new Error(message))
-      // A running server's 'error' and 'exit' events are not mutually
-      // exclusive (Node does not guarantee only one fires for a given
-      // failure): the crash gate makes sure this crash is still toasted only
-      // once, whichever of this handler and `handleExit`'s 'exit' branch runs
-      // first (or both).
+      // Node doesn't guarantee only one of 'error'/'exit' fires for a given
+      // failure; the crash gate ensures this is toasted only once regardless.
       else if (this.crashGate.crash()) {
         this.sink.log('error', message)
       }
@@ -372,6 +327,8 @@ export class LspSession implements LanguageSession {
       workspaceFolders: [{ uri: rootUri, name: path.basename(this.plan.cwd) }],
       initializationOptions: this.plan.initializationOptions,
       capabilities: {
+        // LSP defaults to UTF-16 code units for positions unless negotiated
+        // otherwise; declared explicitly rather than relying on the default.
         general: { positionEncodings: ['utf-16'] },
         workspace: {
           configuration: true,
@@ -410,13 +367,8 @@ export class LspSession implements LanguageSession {
 
   private handleExit(code: number | null, signal: NodeJS.Signals | null): void {
     if (this.disposed) return
-    // Whatever was waiting on this incarnation's connection would otherwise
-    // hang forever — vscode-jsonrpc never rejects pending requests on its own
-    // when the underlying stream closes — so reject them now: their queries
-    // fail and report normally (as a CANCELLED-shaped result the renderer
-    // does not toast, since the crash itself is toasted at most once, below).
-    // See the 'error' handler above: this crash may already have been
-    // toasted from there — `crash()` reports true at most once per incarnation.
+    // vscode-jsonrpc never rejects pending requests on its own when the
+    // underlying stream closes, so they're rejected here instead.
     if (this.crashGate.crash()) {
       this.sink.log('error', `LSP process exited unexpectedly (code=${code}, signal=${signal})`)
     }
@@ -425,21 +377,14 @@ export class LspSession implements LanguageSession {
     this.launch().then(
       () => {
         this.restarting = false
-        // 'warn' (not 'info'): the sink drops 'info' as too chatty, but a
-        // restart is a notable crash-recovery event worth keeping in the log.
         this.sink.log('warn', 'LSP process restarted')
       },
       (e: Error) => {
-        // A dispose() while restarting kills the new process on purpose.
         if (!this.disposed) this.sink.log('error', `LSP restart failed: ${e.message}`)
       }
     )
   }
 
-  /** Resolves an LSP location to a repo-relative path when inside the
-   * project, or a sanitized absolute-path-derived string (still a valid
-   * RepoPath, never referenceable) when outside it (report 03 §7:
-   * DefinitionTarget.external). */
   private toRepoLocation(uri: string): { path: string; external: boolean } {
     const abs = fileURLToPath(uri)
     const rel = path.relative(this.plan.cwd, abs)
@@ -453,12 +398,10 @@ export class LspSession implements LanguageSession {
     return path.join(this.plan.cwd, repoRelativePath)
   }
 
-  /** `MessageConnection#sendRequest`'s string overload treats an explicit
-   * `undefined` third argument as a second params element, not "no
-   * cancellation token" (it only special-cases an actual `CancellationToken`
-   * there) — so `token` is appended only when given. Guarded by the crash
-   * gate so a request in flight when the server crashes rejects right away
-   * instead of hanging forever (`handleExit`/the 'error' handler). */
+  // `MessageConnection#sendRequest`'s string overload treats an explicit
+  // `undefined` third argument as a second params element, not "no
+  // cancellation token" — it only special-cases an actual `CancellationToken`
+  // — so `token` is appended only when given.
   private sendRequest<R>(method: string, params: unknown, token?: CancellationToken): Promise<R> {
     const real = (
       token ? this.conn.sendRequest(method, params, token) : this.conn.sendRequest(method, params)
@@ -466,9 +409,6 @@ export class LspSession implements LanguageSession {
     return this.crashGate.guard(real)
   }
 
-  /** Opens `absPath` (didOpen with file text), runs `fn`, then didCloses.
-   * Serialized per path so concurrent queries on the same document cannot
-   * interleave open/close notifications (report 03 §4). */
   private withOpenDocument<T>(filePath: string, fn: (text: string) => Promise<T>): Promise<T> {
     const previous = this.docQueue.get(filePath) ?? Promise.resolve()
     const run = previous
@@ -615,7 +555,7 @@ export class LspSession implements LanguageSession {
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([repoPath, matches]) => ({
           path: repoPath,
-          targeted: false, // overlaid by the caller, which knows the current targeting
+          targeted: false,
           matches: matches.sort((a, b) => a.line - b.line)
         }))
     })
@@ -666,7 +606,7 @@ export class LspSession implements LanguageSession {
       await this.conn.sendRequest('shutdown')
       await this.conn.sendNotification('exit')
     } catch {
-      // best effort; fall through to killing the process
+      // The server may already be gone; disposal proceeds regardless.
     }
     this.conn.dispose()
     if (!this.child.killed) this.child.kill()

@@ -1,5 +1,3 @@
-// Text with marked ranges: fuzzy-matched characters (Combobox, symbol
-// prefill) and search match spans (search results, reference previews).
 import styled from 'styled-components'
 
 const Mark = styled.mark`
@@ -8,7 +6,8 @@ const Mark = styled.mark`
   font-weight: 600;
 `
 
-/** Half-open `[start, end)` UTF-16 ranges into `text`, any order. */
+// JavaScript string indices are UTF-16 code units, not Unicode code points,
+// so a range here can split a surrogate pair if built from the wrong source.
 export type TextRange = readonly [number, number]
 
 export function HighlightedText({

@@ -1,9 +1,5 @@
-// Renderer-originated React render errors must reach the same unified
-// surface as everything else (coordinator spec). React discards the crashed
-// subtree, so this is the one legitimate leftover "error rendering": a
-// single top-level fallback, not a per-panel duplicate. Mounted around <App/>
-// only (main.tsx), inside AppProvider, so ToastHost — a sibling, not a
-// descendant of App — stays mounted and still shows the toast.
+// React discards the whole crashed subtree on a render error, so a single
+// top-level boundary is needed to show a fallback instead of a blank app.
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import styled from 'styled-components'
 import { Button } from '../components/Button'

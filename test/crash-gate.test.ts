@@ -1,14 +1,3 @@
-// Pure tests for lsp/crash-gate.ts: the two behaviors that close gaps 2 and
-// 3 of the coordinator spec ("every failure logs once and toasts once") for
-// a running language server.
-//  - gap 2: a request in flight when the server crashes must reject (not
-//    hang forever), with an `AbortError`-named error so `ipc/registry.ts`
-//    maps it to `CANCELLED` and the renderer's `reportQueryError` treats it
-//    as "not a failure" — no extra toast beyond the crash's own.
-//  - gap 3: a crash reported through both the child's 'error' and 'exit'
-//    events (not mutually exclusive) must still be toasted only once.
-// No Electron, no child_process, no vscode-jsonrpc: CrashGate only deals in
-// plain promises, so it is fully unit-testable on its own.
 import { describe, expect, it } from 'vitest'
 import { CrashGate } from '../src/main/lsp/crash-gate'
 
@@ -36,9 +25,7 @@ describe('CrashGate.guard', () => {
 
   it('rejects a request still pending when the incarnation crashes, with an AbortError', async () => {
     const gate = new CrashGate()
-    const pending = new Promise<string>(() => {
-      // never settles on its own: this is a request the crashed server never answers.
-    })
+    const pending = new Promise<string>(() => {})
     const guarded = gate.guard(pending)
     gate.crash()
     await expect(guarded).rejects.toMatchObject({ name: 'AbortError' })
@@ -56,8 +43,8 @@ describe('CrashGate.guard', () => {
 
   it('does not reject a request started on a fresh incarnation after reset()', async () => {
     const gate = new CrashGate()
-    gate.crash() // crash the first incarnation
-    gate.reset() // ... and recover from it (a restart)
+    gate.crash()
+    gate.reset()
 
     await expect(gate.guard(Promise.resolve('after restart'))).resolves.toBe('after restart')
   })

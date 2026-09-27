@@ -1,9 +1,3 @@
-// The read-only CodeMirror view both viewers build on (spec: "@codemirror
-// editor for code and diff view (read only)"): created per (path, doc),
-// themed from the styled-components theme (switched in place on light/dark
-// changes), language support loaded from `@codemirror/language-data`, the
-// Enter/Up/Down keymap bridge, and empty compartments the viewer fills with
-// its inline comments and new-thread gutter.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { useTheme } from 'styled-components'
 import { Compartment, EditorState, type Extension, type Text } from '@codemirror/state'
@@ -18,16 +12,11 @@ import { reportError } from '../errors/report'
 
 export interface ReadOnlyEditor {
   containerRef: RefObject<HTMLDivElement | null>
-  /** State (not a ref): effects keyed on it re-run for a freshly (re)created
-   * view, so it is always fully configured, not left with the empty
-   * compartments it was seeded with. */
   view: EditorView | null
   comments: Compartment
   commentGutter: Compartment
 }
 
-/** `extensions` are read when the view is (re)created, i.e. when `path` or
- * `doc` changes; derive them from `doc`. */
 export function useReadOnlyEditor(
   path: string,
   doc: string | Text,
@@ -80,8 +69,6 @@ export function useReadOnlyEditor(
         (support) => {
           if (!cancelled) newView.dispatch({ effects: compartments.language.reconfigure(support) })
         },
-        // Highlighting is optional: the file still shows as plain text, so
-        // this is reported as a warning (logged once, toasted once).
         (e: Error) =>
           reportError({
             scope: 'language-support',
@@ -97,7 +84,6 @@ export function useReadOnlyEditor(
       newView.destroy()
       setView(null)
     }
-    // `extensions` derive from `doc` (see the doc comment).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [path, doc, compartments])
 

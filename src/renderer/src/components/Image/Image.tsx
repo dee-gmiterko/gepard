@@ -1,5 +1,3 @@
-// An image on a subtle background with a hairline border, so transparent
-// images and their bounds stay visible (image and image diff viewers).
 import styled from 'styled-components'
 
 export const Image = styled.img<{ $fit?: boolean }>`

@@ -1,8 +1,3 @@
-// File comments accordion content (spec: File controls floating panel "File
-// comments accordion"): lists the active file's threads, each expandable
-// into its full `ThreadWidget`, plus a way to start a new file-level thread
-// (subjectType FILE — line-anchored threads are started from the code
-// viewer's gutter, which this feature does not own).
 import { useMemo, useState } from 'react'
 import styled from 'styled-components'
 import { Plus } from 'react-feather'
@@ -11,6 +6,7 @@ import { Accordion } from '../../components/Accordion'
 import { Badge } from '../../components/Badge'
 import { Button } from '../../components/Button'
 import { Caption } from '../../components/Caption'
+import { Ellipsis } from '../../components/Ellipsis'
 import { Stack } from '../../components/Layout'
 import { Message } from '../../components/Message'
 import { useComments } from '../../queries/comments'
@@ -29,11 +25,7 @@ const LineTag = styled.span`
   color: ${({ theme }) => theme.colors.fgMuted};
 `
 
-const Snippet = styled.span`
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+const Snippet = styled(Ellipsis)`
   color: ${({ theme }) => theme.colors.fg};
 `
 

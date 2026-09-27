@@ -1,19 +1,6 @@
-// UI state, synchronous, no IO (report 04 §5.1). Encodes the spec's
-// Behaviors section:
-// - each targeting box is set/cleared individually; changing the PR clears
-//   the commit (commits are limited to the PR's, spec);
-// - setting any target switches the side panel to "targeted";
-// - pinned files stay open across target changes (missing view if absent).
-// Checkout / index / remote pull on target change are side effects owned by
-// the query layer, not this reducer.
 export type SidePanelTab = 'files' | 'targeted' | 'search'
 export type MainTab = 'files' | 'comments'
 
-/** One entry in the unified toast surface (coordinator spec): every failure
- * in the app — render errors, window/unhandledrejection, failed
- * queries/mutations, background events like a failed clone or index — is
- * reported through errors/report.ts and lands here via state/ToastHost.tsx,
- * the sole place that turns a report into a dispatch. */
 export interface Toast {
   id: string
   tone: 'danger' | 'warning'
@@ -23,32 +10,24 @@ export interface Toast {
 export interface Targeting {
   pr: number | null
   commit: string | null
-  folder: string | null
+  path: string | null
 }
 
 export interface AppState {
   projectId: string | null
   targeting: Targeting
   sidePanelTab: SidePanelTab
-  /** Preserved open even when they don't exist in the current state -> missing view (spec). */
   pinnedFiles: string[]
-  /** The one switching tab, replaced by each file picked from navigation (spec:
-   * "pinned ones + one switching active file picked from navigation"). */
   previewFile: string | null
-  /** The file shown in the viewer: a pinned file or the preview file. */
   activeFile: string | null
   mainTab: MainTab
-  /** Result of the last pr.checkout for the current targeting; null until the
-   * first checkout completes. Viewers and lists read base/head from here. */
   checkout: { base: string; head: string } | null
-  /** The unified toast surface's queue (coordinator spec); survives
-   * project open/close (see appReducer below) since it is not project state. */
   toasts: Toast[]
 }
 
 export const initialAppState: AppState = {
   projectId: null,
-  targeting: { pr: null, commit: null, folder: null },
+  targeting: { pr: null, commit: null, path: null },
   sidePanelTab: 'files',
   pinnedFiles: [],
   previewFile: null,
@@ -63,12 +42,11 @@ export type AppAction =
   | { type: 'project/close' }
   | { type: 'target/pr'; pr: number | null }
   | { type: 'target/commit'; sha: string | null }
-  | { type: 'target/folder'; path: string | null }
+  | { type: 'target/path'; path: string | null }
+  | { type: 'target/restore'; targeting: Targeting }
   | { type: 'target/checkoutResult'; checkout: { base: string; head: string } | null }
   | { type: 'sidePanel/setTab'; tab: SidePanelTab }
-  /** Pick a file from navigation (tree, targeted list, search, Up/Down). */
   | { type: 'file/open'; path: string }
-  /** Click an existing tab. */
   | { type: 'file/focus'; path: string }
   | { type: 'file/pin'; path: string }
   | { type: 'file/unpin'; path: string }
@@ -84,9 +62,6 @@ export function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'project/open':
       if (state.projectId === action.projectId) return state
-      // Toasts are not project state (a failure from the project you're
-      // leaving is still a failure you should see) — carried over rather
-      // than reset with the rest.
       return { ...initialAppState, projectId: action.projectId, toasts: state.toasts }
     case 'project/close':
       return { ...initialAppState, toasts: state.toasts }
@@ -100,9 +75,13 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case 'target/commit':
       if (state.targeting.commit === action.sha) return state
       return withTarget(state, { ...state.targeting, commit: action.sha }, action.sha !== null)
-    case 'target/folder':
-      if (state.targeting.folder === action.path) return state
-      return withTarget(state, { ...state.targeting, folder: action.path }, action.path !== null)
+    case 'target/path':
+      if (state.targeting.path === action.path) return state
+      return withTarget(state, { ...state.targeting, path: action.path }, action.path !== null)
+    case 'target/restore': {
+      const { pr, commit, path } = action.targeting
+      return withTarget(state, action.targeting, pr !== null || commit !== null || path !== null)
+    }
     case 'target/checkoutResult':
       return { ...state, checkout: action.checkout }
     case 'sidePanel/setTab':

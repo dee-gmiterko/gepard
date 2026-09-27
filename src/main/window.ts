@@ -1,7 +1,3 @@
-// Window creation. Security baseline (report 04 §2.1, verified in the
-// prototype): sandbox: true, contextIsolation: true, nodeIntegration: false.
-// The CSP meta tag lives in renderer/index.html (styled-components needs
-// `style-src 'self' 'unsafe-inline'`).
 import { BrowserWindow, shell } from 'electron'
 import { join } from 'node:path'
 import { is } from '@electron-toolkit/utils'

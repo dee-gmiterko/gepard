@@ -1,14 +1,12 @@
-// Start interface for managing projects (spec: "Projects (launchpad)") —
-// selecting one from a GitHub url with prefill from the signed-in `gh`
-// profile, remove, clone progress, open.
 import { useState, type FormEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import styled from 'styled-components'
 import { Download, Folder, Trash2 } from 'react-feather'
 import { IconButton } from '../../components/IconButton'
 import { Button } from '../../components/Button'
+import { Ellipsis } from '../../components/Ellipsis'
 import { Inline } from '../../components/Layout'
-import { TextInput } from '../../components/TextInput'
+import { List, ListRow } from '../../components/List'
 import { Message } from '../../components/Message'
 import { useIpcEvent } from '../../ipc/client'
 import { qk } from '../../queries/keys'
@@ -17,9 +15,12 @@ import {
   useCloneStart,
   useProjects,
   useRemoveProject,
-  useViewer
+  useViewer,
+  useViewerRepos
 } from '../../queries/projects'
 import { useAppDispatch } from '../../state/AppContext'
+import { RepoUrlCombobox } from './RepoUrlCombobox'
+import { ExtensionsPanel } from './ExtensionsPanel'
 import type { EventPayload } from '@shared/ipc/contract'
 
 type CloneProgress = EventPayload<'clone.progress'>
@@ -61,19 +62,8 @@ const AddForm = styled.form`
   margin-bottom: ${({ theme }) => theme.space[2]};
 `
 
-const List = styled.ul`
-  list-style: none;
-  margin: ${({ theme }) => theme.space[4]} 0 0;
-  padding: 0;
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
-`
-
-const Row = styled.li`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.space[3]};
-  padding: ${({ theme }) => theme.space[3]} 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+const ProjectsList = styled(List)`
+  margin-top: ${({ theme }) => theme.space[4]};
 `
 
 const RowMain = styled.div`
@@ -86,12 +76,9 @@ const RowName = styled.div`
   color: ${({ theme }) => theme.colors.fg};
 `
 
-const RowUrl = styled.div`
+const RowUrl = styled(Ellipsis)`
   font-size: ${({ theme }) => theme.font.size.xs};
   color: ${({ theme }) => theme.colors.fgSubtle};
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 `
 
 const ProgressBar = styled.div`
@@ -123,6 +110,7 @@ export function Launchpad(): React.JSX.Element {
   const dispatch = useAppDispatch()
   const qc = useQueryClient()
   const { data: viewer } = useViewer()
+  const { data: viewerRepos, isFetching: viewerReposLoading } = useViewerRepos()
   const { data: projects, isLoading } = useProjects()
   const addProject = useAddProject()
   const removeProject = useRemoveProject()
@@ -132,9 +120,6 @@ export function Launchpad(): React.JSX.Element {
   const [urlTouched, setUrlTouched] = useState(false)
   const [progressById, setProgressById] = useState<Record<string, CloneProgress>>({})
 
-  // Prefill from the signed-in gh profile (spec): until the user types, the
-  // URL defaults to the viewer's own namespace so adding one of their own
-  // repos only needs a name.
   const prefill = viewer ? `https://github.com/${viewer.login}/` : ''
   const urlValue = urlTouched ? url : prefill
 
@@ -143,9 +128,6 @@ export function Launchpad(): React.JSX.Element {
     if (payload.phase === 'done' || payload.phase === 'error') {
       qc.invalidateQueries({ queryKey: qk.projects() })
     }
-    // A failed clone ('error' phase) is toasted by the always-mounted
-    // subscription in main.tsx, not here: the Launchpad unmounts while
-    // another project is open, and a clone can fail in the meantime.
   })
 
   function startClone(projectId: string): void {
@@ -153,10 +135,6 @@ export function Launchpad(): React.JSX.Element {
       ...prev,
       [projectId]: { projectId, phase: 'counting', percent: 0 }
     }))
-    // A rejection here (e.g. PROJECT_NOT_FOUND) is a real mutation failure
-    // and already reaches the unified toast surface via the global mutation
-    // cache (main.tsx); this local handler only needs to reset the row's
-    // progress display.
     cloneStart.mutate(projectId, {
       onError: () =>
         setProgressById((prev) => {
@@ -184,8 +162,6 @@ export function Launchpad(): React.JSX.Element {
   }
 
   function handleOpen(projectId: string): void {
-    // Report 04 §5.2: refetch project-scoped data on project switch (the
-    // working tree may have moved since it was last open).
     qc.invalidateQueries({ queryKey: qk.project(projectId) })
     dispatch({ type: 'project/open', projectId })
   }
@@ -213,14 +189,15 @@ export function Launchpad(): React.JSX.Element {
       </TopBar>
 
       <AddForm onSubmit={handleAdd}>
-        <TextInput
-          type="text"
-          placeholder="https://github.com/owner/repo"
+        <RepoUrlCombobox
           value={urlValue}
-          onChange={(e) => {
-            setUrl(e.target.value)
+          onChange={(next) => {
+            setUrl(next)
             setUrlTouched(true)
           }}
+          repos={viewerRepos ?? []}
+          loading={viewerReposLoading}
+          placeholder="https://github.com/owner/repo"
         />
         <Button
           type="submit"
@@ -236,12 +213,16 @@ export function Launchpad(): React.JSX.Element {
         <Message>No projects yet — add one above.</Message>
       )}
 
-      <List>
+      <ProjectsList>
         {projects?.map((project) => {
           const progress = progressById[project.id]
           const cloning = isActiveClone(progress)
           return (
-            <Row key={project.id}>
+            <ListRow
+              key={project.id}
+              $clickable={project.cloned}
+              onClick={project.cloned ? () => handleOpen(project.id) : undefined}
+            >
               <RowMain>
                 <RowName>
                   {project.owner}/{project.repo}
@@ -259,7 +240,7 @@ export function Launchpad(): React.JSX.Element {
                   </ProgressLabel>
                 )}
               </RowMain>
-              <Inline $gap={1}>
+              <Inline $gap={1} onClick={(e) => e.stopPropagation()}>
                 {project.cloned ? (
                   <IconButton icon={Folder} label="Open" onClick={() => handleOpen(project.id)} />
                 ) : (
@@ -272,10 +253,12 @@ export function Launchpad(): React.JSX.Element {
                 )}
                 <IconButton icon={Trash2} label="Remove" onClick={() => handleRemove(project.id)} />
               </Inline>
-            </Row>
+            </ListRow>
           )
         })}
-      </List>
+      </ProjectsList>
+
+      <ExtensionsPanel />
     </Page>
   )
 }
