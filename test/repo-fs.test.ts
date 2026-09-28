@@ -1,7 +1,7 @@
 import { symlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { resolveWithinRepo } from '../src/main/services/repo-fs'
+import { resolveWithinRepo } from '../src/main/helpers/repo-fs'
 import { makeTmpDir, type TmpDir } from './support/tmp'
 
 describe('resolveWithinRepo', () => {

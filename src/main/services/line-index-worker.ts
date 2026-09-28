@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises'
 import { parentPort } from 'node:worker_threads'
-import { looksBinary } from './binary'
+import { looksBinary } from '../helpers/binary'
 import { LineIndex } from './line-index'
-import { resolveWithinRepo } from './repo-fs'
+import { resolveWithinRepo } from '../helpers/repo-fs'
 import type {
   LineIndexFileChange,
   LineIndexRequest,

@@ -10,6 +10,7 @@ import {
   type MessageConnection
 } from 'vscode-jsonrpc/node'
 import { CrashGate } from './crash-gate'
+import { toPosix } from '../helpers/path'
 import {
   FileMatches as FileMatchesSchema,
   Match as MatchSchema,
@@ -111,10 +112,6 @@ const STANDARD_TOKEN_MODIFIERS = [
   'defaultLibrary'
 ]
 const KNOWN_MODIFIERS = new Set(['declaration', 'readonly', 'static', 'async', 'defaultLibrary'])
-
-function toPosix(p: string): string {
-  return p.split(path.sep).join('/')
-}
 
 function languageIdFor(filePath: string): string {
   if (filePath.endsWith('.tsx')) return 'typescriptreact'

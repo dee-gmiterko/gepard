@@ -9,7 +9,8 @@ import { IconButton } from '../../components/IconButton'
 import { useChangedFiles, useTree } from '../../queries/files'
 import { useAppState } from '../../state/AppContext'
 import { useTargetActions } from './useTargetActions'
-import { activeTargetRef, folderSourcePaths, foldersOf } from '../../state/selectors'
+import { activeTargetRef, folderSourcePaths } from '../../state/selectors'
+import { foldersOf } from '../../helpers/paths'
 
 const messages = defineMessages({
   placeholder: {

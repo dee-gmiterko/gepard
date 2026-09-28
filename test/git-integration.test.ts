@@ -3,7 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { changedFiles, checkoutTarget, cloneProject, listTree } from '../src/main/services/git'
+import { GitService } from '../src/main/services/git'
 import { nohooksDir, projectRepoDir } from '../src/main/paths'
 import { __clearEmittedEvents, __setUserDataDir, emittedEvents } from './support/electron'
 import { makeTmpDir, type TmpDir } from './support/tmp'
@@ -65,12 +65,13 @@ async function buildFixtureRepo(dir: string): Promise<Fixture> {
   return { rootSha, baseSha, featureHeadSha }
 }
 
-describe('git service (integration)', () => {
+describe('GitService (integration)', () => {
   let origin: TmpDir
   let userData: TmpDir
   let fixture: Fixture
   const projectId = 'acme__widgets'
   const EMPTY_TREE_SHA = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
+  const gitService = new GitService()
 
   beforeAll(async () => {
     origin = await makeTmpDir('git-origin')
@@ -78,7 +79,7 @@ describe('git service (integration)', () => {
     __setUserDataDir(userData.path)
     __clearEmittedEvents()
     fixture = await buildFixtureRepo(origin.path)
-    await cloneProject(projectId, `file://${origin.path}`)
+    await gitService.cloneProject(projectId, `file://${origin.path}`)
   }, 30_000)
 
   afterAll(async () => {
@@ -103,7 +104,7 @@ describe('git service (integration)', () => {
   })
 
   it('checkoutTarget: a PR-like target resolves base to the merge-base of head/base', async () => {
-    const result = await checkoutTarget(projectId, {
+    const result = await gitService.checkoutTarget(projectId, {
       kind: 'pr',
       pr: 1,
       headRefOid: fixture.featureHeadSha,
@@ -113,17 +114,27 @@ describe('git service (integration)', () => {
   })
 
   it('checkoutTarget: a commit resolves base to its parent', async () => {
-    const result = await checkoutTarget(projectId, { kind: 'commit', sha: fixture.baseSha })
+    const result = await gitService.checkoutTarget(projectId, {
+      kind: 'commit',
+      sha: fixture.baseSha
+    })
     expect(result).toEqual({ base: fixture.rootSha, head: fixture.baseSha })
   })
 
   it('checkoutTarget: a root commit resolves base to the empty tree', async () => {
-    const result = await checkoutTarget(projectId, { kind: 'commit', sha: fixture.rootSha })
+    const result = await gitService.checkoutTarget(projectId, {
+      kind: 'commit',
+      sha: fixture.rootSha
+    })
     expect(result).toEqual({ base: EMPTY_TREE_SHA, head: fixture.rootSha })
   })
 
   it('changedFiles reports the modify, rename, delete, and added-binary between base and head', async () => {
-    const changes = await changedFiles(projectId, fixture.baseSha, fixture.featureHeadSha)
+    const changes = await gitService.changedFiles(
+      projectId,
+      fixture.baseSha,
+      fixture.featureHeadSha
+    )
     const byPath = new Map(changes.map((c) => [c.path, c]))
     expect(byPath.get('a.txt')).toMatchObject({ changeType: 'MODIFIED', previousPath: null })
     expect(byPath.get('sub/c.txt')).toMatchObject({
@@ -139,7 +150,7 @@ describe('git service (integration)', () => {
   })
 
   it('listTree lists every tracked path at the feature head', async () => {
-    const tree = await listTree(projectId, fixture.featureHeadSha)
+    const tree = await gitService.listTree(projectId, fixture.featureHeadSha)
     expect([...tree].sort()).toEqual(['a.txt', 'image.png', 'sub/c.txt'])
   })
 })

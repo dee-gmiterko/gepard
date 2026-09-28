@@ -16,10 +16,7 @@ import {
   type ScanCache,
   type Sourced
 } from './scanner'
-
-function isFn(v: unknown): v is (...args: never[]) => unknown {
-  return typeof v === 'function'
-}
+import { isFn } from '../helpers/type-guards'
 
 export function isLanguageExtension(value: unknown): value is LanguageExtension {
   if (!value || typeof value !== 'object') return false

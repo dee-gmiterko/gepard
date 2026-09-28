@@ -1,7 +1,20 @@
 import { z } from 'zod'
-import { run, runJson, ExecError } from './exec'
+import { run, runJson, ExecError } from '../helpers/exec'
+import { mapWithConcurrency } from '../helpers/async'
 import { AppError } from '../ipc/registry'
-import { getProject } from '../store/projects'
+import { getProject as defaultGetProject } from '../store/projects'
+import {
+  buildPrListArgs,
+  buildPrsFilesQuery,
+  chunk,
+  filterPrsByPath,
+  matchesPrSearch,
+  parsePrCreateUrl,
+  parsePrsFilesPageInfo,
+  parsePrsFilesResponse,
+  PrFilesNode,
+  PRS_FILES_CHUNK_SIZE
+} from '../helpers/ghParsing'
 import {
   NodeId,
   Sha,
@@ -23,7 +36,6 @@ import {
   RemoteViewedFile
 } from '@shared/ipc/schemas/comment'
 import type { Viewer, ViewerRepo } from '@shared/ipc/schemas/project'
-import { matchesTarget } from '@shared/model/paths'
 
 const GH_ENV: NodeJS.ProcessEnv = {
   ...process.env,
@@ -49,38 +61,6 @@ export interface RepoRef {
   repo: string
 }
 
-export async function repoRefFor(projectId: string): Promise<RepoRef> {
-  const project = await getProject(projectId)
-  if (!project) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${projectId}`)
-  return { owner: project.owner, repo: project.repo }
-}
-
-const PR_LIST_FIELDS =
-  'number,id,title,author,headRefName,baseRefName,headRefOid,createdAt,changedFiles,labels,url'
-
-// `gh pr list --limit N` fetches 100 PRs per request and stops at the first
-// short page.
-const OPEN_PR_LIST_LIMIT = 10_000
-
-export function buildPrListArgs(owner: string, repo: string, search?: string): string[] {
-  const args = [
-    'pr',
-    'list',
-    '-R',
-    `${owner}/${repo}`,
-    '--limit',
-    String(OPEN_PR_LIST_LIMIT),
-    '--json',
-    PR_LIST_FIELDS
-  ]
-  if (search) args.push('--search', search)
-  return args
-}
-
-export async function listPrs(owner: string, repo: string, search?: string): Promise<PrListItem[]> {
-  return runJson(z.array(PrListItem), 'gh', buildPrListArgs(owner, repo, search), ghOpts())
-}
-
 const PR_SUMMARY_FIELDS = [
   'number',
   'title',
@@ -96,55 +76,9 @@ const PR_SUMMARY_FIELDS = [
   'labels'
 ].join(',')
 
-export async function viewPr(owner: string, repo: string, number: number): Promise<PrSummary> {
-  return runJson(
-    PrSummary,
-    'gh',
-    ['pr', 'view', String(number), '-R', `${owner}/${repo}`, '--json', PR_SUMMARY_FIELDS],
-    ghOpts()
-  )
-}
-
 const PrCommitsResponse = z.object({ commits: z.array(Commit) })
 
-// gh returns a PR's commits in topological order, oldest first.
-export async function viewPrCommits(
-  owner: string,
-  repo: string,
-  number: number
-): Promise<Commit[]> {
-  const { commits } = await runJson(
-    PrCommitsResponse,
-    'gh',
-    ['pr', 'view', String(number), '-R', `${owner}/${repo}`, '--json', 'commits'],
-    ghOpts()
-  )
-  return commits
-}
-
 const PrHeadBase = z.object({ headRefOid: Sha, baseRefOid: Sha })
-
-export async function viewPrHeadBase(
-  owner: string,
-  repo: string,
-  number: number
-): Promise<{ headRefOid: string; baseRefOid: string }> {
-  return runJson(
-    PrHeadBase,
-    'gh',
-    ['pr', 'view', String(number), '-R', `${owner}/${repo}`, '--json', 'headRefOid,baseRefOid'],
-    ghOpts()
-  )
-}
-
-// `gh pr create` has no `--json` and prints the new PR's URL as the last line
-// of stdout.
-export function parsePrCreateUrl(stdout: string): number {
-  const match = stdout.trim().match(/\/pull\/(\d+)\s*$/)
-  if (!match)
-    throw new AppError('GH_PARSE_ERROR', `gh pr create did not return a PR URL: ${stdout.trim()}`)
-  return Number(match[1])
-}
 
 export interface CreatePrInput {
   base: string
@@ -153,110 +87,12 @@ export interface CreatePrInput {
   body: string
 }
 
-export async function createPr(
-  owner: string,
-  repo: string,
-  input: CreatePrInput
-): Promise<PrSummary> {
-  const { stdout } = await run(
-    'gh',
-    [
-      'pr',
-      'create',
-      '-R',
-      `${owner}/${repo}`,
-      '--base',
-      input.base,
-      '--head',
-      input.head,
-      '--title',
-      input.title,
-      // `--body-file -` reads the body from stdin instead of argv, where it
-      // would otherwise be visible to every other process on the machine.
-      '--body-file',
-      '-'
-    ],
-    ghOpts({ stdin: input.body })
-  )
-  const number = parsePrCreateUrl(stdout)
-  return viewPr(owner, repo, number)
-}
-
 const CommitPrRaw = z.object({ number: z.int().positive() })
-
-// `gh api --paginate` concatenates REST pages into one JSON array.
-export async function listPrsForCommit(
-  owner: string,
-  repo: string,
-  sha: string
-): Promise<number[]> {
-  const items = await runJson(
-    z.array(CommitPrRaw),
-    'gh',
-    ['api', `repos/${owner}/${repo}/commits/${sha}/pulls`, '--paginate'],
-    ghOpts()
-  )
-  return items.map((i) => i.number)
-}
-
-const PrFilesNode = z.object({
-  number: z.int().positive(),
-  files: z.object({
-    pageInfo: GqlPageInfo,
-    nodes: z.array(z.object({ path: z.string() }))
-  })
-})
 
 const PrsFilesResponse = z.object({
   data: z.object({ repository: z.record(z.string(), PrFilesNode.nullable()) }),
   errors: z.array(GqlError).optional()
 })
-
-export function buildPrsFilesQuery(numbers: number[]): {
-  query: string
-  variables: Record<string, unknown>
-} {
-  const varDecls = ['$owner:String!', '$name:String!']
-  const fields: string[] = []
-  const variables: Record<string, unknown> = {}
-  numbers.forEach((n, i) => {
-    const v = `n${i}`
-    varDecls.push(`$${v}:Int!`)
-    variables[v] = n
-    fields.push(
-      `pr${i}: pullRequest(number:$${v}) { number files(first:100) { pageInfo { hasNextPage endCursor } nodes { path } } }`
-    )
-  })
-  const query = `query(${varDecls.join(', ')}) {\n  repository(owner:$owner, name:$name) {\n${fields.join('\n')}\n  }\n}`
-  return { query, variables }
-}
-
-// GitHub returns a null node for a PR number that is deleted or inaccessible.
-export function parsePrsFilesResponse(
-  repository: Record<string, z.infer<typeof PrFilesNode> | null>
-): Map<number, string[]> {
-  const map = new Map<number, string[]>()
-  for (const node of Object.values(repository)) {
-    if (node)
-      map.set(
-        node.number,
-        node.files.nodes.map((f) => f.path)
-      )
-  }
-  return map
-}
-
-export function parsePrsFilesPageInfo(
-  repository: Record<string, z.infer<typeof PrFilesNode> | null>
-): Map<number, string> {
-  const map = new Map<number, string>()
-  for (const node of Object.values(repository)) {
-    if (node?.files.pageInfo.hasNextPage && node.files.pageInfo.endCursor) {
-      map.set(node.number, node.files.pageInfo.endCursor)
-    }
-  }
-  return map
-}
 
 const PR_FILES_PAGE_QUERY = `
 query($owner:String!, $name:String!, $number:Int!, $endCursor:String) {
@@ -286,138 +122,10 @@ const PrFilesPageResponse = z.object({
   errors: z.array(GqlError).optional()
 })
 
-async function fetchRemainingPrFiles(
-  owner: string,
-  repo: string,
-  number: number,
-  after: string
-): Promise<string[]> {
-  const out: string[] = []
-  let cursor: string | null = after
-  for (;;) {
-    const page = await graphql(PrFilesPageResponse, PR_FILES_PAGE_QUERY, {
-      owner,
-      name: repo,
-      number,
-      endCursor: cursor
-    })
-    const files = page.data.repository.pullRequest?.files
-    if (!files) break
-    out.push(...files.nodes.map((f) => f.path))
-    if (!files.pageInfo.hasNextPage) break
-    cursor = files.pageInfo.endCursor
-  }
-  return out
-}
-
-// A single aliased GraphQL query aliasing every candidate PR would exceed
-// GitHub's query cost limit once a repo has thousands of open PRs.
-const PRS_FILES_CHUNK_SIZE = 50
-
-function chunk<T>(items: T[], size: number): T[][] {
-  const chunks: T[][] = []
-  for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size))
-  return chunks
-}
-
-export async function fetchPrsFiles(
-  owner: string,
-  repo: string,
-  numbers: number[]
-): Promise<Map<number, string[]>> {
-  if (numbers.length === 0) return new Map()
-  const map = new Map<number, string[]>()
-  for (const batch of chunk(numbers, PRS_FILES_CHUNK_SIZE)) {
-    const { query, variables } = buildPrsFilesQuery(batch)
-    const res = await graphql(PrsFilesResponse, query, { owner, name: repo, ...variables })
-    for (const [number, files] of parsePrsFilesResponse(res.data.repository)) {
-      map.set(number, files)
-    }
-    const stragglers = parsePrsFilesPageInfo(res.data.repository)
-    for (const [number, cursor] of stragglers) {
-      const rest = await fetchRemainingPrFiles(owner, repo, number, cursor)
-      map.set(number, [...(map.get(number) ?? []), ...rest])
-    }
-  }
-  return map
-}
-
-export function filterPrsByPath(
-  prs: PrListItem[],
-  filesByNumber: Map<number, string[]>,
-  path: string
-): PrListItem[] {
-  return prs.filter((pr) =>
-    (filesByNumber.get(pr.number) ?? []).some((f) => matchesTarget(f, path))
-  )
-}
-
-// Same corpus the fuzzy-search combo box matches against, since `gh pr list
-// --search` has no REST equivalent for single PRs fetched by number.
-export function matchesPrSearch(pr: PrListItem, search: string): boolean {
-  const q = search.toLowerCase()
-  return (
-    String(pr.number).includes(q) ||
-    pr.title.toLowerCase().includes(q) ||
-    pr.author.login.toLowerCase().includes(q) ||
-    pr.headRefName.toLowerCase().includes(q) ||
-    pr.labels.some((l) => l.name.toLowerCase().includes(q))
-  )
-}
-
-const PR_VIEW_CONCURRENCY = 5
-
-async function mapWithConcurrency<T, R>(
-  items: T[],
-  limit: number,
-  fn: (item: T) => Promise<R>
-): Promise<R[]> {
-  const results: R[] = new Array(items.length)
-  let next = 0
-  async function worker(): Promise<void> {
-    for (;;) {
-      const i = next++
-      if (i >= items.length) return
-      results[i] = await fn(items[i])
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
-  return results
-}
-
 export interface PrListFilter {
   search?: string
   commit?: string
   path?: string
-}
-
-export async function listPrsFiltered(
-  owner: string,
-  repo: string,
-  filter: PrListFilter
-): Promise<PrListItem[]> {
-  let candidates: PrListItem[]
-  if (filter.commit) {
-    const numbers = await listPrsForCommit(owner, repo, filter.commit)
-    candidates = await mapWithConcurrency(numbers, PR_VIEW_CONCURRENCY, (n) =>
-      viewPr(owner, repo, n)
-    )
-    if (filter.search) {
-      const search = filter.search
-      candidates = candidates.filter((c) => matchesPrSearch(c, search))
-    }
-  } else {
-    candidates = await listPrs(owner, repo, filter.search)
-  }
-  if (filter.path && candidates.length > 0) {
-    const filesByNumber = await fetchPrsFiles(
-      owner,
-      repo,
-      candidates.map((c) => c.number)
-    )
-    candidates = filterPrsByPath(candidates, filesByNumber, filter.path)
-  }
-  return candidates
 }
 
 // `gh auth status --json` always exits 0 and reports failure as a `state`
@@ -434,28 +142,6 @@ const GhUser = z.object({
   avatar_url: z.url(),
   html_url: z.url()
 })
-
-async function fetchUser(): Promise<z.infer<typeof GhUser>> {
-  return runJson(GhUser, 'gh', ['api', 'user'], ghOpts())
-}
-
-async function hasActiveAuth(): Promise<boolean> {
-  const status = await runJson(
-    GhAuthStatus,
-    'gh',
-    ['auth', 'status', '--active', '--json', 'hosts'],
-    ghOpts()
-  )
-  return Object.values(status.hosts)
-    .flat()
-    .some((h) => h.active && h.state === 'success')
-}
-
-export async function viewer(): Promise<Viewer | null> {
-  if (!(await hasActiveAuth())) return null
-  const user = await fetchUser()
-  return { login: user.login, name: user.name, avatarUrl: user.avatar_url, htmlUrl: user.html_url }
-}
 
 const ViewerReposResponse = z.object({
   data: z.object({
@@ -482,41 +168,6 @@ query($endCursor:String) {
 }`
 
 const MAX_VIEWER_REPOS = 200
-
-export async function listViewerRepos(): Promise<ViewerRepo[]> {
-  if (!(await hasActiveAuth())) return []
-  const repos: ViewerRepo[] = []
-  let cursor: string | null = null
-  for (;;) {
-    const page = await graphql(ViewerReposResponse, VIEWER_REPOS_QUERY, { endCursor: cursor })
-    const { nodes, pageInfo } = page.data.viewer.repositories
-    repos.push(...nodes.map((n) => ({ owner: n.owner.login, repo: n.name, url: n.url })))
-    if (!pageInfo.hasNextPage || repos.length >= MAX_VIEWER_REPOS) break
-    cursor = pageInfo.endCursor
-  }
-  return repos
-}
-
-function checkGqlErrors(errors: GqlError[] | undefined): void {
-  if (errors && errors.length > 0) {
-    throw new AppError('GRAPHQL_ERROR', errors.map((e) => e.message).join('; '), errors)
-  }
-}
-
-// `gh api --paginate` hangs on GraphQL queries whose cursor variable is not
-// named exactly `$endCursor`.
-async function graphql<T extends { errors?: GqlError[] }>(
-  schema: z.ZodType<T>,
-  query: string,
-  variables: Record<string, unknown>
-): Promise<T> {
-  const result = await runJson(schema, 'gh', ['api', 'graphql', '--input', '-'], {
-    ...ghOpts(),
-    stdin: JSON.stringify({ query, variables })
-  })
-  checkGqlErrors(result.errors)
-  return result
-}
 
 const REVIEW_COMMENT_FIELDS = `
   id
@@ -576,68 +227,11 @@ query($threadId:ID!, $endCursor:String) {
   }
 }`
 
-async function fetchRemainingThreadComments(
-  threadId: string,
-  after: string | null
-): Promise<GqlReviewCommentRaw[]> {
-  const out: GqlReviewCommentRaw[] = []
-  let cursor = after
-  for (;;) {
-    const page = await graphql(ThreadCommentsPage, THREAD_COMMENTS_QUERY, {
-      threadId,
-      endCursor: cursor
-    })
-    const comments = page.data.node?.comments
-    if (!comments) break
-    out.push(...comments.nodes)
-    if (!comments.pageInfo.hasNextPage) break
-    cursor = comments.pageInfo.endCursor
-  }
-  return out
-}
-
 export interface ReviewThreadsResult {
   prId: string
   headRefOid: string
   baseRefOid: string
   threads: GqlReviewThreadRaw[]
-}
-
-export async function fetchReviewThreads(
-  owner: string,
-  repo: string,
-  number: number
-): Promise<ReviewThreadsResult> {
-  const threads: GqlReviewThreadRaw[] = []
-  let prId = ''
-  let headRefOid = ''
-  let baseRefOid = ''
-  let cursor: string | null = null
-  for (;;) {
-    const page = await graphql(GqlReviewThreadsPage, REVIEW_THREADS_QUERY, {
-      owner,
-      name: repo,
-      number,
-      endCursor: cursor
-    })
-    const pr = page.data.repository.pullRequest
-    prId = pr.id
-    headRefOid = pr.headRefOid
-    baseRefOid = pr.baseRefOid
-    for (const thread of pr.reviewThreads.nodes) {
-      if (thread.comments.pageInfo.hasNextPage) {
-        const rest = await fetchRemainingThreadComments(
-          thread.id,
-          thread.comments.pageInfo.endCursor
-        )
-        thread.comments.nodes.push(...rest)
-      }
-      threads.push(thread)
-    }
-    if (!pr.reviewThreads.pageInfo.hasNextPage) break
-    cursor = pr.reviewThreads.pageInfo.endCursor
-  }
-  return { prId, headRefOid, baseRefOid, threads }
 }
 
 const FilesViewedPage = z.object({
@@ -677,32 +271,6 @@ export interface FilesViewedResult {
   files: RemoteViewedFile[]
 }
 
-export async function fetchViewedFiles(
-  owner: string,
-  repo: string,
-  number: number
-): Promise<FilesViewedResult> {
-  const files: RemoteViewedFile[] = []
-  let prId = ''
-  let headRefOid = ''
-  let cursor: string | null = null
-  for (;;) {
-    const page = await graphql(FilesViewedPage, FILES_VIEWED_QUERY, {
-      owner,
-      name: repo,
-      number,
-      endCursor: cursor
-    })
-    const pr = page.data.repository.pullRequest
-    prId = pr.id
-    headRefOid = pr.headRefOid
-    files.push(...pr.files.nodes)
-    if (!pr.files.pageInfo.hasNextPage) break
-    cursor = pr.files.pageInfo.endCursor
-  }
-  return { prId, headRefOid, files }
-}
-
 const BatchMutationResponse = z.object({
   data: z.unknown().nullable().optional(),
   errors: z.array(GqlError).optional()
@@ -711,27 +279,6 @@ const BatchMutationResponse = z.object({
 export interface ViewedChange {
   path: string
   viewed: boolean
-}
-
-export async function setFilesViewed(
-  pullRequestId: string,
-  changes: ViewedChange[]
-): Promise<void> {
-  if (changes.length === 0) return
-  const varDecls = ['$pr:ID!']
-  const fields: string[] = []
-  const variables: Record<string, unknown> = { pr: pullRequestId }
-  changes.forEach((c, i) => {
-    const pathVar = `p${i}`
-    varDecls.push(`$${pathVar}:String!`)
-    variables[pathVar] = c.path
-    const mutation = c.viewed ? 'markFileAsViewed' : 'unmarkFileAsViewed'
-    fields.push(
-      `f${i}: ${mutation}(input:{pullRequestId:$pr, path:$${pathVar}}) { clientMutationId }`
-    )
-  })
-  const query = `mutation(${varDecls.join(', ')}) {\n${fields.join('\n')}\n}`
-  await graphql(BatchMutationResponse, query, variables)
 }
 
 const PendingReviewResponse = z.object({
@@ -756,20 +303,6 @@ query($owner:String!, $name:String!, $number:Int!) {
   }
 }`
 
-export async function findPendingReview(
-  owner: string,
-  repo: string,
-  number: number
-): Promise<{ id: string } | null> {
-  const page = await graphql(PendingReviewResponse, PENDING_REVIEW_QUERY, {
-    owner,
-    name: repo,
-    number
-  })
-  const node = page.data.repository.pullRequest.reviews.nodes[0]
-  return node ? { id: node.id } : null
-}
-
 const CreateReviewResponse = z.object({
   data: z.object({
     addPullRequestReview: z.object({ pullRequestReview: z.object({ id: NodeId }) })
@@ -783,18 +316,6 @@ mutation($pr:ID!, $oid:GitObjectID!) {
     pullRequestReview { id }
   }
 }`
-
-// GitHub allows only one pending review per user per PR.
-export async function createPendingReview(
-  pullRequestId: string,
-  commitOid: string
-): Promise<string> {
-  const res = await graphql(CreateReviewResponse, CREATE_REVIEW_QUERY, {
-    pr: pullRequestId,
-    oid: commitOid
-  })
-  return res.data.addPullRequestReview.pullRequestReview.id
-}
 
 const NewThreadComment = z.object({
   id: NodeId,
@@ -870,157 +391,6 @@ type ThreadPayload = NonNullable<
   AddThreadResponseType['data']['addPullRequestReviewThread']
 >['thread']
 
-function firstComment(res: AddThreadResponseType): {
-  thread: ThreadPayload
-  root: z.infer<typeof NewThreadComment>
-} {
-  const thread = res.data.addPullRequestReviewThread?.thread
-  if (!thread) throw new AppError('GRAPHQL_ERROR', 'addPullRequestReviewThread returned no thread')
-  const root = thread.comments.nodes[0]
-  if (!root)
-    throw new AppError('GRAPHQL_ERROR', 'addPullRequestReviewThread returned no root comment')
-  return { thread, root }
-}
-
-async function addThreadAsFile(
-  pullRequestReviewId: string,
-  path: string,
-  body: string
-): Promise<NewThreadResult> {
-  const res = await graphql(AddThreadResponse, ADD_THREAD_FILE_QUERY, {
-    reviewId: pullRequestReviewId,
-    path,
-    body
-  })
-  const { thread, root } = firstComment(res)
-  return { thread, rootComment: root, isFile: true }
-}
-
-// GitHub rejects a LINE-anchored review comment on a line outside the diff
-// with a 422 "must be part of the diff" error.
-export async function addReviewThread(input: NewThreadInput): Promise<NewThreadResult> {
-  if (input.line === null) return addThreadAsFile(input.pullRequestReviewId, input.path, input.body)
-  const line = input.line
-  try {
-    const res = await graphql(AddThreadResponse, ADD_THREAD_LINE_QUERY, {
-      reviewId: input.pullRequestReviewId,
-      path: input.path,
-      body: input.body,
-      line,
-      side: input.side,
-      startLine: input.startLine ?? null,
-      startSide: input.startSide ?? null,
-      subjectType: 'LINE'
-    })
-    const { thread, root } = firstComment(res)
-    return { thread, rootComment: root, isFile: false }
-  } catch (e) {
-    if (!isLineNotInDiffError(e)) throw e
-    const fallbackBody = `${input.path}:${line}\n\n${input.body}`
-    return addThreadAsFile(input.pullRequestReviewId, input.path, fallbackBody)
-  }
-}
-
-const ReplyComment = NewThreadComment.extend({ replyTo: z.object({ id: NodeId }).nullable() })
-
-const AddReplyResponse = z.object({
-  data: z.object({ addPullRequestReviewThreadReply: z.object({ comment: ReplyComment }) }),
-  errors: z.array(GqlError).optional()
-})
-
-const ADD_REPLY_QUERY = `
-mutation($threadId:ID!, $body:String!, $reviewId:ID) {
-  addPullRequestReviewThreadReply(input:{ pullRequestReviewThreadId:$threadId, body:$body, pullRequestReviewId:$reviewId }) {
-    comment { id createdAt updatedAt replyTo { id } pullRequestReview { id state } }
-  }
-}`
-
-// GitHub accepts replies only to a thread root.
-export async function addReviewThreadReply(
-  threadId: string,
-  body: string,
-  reviewId?: string | null
-): Promise<z.infer<typeof ReplyComment>> {
-  const res = await graphql(AddReplyResponse, ADD_REPLY_QUERY, {
-    threadId,
-    body,
-    reviewId: reviewId ?? null
-  })
-  return res.data.addPullRequestReviewThreadReply.comment
-}
-
-const DeleteCommentResponse = z.object({
-  data: z.object({
-    deletePullRequestReviewComment: z
-      .object({ pullRequestReview: z.object({ id: NodeId }).nullable() })
-      .nullable()
-  }),
-  errors: z.array(GqlError).optional()
-})
-
-const DELETE_COMMENT_QUERY = `
-mutation($id:ID!) {
-  deletePullRequestReviewComment(input:{id:$id}) { pullRequestReview { id } }
-}`
-
-export async function deleteReviewComment(commentId: string): Promise<void> {
-  await graphql(DeleteCommentResponse, DELETE_COMMENT_QUERY, { id: commentId })
-}
-
-const UpdateCommentResponse = z.object({
-  data: z.object({
-    updatePullRequestReviewComment: z.object({
-      pullRequestReviewComment: z.object({
-        id: NodeId,
-        updatedAt: IsoDate,
-        lastEditedAt: IsoDate.nullable()
-      })
-    })
-  }),
-  errors: z.array(GqlError).optional()
-})
-
-const UPDATE_COMMENT_QUERY = `
-mutation($id:ID!, $body:String!) {
-  updatePullRequestReviewComment(input:{ pullRequestReviewCommentId:$id, body:$body }) {
-    pullRequestReviewComment { id updatedAt lastEditedAt }
-  }
-}`
-
-export interface UpdatedComment {
-  updatedAt: string
-  lastEditedAt: string | null
-}
-
-export async function updateReviewComment(
-  commentId: string,
-  body: string
-): Promise<UpdatedComment> {
-  const res = await graphql(UpdateCommentResponse, UPDATE_COMMENT_QUERY, { id: commentId, body })
-  const c = res.data.updatePullRequestReviewComment.pullRequestReviewComment
-  return { updatedAt: c.updatedAt, lastEditedAt: c.lastEditedAt }
-}
-
-const SubmitReviewResponse = z.object({
-  data: z.object({
-    submitPullRequestReview: z.object({
-      pullRequestReview: z.object({ id: NodeId, state: ReviewState })
-    })
-  }),
-  errors: z.array(GqlError).optional()
-})
-
-const SUBMIT_REVIEW_QUERY = `
-mutation($reviewId:ID!, $body:String) {
-  submitPullRequestReview(input:{ pullRequestReviewId:$reviewId, event:COMMENT, body:$body }) {
-    pullRequestReview { id state }
-  }
-}`
-
-export async function submitReview(reviewId: string, body?: string): Promise<void> {
-  await graphql(SubmitReviewResponse, SUBMIT_REVIEW_QUERY, { reviewId, body: body ?? null })
-}
-
 const GENERAL_COMMENT_FIELDS = `
   id
   author { login }
@@ -1058,32 +428,6 @@ export interface GeneralCommentsResult {
   comments: GqlIssueCommentRaw[]
 }
 
-// General PR comments (IssueComments) are a separate connection from
-// `reviewThreads`, with no path/line/side and no review/pending state.
-export async function fetchGeneralComments(
-  owner: string,
-  repo: string,
-  number: number
-): Promise<GeneralCommentsResult> {
-  const comments: GqlIssueCommentRaw[] = []
-  let prId = ''
-  let cursor: string | null = null
-  for (;;) {
-    const page = await graphql(GeneralCommentsPage, GENERAL_COMMENTS_QUERY, {
-      owner,
-      name: repo,
-      number,
-      endCursor: cursor
-    })
-    const pr = page.data.repository.pullRequest
-    prId = pr.id
-    comments.push(...pr.comments.nodes)
-    if (!pr.comments.pageInfo.hasNextPage) break
-    cursor = pr.comments.pageInfo.endCursor
-  }
-  return { prId, comments }
-}
-
 const AddGeneralCommentResponse = z.object({
   data: z.object({
     addComment: z
@@ -1099,16 +443,6 @@ mutation($subjectId:ID!, $body:String!) {
     commentEdge { node { ... on IssueComment { ${GENERAL_COMMENT_FIELDS} } } }
   }
 }`
-
-export async function addGeneralComment(prId: string, body: string): Promise<GqlIssueCommentRaw> {
-  const res = await graphql(AddGeneralCommentResponse, ADD_GENERAL_COMMENT_QUERY, {
-    subjectId: prId,
-    body
-  })
-  const node = res.data.addComment?.commentEdge?.node
-  if (!node) throw new AppError('GRAPHQL_ERROR', 'addComment returned no comment')
-  return node
-}
 
 const UpdateGeneralCommentResponse = z.object({
   data: z.object({
@@ -1126,18 +460,6 @@ mutation($id:ID!, $body:String!) {
   }
 }`
 
-export async function updateGeneralComment(
-  commentId: string,
-  body: string
-): Promise<UpdatedComment> {
-  const res = await graphql(UpdateGeneralCommentResponse, UPDATE_GENERAL_COMMENT_QUERY, {
-    id: commentId,
-    body
-  })
-  const c = res.data.updateIssueComment.issueComment
-  return { updatedAt: c.updatedAt, lastEditedAt: c.lastEditedAt }
-}
-
 const DeleteGeneralCommentResponse = z.object({
   data: z.object({
     deleteIssueComment: z.object({ clientMutationId: z.string().nullable() }).nullable()
@@ -1150,6 +472,562 @@ mutation($id:ID!) {
   deleteIssueComment(input:{id:$id}) { clientMutationId }
 }`
 
-export async function deleteGeneralComment(commentId: string): Promise<void> {
-  await graphql(DeleteGeneralCommentResponse, DELETE_GENERAL_COMMENT_QUERY, { id: commentId })
+const DeleteCommentResponse = z.object({
+  data: z.object({
+    deletePullRequestReviewComment: z
+      .object({ pullRequestReview: z.object({ id: NodeId }).nullable() })
+      .nullable()
+  }),
+  errors: z.array(GqlError).optional()
+})
+
+const DELETE_COMMENT_QUERY = `
+mutation($id:ID!) {
+  deletePullRequestReviewComment(input:{id:$id}) { pullRequestReview { id } }
+}`
+
+const UpdateCommentResponse = z.object({
+  data: z.object({
+    updatePullRequestReviewComment: z.object({
+      pullRequestReviewComment: z.object({
+        id: NodeId,
+        updatedAt: IsoDate,
+        lastEditedAt: IsoDate.nullable()
+      })
+    })
+  }),
+  errors: z.array(GqlError).optional()
+})
+
+const UPDATE_COMMENT_QUERY = `
+mutation($id:ID!, $body:String!) {
+  updatePullRequestReviewComment(input:{ pullRequestReviewCommentId:$id, body:$body }) {
+    pullRequestReviewComment { id updatedAt lastEditedAt }
+  }
+}`
+
+export interface UpdatedComment {
+  updatedAt: string
+  lastEditedAt: string | null
 }
+
+const SubmitReviewResponse = z.object({
+  data: z.object({
+    submitPullRequestReview: z.object({
+      pullRequestReview: z.object({ id: NodeId, state: ReviewState })
+    })
+  }),
+  errors: z.array(GqlError).optional()
+})
+
+const SUBMIT_REVIEW_QUERY = `
+mutation($reviewId:ID!, $body:String) {
+  submitPullRequestReview(input:{ pullRequestReviewId:$reviewId, event:COMMENT, body:$body }) {
+    pullRequestReview { id state }
+  }
+}`
+
+const PR_VIEW_CONCURRENCY = 5
+
+function checkGqlErrors(errors: GqlError[] | undefined): void {
+  if (errors && errors.length > 0) {
+    throw new AppError('GRAPHQL_ERROR', errors.map((e) => e.message).join('; '), errors)
+  }
+}
+
+const ReplyComment = NewThreadComment.extend({ replyTo: z.object({ id: NodeId }).nullable() })
+
+const AddReplyResponse = z.object({
+  data: z.object({ addPullRequestReviewThreadReply: z.object({ comment: ReplyComment }) }),
+  errors: z.array(GqlError).optional()
+})
+
+const ADD_REPLY_QUERY = `
+mutation($threadId:ID!, $body:String!, $reviewId:ID) {
+  addPullRequestReviewThreadReply(input:{ pullRequestReviewThreadId:$threadId, body:$body, pullRequestReviewId:$reviewId }) {
+    comment { id createdAt updatedAt replyTo { id } pullRequestReview { id state } }
+  }
+}`
+
+interface ProjectStore {
+  getProject: typeof defaultGetProject
+}
+
+/**
+ * Wraps the `gh` CLI (both its REST/JSON subcommands and `gh api graphql`)
+ * for one GitHub host. The only real dependency is resolving a project id to
+ * an owner/repo, which is injected so the GraphQL/CLI plumbing can be tested
+ * without a project store.
+ */
+export class GhService {
+  private readonly getProject: typeof defaultGetProject
+
+  constructor(deps: ProjectStore = { getProject: defaultGetProject }) {
+    this.getProject = deps.getProject
+  }
+
+  async repoRefFor(projectId: string): Promise<RepoRef> {
+    const project = await this.getProject(projectId)
+    if (!project) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${projectId}`)
+    return { owner: project.owner, repo: project.repo }
+  }
+
+  async listPrs(owner: string, repo: string, search?: string): Promise<PrListItem[]> {
+    return runJson(z.array(PrListItem), 'gh', buildPrListArgs(owner, repo, search), ghOpts())
+  }
+
+  async viewPr(owner: string, repo: string, number: number): Promise<PrSummary> {
+    return runJson(
+      PrSummary,
+      'gh',
+      ['pr', 'view', String(number), '-R', `${owner}/${repo}`, '--json', PR_SUMMARY_FIELDS],
+      ghOpts()
+    )
+  }
+
+  // gh returns a PR's commits in topological order, oldest first.
+  async viewPrCommits(owner: string, repo: string, number: number): Promise<Commit[]> {
+    const { commits } = await runJson(
+      PrCommitsResponse,
+      'gh',
+      ['pr', 'view', String(number), '-R', `${owner}/${repo}`, '--json', 'commits'],
+      ghOpts()
+    )
+    return commits
+  }
+
+  async viewPrHeadBase(
+    owner: string,
+    repo: string,
+    number: number
+  ): Promise<{ headRefOid: string; baseRefOid: string }> {
+    return runJson(
+      PrHeadBase,
+      'gh',
+      ['pr', 'view', String(number), '-R', `${owner}/${repo}`, '--json', 'headRefOid,baseRefOid'],
+      ghOpts()
+    )
+  }
+
+  async createPr(owner: string, repo: string, input: CreatePrInput): Promise<PrSummary> {
+    const { stdout } = await run(
+      'gh',
+      [
+        'pr',
+        'create',
+        '-R',
+        `${owner}/${repo}`,
+        '--base',
+        input.base,
+        '--head',
+        input.head,
+        '--title',
+        input.title,
+        // `--body-file -` reads the body from stdin instead of argv, where it
+        // would otherwise be visible to every other process on the machine.
+        '--body-file',
+        '-'
+      ],
+      ghOpts({ stdin: input.body })
+    )
+    const number = parsePrCreateUrl(stdout)
+    return this.viewPr(owner, repo, number)
+  }
+
+  // `gh api --paginate` concatenates REST pages into one JSON array.
+  async listPrsForCommit(owner: string, repo: string, sha: string): Promise<number[]> {
+    const items = await runJson(
+      z.array(CommitPrRaw),
+      'gh',
+      ['api', `repos/${owner}/${repo}/commits/${sha}/pulls`, '--paginate'],
+      ghOpts()
+    )
+    return items.map((i) => i.number)
+  }
+
+  private async fetchRemainingPrFiles(
+    owner: string,
+    repo: string,
+    number: number,
+    after: string
+  ): Promise<string[]> {
+    const out: string[] = []
+    let cursor: string | null = after
+    for (;;) {
+      const page = await this.graphql(PrFilesPageResponse, PR_FILES_PAGE_QUERY, {
+        owner,
+        name: repo,
+        number,
+        endCursor: cursor
+      })
+      const files = page.data.repository.pullRequest?.files
+      if (!files) break
+      out.push(...files.nodes.map((f) => f.path))
+      if (!files.pageInfo.hasNextPage) break
+      cursor = files.pageInfo.endCursor
+    }
+    return out
+  }
+
+  async fetchPrsFiles(
+    owner: string,
+    repo: string,
+    numbers: number[]
+  ): Promise<Map<number, string[]>> {
+    if (numbers.length === 0) return new Map()
+    const map = new Map<number, string[]>()
+    for (const batch of chunk(numbers, PRS_FILES_CHUNK_SIZE)) {
+      const { query, variables } = buildPrsFilesQuery(batch)
+      const res = await this.graphql(PrsFilesResponse, query, { owner, name: repo, ...variables })
+      for (const [number, files] of parsePrsFilesResponse(res.data.repository)) {
+        map.set(number, files)
+      }
+      const stragglers = parsePrsFilesPageInfo(res.data.repository)
+      for (const [number, cursor] of stragglers) {
+        const rest = await this.fetchRemainingPrFiles(owner, repo, number, cursor)
+        map.set(number, [...(map.get(number) ?? []), ...rest])
+      }
+    }
+    return map
+  }
+
+  async listPrsFiltered(owner: string, repo: string, filter: PrListFilter): Promise<PrListItem[]> {
+    let candidates: PrListItem[]
+    if (filter.commit) {
+      const numbers = await this.listPrsForCommit(owner, repo, filter.commit)
+      candidates = await mapWithConcurrency(numbers, PR_VIEW_CONCURRENCY, (n) =>
+        this.viewPr(owner, repo, n)
+      )
+      if (filter.search) {
+        const search = filter.search
+        candidates = candidates.filter((c) => matchesPrSearch(c, search))
+      }
+    } else {
+      candidates = await this.listPrs(owner, repo, filter.search)
+    }
+    if (filter.path && candidates.length > 0) {
+      const filesByNumber = await this.fetchPrsFiles(
+        owner,
+        repo,
+        candidates.map((c) => c.number)
+      )
+      candidates = filterPrsByPath(candidates, filesByNumber, filter.path)
+    }
+    return candidates
+  }
+
+  private async fetchUser(): Promise<z.infer<typeof GhUser>> {
+    return runJson(GhUser, 'gh', ['api', 'user'], ghOpts())
+  }
+
+  private async hasActiveAuth(): Promise<boolean> {
+    const status = await runJson(
+      GhAuthStatus,
+      'gh',
+      ['auth', 'status', '--active', '--json', 'hosts'],
+      ghOpts()
+    )
+    return Object.values(status.hosts)
+      .flat()
+      .some((h) => h.active && h.state === 'success')
+  }
+
+  async viewer(): Promise<Viewer | null> {
+    if (!(await this.hasActiveAuth())) return null
+    const user = await this.fetchUser()
+    return {
+      login: user.login,
+      name: user.name,
+      avatarUrl: user.avatar_url,
+      htmlUrl: user.html_url
+    }
+  }
+
+  async listViewerRepos(): Promise<ViewerRepo[]> {
+    if (!(await this.hasActiveAuth())) return []
+    const repos: ViewerRepo[] = []
+    let cursor: string | null = null
+    for (;;) {
+      const page = await this.graphql(ViewerReposResponse, VIEWER_REPOS_QUERY, {
+        endCursor: cursor
+      })
+      const { nodes, pageInfo } = page.data.viewer.repositories
+      repos.push(...nodes.map((n) => ({ owner: n.owner.login, repo: n.name, url: n.url })))
+      if (!pageInfo.hasNextPage || repos.length >= MAX_VIEWER_REPOS) break
+      cursor = pageInfo.endCursor
+    }
+    return repos
+  }
+
+  // `gh api --paginate` hangs on GraphQL queries whose cursor variable is not
+  // named exactly `$endCursor`.
+  private async graphql<T extends { errors?: GqlError[] }>(
+    schema: z.ZodType<T>,
+    query: string,
+    variables: Record<string, unknown>
+  ): Promise<T> {
+    const result = await runJson(schema, 'gh', ['api', 'graphql', '--input', '-'], {
+      ...ghOpts(),
+      stdin: JSON.stringify({ query, variables })
+    })
+    checkGqlErrors(result.errors)
+    return result
+  }
+
+  private async fetchRemainingThreadComments(
+    threadId: string,
+    after: string | null
+  ): Promise<GqlReviewCommentRaw[]> {
+    const out: GqlReviewCommentRaw[] = []
+    let cursor = after
+    for (;;) {
+      const page = await this.graphql(ThreadCommentsPage, THREAD_COMMENTS_QUERY, {
+        threadId,
+        endCursor: cursor
+      })
+      const comments = page.data.node?.comments
+      if (!comments) break
+      out.push(...comments.nodes)
+      if (!comments.pageInfo.hasNextPage) break
+      cursor = comments.pageInfo.endCursor
+    }
+    return out
+  }
+
+  async fetchReviewThreads(
+    owner: string,
+    repo: string,
+    number: number
+  ): Promise<ReviewThreadsResult> {
+    const threads: GqlReviewThreadRaw[] = []
+    let prId = ''
+    let headRefOid = ''
+    let baseRefOid = ''
+    let cursor: string | null = null
+    for (;;) {
+      const page = await this.graphql(GqlReviewThreadsPage, REVIEW_THREADS_QUERY, {
+        owner,
+        name: repo,
+        number,
+        endCursor: cursor
+      })
+      const pr = page.data.repository.pullRequest
+      prId = pr.id
+      headRefOid = pr.headRefOid
+      baseRefOid = pr.baseRefOid
+      for (const thread of pr.reviewThreads.nodes) {
+        if (thread.comments.pageInfo.hasNextPage) {
+          const rest = await this.fetchRemainingThreadComments(
+            thread.id,
+            thread.comments.pageInfo.endCursor
+          )
+          thread.comments.nodes.push(...rest)
+        }
+        threads.push(thread)
+      }
+      if (!pr.reviewThreads.pageInfo.hasNextPage) break
+      cursor = pr.reviewThreads.pageInfo.endCursor
+    }
+    return { prId, headRefOid, baseRefOid, threads }
+  }
+
+  async fetchViewedFiles(owner: string, repo: string, number: number): Promise<FilesViewedResult> {
+    const files: RemoteViewedFile[] = []
+    let prId = ''
+    let headRefOid = ''
+    let cursor: string | null = null
+    for (;;) {
+      const page = await this.graphql(FilesViewedPage, FILES_VIEWED_QUERY, {
+        owner,
+        name: repo,
+        number,
+        endCursor: cursor
+      })
+      const pr = page.data.repository.pullRequest
+      prId = pr.id
+      headRefOid = pr.headRefOid
+      files.push(...pr.files.nodes)
+      if (!pr.files.pageInfo.hasNextPage) break
+      cursor = pr.files.pageInfo.endCursor
+    }
+    return { prId, headRefOid, files }
+  }
+
+  async setFilesViewed(pullRequestId: string, changes: ViewedChange[]): Promise<void> {
+    if (changes.length === 0) return
+    const varDecls = ['$pr:ID!']
+    const fields: string[] = []
+    const variables: Record<string, unknown> = { pr: pullRequestId }
+    changes.forEach((c, i) => {
+      const pathVar = `p${i}`
+      varDecls.push(`$${pathVar}:String!`)
+      variables[pathVar] = c.path
+      const mutation = c.viewed ? 'markFileAsViewed' : 'unmarkFileAsViewed'
+      fields.push(
+        `f${i}: ${mutation}(input:{pullRequestId:$pr, path:$${pathVar}}) { clientMutationId }`
+      )
+    })
+    const query = `mutation(${varDecls.join(', ')}) {\n${fields.join('\n')}\n}`
+    await this.graphql(BatchMutationResponse, query, variables)
+  }
+
+  async findPendingReview(
+    owner: string,
+    repo: string,
+    number: number
+  ): Promise<{ id: string } | null> {
+    const page = await this.graphql(PendingReviewResponse, PENDING_REVIEW_QUERY, {
+      owner,
+      name: repo,
+      number
+    })
+    const node = page.data.repository.pullRequest.reviews.nodes[0]
+    return node ? { id: node.id } : null
+  }
+
+  // GitHub allows only one pending review per user per PR.
+  async createPendingReview(pullRequestId: string, commitOid: string): Promise<string> {
+    const res = await this.graphql(CreateReviewResponse, CREATE_REVIEW_QUERY, {
+      pr: pullRequestId,
+      oid: commitOid
+    })
+    return res.data.addPullRequestReview.pullRequestReview.id
+  }
+
+  private firstComment(res: AddThreadResponseType): {
+    thread: ThreadPayload
+    root: z.infer<typeof NewThreadComment>
+  } {
+    const thread = res.data.addPullRequestReviewThread?.thread
+    if (!thread)
+      throw new AppError('GRAPHQL_ERROR', 'addPullRequestReviewThread returned no thread')
+    const root = thread.comments.nodes[0]
+    if (!root)
+      throw new AppError('GRAPHQL_ERROR', 'addPullRequestReviewThread returned no root comment')
+    return { thread, root }
+  }
+
+  private async addThreadAsFile(
+    pullRequestReviewId: string,
+    path: string,
+    body: string
+  ): Promise<NewThreadResult> {
+    const res = await this.graphql(AddThreadResponse, ADD_THREAD_FILE_QUERY, {
+      reviewId: pullRequestReviewId,
+      path,
+      body
+    })
+    const { thread, root } = this.firstComment(res)
+    return { thread, rootComment: root, isFile: true }
+  }
+
+  // GitHub rejects a LINE-anchored review comment on a line outside the diff
+  // with a 422 "must be part of the diff" error.
+  async addReviewThread(input: NewThreadInput): Promise<NewThreadResult> {
+    if (input.line === null)
+      return this.addThreadAsFile(input.pullRequestReviewId, input.path, input.body)
+    const line = input.line
+    try {
+      const res = await this.graphql(AddThreadResponse, ADD_THREAD_LINE_QUERY, {
+        reviewId: input.pullRequestReviewId,
+        path: input.path,
+        body: input.body,
+        line,
+        side: input.side,
+        startLine: input.startLine ?? null,
+        startSide: input.startSide ?? null,
+        subjectType: 'LINE'
+      })
+      const { thread, root } = this.firstComment(res)
+      return { thread, rootComment: root, isFile: false }
+    } catch (e) {
+      if (!isLineNotInDiffError(e)) throw e
+      const fallbackBody = `${input.path}:${line}\n\n${input.body}`
+      return this.addThreadAsFile(input.pullRequestReviewId, input.path, fallbackBody)
+    }
+  }
+
+  // GitHub accepts replies only to a thread root.
+  async addReviewThreadReply(
+    threadId: string,
+    body: string,
+    reviewId?: string | null
+  ): Promise<z.infer<typeof ReplyComment>> {
+    const res = await this.graphql(AddReplyResponse, ADD_REPLY_QUERY, {
+      threadId,
+      body,
+      reviewId: reviewId ?? null
+    })
+    return res.data.addPullRequestReviewThreadReply.comment
+  }
+
+  async deleteReviewComment(commentId: string): Promise<void> {
+    await this.graphql(DeleteCommentResponse, DELETE_COMMENT_QUERY, { id: commentId })
+  }
+
+  async updateReviewComment(commentId: string, body: string): Promise<UpdatedComment> {
+    const res = await this.graphql(UpdateCommentResponse, UPDATE_COMMENT_QUERY, {
+      id: commentId,
+      body
+    })
+    const c = res.data.updatePullRequestReviewComment.pullRequestReviewComment
+    return { updatedAt: c.updatedAt, lastEditedAt: c.lastEditedAt }
+  }
+
+  async submitReview(reviewId: string, body?: string): Promise<void> {
+    await this.graphql(SubmitReviewResponse, SUBMIT_REVIEW_QUERY, { reviewId, body: body ?? null })
+  }
+
+  // General PR comments (IssueComments) are a separate connection from
+  // `reviewThreads`, with no path/line/side and no review/pending state.
+  async fetchGeneralComments(
+    owner: string,
+    repo: string,
+    number: number
+  ): Promise<GeneralCommentsResult> {
+    const comments: GqlIssueCommentRaw[] = []
+    let prId = ''
+    let cursor: string | null = null
+    for (;;) {
+      const page = await this.graphql(GeneralCommentsPage, GENERAL_COMMENTS_QUERY, {
+        owner,
+        name: repo,
+        number,
+        endCursor: cursor
+      })
+      const pr = page.data.repository.pullRequest
+      prId = pr.id
+      comments.push(...pr.comments.nodes)
+      if (!pr.comments.pageInfo.hasNextPage) break
+      cursor = pr.comments.pageInfo.endCursor
+    }
+    return { prId, comments }
+  }
+
+  async addGeneralComment(prId: string, body: string): Promise<GqlIssueCommentRaw> {
+    const res = await this.graphql(AddGeneralCommentResponse, ADD_GENERAL_COMMENT_QUERY, {
+      subjectId: prId,
+      body
+    })
+    const node = res.data.addComment?.commentEdge?.node
+    if (!node) throw new AppError('GRAPHQL_ERROR', 'addComment returned no comment')
+    return node
+  }
+
+  async updateGeneralComment(commentId: string, body: string): Promise<UpdatedComment> {
+    const res = await this.graphql(UpdateGeneralCommentResponse, UPDATE_GENERAL_COMMENT_QUERY, {
+      id: commentId,
+      body
+    })
+    const c = res.data.updateIssueComment.issueComment
+    return { updatedAt: c.updatedAt, lastEditedAt: c.lastEditedAt }
+  }
+
+  async deleteGeneralComment(commentId: string): Promise<void> {
+    await this.graphql(DeleteGeneralCommentResponse, DELETE_GENERAL_COMMENT_QUERY, {
+      id: commentId
+    })
+  }
+}
+
+export const ghService = new GhService()

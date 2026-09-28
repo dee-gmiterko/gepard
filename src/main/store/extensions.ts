@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { extensionsFilesJsonPath, extensionsJsonPath } from '../paths'
-import { readJsonFile, writeJsonFile } from './jsonFile'
+import { readJsonFile, writeJsonFile } from '../helpers/jsonFile'
 
 const ExtensionsState = z.record(z.string(), z.boolean())
 export type ExtensionsState = z.infer<typeof ExtensionsState>

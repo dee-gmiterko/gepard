@@ -6,7 +6,7 @@ import {
   groupPendingByCommit,
   mergeThreads,
   mergeViewed
-} from '../src/main/services/sync'
+} from '../src/main/helpers/reviewMapping'
 import type {
   Comment,
   LocalViewedState,

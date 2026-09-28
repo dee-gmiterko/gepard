@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { Project, PersistedLayout } from '@shared/ipc/schemas/project'
 import { PersistedTargeting } from '@shared/ipc/schemas/pr'
 import { AppError } from '../ipc/registry'
-import { readJsonFile, writeJsonFile } from './jsonFile'
+import { readJsonFile, writeJsonFile } from '../helpers/jsonFile'
 import {
   projectDir,
   projectId as makeProjectId,

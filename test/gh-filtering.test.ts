@@ -7,7 +7,7 @@ import {
   parsePrCreateUrl,
   parsePrsFilesPageInfo,
   parsePrsFilesResponse
-} from '../src/main/services/gh'
+} from '../src/main/helpers/ghParsing'
 import type { PrListItem } from '../src/shared/ipc/schemas/pr'
 
 const NOT_PAGED = { hasNextPage: false, endCursor: null }

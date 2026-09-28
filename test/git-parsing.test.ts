@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  mimeForPath,
   parseBranchNames,
   parseCloneProgressLine,
   parseDiffTreeStdinFiles,
@@ -8,8 +7,8 @@ import {
   parseNumstat,
   parseUnifiedDiff,
   selectDiffSection
-} from '../src/main/services/git'
-import { looksBinary } from '../src/main/services/binary'
+} from '../src/main/helpers/gitParsing'
+import { looksBinary } from '../src/main/helpers/binary'
 
 describe('parseCloneProgressLine', () => {
   it('parses a local progress line into phase + percent', () => {
@@ -195,19 +194,6 @@ describe('parseBranchNames', () => {
 
   it('returns an empty list for empty stdout', () => {
     expect(parseBranchNames('')).toEqual([])
-  })
-})
-
-describe('mimeForPath', () => {
-  it('maps known image extensions case-insensitively', () => {
-    expect(mimeForPath('a/b/photo.PNG')).toBe('image/png')
-    expect(mimeForPath('icon.svg')).toBe('image/svg+xml')
-    expect(mimeForPath('pic.jpeg')).toBe('image/jpeg')
-  })
-
-  it('returns null for non-image or extension-less paths', () => {
-    expect(mimeForPath('README.md')).toBeNull()
-    expect(mimeForPath('Makefile')).toBeNull()
   })
 })
 

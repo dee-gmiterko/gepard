@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { themeJsonPath } from '../paths'
-import { readJsonFile, writeJsonFile } from './jsonFile'
+import { readJsonFile, writeJsonFile } from '../helpers/jsonFile'
 
 const ThemeStoreFile = z.object({ templateId: z.string().nullable() })
 type ThemeStoreFile = z.infer<typeof ThemeStoreFile>
