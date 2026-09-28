@@ -13,7 +13,7 @@ import { useTargetedFiles } from '../../queries/files'
 import { sameRef } from './refs'
 import { isTargeted } from '@shared/model/paths'
 import type { CommentReference } from '@shared/ipc/schemas/comment'
-import type { LineSymbolsResult } from '@shared/ipc/schemas/index'
+import type { LineSymbolsResult } from '@shared/ipc/schemas/lsp'
 import type { RefAnchor } from './anchorLine'
 
 export type LineSymbol = LineSymbolsResult['symbols'][number]

@@ -6,7 +6,7 @@ import type { ImageData } from '@shared/ipc/schemas/pr'
 import { Image } from '../../../../components/Image'
 import { Message } from '../../../../components/Message'
 import { ViewerFrame } from '../ViewerFrame'
-import { imageSrc } from '../imageSrc'
+import { imageSrc } from '../utils/imageSrc'
 
 const messages = defineMessages({
   before: {

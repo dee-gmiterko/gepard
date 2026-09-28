@@ -5,20 +5,20 @@ import { defineMessages } from '../../../../i18n/defineMessages'
 import { useAppState } from '../../../../state/AppContext'
 import { useFileDiff } from '../../../../queries/files'
 import { useComments } from '../../../../queries/comments'
-import { useReadOnlyEditor } from '../../../../codemirror/useReadOnlyEditor'
+import { useReadOnlyEditor } from '../../../../components/CodeEditor/useReadOnlyEditor'
 import {
   buildDiffDoc,
   diffGutters,
   diffLineDecorations,
   findDiffDocLine
-} from '../../../../codemirror/diffDecorations'
-import { revealDocLine } from '../../../../codemirror/revealLine'
+} from '../../../../components/CodeEditor/diffDecorations'
+import { revealDocLine } from '../../../../components/CodeEditor/revealLine'
 import {
   CommentPortals,
   commentAffordanceGutter,
   commentBlockDecorations,
   diffViewCommentEntries
-} from '../../../../codemirror/commentWidgets'
+} from '../../../../components/CodeEditor/commentWidgets'
 import { EditorHost } from '../../../../components/EditorHost'
 import { Message } from '../../../../components/Message'
 import { CommentPortalHost } from '../CommentPortalHost'

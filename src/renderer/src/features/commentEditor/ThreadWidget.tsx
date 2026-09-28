@@ -108,6 +108,7 @@ export function ThreadWidget({
 
   const anchor = thread?.anchor ?? draftAnchor
   if (!anchor) return null
+  const isGeneral = anchor.subjectType === 'PR'
   const refAnchor = thread
     ? refAnchorFromThread(thread.anchor, state.checkout)
     : refAnchorFromDraft(anchor, state.checkout)
@@ -190,7 +191,7 @@ export function ThreadWidget({
     <Wrapper>
       <Stack>
         <Inline>
-          <PathAndLine path={anchor.path} line={anchor.line} />
+          {!isGeneral && <PathAndLine path={anchor.path} line={anchor.line} />}
           {thread?.isResolved && <ResolvedBadge />}
           {thread?.isOutdated && <OutdatedBadge />}
           {!thread && onClose && (

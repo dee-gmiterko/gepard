@@ -1,2 +1,1 @@
-export { List, ListRow, RowTitle } from './List'
-export { listReset } from './listReset'
+export { List, ListRow, RowTitle, listReset } from './List'

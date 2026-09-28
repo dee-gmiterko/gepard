@@ -1,2 +1,1 @@
-export { Ellipsis } from './Ellipsis'
-export { ellipsis, truncate } from './ellipsis'
+export { Ellipsis, ellipsis, truncate } from './Ellipsis'

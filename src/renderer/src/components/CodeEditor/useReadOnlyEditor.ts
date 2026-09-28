@@ -5,16 +5,16 @@ import { Compartment, EditorState, type Extension, type Text } from '@codemirror
 import { EditorView } from '@codemirror/view'
 import { LanguageDescription } from '@codemirror/language'
 import { languages } from '@codemirror/language-data'
-import { useCommands } from '../keyboard/commands'
+import { useCommands } from '../../keyboard/commands'
 import { readOnlyExtensions } from './setup'
 import { editorTheme } from './theme'
 import { keymapBridge } from './keymapBridge'
-import { reportError } from '../errors/report'
-import { defineMessages } from '../i18n/defineMessages'
+import { reportError } from '../../errors/report'
+import { defineMessages } from '../../i18n/defineMessages'
 
 const messages = defineMessages({
   syntaxHighlightingFailed: {
-    id: 'codemirror.syntaxHighlightingFailed',
+    id: 'codeEditor.syntaxHighlightingFailed',
     defaultMessage: 'Syntax highlighting for {path} failed to load; showing plain text.'
   }
 })

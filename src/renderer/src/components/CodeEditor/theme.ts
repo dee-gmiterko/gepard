@@ -2,7 +2,7 @@ import type { Extension } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { tags as t } from '@lezer/highlight'
-import type { Theme } from '../theme/tokens'
+import type { Theme } from '../../theme/tokens'
 
 function highlightStyle(theme: Theme): HighlightStyle {
   const s = theme.syntax

@@ -5,12 +5,12 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Plus } from 'react-feather'
 import type { DraftAnchor, ReviewThread } from '@shared/ipc/schemas/comment'
-import { defineMessages } from '../i18n/defineMessages'
-import { intl } from '../i18n/intl'
+import { defineMessages } from '../../i18n/defineMessages'
+import { intl } from '../../i18n/intl'
 
 const messages = defineMessages({
   addComment: {
-    id: 'codemirror.addComment',
+    id: 'codeEditor.addComment',
     defaultMessage: 'Add comment'
   }
 })
@@ -172,6 +172,50 @@ export function commentAffordanceGutter(
       }
     }
   })
+}
+
+export function codeViewCommentEntries(
+  threads: readonly ReviewThread[],
+  path: string,
+  draftLine: number | null,
+  head: string
+): LineCommentEntry[] {
+  const byLine = new Map<number, ReviewThread[]>()
+  for (const t of threads) {
+    if (
+      t.anchor.path !== path ||
+      t.anchor.subjectType !== 'LINE' ||
+      t.anchor.side !== 'RIGHT' ||
+      t.anchor.line == null
+    )
+      continue
+    if (t.isOutdated || t.anchor.commitOid !== head) continue
+    const list = byLine.get(t.anchor.line) ?? []
+    list.push(t)
+    byLine.set(t.anchor.line, list)
+  }
+
+  const entries: LineCommentEntry[] = [...byLine.entries()].map(([docLine, lineThreads]) => ({
+    docLine,
+    threads: lineThreads,
+    draft: null
+  }))
+
+  if (draftLine != null) {
+    const draftAnchor: DraftAnchor = {
+      path,
+      subjectType: 'LINE',
+      side: 'RIGHT',
+      line: draftLine,
+      startLine: null,
+      startSide: null
+    }
+    const existing = entries.find((e) => e.docLine === draftLine)
+    if (existing) existing.draft = draftAnchor
+    else entries.push({ docLine: draftLine, threads: [], draft: draftAnchor })
+  }
+
+  return entries
 }
 
 export function diffViewCommentEntries(

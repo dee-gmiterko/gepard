@@ -1,7 +1,7 @@
 import { useIntl } from 'react-intl'
 import { defineMessages } from '../../i18n/defineMessages'
 import { Combobox } from '../../components/Combobox'
-import { repoFilterText, repoSearchQuery, repoUrl } from './repoUrl'
+import { repoFilterText, repoSearchQuery, repoUrl } from './utils/repoUrl'
 import type { ViewerRepo } from '@shared/ipc/schemas/project'
 
 const messages = defineMessages({

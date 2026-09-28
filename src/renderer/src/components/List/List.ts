@@ -1,7 +1,12 @@
 import styled, { css } from 'styled-components'
 import type { Theme } from '../../theme/tokens'
 import type { Gap } from '../Layout'
-import { listReset } from './listReset'
+
+export const listReset = css`
+  list-style: none;
+  margin: 0;
+  padding: 0;
+`
 
 export const List = styled.ul`
   ${listReset}
