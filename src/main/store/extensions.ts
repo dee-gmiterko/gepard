@@ -25,9 +25,6 @@ export type KnownFile = z.infer<typeof KnownFile>
 const KnownFilesState = z.record(z.string(), KnownFile)
 export type KnownFilesState = z.infer<typeof KnownFilesState>
 
-// Records, per extension file path, the id/displayName learned the last time
-// that file was imported, so a disabled extension's id can be looked up (and
-// its import skipped) without importing it again.
 export async function getKnownFiles(): Promise<KnownFilesState> {
   return readJsonFile(extensionsFilesJsonPath(), KnownFilesState, () => ({}))
 }

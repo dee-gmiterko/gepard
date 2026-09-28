@@ -7,7 +7,7 @@ export const channelNames = [
   'projects.add',
   'projects.open',
   'projects.setTargeting',
-  'projects.setTrustWorkspaceToolchain',
+  'projects.setLayout',
   'projects.remove',
   'clone.start',
   'pr.list',
@@ -39,7 +39,8 @@ export const channelNames = [
   'extensions.install',
   'extensions.dir',
   'theme.getTemplateId',
-  'theme.setTemplateId'
+  'theme.setTemplateId',
+  'themes.list'
 ] as const
 
 export const eventNames = ['clone.progress', 'index.status', 'theme.changed', 'app.error'] as const

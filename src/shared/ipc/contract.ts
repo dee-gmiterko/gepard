@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { Viewer, ViewerRepo, Project, ProjectId } from './schemas/project'
+import { Viewer, ViewerRepo, Project, ProjectId, PersistedLayout } from './schemas/project'
 import {
   ChangedFile,
   CheckoutResult,
@@ -16,8 +16,9 @@ import {
 } from './schemas/pr'
 import { Comment, CommentDraft, LocalViewedState, ReviewThread } from './schemas/comment'
 import { GroupedResult, Pos, SearchQuery, WorkspaceSymbol } from './schemas/search'
-import { DefinitionResult, IndexStatus, LineSymbolsResult } from './schemas/index'
+import { DefinitionResult, IndexStatus, LineSymbolsResult } from './schemas/lsp'
 import { ExtensionInfo } from './schemas/extensions'
+import { ThemeTemplateData } from './schemas/theme'
 import type { ChannelNameList, EventNameList } from './names'
 export { channelNames, eventNames } from './names'
 
@@ -49,13 +50,15 @@ export const channels = {
   ),
   'projects.open': ch(
     z.object(ProjectRef),
-    z.object({ project: Project, head: Sha, targeting: PersistedTargeting })
+    z.object({
+      project: Project,
+      head: Sha,
+      targeting: PersistedTargeting,
+      layout: PersistedLayout
+    })
   ),
   'projects.setTargeting': ch(z.object({ ...ProjectRef, targeting: PersistedTargeting }), z.void()),
-  'projects.setTrustWorkspaceToolchain': ch(
-    z.object({ ...ProjectRef, trustWorkspaceToolchain: z.boolean() }),
-    Project
-  ),
+  'projects.setLayout': ch(z.object({ ...ProjectRef, layout: PersistedLayout }), z.void()),
   'projects.remove': ch(z.object(ProjectRef), z.void()),
   'clone.start': ch(z.object(ProjectRef), z.void()),
 
@@ -126,8 +129,6 @@ export const channels = {
       ...PrRef,
       paths: z.array(RepoPath).min(1),
       viewed: z.boolean(),
-      // The targeted PR's node id; the renderer already has it from the PR's
-      // summary once a PR is targeted.
       prId: NodeId.nullable().default(null)
     }),
     z.array(LocalViewedState)
@@ -157,14 +158,12 @@ export const channels = {
     z.object({ id: z.string(), enabled: z.boolean() }),
     z.array(ExtensionInfo)
   ),
-  'extensions.install': ch(
-    z.object({ dialogTitle: z.string().min(1), filterName: z.string().min(1) }),
-    z.array(ExtensionInfo)
-  ),
+  'extensions.install': ch(z.object({ dialogTitle: z.string().min(1) }), z.array(ExtensionInfo)),
   'extensions.dir': ch(z.void(), z.string()),
 
   'theme.getTemplateId': ch(z.void(), z.string().nullable()),
-  'theme.setTemplateId': ch(z.object({ templateId: z.string().nullable() }), z.string().nullable())
+  'theme.setTemplateId': ch(z.object({ templateId: z.string().nullable() }), z.string().nullable()),
+  'themes.list': ch(z.void(), z.array(ThemeTemplateData))
 } as const satisfies Record<ChannelNameList, { input: z.ZodType; output: z.ZodType }>
 
 export const events = {

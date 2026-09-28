@@ -25,8 +25,7 @@ export function useExtensionsDir() {
 export function useInstallExtension() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: { dialogTitle: string; filterName: string }) =>
-      invoke('extensions.install', input),
+    mutationFn: (input: { dialogTitle: string }) => invoke('extensions.install', input),
     onSuccess: (extensions) => qc.setQueryData(qk.extensions(), extensions),
     onSettled: () => qc.invalidateQueries({ queryKey: qk.extensions() })
   })

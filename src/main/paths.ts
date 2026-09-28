@@ -42,8 +42,21 @@ export function projectReviewDir(id: string): string {
   return join(projectDir(id), 'review')
 }
 
-export function extensionsDir(): string {
+export type ExtensionKindDir = 'lsp' | 'themes'
+
+export function extensionsRootDir(): string {
   return join(userDataDir(), 'extensions')
+}
+
+export function userExtensionsDir(kind: ExtensionKindDir): string {
+  return join(extensionsRootDir(), kind)
+}
+
+// Bundled main process code always runs from out/main (electron-vite dev
+// and build alike), so the app root is two directories up, whether that is
+// the repo root or a packaged app.asar.
+export function builtinExtensionsDir(kind: ExtensionKindDir): string {
+  return join(__dirname, '..', '..', 'extensions', kind)
 }
 
 export function extensionsJsonPath(): string {

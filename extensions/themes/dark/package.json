@@ -1,0 +1,10 @@
+{
+  "name": "gepard-theme-dark",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Built-in dark theme extension for Gepard.",
+  "main": "index.mjs",
+  "gepard": {
+    "type": "theme"
+  }
+}

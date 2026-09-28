@@ -1,7 +1,7 @@
 import { dialog } from 'electron'
 import type { HandlerMap } from '../registry'
-import { extensionRegistry } from '../../lsp'
-import { extensionsDir } from '../../paths'
+import { extensionRegistry } from '../../extensions/registry'
+import { extensionsRootDir } from '../../paths'
 
 export const extensionsHandlers: Pick<
   HandlerMap,
@@ -9,17 +9,13 @@ export const extensionsHandlers: Pick<
 > = {
   'extensions.list': () => extensionRegistry.list(),
   'extensions.setEnabled': ({ id, enabled }) => extensionRegistry.setEnabled(id, enabled),
-  'extensions.dir': () => extensionsDir(),
+  'extensions.dir': () => extensionsRootDir(),
 
-  'extensions.install': async ({ dialogTitle, filterName }, { window }) => {
-    const filters = [{ name: filterName, extensions: ['js', 'mjs', 'cjs'] }]
+  'extensions.install': async ({ dialogTitle }, { window }) => {
+    const options = { title: dialogTitle, properties: ['openDirectory' as const] }
     const { canceled, filePaths } = window
-      ? await dialog.showOpenDialog(window, {
-          title: dialogTitle,
-          properties: ['openFile'],
-          filters
-        })
-      : await dialog.showOpenDialog({ title: dialogTitle, properties: ['openFile'], filters })
+      ? await dialog.showOpenDialog(window, options)
+      : await dialog.showOpenDialog(options)
     if (canceled || filePaths.length === 0) return extensionRegistry.list()
     return extensionRegistry.install(filePaths[0])
   }

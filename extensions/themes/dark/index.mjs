@@ -1,6 +1,4 @@
-import type { ThemeTemplate } from '../tokens'
-
-export const darkTemplate: ThemeTemplate = {
+export default {
   id: 'dark',
   name: 'Dark',
   mode: 'dark',

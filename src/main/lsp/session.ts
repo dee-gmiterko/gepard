@@ -21,8 +21,8 @@ import {
 import {
   DefinitionTarget as DefinitionTargetSchema,
   LineSymbol as LineSymbolSchema
-} from '@shared/ipc/schemas/index'
-import type { IndexStatus } from '@shared/ipc/schemas/index'
+} from '@shared/ipc/schemas/lsp'
+import type { IndexStatus } from '@shared/ipc/schemas/lsp'
 
 export type LineSymbol = ReturnType<typeof LineSymbolSchema.parse>
 export type FileMatches = ReturnType<typeof FileMatchesSchema.parse>
@@ -39,8 +39,6 @@ export interface LaunchPlan {
   cwd: string
   env?: NodeJS.ProcessEnv
   initializationOptions?: unknown
-  source: 'workspace' | 'bundled'
-  version?: string
 }
 
 export interface ExtensionEvents {
@@ -52,8 +50,7 @@ export interface LanguageExtension {
   id: string
   displayName: string
   matches(filePath: string): boolean
-  resolve(project: { root: string; trustWorkspaceToolchain?: boolean }): Promise<LaunchPlan>
-  start(plan: LaunchPlan, sink: ExtensionEvents): Promise<LanguageSession>
+  resolve(project: { root: string }): Promise<LaunchPlan>
 }
 
 export interface FileChange {

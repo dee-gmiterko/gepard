@@ -1,7 +1,7 @@
 import { useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { ThemeProvider as StyledThemeProvider, createGlobalStyle } from 'styled-components'
 import { useIpcEvent } from '../ipc/client'
-import { useThemeTemplateId } from '../queries/theme'
+import { useThemeTemplateId, useThemes } from '../queries/theme'
 import { buildTheme } from './tokens'
 import { resolveTemplate } from './resolveTemplate'
 
@@ -63,9 +63,10 @@ export function AppThemeProvider({ children }: { children: ReactNode }): React.J
 
   const { data: templateId } = useThemeTemplateId()
   const resolvedTemplateId = templateId ?? null
+  const { data: templates } = useThemes()
   const theme = useMemo(
-    () => buildTheme(resolveTemplate(resolvedTemplateId, systemPrefersDark)),
-    [resolvedTemplateId, systemPrefersDark]
+    () => buildTheme(resolveTemplate(resolvedTemplateId, systemPrefersDark, templates ?? [])),
+    [resolvedTemplateId, systemPrefersDark, templates]
   )
 
   return (

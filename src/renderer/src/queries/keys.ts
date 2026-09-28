@@ -6,6 +6,7 @@ export const qk = {
   extensions: () => [...qk.all, 'extensions'] as const,
   extensionsDir: () => [...qk.all, 'extensionsDir'] as const,
   themeTemplate: () => [...qk.all, 'themeTemplate'] as const,
+  themes: () => [...qk.all, 'themes'] as const,
   project: (projectId: string) => [...qk.all, 'project', projectId] as const,
   open: (p: string) => [...qk.project(p), 'open'] as const,
   commits: (p: string, search?: string, path?: string) =>
