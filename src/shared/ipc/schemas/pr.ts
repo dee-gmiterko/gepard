@@ -23,7 +23,9 @@ export const ReviewState = z.enum([
   'CHANGES_REQUESTED',
   'DISMISSED'
 ])
-export const SubjectType = z.enum(['LINE', 'FILE'])
+// 'PR' is not a GitHub subject type: it marks a general PR-level comment
+// (an IssueComment), which has no file/line anchor at all.
+export const SubjectType = z.enum(['LINE', 'FILE', 'PR'])
 
 export const RepoPath = z.string().regex(/^(?!\/)(?!.*\\)(?!.*(^|\/)\.\.(\/|$)).+/)
 

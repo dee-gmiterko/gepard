@@ -43,5 +43,6 @@ export const BrowserWindow = {
 }
 
 export const ipcMain = {
-  handle: (): void => undefined
+  handle: (): void => undefined,
+  on: (): void => undefined
 }
