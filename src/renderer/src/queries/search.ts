@@ -1,36 +1,66 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useMemo } from 'react';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { invoke, isCancelledError } from '../ipc/client';
 import { qk } from './keys';
 import { useAppState } from '../state/AppContext';
 import { useCurrentHead } from './projects';
+import { digestPaths } from '../helpers/pathsDigest';
 import type { SearchQuery } from '@gepard/common/ipc/schemas/search';
 
-// React Query keeps `data` at its last successful value when a fetch fails.
-function ignoreCancelled<TData, TError>(
-  result: UseQueryResult<TData, TError>,
-): UseQueryResult<TData, TError> {
+const SEARCH_PAGE_SIZE = 50;
+const SEARCH_GC_MS = 30_000;
+
+function ignoreCancelled<T extends { error: unknown; isError: boolean; failureReason: unknown }>(
+  result: T,
+): T {
   if (!result.error || !isCancelledError(result.error)) return result;
-  return {
-    ...result,
-    error: null,
-    isError: false,
-    failureReason: null,
-  } as UseQueryResult<TData, TError>;
+  return { ...result, error: null, isError: false, failureReason: null };
 }
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
 export type SearchParams = DistributiveOmit<SearchQuery, 'projectId' | 'sha'>;
 
+function useParamsKey(params: SearchParams | null): unknown {
+  return useMemo(
+    () => params && { ...params, targetedPaths: digestPaths(params.targetedPaths ?? []) },
+    [params],
+  );
+}
+
 export function useSearch(sha: string, params: SearchParams | null) {
   const projectId = useAppState().projectId ?? '';
   const query = params && projectId && sha ? ({ ...params, projectId, sha } as SearchQuery) : null;
+  const paramsKey = useParamsKey(params);
   return ignoreCancelled(
     useQuery({
-      queryKey: qk.search(projectId, sha, params?.text ?? '', params),
+      queryKey: qk.search(projectId, sha, params?.text ?? '', paramsKey),
       queryFn: () => invoke('search.run', query as SearchQuery),
       enabled: Boolean(query),
       staleTime: Infinity,
+      gcTime: SEARCH_GC_MS,
+    }),
+  );
+}
+
+export function useSearchPages(sha: string, params: SearchParams | null) {
+  const projectId = useAppState().projectId ?? '';
+  const query = params && projectId && sha ? ({ ...params, projectId, sha } as SearchQuery) : null;
+  const paramsKey = useParamsKey(params);
+  return ignoreCancelled(
+    useInfiniteQuery({
+      queryKey: qk.searchPages(projectId, sha, params?.text ?? '', paramsKey),
+      queryFn: ({ pageParam }) =>
+        invoke('search.run', {
+          ...(query as SearchQuery),
+          offset: pageParam,
+          limit: SEARCH_PAGE_SIZE,
+        }),
+      initialPageParam: 0,
+      getNextPageParam: (last) => last.nextOffset ?? undefined,
+      enabled: Boolean(query),
+      staleTime: Infinity,
+      gcTime: SEARCH_GC_MS,
     }),
   );
 }

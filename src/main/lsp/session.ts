@@ -9,10 +9,10 @@ import {
   type CancellationToken,
   type MessageConnection,
 } from 'vscode-jsonrpc/node';
+import { comparePaths } from '@gepard/common/model/pathOrder';
 import { CrashGate } from './crash-gate';
 import { toPosix } from '../helpers/fs/path';
 import {
-  FileMatches as FileMatchesSchema,
   Match as MatchSchema,
   WorkspaceSymbol as WorkspaceSymbolSchema,
   Pos as PosSchema,
@@ -26,8 +26,11 @@ import {
 import type { IndexStatus, DocumentSymbol } from '@gepard/common/ipc/schemas/lsp';
 
 export type LineSymbol = ReturnType<typeof LineSymbolSchema.parse>;
-export type FileMatches = ReturnType<typeof FileMatchesSchema.parse>;
 export type Match = ReturnType<typeof MatchSchema.parse>;
+export interface FileMatches {
+  path: string;
+  matches: Match[];
+}
 export type WorkspaceSymbol = ReturnType<typeof WorkspaceSymbolSchema.parse>;
 export type Pos = ReturnType<typeof PosSchema.parse>;
 export type Range = ReturnType<typeof RangeSchema.parse>;
@@ -79,8 +82,6 @@ export interface LanguageSession {
   dispose(): Promise<void>;
 }
 
-// LSP servers report an empty semantic token legend unless the client
-// declares the token types it supports.
 const STANDARD_TOKEN_TYPES = [
   'namespace',
   'type',
@@ -195,7 +196,6 @@ interface LspLocation {
   uri: string;
   range: LspRange;
 }
-// textDocument/definition may reply with plain Locations or LocationLinks.
 interface LspLocationLink {
   targetUri: string;
   targetSelectionRange: LspRange;
@@ -209,8 +209,6 @@ function toRange(r: LspRange): Range {
   };
 }
 
-// textDocument/documentSymbol replies with hierarchical DocumentSymbol[] when
-// the server supports it, or falls back to flat SymbolInformation[] otherwise.
 interface LspDocumentSymbol {
   name: string;
   kind: number;
@@ -241,8 +239,6 @@ function toDocumentSymbol(s: LspDocumentSymbol): DocumentSymbol {
   };
 }
 
-// SymbolInformation carries a flat list with `containerName`; rebuild a tree
-// from that so the renderer only ever deals with one shape.
 function flatSymbolsToTree(raw: LspSymbolInformation[]): DocumentSymbol[] {
   const nodes = raw.map((s): DocumentSymbol => ({
     name: s.name,
@@ -314,7 +310,6 @@ export class LspSession implements LanguageSession {
     });
     this.child = child;
     child.stderr.on('data', (d: Buffer) => this.sink.log('warn', d.toString('utf8').trim()));
-    // vscode-jsonrpc does not reject pending requests when the connection closes.
     let failLaunch: ((e: Error) => void) | null = null;
     let abandoned = false;
     const launchFailed = new Promise<never>((_, reject) => {
@@ -324,7 +319,6 @@ export class LspSession implements LanguageSession {
       if (abandoned) return;
       const message = `LSP process error: ${err.message}`;
       if (failLaunch) failLaunch(new Error(message));
-      // Node may fire both 'error' and 'exit' for the same failure.
       else if (this.crashGate.crash()) {
         this.sink.log('error', message);
       }
@@ -487,8 +481,6 @@ export class LspSession implements LanguageSession {
     return path.join(this.plan.cwd, repoRelativePath);
   }
 
-  // `MessageConnection#sendRequest` treats an explicit `undefined` third
-  // argument as a params element, not as a missing cancellation token.
   private sendRequest<R>(method: string, params: unknown, token?: CancellationToken): Promise<R> {
     const real = (
       token ? this.conn.sendRequest(method, params, token) : this.conn.sendRequest(method, params)
@@ -639,10 +631,9 @@ export class LspSession implements LanguageSession {
         byFile.set(repoPath, matches);
       }
       return Array.from(byFile.entries())
-        .sort(([a], [b]) => a.localeCompare(b))
+        .sort(([a], [b]) => comparePaths(a, b))
         .map(([repoPath, matches]) => ({
           path: repoPath,
-          targeted: false,
           matches: matches.sort((a, b) => a.line - b.line),
         }));
     });
@@ -684,8 +675,6 @@ export class LspSession implements LanguageSession {
         token,
       );
       if (!raw || raw.length === 0) return [];
-      // Hierarchical (DocumentSymbol[]) entries carry `range`/`selectionRange`;
-      // flat (SymbolInformation[]) entries carry `location` instead.
       if (isDocumentSymbolArray(raw)) return raw.map(toDocumentSymbol);
       return flatSymbolsToTree(raw);
     });

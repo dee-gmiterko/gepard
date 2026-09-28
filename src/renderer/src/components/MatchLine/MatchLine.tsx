@@ -36,11 +36,16 @@ export function MatchLine({
   preview: string;
   spans: readonly TextRange[];
 }): React.JSX.Element {
+  const indent = preview.length - preview.trimStart().length;
+  const shifted = spans.map(([start, end]): TextRange => [
+    Math.max(start, indent) - indent,
+    Math.max(end, indent) - indent,
+  ]);
   return (
     <Row>
       <LineNo>{line}</LineNo>
       <Preview>
-        <HighlightedText text={preview} ranges={spans} />
+        <HighlightedText text={preview.slice(indent)} ranges={shifted} />
       </Preview>
     </Row>
   );

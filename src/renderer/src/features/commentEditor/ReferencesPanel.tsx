@@ -40,6 +40,10 @@ const messages = defineMessages({
     id: 'commentEditor.referencesPanel.samePatternDisabledHint',
     defaultMessage: 'No symbols on this line to match a pattern on.',
   },
+  truncated: {
+    id: 'commentEditor.referencesPanel.truncated',
+    defaultMessage: 'Too many matches: only the first ones are shown and included.',
+  },
   noAnchor: {
     id: 'commentEditor.referencesPanel.noAnchor',
     defaultMessage: 'References are not available for this comment (no anchor line).',
@@ -116,6 +120,11 @@ function SearchRefsSection({
             ))}
           </div>
         ))}
+        {data?.truncated && (
+          <Message layout="inline">
+            <FormattedMessage {...messages.truncated} />
+          </Message>
+        )}
       </Stack>
     </Accordion>
   );

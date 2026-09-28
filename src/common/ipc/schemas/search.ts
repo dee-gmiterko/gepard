@@ -30,7 +30,7 @@ export const Match = z.object({
 });
 export const FileMatches = z.object({
   path: RepoPath,
-  targeted: z.boolean(),
+  moreMatches: z.boolean(),
   matches: z.array(Match),
 });
 export const GroupedResult = z.object({
@@ -40,7 +40,11 @@ export const GroupedResult = z.object({
     scope: z.enum(['all', 'targeted']),
   }),
   files: z.array(FileMatches),
-  totalMatches: z.int().nonnegative(),
+  offset: z.int().nonnegative(),
+  nextOffset: z.int().nonnegative().nullable(),
+  hasMore: z.boolean(),
+  truncated: z.boolean(),
+  matchesInPage: z.int().nonnegative(),
 });
 export type GroupedResult = z.infer<typeof GroupedResult>;
 
@@ -57,6 +61,9 @@ const SearchBase = {
   sha: z.string().regex(/^[0-9a-f]{40}$/),
   scope: z.enum(['all', 'targeted']),
   targetedPaths: z.array(RepoPath).default([]),
+  limit: z.int().positive().max(200).optional(),
+  offset: z.int().nonnegative().default(0),
+  maxMatchesPerFile: z.int().positive().optional(),
 };
 export const SearchQuery = z.discriminatedUnion('kind', [
   z.object({

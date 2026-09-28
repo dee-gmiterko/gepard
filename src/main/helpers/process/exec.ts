@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { StringDecoder } from 'node:string_decoder';
 import { z } from 'zod';
 import { AppError } from '../../ipc/registry';
 
@@ -43,7 +44,49 @@ function stderrTail(stderr: string): string {
   return stderr.trim().split(/\r?\n/).slice(-5).join('\n');
 }
 
-// git progress output uses bare `\r`, not always `\n`.
+function spawnFailure(
+  err: NodeJS.ErrnoException,
+  cmd: string,
+  args: string[],
+  stderr: string,
+): Error {
+  if (err.name === 'AbortError') return err;
+  if (err.code === 'ENOENT') {
+    return new ExecError('EXEC_NOT_FOUND', `${cmd}: not found`, cmd, args, null, stderr);
+  }
+  return new ExecError('EXEC_FAILED', err.message, cmd, args, null, stderr);
+}
+
+function exitFailure(
+  cmd: string,
+  args: string[],
+  exitCode: number | null,
+  signal: NodeJS.Signals | null,
+  stderr: string,
+): ExecError {
+  if (signal) {
+    return new ExecError(
+      'EXEC_FAILED',
+      `${cmd} was killed by signal ${signal}`,
+      cmd,
+      args,
+      null,
+      stderr,
+    );
+  }
+  const detail = stderrTail(stderr);
+  return new ExecError(
+    'EXEC_FAILED',
+    detail
+      ? `${cmd} exited with code ${exitCode}: ${detail}`
+      : `${cmd} exited with code ${exitCode}`,
+    cmd,
+    args,
+    exitCode,
+    stderr,
+  );
+}
+
 function makeLineSplitter(onLine: (line: string) => void): (chunk: Buffer | string) => void {
   let buf = '';
   return (chunk) => {
@@ -95,15 +138,7 @@ function spawnCollect(
       splitStderr(chunk);
     });
 
-    child.on('error', (err: NodeJS.ErrnoException) => {
-      if (err.name === 'AbortError') return reject(err);
-      if (err.code === 'ENOENT') {
-        return reject(
-          new ExecError('EXEC_NOT_FOUND', `${cmd}: not found`, cmd, args, null, stderr),
-        );
-      }
-      reject(new ExecError('EXEC_FAILED', err.message, cmd, args, null, stderr));
-    });
+    child.on('error', (err: NodeJS.ErrnoException) => reject(spawnFailure(err, cmd, args, stderr)));
 
     child.on('close', (exitCode, signal) => {
       if (tooLarge) {
@@ -120,40 +155,92 @@ function spawnCollect(
       }
       if (exitCode === 0)
         return resolve({ stdout: Buffer.concat(stdoutChunks), stderr, exitCode: 0 });
-      // Node reports a null exit code and a signal when the process is killed,
-      // including by its own `timeout` option.
-      if (signal) {
-        return reject(
-          new ExecError(
-            'EXEC_FAILED',
-            `${cmd} was killed by signal ${signal}`,
-            cmd,
-            args,
-            null,
-            stderr,
-          ),
-        );
-      }
-      const detail = stderrTail(stderr);
-      reject(
-        new ExecError(
-          'EXEC_FAILED',
-          detail
-            ? `${cmd} exited with code ${exitCode}: ${detail}`
-            : `${cmd} exited with code ${exitCode}`,
-          cmd,
-          args,
-          exitCode,
-          stderr,
-        ),
-      );
+      reject(exitFailure(cmd, args, exitCode, signal, stderr));
     });
 
     if (opts.stdin !== undefined) {
-      // Writing to the stdin of a child that has already exited emits EPIPE.
       child.stdin?.on('error', () => undefined);
       child.stdin?.end(opts.stdin);
     }
+  });
+}
+
+export interface RunLinesOptions {
+  cwd?: string;
+  env?: NodeJS.ProcessEnv;
+  signal?: AbortSignal;
+  timeoutMs?: number;
+  onLine: (line: string) => 'stop' | void;
+}
+
+export interface RunLinesResult {
+  stopped: boolean;
+  stderr: string;
+}
+
+export function runLines(
+  cmd: string,
+  args: string[],
+  opts: RunLinesOptions,
+): Promise<RunLinesResult> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, args, {
+      cwd: opts.cwd,
+      env: opts.env ?? process.env,
+      signal: opts.signal,
+      killSignal: 'SIGTERM',
+      timeout: opts.timeoutMs,
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    const decoder = new StringDecoder('utf8');
+    let pending = '';
+    let stderr = '';
+    let stopped = false;
+    let failure: unknown = null;
+
+    function deliver(line: string): void {
+      if (stopped || failure !== null) return;
+      try {
+        const clean = line.endsWith('\r') ? line.slice(0, -1) : line;
+        if (opts.onLine(clean) === 'stop') {
+          stopped = true;
+          child.kill('SIGTERM');
+        }
+      } catch (e) {
+        failure = e;
+        child.kill('SIGTERM');
+      }
+    }
+
+    function feed(text: string): void {
+      pending += text;
+      let from = 0;
+      let newline = pending.indexOf('\n', from);
+      while (newline !== -1 && !stopped && failure === null) {
+        deliver(pending.slice(from, newline));
+        from = newline + 1;
+        newline = pending.indexOf('\n', from);
+      }
+      pending = stopped || failure !== null ? '' : pending.slice(from);
+    }
+
+    child.stdout.on('data', (chunk: Buffer) => feed(decoder.write(chunk)));
+    child.stderr.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString('utf8');
+    });
+    child.on('error', (err: NodeJS.ErrnoException) => reject(spawnFailure(err, cmd, args, stderr)));
+    child.on('close', (exitCode, signal) => {
+      if (failure !== null) return reject(failure);
+      if (!stopped) {
+        feed(decoder.end());
+        if (pending) deliver(pending);
+        if (failure !== null) return reject(failure);
+      }
+      if (stopped || exitCode === 0) return resolve({ stopped, stderr });
+      reject(exitFailure(cmd, args, exitCode, signal, stderr));
+    });
   });
 }
 

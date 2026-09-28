@@ -1,8 +1,5 @@
-// `rg -w` matches only where a word character meets a non-word character or
-// the edge of the line. ripgrep's `\w` is Unicode-aware: a word character is
-// any Alphabetic, Mark, decimal-Number, Connector_Punctuation, or
-// Join_Control code point (the Rust regex crate's definition of `\w` under
-// Unicode mode, which is on by default).
+import { comparePaths } from '@gepard/common/model/pathOrder';
+
 const WORD_RE =
   /[\p{Alphabetic}\p{Mark}\p{Decimal_Number}\p{Connector_Punctuation}\p{Join_Control}]+/gu;
 
@@ -126,7 +123,7 @@ export class LineIndex {
         });
       results.push({ path, matches });
     }
-    return results.sort((a, b) => a.path.localeCompare(b.path));
+    return results.sort((a, b) => comparePaths(a.path, b.path));
   }
 
   queryWord(word: string): LineIndexFileMatches[] {
@@ -152,6 +149,6 @@ export class LineIndex {
         }));
       results.push({ path, matches });
     }
-    return results.sort((a, b) => a.path.localeCompare(b.path));
+    return results.sort((a, b) => comparePaths(a.path, b.path));
   }
 }

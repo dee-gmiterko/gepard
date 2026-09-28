@@ -34,7 +34,7 @@ const List = styled.ul`
 
 const CHEVRON_SLOT_WIDTH = 18;
 
-const Row = styled.div<{ $depth: number }>`
+export const Row = styled.div<{ $depth: number }>`
   display: flex;
   align-items: center;
   gap: ${({ theme }) => theme.space[1]};
@@ -45,7 +45,7 @@ const Row = styled.div<{ $depth: number }>`
   ${focusVisible}
 `;
 
-const ChevronSlot = styled.span`
+export const ChevronSlot = styled.span`
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -53,7 +53,7 @@ const ChevronSlot = styled.span`
   width: ${CHEVRON_SLOT_WIDTH}px;
 `;
 
-const FileRow = styled(Row)<{ $selected: boolean }>`
+export const FileRow = styled(Row)<{ $selected: boolean }>`
   cursor: pointer;
   color: ${({ theme }) => theme.colors.fg};
   background: ${({ $selected, theme }) => ($selected ? theme.colors.bgSelected : 'transparent')};
@@ -63,7 +63,7 @@ const FileRow = styled(Row)<{ $selected: boolean }>`
   }
 `;
 
-const FolderRow = styled(Row)`
+export const FolderRow = styled(Row)`
   cursor: pointer;
   color: ${({ theme }) => theme.colors.fgMuted};
 
@@ -85,7 +85,7 @@ const ChevronButton = styled(IconButton)`
   height: ${CHEVRON_SLOT_WIDTH}px;
 `;
 
-function Chevron({
+export function Chevron({
   expanded,
   onToggle,
 }: {

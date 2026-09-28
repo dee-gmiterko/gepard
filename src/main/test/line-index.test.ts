@@ -47,6 +47,18 @@ describe('LineIndex.queryExactLine ("Also in")', () => {
     expect(results.map((f) => f.path)).toEqual(['a.ts', 'z.ts']);
   });
 
+  it('sorts in the same component-wise order ripgrep walks in, so pages agree across backends', () => {
+    const idx = new LineIndex();
+    for (const path of ['a.ts', 'a/x.ts', 'a-b.ts', 'b.ts']) idx.setFile(path, 'same\n');
+    expect(idx.queryExactLine('same').map((f) => f.path)).toEqual([
+      'a/x.ts',
+      'a-b.ts',
+      'a.ts',
+      'b.ts',
+    ]);
+    expect(idx.queryWord('same').map((f) => f.path)).toEqual(['a/x.ts', 'a-b.ts', 'a.ts', 'b.ts']);
+  });
+
   it('returns nothing for a line no file has', () => {
     const idx = new LineIndex();
     idx.setFile('a.ts', 'foo\n');

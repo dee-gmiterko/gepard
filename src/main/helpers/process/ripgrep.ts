@@ -1,8 +1,8 @@
 import { rgPath as rgPathRaw } from '@vscode/ripgrep';
-import { matchesTarget } from '@gepard/common/model/paths';
-import { run, ExecError } from './exec';
+import { makeTargetMatcher } from '@gepard/common/model/targetMatcher';
+import { runLines, ExecError } from './exec';
+import { clipPreview } from '../search/preview';
 
-// Electron cannot execute binaries from inside an asar archive.
 function resolveRgPath(): string {
   return rgPathRaw.includes('app.asar')
     ? rgPathRaw.replace('app.asar', 'app.asar.unpacked')
@@ -18,6 +18,7 @@ export interface RipgrepMatch {
 export interface RipgrepFileResult {
   path: string;
   matches: RipgrepMatch[];
+  moreMatches?: true;
 }
 
 export interface RipgrepSearchOptions {
@@ -27,6 +28,21 @@ export interface RipgrepSearchOptions {
   word?: boolean;
   paths?: string[];
   signal?: AbortSignal;
+  offset?: number;
+  limit?: number;
+  maxMatchesPerFile?: number;
+  maxTotalMatches?: number;
+}
+
+export interface RipgrepPage {
+  files: RipgrepFileResult[];
+  hasMore: boolean;
+  truncated: boolean;
+}
+
+interface RgBeginMessage {
+  type: 'begin';
+  data: { path: { text?: string } };
 }
 
 interface RgMatchMessage {
@@ -39,11 +55,24 @@ interface RgMatchMessage {
   };
 }
 
-function isMatchMessage(m: unknown): m is RgMatchMessage {
-  return typeof m === 'object' && m !== null && (m as { type?: unknown }).type === 'match';
+interface RgEndMessage {
+  type: 'end';
 }
 
-// ripgrep reports UTF-8 byte offsets, while JS strings index by UTF-16 code units.
+type RgMessage = RgBeginMessage | RgMatchMessage | RgEndMessage;
+
+function parseMessage(line: string): RgMessage | null {
+  if (!line || line.startsWith('{"type":"summary"')) return null;
+  let msg: unknown;
+  try {
+    msg = JSON.parse(line);
+  } catch {
+    return null;
+  }
+  const type = typeof msg === 'object' && msg !== null ? (msg as { type?: unknown }).type : null;
+  return type === 'begin' || type === 'match' || type === 'end' ? (msg as RgMessage) : null;
+}
+
 export function utf16ByteBoundaries(text: string): number[] {
   const boundaries = new Array<number>(text.length + 1);
   boundaries[0] = 0;
@@ -53,7 +82,6 @@ export function utf16ByteBoundaries(text: string): number[] {
     const codePoint = text.codePointAt(i) as number;
     bytes += Buffer.byteLength(String.fromCodePoint(codePoint), 'utf8');
     if (codePoint > 0xffff) {
-      // A code point above U+FFFF occupies two UTF-16 code units.
       boundaries[i + 1] = bytes;
       boundaries[i + 2] = bytes;
       i += 2;
@@ -76,68 +104,107 @@ export function byteOffsetToUtf16(boundaries: number[], byteOffset: number): num
   return lo;
 }
 
-function parseMatches(stdout: string): Map<string, RipgrepMatch[]> {
-  const files = new Map<string, RipgrepMatch[]>();
-  for (const line of stdout.split('\n')) {
-    if (!line) continue;
-    let msg: unknown;
-    try {
-      msg = JSON.parse(line);
-    } catch {
-      continue;
-    }
-    if (!isMatchMessage(msg)) continue;
-    const filePath = msg.data.path.text;
-    const rawLine = msg.data.lines.text;
-    // ripgrep's --json output uses `bytes` instead of `text` for non-UTF-8 data.
-    if (filePath === undefined || rawLine === undefined) continue;
+function toMatch(msg: RgMatchMessage): RipgrepMatch | null {
+  const rawLine = msg.data.lines.text;
+  if (rawLine === undefined) return null;
 
-    const boundaries = utf16ByteBoundaries(rawLine);
-    const spans: Array<[number, number]> = msg.data.submatches.map((s) => [
-      byteOffsetToUtf16(boundaries, s.start),
-      byteOffsetToUtf16(boundaries, s.end),
-    ]);
-    const relPath = filePath.startsWith('./') ? filePath.slice(2) : filePath;
-    const list = files.get(relPath) ?? [];
-    list.push({ line: msg.data.line_number, preview: rawLine.trimEnd(), spans });
-    files.set(relPath, list);
+  const ascii = Buffer.byteLength(rawLine, 'utf8') === rawLine.length;
+  const boundaries = ascii ? null : utf16ByteBoundaries(rawLine);
+  const spans = msg.data.submatches.map((s): [number, number] =>
+    boundaries
+      ? [byteOffsetToUtf16(boundaries, s.start), byteOffsetToUtf16(boundaries, s.end)]
+      : [s.start, s.end],
+  );
+  return { line: msg.data.line_number, ...clipPreview(rawLine.trimEnd(), spans) };
+}
+
+export async function ripgrepSearchPage(opts: RipgrepSearchOptions): Promise<RipgrepPage> {
+  const targets = opts.paths;
+  if (targets && targets.length === 0) return { files: [], hasMore: false, truncated: false };
+  const isTargeted = targets ? makeTargetMatcher(targets) : null;
+
+  const offset = opts.offset ?? 0;
+  const limit = opts.limit ?? Infinity;
+  const perFile = opts.maxMatchesPerFile;
+  const totalCap = opts.maxTotalMatches ?? Infinity;
+
+  const args = ['--json', '--hidden', '--no-ignore', '--sort', 'path', '--glob', '!.git'];
+  if (opts.fixedString) args.push('-F');
+  if (opts.word) args.push('-w');
+  if (perFile !== undefined) args.push('--max-count', String(perFile + 1));
+  args.push('--', opts.pattern, '.');
+
+  const files: RipgrepFileResult[] = [];
+  let current: { path: string; matches: RipgrepMatch[]; more: boolean } | null = null;
+  let ignoring = false;
+  let skipped = 0;
+  let total = 0;
+  let hasMore = false;
+  let truncated = false;
+
+  function finishFile(): void {
+    if (current && current.matches.length > 0) {
+      files.push(
+        current.more
+          ? { path: current.path, matches: current.matches, moreMatches: true }
+          : { path: current.path, matches: current.matches },
+      );
+    }
+    current = null;
   }
-  return files;
+
+  function onLine(line: string): 'stop' | void {
+    const msg = parseMessage(line);
+    if (!msg) return;
+
+    if (msg.type === 'begin') {
+      finishFile();
+      const raw = msg.data.path.text;
+      const path = raw === undefined ? undefined : raw.startsWith('./') ? raw.slice(2) : raw;
+      ignoring = path === undefined || (isTargeted !== null && !isTargeted(path));
+      if (ignoring || path === undefined) return;
+      if (skipped < offset) {
+        skipped++;
+        ignoring = true;
+        return;
+      }
+      if (files.length >= limit) {
+        hasMore = true;
+        return 'stop';
+      }
+      current = { path, matches: [], more: false };
+    } else if (msg.type === 'match') {
+      if (ignoring || !current) return;
+      if (perFile !== undefined && current.matches.length >= perFile) {
+        current.more = true;
+        return;
+      }
+      if (total >= totalCap) {
+        truncated = true;
+        current.more = current.matches.length > 0;
+        finishFile();
+        return 'stop';
+      }
+      const match = toMatch(msg);
+      if (!match) return;
+      current.matches.push(match);
+      total++;
+    } else {
+      finishFile();
+    }
+  }
+
+  try {
+    await runLines(resolveRgPath(), args, { cwd: opts.cwd, signal: opts.signal, onLine });
+  } catch (e) {
+    if (e instanceof ExecError && e.exitCode === 1) return { files: [], hasMore: false, truncated };
+    throw e;
+  }
+  finishFile();
+
+  return { files, hasMore, truncated };
 }
 
 export async function ripgrepSearch(opts: RipgrepSearchOptions): Promise<RipgrepFileResult[]> {
-  // Always search the whole tree and filter the results with matchesTarget
-  // (the app's own path/glob semantics) below, rather than asking rg to
-  // narrow the search itself: rg's own `--glob` is unanchored on a bare
-  // basename pattern (unlike matchesTarget), a positional path argument and
-  // an include `--glob` filter each other in ways that drop legitimate
-  // matches when mixed, and argv would otherwise grow with every targeted
-  // path, which can exceed the OS argv limit on a large PR.
-  const targetedPaths = opts.paths;
-  if (targetedPaths && targetedPaths.length === 0) return [];
-
-  const args = ['--json', '--hidden', '--glob', '!.git'];
-  if (opts.fixedString) args.push('-F');
-  if (opts.word) args.push('-w');
-  args.push('--', opts.pattern, '.');
-
-  let stdout: string;
-  try {
-    // rg searches stdin instead of the paths when stdin is a non-TTY pipe,
-    // so run() must not pipe anything to it (no `stdin` option is passed).
-    ({ stdout } = await run(resolveRgPath(), args, { cwd: opts.cwd, signal: opts.signal }));
-  } catch (e) {
-    // rg exits with code 1 when nothing matched.
-    if (e instanceof ExecError && e.exitCode === 1) return [];
-    throw e;
-  }
-
-  const files = parseMatches(stdout);
-  return Array.from(files.entries())
-    .map(([filePath, matches]) => ({
-      path: filePath,
-      matches: matches.sort((a, b) => a.line - b.line),
-    }))
-    .filter((f) => !targetedPaths || targetedPaths.some((t) => matchesTarget(f.path, t)))
-    .sort((a, b) => a.path.localeCompare(b.path));
+  return (await ripgrepSearchPage(opts)).files;
 }

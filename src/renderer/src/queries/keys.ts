@@ -33,5 +33,7 @@ export const qk = {
     [...qk.project(p), 'diff', base, head, 'file', path] as const,
   search: (p: string, sha: string, query: string, opts?: unknown) =>
     [...qk.commit(p, sha), 'search', query, opts] as const,
+  searchPages: (p: string, sha: string, query: string, opts?: unknown) =>
+    [...qk.commit(p, sha), 'searchPages', query, opts] as const,
   index: (p: string) => [...qk.project(p), 'index'] as const,
 };

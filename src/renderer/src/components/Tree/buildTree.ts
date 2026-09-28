@@ -23,9 +23,11 @@ interface MutableNode<T> {
   data?: T;
 }
 
+const collator = new Intl.Collator();
+
 function compareNodes<T>(a: TreeNode<T>, b: TreeNode<T>): number {
   if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
-  return a.name.localeCompare(b.name);
+  return collator.compare(a.name, b.name);
 }
 
 export function buildTree<T>(items: Item<T>[], options: BuildTreeOptions<T> = {}): TreeNode<T>[] {
@@ -66,7 +68,7 @@ export function buildTree<T>(items: Item<T>[], options: BuildTreeOptions<T> = {}
 
 export function buildFlatList<T>(items: Item<T>[]): TreeNode<T>[] {
   return [...items]
-    .sort((a, b) => a.path.localeCompare(b.path))
+    .sort((a, b) => collator.compare(a.path, b.path))
     .map((item) => ({
       path: item.path,
       name: item.path,
