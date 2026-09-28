@@ -1,47 +1,47 @@
-import type { ReportTone } from '../errors/report'
+import type { ReportTone } from '../errors/report';
 
-export type SidePanelTab = 'files' | 'targeted' | 'search'
-export type MainTab = 'files' | 'comments'
+export type SidePanelTab = 'files' | 'targeted' | 'search';
+export type MainTab = 'files' | 'comments';
 
 export interface Toast {
-  id: string
-  tone: ReportTone
-  message: string
+  id: string;
+  tone: ReportTone;
+  message: string;
 }
 
 export interface Targeting {
-  pr: number | null
-  commit: string | null
-  path: string | null
+  pr: number | null;
+  commit: string | null;
+  path: string | null;
 }
 
 export interface Layout {
-  sidePanelWidth: number
-  fileCommentsPanelWidth: number
-  fileCommentsPanelOpen: boolean
-  fileControlsPosition: { x: number; y: number } | null
+  sidePanelWidth: number;
+  fileCommentsPanelWidth: number;
+  fileCommentsPanelOpen: boolean;
+  fileControlsPosition: { x: number; y: number } | null;
 }
 
 export const defaultLayout: Layout = {
   sidePanelWidth: 300,
   fileCommentsPanelWidth: 300,
   fileCommentsPanelOpen: false,
-  fileControlsPosition: null
-}
+  fileControlsPosition: null,
+};
 
 export interface AppState {
-  projectId: string | null
-  targeting: Targeting
-  layout: Layout
-  sidePanelTab: SidePanelTab
-  pinnedFiles: string[]
-  previewFile: string | null
-  activeFile: string | null
-  mainTab: MainTab
-  checkout: { base: string; head: string } | null
-  toasts: Toast[]
-  revealLine: { line: number; side: 'LEFT' | 'RIGHT' } | null
-  settingsOpen: boolean
+  projectId: string | null;
+  targeting: Targeting;
+  layout: Layout;
+  sidePanelTab: SidePanelTab;
+  pinnedFiles: string[];
+  previewFile: string | null;
+  activeFile: string | null;
+  mainTab: MainTab;
+  checkout: { base: string; head: string } | null;
+  toasts: Toast[];
+  revealLine: { line: number; side: 'LEFT' | 'RIGHT' } | null;
+  settingsOpen: boolean;
 }
 
 export const initialAppState: AppState = {
@@ -56,8 +56,8 @@ export const initialAppState: AppState = {
   checkout: null,
   toasts: [],
   revealLine: null,
-  settingsOpen: false
-}
+  settingsOpen: false,
+};
 
 export type AppAction =
   | { type: 'project/open'; projectId: string; targeting: Targeting; layout: Layout }
@@ -78,57 +78,57 @@ export type AppAction =
   | { type: 'mainTab/set'; tab: MainTab }
   | { type: 'toast/push'; toast: Toast }
   | { type: 'toast/dismiss'; id: string }
-  | { type: 'settings/setOpen'; open: boolean }
+  | { type: 'settings/setOpen'; open: boolean };
 
 function withTarget(state: AppState, targeting: Targeting, set: boolean): AppState {
-  const mainTab = targeting.pr === null && state.mainTab === 'comments' ? 'files' : state.mainTab
-  return { ...state, targeting, mainTab, sidePanelTab: set ? 'targeted' : state.sidePanelTab }
+  const mainTab = targeting.pr === null && state.mainTab === 'comments' ? 'files' : state.mainTab;
+  return { ...state, targeting, mainTab, sidePanelTab: set ? 'targeted' : state.sidePanelTab };
 }
 
 export function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'project/open': {
-      if (state.projectId === action.projectId) return state
+      if (state.projectId === action.projectId) return state;
       const opened = {
         ...initialAppState,
         projectId: action.projectId,
         layout: action.layout,
         toasts: state.toasts,
-        settingsOpen: state.settingsOpen
-      }
-      const { pr, commit, path } = action.targeting
-      return withTarget(opened, action.targeting, pr !== null || commit !== null || path !== null)
+        settingsOpen: state.settingsOpen,
+      };
+      const { pr, commit, path } = action.targeting;
+      return withTarget(opened, action.targeting, pr !== null || commit !== null || path !== null);
     }
     case 'project/close':
-      return { ...initialAppState, toasts: state.toasts, settingsOpen: state.settingsOpen }
+      return { ...initialAppState, toasts: state.toasts, settingsOpen: state.settingsOpen };
     case 'target/pr':
-      if (state.targeting.pr === action.pr) return state
+      if (state.targeting.pr === action.pr) return state;
       return withTarget(
         state,
         { ...state.targeting, pr: action.pr, commit: null },
-        action.pr !== null
-      )
+        action.pr !== null,
+      );
     case 'target/commit':
-      if (state.targeting.commit === action.sha) return state
-      return withTarget(state, { ...state.targeting, commit: action.sha }, action.sha !== null)
+      if (state.targeting.commit === action.sha) return state;
+      return withTarget(state, { ...state.targeting, commit: action.sha }, action.sha !== null);
     case 'target/path':
-      if (state.targeting.path === action.path) return state
-      return withTarget(state, { ...state.targeting, path: action.path }, action.path !== null)
+      if (state.targeting.path === action.path) return state;
+      return withTarget(state, { ...state.targeting, path: action.path }, action.path !== null);
     case 'target/checkoutResult':
-      return { ...state, checkout: action.checkout }
+      return { ...state, checkout: action.checkout };
     case 'sidePanel/setTab':
-      return { ...state, sidePanelTab: action.tab }
+      return { ...state, sidePanelTab: action.tab };
     case 'layout/setSidePanelWidth':
-      return { ...state, layout: { ...state.layout, sidePanelWidth: action.width } }
+      return { ...state, layout: { ...state.layout, sidePanelWidth: action.width } };
     case 'layout/setFileCommentsPanelWidth':
-      return { ...state, layout: { ...state.layout, fileCommentsPanelWidth: action.width } }
+      return { ...state, layout: { ...state.layout, fileCommentsPanelWidth: action.width } };
     case 'layout/setFileCommentsPanelOpen':
-      return { ...state, layout: { ...state.layout, fileCommentsPanelOpen: action.open } }
+      return { ...state, layout: { ...state.layout, fileCommentsPanelOpen: action.open } };
     case 'layout/setFileControlsPosition':
-      return { ...state, layout: { ...state.layout, fileControlsPosition: action.position } }
+      return { ...state, layout: { ...state.layout, fileControlsPosition: action.position } };
     case 'file/open': {
       const revealLine =
-        action.line != null ? { line: action.line, side: action.side ?? ('RIGHT' as const) } : null
+        action.line != null ? { line: action.line, side: action.side ?? ('RIGHT' as const) } : null;
       return state.pinnedFiles.includes(action.path)
         ? { ...state, activeFile: action.path, mainTab: 'files', revealLine }
         : {
@@ -136,36 +136,36 @@ export function appReducer(state: AppState, action: AppAction): AppState {
             previewFile: action.path,
             activeFile: action.path,
             mainTab: 'files',
-            revealLine
-          }
+            revealLine,
+          };
     }
     case 'file/focus':
-      return { ...state, activeFile: action.path, mainTab: 'files', revealLine: null }
+      return { ...state, activeFile: action.path, mainTab: 'files', revealLine: null };
     case 'file/pin':
-      if (state.pinnedFiles.includes(action.path)) return state
+      if (state.pinnedFiles.includes(action.path)) return state;
       return {
         ...state,
         pinnedFiles: [...state.pinnedFiles, action.path],
-        previewFile: state.previewFile === action.path ? null : state.previewFile
-      }
+        previewFile: state.previewFile === action.path ? null : state.previewFile,
+      };
     case 'file/unpin': {
-      if (!state.pinnedFiles.includes(action.path)) return state
-      const pinnedFiles = state.pinnedFiles.filter((p) => p !== action.path)
+      if (!state.pinnedFiles.includes(action.path)) return state;
+      const pinnedFiles = state.pinnedFiles.filter((p) => p !== action.path);
       const activeFile =
         state.activeFile === action.path
           ? (state.previewFile ?? pinnedFiles.at(-1) ?? null)
-          : state.activeFile
-      return { ...state, pinnedFiles, activeFile, revealLine: null }
+          : state.activeFile;
+      return { ...state, pinnedFiles, activeFile, revealLine: null };
     }
     case 'mainTab/set':
-      return { ...state, mainTab: action.tab }
+      return { ...state, mainTab: action.tab };
     case 'toast/push':
-      return { ...state, toasts: [...state.toasts, action.toast] }
+      return { ...state, toasts: [...state.toasts, action.toast] };
     case 'toast/dismiss':
-      return { ...state, toasts: state.toasts.filter((t) => t.id !== action.id) }
+      return { ...state, toasts: state.toasts.filter((t) => t.id !== action.id) };
     case 'settings/setOpen':
-      return { ...state, settingsOpen: action.open }
+      return { ...state, settingsOpen: action.open };
     default:
-      return state
+      return state;
   }
 }

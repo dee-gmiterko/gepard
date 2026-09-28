@@ -1,153 +1,152 @@
-import { useState, type FormEvent } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import styled from 'styled-components'
-import { Download, Folder, Settings, Trash2 } from 'react-feather'
-import { FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl'
-import { defineMessages } from '../../i18n/defineMessages'
-import { IconButton } from '../../components/IconButton'
-import { Button } from '../../components/Button'
-import { Caption } from '../../components/Caption'
-import { Ellipsis } from '../../components/Ellipsis'
-import { Inline } from '../../components/Layout'
-import { List, ListRow, RowTitle } from '../../components/List'
-import { Message } from '../../components/Message'
-import { SectionHeading } from '../../components/SectionHeading'
-import { invoke, useIpcEvent } from '../../ipc/client'
-import { qk } from '../../queries/keys'
+import { useState, type FormEvent } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import styled from 'styled-components';
+import { Download, Folder, Settings, Trash2 } from 'react-feather';
+import { defineMessages, FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl';
+import { IconButton } from '../../components/IconButton';
+import { Button } from '../../components/Button';
+import { Caption } from '../../components/Caption';
+import { Ellipsis } from '../../components/Ellipsis';
+import { Inline } from '../../components/Layout';
+import { List, ListRow, RowTitle } from '../../components/List';
+import { Message } from '../../components/Message';
+import { SectionHeading } from '../../components/SectionHeading';
+import { invoke, useIpcEvent } from '../../ipc/client';
+import { qk } from '../../queries/keys';
 import {
   useAddProject,
   useCloneStart,
   useProjects,
   useRemoveProject,
   useViewer,
-  useViewerRepos
-} from '../../queries/projects'
-import { useAppDispatch } from '../../state/AppContext'
-import { RepoUrlCombobox } from './RepoUrlCombobox'
-import type { EventPayload } from '@shared/ipc/contract'
+  useViewerRepos,
+} from '../../queries/projects';
+import { useAppDispatch } from '../../state/AppContext';
+import { RepoUrlCombobox } from './RepoUrlCombobox';
+import type { EventPayload } from '@shared/ipc/contract';
 
-type CloneProgress = EventPayload<'clone.progress'>
+type CloneProgress = EventPayload<'clone.progress'>;
 
 const messages = defineMessages({
   title: {
     id: 'launchpad.title',
-    defaultMessage: 'Projects'
+    defaultMessage: 'Projects',
   },
   urlPlaceholder: {
     id: 'launchpad.urlPlaceholder',
-    defaultMessage: 'https://github.com/owner/repo'
+    defaultMessage: 'https://github.com/owner/repo',
   },
   addProject: {
     id: 'launchpad.addProject',
-    defaultMessage: 'Add project'
+    defaultMessage: 'Add project',
   },
   loading: {
     id: 'launchpad.loading',
-    defaultMessage: 'Loading projects…'
+    defaultMessage: 'Loading projects…',
   },
   empty: {
     id: 'launchpad.empty',
-    defaultMessage: 'No projects yet — add one above.'
+    defaultMessage: 'No projects yet — add one above.',
   },
   open: {
     id: 'launchpad.open',
-    defaultMessage: 'Open'
+    defaultMessage: 'Open',
   },
   clone: {
     id: 'launchpad.clone',
-    defaultMessage: 'Clone'
+    defaultMessage: 'Clone',
   },
   remove: {
     id: 'launchpad.remove',
-    defaultMessage: 'Remove'
+    defaultMessage: 'Remove',
   },
   openSettings: {
     id: 'launchpad.openSettings',
-    defaultMessage: 'Settings'
+    defaultMessage: 'Settings',
   },
   confirmRemoveQuestion: {
     id: 'launchpad.confirmRemoveQuestion',
-    defaultMessage: 'Remove this project and its local review data?'
+    defaultMessage: 'Remove this project and its local review data?',
   },
   cancelRemove: {
     id: 'launchpad.cancelRemove',
-    defaultMessage: 'Cancel'
+    defaultMessage: 'Cancel',
   },
   phaseCounting: {
     id: 'launchpad.progress.counting',
-    defaultMessage: 'Counting'
+    defaultMessage: 'Counting',
   },
   phaseCompressing: {
     id: 'launchpad.progress.compressing',
-    defaultMessage: 'Compressing'
+    defaultMessage: 'Compressing',
   },
   phaseReceiving: {
     id: 'launchpad.progress.receiving',
-    defaultMessage: 'Receiving'
+    defaultMessage: 'Receiving',
   },
   phaseResolving: {
     id: 'launchpad.progress.resolving',
-    defaultMessage: 'Resolving'
+    defaultMessage: 'Resolving',
   },
   phaseCheckout: {
     id: 'launchpad.progress.checkout',
-    defaultMessage: 'Checkout'
+    defaultMessage: 'Checkout',
   },
   phaseCountingDetail: {
     id: 'launchpad.progress.countingDetail',
-    defaultMessage: 'Counting — {detail}'
+    defaultMessage: 'Counting — {detail}',
   },
   phaseCompressingDetail: {
     id: 'launchpad.progress.compressingDetail',
-    defaultMessage: 'Compressing — {detail}'
+    defaultMessage: 'Compressing — {detail}',
   },
   phaseReceivingDetail: {
     id: 'launchpad.progress.receivingDetail',
-    defaultMessage: 'Receiving — {detail}'
+    defaultMessage: 'Receiving — {detail}',
   },
   phaseResolvingDetail: {
     id: 'launchpad.progress.resolvingDetail',
-    defaultMessage: 'Resolving — {detail}'
+    defaultMessage: 'Resolving — {detail}',
   },
   phaseCheckoutDetail: {
     id: 'launchpad.progress.checkoutDetail',
-    defaultMessage: 'Checkout — {detail}'
+    defaultMessage: 'Checkout — {detail}',
   },
   projectSlug: {
     id: 'launchpad.projectSlug',
-    defaultMessage: '{owner}/{repo}'
-  }
-})
+    defaultMessage: '{owner}/{repo}',
+  },
+});
 
-type ActivePhase = Exclude<CloneProgress['phase'], 'done' | 'error'>
+type ActivePhase = Exclude<CloneProgress['phase'], 'done' | 'error'>;
 
 function phaseLabel(phase: ActivePhase): MessageDescriptor {
   switch (phase) {
     case 'counting':
-      return messages.phaseCounting
+      return messages.phaseCounting;
     case 'compressing':
-      return messages.phaseCompressing
+      return messages.phaseCompressing;
     case 'receiving':
-      return messages.phaseReceiving
+      return messages.phaseReceiving;
     case 'resolving':
-      return messages.phaseResolving
+      return messages.phaseResolving;
     case 'checkout':
-      return messages.phaseCheckout
+      return messages.phaseCheckout;
   }
 }
 
 function phaseDetailLabel(phase: ActivePhase): MessageDescriptor {
   switch (phase) {
     case 'counting':
-      return messages.phaseCountingDetail
+      return messages.phaseCountingDetail;
     case 'compressing':
-      return messages.phaseCompressingDetail
+      return messages.phaseCompressingDetail;
     case 'receiving':
-      return messages.phaseReceivingDetail
+      return messages.phaseReceivingDetail;
     case 'resolving':
-      return messages.phaseResolvingDetail
+      return messages.phaseResolvingDetail;
     case 'checkout':
-      return messages.phaseCheckoutDetail
+      return messages.phaseCheckoutDetail;
   }
 }
 
@@ -155,43 +154,43 @@ const Page = styled.div`
   max-width: 720px;
   margin: 0 auto;
   padding: ${({ theme }) => theme.space[6]} ${({ theme }) => theme.space[4]};
-`
+`;
 
 const TopBar = styled.div`
   margin-bottom: ${({ theme }) => theme.space[5]};
-`
+`;
 
 const ViewerBadge = styled(Inline)`
   flex-shrink: 0;
   color: ${({ theme }) => theme.colors.fgMuted};
   font-size: ${({ theme }) => theme.font.size.sm};
-`
+`;
 
 const Avatar = styled.img`
   width: 20px;
   height: 20px;
   border-radius: 50%;
-`
+`;
 
 const AddForm = styled.form`
   display: flex;
   gap: ${({ theme }) => theme.space[2]};
   margin-bottom: ${({ theme }) => theme.space[2]};
-`
+`;
 
 const ProjectsList = styled(List)`
   margin-top: ${({ theme }) => theme.space[4]};
-`
+`;
 
 const RowMain = styled.div`
   flex: 1;
   min-width: 0;
-`
+`;
 
 const RowUrl = styled(Ellipsis)`
   font-size: ${({ theme }) => theme.font.size.xs};
   color: ${({ theme }) => theme.colors.fgSubtle};
-`
+`;
 
 const ProgressBar = styled.div`
   position: relative;
@@ -200,110 +199,110 @@ const ProgressBar = styled.div`
   background: ${({ theme }) => theme.colors.bgHover};
   border-radius: ${({ theme }) => theme.radius.sm};
   overflow: hidden;
-`
+`;
 
 const ProgressFill = styled.div`
   height: 100%;
   background: ${({ theme }) => theme.colors.accent};
   transition: width 0.2s ease;
-`
+`;
 
 const ProgressLabel = styled.div`
   margin-top: 2px;
   font-size: ${({ theme }) => theme.font.size.xs};
   color: ${({ theme }) => theme.colors.fgMuted};
-`
+`;
 
 function isActiveClone(progress: CloneProgress | undefined): boolean {
-  return progress !== undefined && progress.phase !== 'done' && progress.phase !== 'error'
+  return progress !== undefined && progress.phase !== 'done' && progress.phase !== 'error';
 }
 
 export function Launchpad(): React.JSX.Element {
-  const intl = useIntl()
-  const dispatch = useAppDispatch()
-  const qc = useQueryClient()
-  const { data: viewer } = useViewer()
-  const { data: viewerRepos, isFetching: viewerReposLoading } = useViewerRepos()
-  const { data: projects, isLoading } = useProjects()
-  const addProject = useAddProject()
-  const removeProject = useRemoveProject()
-  const cloneStart = useCloneStart()
+  const intl = useIntl();
+  const dispatch = useAppDispatch();
+  const qc = useQueryClient();
+  const { data: viewer } = useViewer();
+  const { data: viewerRepos, isFetching: viewerReposLoading } = useViewerRepos();
+  const { data: projects, isLoading } = useProjects();
+  const addProject = useAddProject();
+  const removeProject = useRemoveProject();
+  const cloneStart = useCloneStart();
 
-  const [url, setUrl] = useState('')
-  const [urlTouched, setUrlTouched] = useState(false)
-  const [progressById, setProgressById] = useState<Record<string, CloneProgress>>({})
-  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
+  const [url, setUrl] = useState('');
+  const [urlTouched, setUrlTouched] = useState(false);
+  const [progressById, setProgressById] = useState<Record<string, CloneProgress>>({});
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
-  const prefill = viewer ? `https://github.com/${viewer.login}/` : ''
-  const urlValue = urlTouched ? url : prefill
+  const prefill = viewer ? `https://github.com/${viewer.login}/` : '';
+  const urlValue = urlTouched ? url : prefill;
 
   useIpcEvent('clone.progress', (payload) => {
-    setProgressById((prev) => ({ ...prev, [payload.projectId]: payload }))
+    setProgressById((prev) => ({ ...prev, [payload.projectId]: payload }));
     if (payload.phase === 'done' || payload.phase === 'error') {
-      qc.invalidateQueries({ queryKey: qk.projects() })
+      qc.invalidateQueries({ queryKey: qk.projects() });
     }
-  })
+  });
 
   function startClone(projectId: string): void {
     setProgressById((prev) => ({
       ...prev,
-      [projectId]: { projectId, phase: 'counting', percent: 0 }
-    }))
+      [projectId]: { projectId, phase: 'counting', percent: 0 },
+    }));
     cloneStart.mutate(projectId, {
       onError: () =>
         setProgressById((prev) => {
-          if (!(projectId in prev)) return prev
-          const next = { ...prev }
-          delete next[projectId]
-          return next
-        })
-    })
+          if (!(projectId in prev)) return prev;
+          const next = { ...prev };
+          delete next[projectId];
+          return next;
+        }),
+    });
   }
 
   function handleAdd(e: FormEvent): void {
-    e.preventDefault()
-    if (urlValue.trim().length === 0) return
+    e.preventDefault();
+    if (urlValue.trim().length === 0) return;
     addProject.mutate(
       { url: urlValue.trim() },
       {
         onSuccess: (project) => {
-          setUrl('')
-          setUrlTouched(false)
-          if (!project.cloned) startClone(project.id)
-        }
-      }
-    )
+          setUrl('');
+          setUrlTouched(false);
+          if (!project.cloned) startClone(project.id);
+        },
+      },
+    );
   }
 
   async function handleOpen(projectId: string): Promise<void> {
-    qc.invalidateQueries({ queryKey: qk.project(projectId) })
-    qc.removeQueries({ queryKey: qk.open(projectId) })
+    qc.invalidateQueries({ queryKey: qk.project(projectId) });
+    qc.removeQueries({ queryKey: qk.open(projectId) });
     try {
       const opened = await qc.fetchQuery({
         queryKey: qk.open(projectId),
         queryFn: () => invoke('projects.open', { projectId }),
-        staleTime: Infinity
-      })
+        staleTime: Infinity,
+      });
       dispatch({
         type: 'project/open',
         projectId,
         targeting: opened.targeting,
-        layout: opened.layout
-      })
+        layout: opened.layout,
+      });
     } catch {
       // Reported via the query cache's global error handler.
     }
   }
 
   function handleRemove(projectId: string): void {
-    removeProject.mutate(projectId)
-    setConfirmRemoveId(null)
+    removeProject.mutate(projectId);
+    setConfirmRemoveId(null);
     setProgressById((prev) => {
-      if (!(projectId in prev)) return prev
-      const next = { ...prev }
-      delete next[projectId]
-      return next
-    })
+      if (!(projectId in prev)) return prev;
+      const next = { ...prev };
+      delete next[projectId];
+      return next;
+    });
   }
 
   return (
@@ -335,8 +334,8 @@ export function Launchpad(): React.JSX.Element {
         <RepoUrlCombobox
           value={urlValue}
           onChange={(next) => {
-            setUrl(next)
-            setUrlTouched(true)
+            setUrl(next);
+            setUrlTouched(true);
           }}
           repos={viewerRepos ?? []}
           loading={viewerReposLoading}
@@ -364,8 +363,8 @@ export function Launchpad(): React.JSX.Element {
 
       <ProjectsList>
         {projects?.map((project) => {
-          const progress = progressById[project.id]
-          const cloning = isActiveClone(progress)
+          const progress = progressById[project.id];
+          const cloning = isActiveClone(progress);
           return (
             <ListRow
               key={project.id}
@@ -388,15 +387,15 @@ export function Launchpad(): React.JSX.Element {
                 {cloning &&
                   progress &&
                   (() => {
-                    const phase = progress.phase as ActivePhase
-                    const detail = progress.message
+                    const phase = progress.phase as ActivePhase;
+                    const detail = progress.message;
                     return detail ? (
                       <ProgressLabel>
                         <FormattedMessage {...phaseDetailLabel(phase)} values={{ detail }} />
                       </ProgressLabel>
                     ) : (
                       <ProgressLabel>{intl.formatMessage(phaseLabel(phase))}</ProgressLabel>
-                    )
+                    );
                   })()}
               </RowMain>
               <Inline $gap={1} onClick={(e) => e.stopPropagation()}>
@@ -440,9 +439,9 @@ export function Launchpad(): React.JSX.Element {
                 )}
               </Inline>
             </ListRow>
-          )
+          );
         })}
       </ProjectsList>
     </Page>
-  )
+  );
 }

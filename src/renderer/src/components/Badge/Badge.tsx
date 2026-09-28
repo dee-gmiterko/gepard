@@ -1,4 +1,4 @@
-import styled from 'styled-components'
+import styled from 'styled-components';
 
 export const Badge = styled.span<{ $tone?: 'success' | 'warning' | 'muted' }>`
   flex-shrink: 0;
@@ -12,4 +12,4 @@ export const Badge = styled.span<{ $tone?: 'success' | 'warning' | 'muted' }>`
       : $tone === 'warning'
         ? theme.colors.warning
         : theme.colors.fgMuted};
-`
+`;

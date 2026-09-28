@@ -1,1 +1,1 @@
-export { MatchLine } from './MatchLine'
+export { MatchLine } from './MatchLine';

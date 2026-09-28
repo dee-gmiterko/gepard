@@ -1,12 +1,12 @@
-import { defineMessages } from '../../../i18n/defineMessages'
+import { defineMessages } from 'react-intl';
 
 export const viewerMessages = defineMessages({
   loading: {
     id: 'content.viewer.loading',
-    defaultMessage: 'Loading…'
+    defaultMessage: 'Loading…',
   },
   binaryNotShown: {
     id: 'content.viewer.binaryNotShown',
-    defaultMessage: 'Binary file not shown'
-  }
-})
+    defaultMessage: 'Binary file not shown',
+  },
+});

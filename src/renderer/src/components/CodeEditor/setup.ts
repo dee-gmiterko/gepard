@@ -1,11 +1,11 @@
-import { EditorState, type Extension } from '@codemirror/state'
+import { EditorState, type Extension } from '@codemirror/state';
 import {
   EditorView,
   drawSelection,
   highlightActiveLine,
-  highlightActiveLineGutter
-} from '@codemirror/view'
-import { bracketMatching } from '@codemirror/language'
+  highlightActiveLineGutter,
+} from '@codemirror/view';
+import { bracketMatching } from '@codemirror/language';
 
 export function readOnlyExtensions(): Extension {
   return [
@@ -15,6 +15,6 @@ export function readOnlyExtensions(): Extension {
     drawSelection(),
     highlightActiveLine(),
     highlightActiveLineGutter(),
-    bracketMatching()
-  ]
+    bracketMatching(),
+  ];
 }

@@ -1,14 +1,14 @@
-import { useEffect, useRef } from 'react'
-import styled from 'styled-components'
-import { disabledInteractive } from './disabledInteractive'
+import { useEffect, useRef } from 'react';
+import styled from 'styled-components';
+import { disabledInteractive } from './disabledInteractive';
 
 export interface CheckboxProps {
-  checked: boolean
-  indeterminate?: boolean
-  onChange: (checked: boolean) => void
-  label?: string
-  ariaLabel?: string
-  disabled?: boolean
+  checked: boolean;
+  indeterminate?: boolean;
+  onChange: (checked: boolean) => void;
+  label?: string;
+  ariaLabel?: string;
+  disabled?: boolean;
 }
 
 const Label = styled.label<{ $disabled?: boolean }>`
@@ -18,14 +18,14 @@ const Label = styled.label<{ $disabled?: boolean }>`
   font-size: ${({ theme }) => theme.font.size.sm};
   color: ${({ theme }) => theme.colors.fg};
   ${disabledInteractive}
-`
+`;
 
 const Input = styled.input`
   width: 14px;
   height: 14px;
   margin: 0;
   accent-color: ${({ theme }) => theme.colors.accent};
-`
+`;
 
 export function Checkbox({
   checked,
@@ -33,13 +33,13 @@ export function Checkbox({
   onChange,
   label,
   ariaLabel,
-  disabled
+  disabled,
 }: CheckboxProps): React.JSX.Element {
-  const ref = useRef<HTMLInputElement>(null)
+  const ref = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (ref.current) ref.current.indeterminate = Boolean(indeterminate) && !checked
-  }, [indeterminate, checked])
+    if (ref.current) ref.current.indeterminate = Boolean(indeterminate) && !checked;
+  }, [indeterminate, checked]);
 
   return (
     <Label $disabled={disabled} onClick={(e) => e.stopPropagation()}>
@@ -53,5 +53,5 @@ export function Checkbox({
       />
       {label && <span>{label}</span>}
     </Label>
-  )
+  );
 }

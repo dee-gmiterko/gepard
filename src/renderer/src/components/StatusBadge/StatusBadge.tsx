@@ -1,24 +1,23 @@
-import { FormattedMessage } from 'react-intl'
-import { defineMessages } from '../../i18n/defineMessages'
-import { Badge } from '../Badge'
+import { defineMessages, FormattedMessage } from 'react-intl';
+import { Badge } from '../Badge';
 
 const messages = defineMessages({
   outdated: {
     id: 'components.statusBadge.outdated',
-    defaultMessage: 'outdated'
+    defaultMessage: 'outdated',
   },
   resolved: {
     id: 'components.statusBadge.resolved',
-    defaultMessage: 'resolved'
-  }
-})
+    defaultMessage: 'resolved',
+  },
+});
 
 export function OutdatedBadge(): React.JSX.Element {
   return (
     <Badge $tone="warning">
       <FormattedMessage {...messages.outdated} />
     </Badge>
-  )
+  );
 }
 
 export function ResolvedBadge(): React.JSX.Element {
@@ -26,5 +25,5 @@ export function ResolvedBadge(): React.JSX.Element {
     <Badge $tone="success">
       <FormattedMessage {...messages.resolved} />
     </Badge>
-  )
+  );
 }

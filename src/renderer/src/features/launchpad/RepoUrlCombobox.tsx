@@ -1,26 +1,25 @@
-import { useIntl } from 'react-intl'
-import { defineMessages } from '../../i18n/defineMessages'
-import { Combobox } from '../../components/Combobox'
-import { repoFilterText, repoSearchQuery, repoUrl } from './utils/repoUrl'
-import type { ViewerRepo } from '@shared/ipc/schemas/project'
+import { defineMessages, useIntl } from 'react-intl';
+import { Combobox } from '../../components/Combobox';
+import { repoFilterText, repoSearchQuery, repoUrl } from './utils/repoUrl';
+import type { ViewerRepo } from '@shared/ipc/schemas/project';
 
 const messages = defineMessages({
   loading: {
     id: 'launchpad.repoCombobox.loading',
-    defaultMessage: 'Loading repositories…'
+    defaultMessage: 'Loading repositories…',
   },
   empty: {
     id: 'launchpad.repoCombobox.empty',
-    defaultMessage: 'No matching repositories — typed URLs are still accepted'
-  }
-})
+    defaultMessage: 'No matching repositories — typed URLs are still accepted',
+  },
+});
 
 interface RepoUrlComboboxProps {
-  value: string
-  onChange: (value: string) => void
-  repos: readonly ViewerRepo[]
-  loading?: boolean
-  placeholder?: string
+  value: string;
+  onChange: (value: string) => void;
+  repos: readonly ViewerRepo[];
+  loading?: boolean;
+  placeholder?: string;
 }
 
 export function RepoUrlCombobox({
@@ -28,9 +27,9 @@ export function RepoUrlCombobox({
   onChange,
   repos,
   loading,
-  placeholder
+  placeholder,
 }: RepoUrlComboboxProps): React.JSX.Element {
-  const intl = useIntl()
+  const intl = useIntl();
 
   return (
     <Combobox<ViewerRepo>
@@ -45,5 +44,5 @@ export function RepoUrlCombobox({
       emptyLabel={intl.formatMessage(messages.empty)}
       placeholder={placeholder}
     />
-  )
+  );
 }

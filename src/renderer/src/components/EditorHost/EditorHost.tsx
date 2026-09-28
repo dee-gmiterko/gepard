@@ -1,4 +1,4 @@
-import styled from 'styled-components'
+import styled from 'styled-components';
 
 export const EditorHost = styled.div`
   height: 100%;
@@ -6,4 +6,4 @@ export const EditorHost = styled.div`
   .cm-editor {
     height: 100%;
   }
-`
+`;

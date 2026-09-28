@@ -1,9 +1,9 @@
-import { AppError } from '../ipc/registry'
-import { log } from '../log'
-import { GhService, ghService as defaultGhService } from './gh'
-import { GitService, gitService as defaultGitService } from './git'
-import * as review from '../store/review'
-import { nowIso, withReviewLock, type ReviewStoreFile } from '../store/review'
+import { AppError } from '../ipc/registry';
+import { log } from '../log';
+import { GhService, ghService as defaultGhService } from './gh';
+import { GitService, gitService as defaultGitService } from './git';
+import * as review from '../store/review';
+import { nowIso, withReviewLock, type ReviewStoreFile } from '../store/review';
 import {
   collectPendingGeneralReplies,
   composeBody,
@@ -14,127 +14,127 @@ import {
   mapThread,
   mergeThreads,
   mergeViewed,
-  type PendingGroup
-} from '../helpers/reviewMapping'
+  type PendingGroup,
+} from '../helpers/github/reviewMapping';
 
 interface PushOutcome {
-  pushedCount: number
-  goneRemotely: number
+  pushedCount: number;
+  goneRemotely: number;
 }
 
 export interface SyncResult {
-  syncedAt: string
-  droppedRemoteDeleted: number
+  syncedAt: string;
+  droppedRemoteDeleted: number;
 }
 
 export interface SyncContext {
-  owner: string
-  repo: string
+  owner: string;
+  repo: string;
 }
 
 /**
  * Orchestrates pushing local pending review changes to GitHub and pulling
  * the remote state back down, on top of GhService (GraphQL/CLI) and
  * GitService (local checkout). The pure merge/mapping logic it uses lives in
- * helpers/reviewMapping.ts; this class is only the stateful push/pull flow.
+ * helpers/github/reviewMapping.ts; this class is only the stateful push/pull flow.
  */
 export class SyncService {
   constructor(
     private readonly gh: GhService = defaultGhService,
-    private readonly git: GitService = defaultGitService
+    private readonly git: GitService = defaultGitService,
   ) {}
 
   private async pushViewed(store: ReviewStoreFile, prId: string): Promise<number> {
-    const now = nowIso()
-    const dirty = store.viewed.filter(isViewedDirty)
-    if (dirty.length === 0) return 0
+    const now = nowIso();
+    const dirty = store.viewed.filter(isViewedDirty);
+    if (dirty.length === 0) return 0;
     await this.gh.setFilesViewed(
       prId,
-      dirty.map((v) => ({ path: v.path, viewed: v.viewed }))
-    )
+      dirty.map((v) => ({ path: v.path, viewed: v.viewed })),
+    );
     for (const v of dirty) {
-      v.remote = v.viewed ? 'VIEWED' : 'UNVIEWED'
-      v.remoteFetchedAt = now
+      v.remote = v.viewed ? 'VIEWED' : 'UNVIEWED';
+      v.remoteFetchedAt = now;
     }
-    return dirty.length
+    return dirty.length;
   }
 
   // GitHub deletes and edits review comments without a pending review.
   private async pushDeletions(
     projectId: string,
     pr: number,
-    store: ReviewStoreFile
+    store: ReviewStoreFile,
   ): Promise<PushOutcome> {
-    let pushedCount = 0
-    let goneRemotely = 0
+    let pushedCount = 0;
+    let goneRemotely = 0;
     for (const thread of [...store.threads]) {
-      const isGeneral = thread.anchor.subjectType === 'PR'
+      const isGeneral = thread.anchor.subjectType === 'PR';
       if (thread.local?.status === 'deleted') {
-        const root = thread.comments[0]
-        if (!root) throw new AppError('STORE_CORRUPT', `thread ${thread.id} has no root comment`)
+        const root = thread.comments[0];
+        if (!root) throw new AppError('STORE_CORRUPT', `thread ${thread.id} has no root comment`);
         try {
-          if (isGeneral) await this.gh.deleteGeneralComment(root.id)
-          else await this.gh.deleteReviewComment(root.id)
-          pushedCount++
+          if (isGeneral) await this.gh.deleteGeneralComment(root.id);
+          else await this.gh.deleteReviewComment(root.id);
+          pushedCount++;
         } catch (e) {
-          if (!isRemoteNotFoundError(e)) throw e
-          goneRemotely++
+          if (!isRemoteNotFoundError(e)) throw e;
+          goneRemotely++;
         }
-        store.threads = store.threads.filter((t) => t.id !== thread.id)
-        await review.saveReview(projectId, pr, store)
-        continue
+        store.threads = store.threads.filter((t) => t.id !== thread.id);
+        await review.saveReview(projectId, pr, store);
+        continue;
       }
       for (const comment of [...thread.comments]) {
-        if (comment.local?.status !== 'deleted') continue
+        if (comment.local?.status !== 'deleted') continue;
         try {
-          if (isGeneral) await this.gh.deleteGeneralComment(comment.id)
-          else await this.gh.deleteReviewComment(comment.id)
-          pushedCount++
+          if (isGeneral) await this.gh.deleteGeneralComment(comment.id);
+          else await this.gh.deleteReviewComment(comment.id);
+          pushedCount++;
         } catch (e) {
-          if (!isRemoteNotFoundError(e)) throw e
-          goneRemotely++
+          if (!isRemoteNotFoundError(e)) throw e;
+          goneRemotely++;
         }
-        thread.comments = thread.comments.filter((c) => c.id !== comment.id)
-        await review.saveReview(projectId, pr, store)
+        thread.comments = thread.comments.filter((c) => c.id !== comment.id);
+        await review.saveReview(projectId, pr, store);
       }
     }
-    return { pushedCount, goneRemotely }
+    return { pushedCount, goneRemotely };
   }
 
   private async pushEdits(
     projectId: string,
     pr: number,
-    store: ReviewStoreFile
+    store: ReviewStoreFile,
   ): Promise<PushOutcome> {
-    let pushedCount = 0
-    let goneRemotely = 0
+    let pushedCount = 0;
+    let goneRemotely = 0;
     for (const thread of [...store.threads]) {
-      const isGeneral = thread.anchor.subjectType === 'PR'
+      const isGeneral = thread.anchor.subjectType === 'PR';
       for (const comment of [...thread.comments]) {
-        if (comment.local?.status !== 'edited') continue
-        const body = composeBody(comment)
+        if (comment.local?.status !== 'edited') continue;
+        const body = composeBody(comment);
         try {
           const result = isGeneral
             ? await this.gh.updateGeneralComment(comment.id, body)
-            : await this.gh.updateReviewComment(comment.id, body)
-          comment.body = body
-          comment.updatedAt = result.updatedAt
-          comment.lastEditedAt = result.lastEditedAt
-          comment.local = undefined
-          pushedCount++
+            : await this.gh.updateReviewComment(comment.id, body);
+          comment.body = body;
+          comment.updatedAt = result.updatedAt;
+          comment.lastEditedAt = result.lastEditedAt;
+          comment.local = undefined;
+          pushedCount++;
         } catch (e) {
-          if (!isRemoteNotFoundError(e)) throw e
-          goneRemotely++
+          if (!isRemoteNotFoundError(e)) throw e;
+          goneRemotely++;
           if (thread.comments[0]?.id === comment.id) {
-            store.threads = store.threads.filter((t) => t.id !== thread.id)
+            store.threads = store.threads.filter((t) => t.id !== thread.id);
           } else {
-            thread.comments = thread.comments.filter((c) => c.id !== comment.id)
+            thread.comments = thread.comments.filter((c) => c.id !== comment.id);
           }
         }
-        await review.saveReview(projectId, pr, store)
+        await review.saveReview(projectId, pr, store);
       }
     }
-    return { pushedCount, goneRemotely }
+    return { pushedCount, goneRemotely };
   }
 
   // General PR comments post immediately, with no pending review to batch
@@ -143,45 +143,45 @@ export class SyncService {
     projectId: string,
     pr: number,
     store: ReviewStoreFile,
-    prId: string
+    prId: string,
   ): Promise<number> {
-    let pushedCount = 0
+    let pushedCount = 0;
     for (const thread of store.threads) {
-      if (thread.anchor.subjectType !== 'PR' || thread.local?.status !== 'new') continue
-      const root = thread.comments[0]
-      if (!root) throw new AppError('STORE_CORRUPT', `thread ${thread.id} has no root comment`)
-      const body = composeBody(root)
-      const result = await this.gh.addGeneralComment(prId, body)
-      const oldThreadId = thread.id
-      thread.id = result.id
-      thread.local = undefined
-      root.id = result.id
-      root.threadId = thread.id
-      root.createdAt = result.createdAt
-      root.updatedAt = result.updatedAt
-      root.body = body
-      root.local = undefined
+      if (thread.anchor.subjectType !== 'PR' || thread.local?.status !== 'new') continue;
+      const root = thread.comments[0];
+      if (!root) throw new AppError('STORE_CORRUPT', `thread ${thread.id} has no root comment`);
+      const body = composeBody(root);
+      const result = await this.gh.addGeneralComment(prId, body);
+      const oldThreadId = thread.id;
+      thread.id = result.id;
+      thread.local = undefined;
+      root.id = result.id;
+      root.threadId = thread.id;
+      root.createdAt = result.createdAt;
+      root.updatedAt = result.updatedAt;
+      root.body = body;
+      root.local = undefined;
       for (const c of thread.comments) {
-        if (c.threadId === oldThreadId) c.threadId = thread.id
+        if (c.threadId === oldThreadId) c.threadId = thread.id;
       }
-      pushedCount++
-      await review.saveReview(projectId, pr, store)
+      pushedCount++;
+      await review.saveReview(projectId, pr, store);
     }
 
     for (const { thread, comment } of collectPendingGeneralReplies(store.threads)) {
-      const body = composeBody(comment)
-      const result = await this.gh.addGeneralComment(prId, body)
-      comment.id = result.id
-      comment.createdAt = result.createdAt
-      comment.updatedAt = result.updatedAt
-      comment.body = body
-      comment.local = undefined
-      thread.comments = thread.comments.filter((c) => c !== comment)
-      pushedCount++
-      await review.saveReview(projectId, pr, store)
+      const body = composeBody(comment);
+      const result = await this.gh.addGeneralComment(prId, body);
+      comment.id = result.id;
+      comment.createdAt = result.createdAt;
+      comment.updatedAt = result.updatedAt;
+      comment.body = body;
+      comment.local = undefined;
+      thread.comments = thread.comments.filter((c) => c !== comment);
+      pushedCount++;
+      await review.saveReview(projectId, pr, store);
     }
 
-    return pushedCount
+    return pushedCount;
   }
 
   private async ensureOwnPendingReview(
@@ -192,20 +192,20 @@ export class SyncService {
     repo: string,
     prNumber: number,
     prId: string,
-    commitOid: string
+    commitOid: string,
   ): Promise<string> {
-    const existing = await this.gh.findPendingReview(owner, repo, prNumber)
+    const existing = await this.gh.findPendingReview(owner, repo, prNumber);
     if (existing) {
       if (store.pendingReviewId !== existing.id) {
-        store.pendingReviewId = existing.id
-        await review.saveReview(projectId, pr, store)
+        store.pendingReviewId = existing.id;
+        await review.saveReview(projectId, pr, store);
       }
-      return existing.id
+      return existing.id;
     }
-    const reviewId = await this.gh.createPendingReview(prId, commitOid)
-    store.pendingReviewId = reviewId
-    await review.saveReview(projectId, pr, store)
-    return reviewId
+    const reviewId = await this.gh.createPendingReview(prId, commitOid);
+    store.pendingReviewId = reviewId;
+    await review.saveReview(projectId, pr, store);
+    return reviewId;
   }
 
   private async pushGroup(
@@ -216,9 +216,9 @@ export class SyncService {
     prNumber: number,
     store: ReviewStoreFile,
     prId: string,
-    group: PendingGroup
+    group: PendingGroup,
   ): Promise<number> {
-    let pushedCount = 0
+    let pushedCount = 0;
     const reviewId = await this.ensureOwnPendingReview(
       projectId,
       pr,
@@ -227,13 +227,13 @@ export class SyncService {
       repo,
       prNumber,
       prId,
-      group.commitOid
-    )
+      group.commitOid,
+    );
 
     for (const thread of group.newThreads) {
-      const root = thread.comments[0]
-      if (!root) throw new AppError('STORE_CORRUPT', `thread ${thread.id} has no root comment`)
-      const body = composeBody(root)
+      const root = thread.comments[0];
+      if (!root) throw new AppError('STORE_CORRUPT', `thread ${thread.id} has no root comment`);
+      const body = composeBody(root);
       const result = await this.gh.addReviewThread({
         pullRequestReviewId: reviewId,
         path: thread.anchor.path,
@@ -241,50 +241,50 @@ export class SyncService {
         line: thread.anchor.line,
         side: thread.anchor.side,
         startLine: thread.anchor.startLine,
-        startSide: thread.anchor.startSide
-      })
-      const oldThreadId = thread.id
-      const oldRootId = root.id
-      thread.id = result.thread.id
-      if (result.isFile) thread.anchor.subjectType = 'FILE'
-      thread.anchor.line = result.thread.line
-      thread.anchor.startLine = result.thread.startLine
-      thread.isResolved = result.thread.isResolved
-      thread.local = undefined
-      root.id = result.rootComment.id
-      root.threadId = thread.id
-      root.reviewId = result.rootComment.pullRequestReview?.id ?? reviewId
-      root.reviewState = result.rootComment.pullRequestReview?.state ?? 'PENDING'
-      root.createdAt = result.rootComment.createdAt
-      root.updatedAt = result.rootComment.updatedAt
-      root.body = body
-      root.local = undefined
+        startSide: thread.anchor.startSide,
+      });
+      const oldThreadId = thread.id;
+      const oldRootId = root.id;
+      thread.id = result.thread.id;
+      if (result.isFile) thread.anchor.subjectType = 'FILE';
+      thread.anchor.line = result.thread.line;
+      thread.anchor.startLine = result.thread.startLine;
+      thread.isResolved = result.thread.isResolved;
+      thread.local = undefined;
+      root.id = result.rootComment.id;
+      root.threadId = thread.id;
+      root.reviewId = result.rootComment.pullRequestReview?.id ?? reviewId;
+      root.reviewState = result.rootComment.pullRequestReview?.state ?? 'PENDING';
+      root.createdAt = result.rootComment.createdAt;
+      root.updatedAt = result.rootComment.updatedAt;
+      root.body = body;
+      root.local = undefined;
       for (const c of thread.comments) {
-        if (c.threadId === oldThreadId) c.threadId = thread.id
-        if (c.replyToId === oldRootId) c.replyToId = root.id
+        if (c.threadId === oldThreadId) c.threadId = thread.id;
+        if (c.replyToId === oldRootId) c.replyToId = root.id;
       }
-      pushedCount++
+      pushedCount++;
     }
 
     for (const { thread, comment } of group.replies) {
-      const root = thread.comments[0]
-      const body = composeBody(comment)
-      const result = await this.gh.addReviewThreadReply(thread.id, body, reviewId)
-      comment.id = result.id
-      comment.threadId = thread.id
-      comment.reviewId = result.pullRequestReview?.id ?? reviewId
-      comment.reviewState = result.pullRequestReview?.state ?? 'PENDING'
-      comment.createdAt = result.createdAt
-      comment.updatedAt = result.updatedAt
-      comment.body = body
-      comment.replyToId = result.replyTo?.id ?? root?.id ?? null
-      comment.local = undefined
-      pushedCount++
+      const root = thread.comments[0];
+      const body = composeBody(comment);
+      const result = await this.gh.addReviewThreadReply(thread.id, body, reviewId);
+      comment.id = result.id;
+      comment.threadId = thread.id;
+      comment.reviewId = result.pullRequestReview?.id ?? reviewId;
+      comment.reviewState = result.pullRequestReview?.state ?? 'PENDING';
+      comment.createdAt = result.createdAt;
+      comment.updatedAt = result.updatedAt;
+      comment.body = body;
+      comment.replyToId = result.replyTo?.id ?? root?.id ?? null;
+      comment.local = undefined;
+      pushedCount++;
     }
 
-    await this.gh.submitReview(reviewId)
-    store.pendingReviewId = null
-    return pushedCount
+    await this.gh.submitReview(reviewId);
+    store.pendingReviewId = null;
+    return pushedCount;
   }
 
   private async pushComments(
@@ -295,50 +295,50 @@ export class SyncService {
     prNumber: number,
     store: ReviewStoreFile,
     prId: string,
-    headRefOid: string
+    headRefOid: string,
   ): Promise<PushOutcome> {
-    let pushedCount = 0
-    let goneRemotely = 0
-    const deletions = await this.pushDeletions(projectId, pr, store)
-    pushedCount += deletions.pushedCount
-    goneRemotely += deletions.goneRemotely
-    const edits = await this.pushEdits(projectId, pr, store)
-    pushedCount += edits.pushedCount
-    goneRemotely += edits.goneRemotely
+    let pushedCount = 0;
+    let goneRemotely = 0;
+    const deletions = await this.pushDeletions(projectId, pr, store);
+    pushedCount += deletions.pushedCount;
+    goneRemotely += deletions.goneRemotely;
+    const edits = await this.pushEdits(projectId, pr, store);
+    pushedCount += edits.pushedCount;
+    goneRemotely += edits.goneRemotely;
 
-    pushedCount += await this.pushGeneralComments(projectId, pr, store, prId)
+    pushedCount += await this.pushGeneralComments(projectId, pr, store, prId);
 
-    const reviewThreads = store.threads.filter((t) => t.anchor.subjectType !== 'PR')
-    const groups = groupPendingByCommit(reviewThreads, headRefOid)
+    const reviewThreads = store.threads.filter((t) => t.anchor.subjectType !== 'PR');
+    const groups = groupPendingByCommit(reviewThreads, headRefOid);
     for (const group of groups) {
-      pushedCount += await this.pushGroup(projectId, pr, owner, repo, prNumber, store, prId, group)
+      pushedCount += await this.pushGroup(projectId, pr, owner, repo, prNumber, store, prId, group);
     }
-    return { pushedCount, goneRemotely }
+    return { pushedCount, goneRemotely };
   }
 
   private async runSyncLocked(
     projectId: string,
     pr: number,
     mode: 'full' | 'pull',
-    ctx: SyncContext
+    ctx: SyncContext,
   ): Promise<SyncResult> {
-    log.info('sync', `projectId=${projectId} pr=${pr} mode=${mode} start`)
-    const store = await review.loadReview(projectId, pr)
+    log.info('sync', `projectId=${projectId} pr=${pr} mode=${mode} start`);
+    const store = await review.loadReview(projectId, pr);
 
-    const { id: prId, headRefOid, baseRefOid } = await this.gh.viewPr(ctx.owner, ctx.repo, pr)
+    const { id: prId, headRefOid, baseRefOid } = await this.gh.viewPr(ctx.owner, ctx.repo, pr);
 
-    await this.git.fetchOrigin(projectId)
-    const { head: currentHead } = await this.git.workingTree(projectId)
+    await this.git.fetchOrigin(projectId);
+    const { head: currentHead } = await this.git.workingTree(projectId);
     if (currentHead !== headRefOid) {
-      await this.git.checkoutTarget(projectId, { kind: 'pr', pr, headRefOid, baseRefOid })
+      await this.git.checkoutTarget(projectId, { kind: 'pr', pr, headRefOid, baseRefOid });
     }
 
-    let pushedViewed = 0
-    let pushedComments = 0
-    let goneRemotely = 0
+    let pushedViewed = 0;
+    let pushedComments = 0;
+    let goneRemotely = 0;
     if (mode === 'full') {
       try {
-        pushedViewed = await this.pushViewed(store, prId)
+        pushedViewed = await this.pushViewed(store, prId);
         const commentsOutcome = await this.pushComments(
           projectId,
           pr,
@@ -347,64 +347,64 @@ export class SyncService {
           pr,
           store,
           prId,
-          headRefOid
-        )
-        pushedComments = commentsOutcome.pushedCount
-        goneRemotely = commentsOutcome.goneRemotely
+          headRefOid,
+        );
+        pushedComments = commentsOutcome.pushedCount;
+        goneRemotely = commentsOutcome.goneRemotely;
       } finally {
-        await review.saveReview(projectId, pr, store)
+        await review.saveReview(projectId, pr, store);
       }
       if (goneRemotely > 0) {
         log.warn(
           'sync',
           `projectId=${projectId} pr=${pr} dropped ${goneRemotely} local pending change(s) ` +
-            `already deleted on GitHub`
-        )
+            `already deleted on GitHub`,
+        );
       }
     }
 
     const [threadsResult, generalResult, viewedResult] = await Promise.all([
       this.gh.fetchReviewThreads(ctx.owner, ctx.repo, pr),
       this.gh.fetchGeneralComments(ctx.owner, ctx.repo, pr),
-      this.gh.fetchViewedFiles(ctx.owner, ctx.repo, pr)
-    ])
+      this.gh.fetchViewedFiles(ctx.owner, ctx.repo, pr),
+    ]);
     const remoteThreads = [
       ...threadsResult.threads.map((t) => mapThread(t, threadsResult.prId)),
-      ...generalResult.comments.map((c) => mapGeneralComment(c, generalResult.prId))
-    ]
-    const mergedThreads = mergeThreads(store.threads, remoteThreads)
+      ...generalResult.comments.map((c) => mapGeneralComment(c, generalResult.prId)),
+    ];
+    const mergedThreads = mergeThreads(store.threads, remoteThreads);
     const mergedViewed = mergeViewed(
       store.viewed,
       viewedResult.files,
       threadsResult.prId,
-      store.lastSuccessfulSyncAt
-    )
+      store.lastSuccessfulSyncAt,
+    );
 
-    const syncedAt = nowIso()
+    const syncedAt = nowIso();
     const finalStore: ReviewStoreFile = {
       threads: mergedThreads,
       viewed: mergedViewed,
       pendingReviewId: store.pendingReviewId,
-      lastSuccessfulSyncAt: mode === 'full' ? syncedAt : store.lastSuccessfulSyncAt
-    }
-    await review.saveReview(projectId, pr, finalStore)
+      lastSuccessfulSyncAt: mode === 'full' ? syncedAt : store.lastSuccessfulSyncAt,
+    };
+    await review.saveReview(projectId, pr, finalStore);
     log.info(
       'sync',
       `projectId=${projectId} pr=${pr} mode=${mode} end ` +
         `pushed=${pushedViewed + pushedComments} pulledThreads=${remoteThreads.length} ` +
-        `pulledViewed=${viewedResult.files.length}`
-    )
-    return { syncedAt, droppedRemoteDeleted: goneRemotely }
+        `pulledViewed=${viewedResult.files.length}`,
+    );
+    return { syncedAt, droppedRemoteDeleted: goneRemotely };
   }
 
   async runSync(
     projectId: string,
     pr: number,
     mode: 'full' | 'pull',
-    ctx: SyncContext
+    ctx: SyncContext,
   ): Promise<SyncResult> {
-    return withReviewLock(projectId, pr, () => this.runSyncLocked(projectId, pr, mode, ctx))
+    return withReviewLock(projectId, pr, () => this.runSyncLocked(projectId, pr, mode, ctx));
   }
 }
 
-export const syncService = new SyncService()
+export const syncService = new SyncService();

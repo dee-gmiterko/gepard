@@ -1,1 +1,1 @@
-export { ScopeToggle, type SearchScope } from './ScopeToggle'
+export { ScopeToggle, type SearchScope } from './ScopeToggle';

@@ -1,29 +1,28 @@
-import { Layers, List } from 'react-feather'
-import { useIntl } from 'react-intl'
-import { defineMessages } from '../../i18n/defineMessages'
-import { IconButton } from '../IconButton'
+import { Layers, List } from 'react-feather';
+import { defineMessages, useIntl } from 'react-intl';
+import { IconButton } from '../IconButton';
 
-export type ViewMode = 'tree' | 'flat'
+export type ViewMode = 'tree' | 'flat';
 
 const messages = defineMessages({
   tree: {
     id: 'components.viewModeToggle.tree',
-    defaultMessage: 'Tree view'
+    defaultMessage: 'Tree view',
   },
   flat: {
     id: 'components.viewModeToggle.flat',
-    defaultMessage: 'Flat view'
-  }
-})
+    defaultMessage: 'Flat view',
+  },
+});
 
 export function ViewModeToggle({
   value,
-  onChange
+  onChange,
 }: {
-  value: ViewMode
-  onChange: (mode: ViewMode) => void
+  value: ViewMode;
+  onChange: (mode: ViewMode) => void;
 }): React.JSX.Element {
-  const intl = useIntl()
+  const intl = useIntl();
   return (
     <span>
       <IconButton
@@ -41,5 +40,5 @@ export function ViewModeToggle({
         onClick={() => onChange('flat')}
       />
     </span>
-  )
+  );
 }

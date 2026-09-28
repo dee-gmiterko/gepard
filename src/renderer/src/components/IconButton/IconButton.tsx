@@ -1,8 +1,8 @@
-import type { ButtonHTMLAttributes, ComponentType } from 'react'
-import styled from 'styled-components'
-import { disabledControl } from '../Button'
-import { activeToggleBackground } from './activeToggleBackground'
-import { focusVisible } from './focusVisible'
+import type { ButtonHTMLAttributes, ComponentType } from 'react';
+import styled from 'styled-components';
+import { disabledControl } from '../Button';
+import { activeToggleBackground } from './activeToggleBackground';
+import { focusVisible } from './focusVisible';
 
 const StyledButton = styled.button<{ $active?: boolean }>`
   display: inline-flex;
@@ -23,13 +23,13 @@ const StyledButton = styled.button<{ $active?: boolean }>`
 
   ${disabledControl}
   ${focusVisible}
-`
+`;
 
 export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  icon: ComponentType<{ size?: number | string }>
-  size?: number
-  active?: boolean
-  label: string
+  icon: ComponentType<{ size?: number | string }>;
+  size?: number;
+  active?: boolean;
+  label: string;
 }
 
 export function IconButton({
@@ -50,5 +50,5 @@ export function IconButton({
     >
       <Icon size={size} />
     </StyledButton>
-  )
+  );
 }

@@ -1,4 +1,4 @@
-import styled from 'styled-components'
+import styled from 'styled-components';
 
 export const Toolbar = styled.div`
   display: flex;
@@ -10,4 +10,4 @@ export const Toolbar = styled.div`
   & > :last-child {
     margin-left: auto;
   }
-`
+`;

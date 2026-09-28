@@ -1,1 +1,1 @@
-export { Byline } from './Byline'
+export { Byline } from './Byline';

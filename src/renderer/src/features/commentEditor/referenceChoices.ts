@@ -1,14 +1,14 @@
-import type { SearchScope } from '../../components/ScopeToggle'
-import type { CommentReference } from '@shared/ipc/schemas/comment'
+import type { SearchScope } from '../../components/ScopeToggle';
+import type { CommentReference } from '@shared/ipc/schemas/comment';
 
 export interface ReferenceChoices {
-  symbolOpen: boolean
-  symbols: CommentReference[]
-  exactOpen: boolean
-  exactScope: SearchScope
-  patternOpen: boolean
-  patternScope: SearchScope
-  patternSymbol: string
+  symbolOpen: boolean;
+  symbols: CommentReference[];
+  exactOpen: boolean;
+  exactScope: SearchScope;
+  patternOpen: boolean;
+  patternScope: SearchScope;
+  patternSymbol: string;
 }
 
 export function initialReferenceChoices(references: CommentReference[]): ReferenceChoices {
@@ -19,6 +19,6 @@ export function initialReferenceChoices(references: CommentReference[]): Referen
     exactScope: 'all',
     patternOpen: references.some((r) => r.kind === 'pattern'),
     patternScope: 'all',
-    patternSymbol: ''
-  }
+    patternSymbol: '',
+  };
 }

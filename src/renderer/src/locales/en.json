@@ -155,6 +155,7 @@
   "settings.extensions.failed": "Failed to load extensions.",
   "settings.extensions.installDialogTitle": "Add extension package",
   "settings.extensions.installedIn": "Installed extensions live in {dir}",
+  "settings.extensions.kindLocale": "Locale",
   "settings.extensions.kindLsp": "Language server",
   "settings.extensions.kindTheme": "Theme",
   "settings.extensions.loadFailed": "Failed to load: {error}",

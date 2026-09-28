@@ -1,98 +1,97 @@
-import { useState } from 'react'
-import { FormattedMessage, useIntl } from 'react-intl'
-import { defineMessages } from '../../i18n/defineMessages'
-import { ReferencesPanel } from './ReferencesPanel'
-import { initialReferenceChoices, type ReferenceChoices } from './referenceChoices'
-import { useDerivedReferences } from './useDerivedReferences'
-import { useUpsertComment, type CommentDraftBody } from '../../queries/comments'
-import { Button } from '../../components/Button'
-import { ActionRow, Stack } from '../../components/Layout'
-import { TextArea } from '../../components/TextInput'
-import type { CommentReference, DraftAnchor } from '@shared/ipc/schemas/comment'
-import type { RefAnchor } from './anchorLine'
+import { useState } from 'react';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { ReferencesPanel } from './ReferencesPanel';
+import { initialReferenceChoices, type ReferenceChoices } from './referenceChoices';
+import { useDerivedReferences } from './useDerivedReferences';
+import { useUpsertComment, type CommentDraftBody } from '../../queries/comments';
+import { Button } from '../../components/Button';
+import { ActionRow, Stack } from '../../components/Layout';
+import { TextArea } from '../../components/TextInput';
+import type { CommentReference, DraftAnchor } from '@shared/ipc/schemas/comment';
+import type { RefAnchor } from './anchorLine';
 
 const messages = defineMessages({
   placeholder: {
     id: 'commentEditor.placeholder',
-    defaultMessage: 'Leave a comment…'
+    defaultMessage: 'Leave a comment…',
   },
   cancel: {
     id: 'commentEditor.cancel',
-    defaultMessage: 'Cancel'
+    defaultMessage: 'Cancel',
   },
   save: {
     id: 'commentEditor.save',
-    defaultMessage: 'Save'
+    defaultMessage: 'Save',
   },
   reply: {
     id: 'commentEditor.reply',
-    defaultMessage: 'Reply'
+    defaultMessage: 'Reply',
   },
   submit: {
     id: 'commentEditor.submit',
-    defaultMessage: 'Submit'
-  }
-})
+    defaultMessage: 'Submit',
+  },
+});
 
 type CommentEditorTarget =
   | { kind: 'thread'; anchor: DraftAnchor }
   | { kind: 'reply'; threadId: string }
   | {
-      kind: 'edit'
-      id: string
-      threadId: string
-      initialBody: string
-      initialReferences: CommentReference[]
-    }
+      kind: 'edit';
+      id: string;
+      threadId: string;
+      initialBody: string;
+      initialReferences: CommentReference[];
+    };
 
 interface CommentEditorProps {
-  refAnchor: RefAnchor | null
-  target: CommentEditorTarget
-  onSubmitted: () => void
-  onCancel?: () => void
+  refAnchor: RefAnchor | null;
+  target: CommentEditorTarget;
+  onSubmitted: () => void;
+  onCancel?: () => void;
 }
 
 export function CommentEditor({
   refAnchor,
   target,
   onSubmitted,
-  onCancel
+  onCancel,
 }: CommentEditorProps): React.JSX.Element {
-  const intl = useIntl()
-  const [body, setBody] = useState(target.kind === 'edit' ? target.initialBody : '')
+  const intl = useIntl();
+  const [body, setBody] = useState(target.kind === 'edit' ? target.initialBody : '');
   const [choices, setChoices] = useState<ReferenceChoices>(() =>
-    initialReferenceChoices(target.kind === 'edit' ? target.initialReferences : [])
-  )
-  const derivedReferences = useDerivedReferences(choices, refAnchor)
-  const upsert = useUpsertComment()
+    initialReferenceChoices(target.kind === 'edit' ? target.initialReferences : []),
+  );
+  const derivedReferences = useDerivedReferences(choices, refAnchor);
+  const upsert = useUpsertComment();
 
   const submitMessage =
     target.kind === 'edit'
       ? messages.save
       : target.kind === 'reply'
         ? messages.reply
-        : messages.submit
+        : messages.submit;
 
   function handleSubmit(): void {
-    const trimmed = body.trim()
-    if (!trimmed) return
-    const references: CommentReference[] = derivedReferences.references
+    const trimmed = body.trim();
+    if (!trimmed) return;
+    const references: CommentReference[] = derivedReferences.references;
     const draft: CommentDraftBody = {
       id: target.kind === 'edit' ? target.id : null,
       threadId: target.kind === 'reply' || target.kind === 'edit' ? target.threadId : null,
       anchor: target.kind === 'thread' ? target.anchor : null,
       body: trimmed,
-      references
-    }
+      references,
+    };
     upsert.mutate(draft, {
       onSuccess: () => {
         if (target.kind !== 'edit') {
-          setBody('')
-          setChoices(initialReferenceChoices([]))
+          setBody('');
+          setChoices(initialReferenceChoices([]));
         }
-        onSubmitted()
-      }
-    })
+        onSubmitted();
+      },
+    });
   }
 
   return (
@@ -133,5 +132,5 @@ export function CommentEditor({
         </Button>
       </ActionRow>
     </Stack>
-  )
+  );
 }

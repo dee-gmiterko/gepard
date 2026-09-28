@@ -1,4 +1,4 @@
-import styled from 'styled-components'
+import styled from 'styled-components';
 
 export const ViewerFrame = styled.div<{ $center?: boolean }>`
   display: flex;
@@ -13,4 +13,4 @@ export const ViewerFrame = styled.div<{ $center?: boolean }>`
     padding: ${theme.space[4]};
   `
       : ''}
-`
+`;

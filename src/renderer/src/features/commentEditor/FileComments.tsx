@@ -1,55 +1,54 @@
-import { useMemo, useState } from 'react'
-import styled from 'styled-components'
-import { Plus } from 'react-feather'
-import { FormattedMessage } from 'react-intl'
-import { defineMessages } from '../../i18n/defineMessages'
-import type { ReviewThread } from '@shared/ipc/schemas/comment'
-import { useAppState } from '../../state/AppContext'
-import { Accordion } from '../../components/Accordion'
-import { Button } from '../../components/Button'
-import { Caption } from '../../components/Caption'
-import { Ellipsis } from '../../components/Ellipsis'
-import { Stack } from '../../components/Layout'
-import { LineTag } from '../../components/LineTag'
-import { Message } from '../../components/Message'
-import { ResolvedBadge } from '../../components/StatusBadge'
-import { useComments } from '../../queries/comments'
-import { ThreadWidget } from './ThreadWidget'
+import { useMemo, useState } from 'react';
+import styled from 'styled-components';
+import { Plus } from 'react-feather';
+import { defineMessages, FormattedMessage } from 'react-intl';
+import type { ReviewThread } from '@shared/ipc/schemas/comment';
+import { useAppState } from '../../state/AppContext';
+import { Accordion } from '../../components/Accordion';
+import { Button } from '../../components/Button';
+import { Caption } from '../../components/Caption';
+import { Ellipsis } from '../../components/Ellipsis';
+import { Stack } from '../../components/Layout';
+import { LineTag } from '../../components/LineTag';
+import { Message } from '../../components/Message';
+import { ResolvedBadge } from '../../components/StatusBadge';
+import { useComments } from '../../queries/comments';
+import { ThreadWidget } from './ThreadWidget';
 
 const messages = defineMessages({
   fileTag: {
     id: 'commentEditor.fileComments.fileTag',
-    defaultMessage: 'file'
+    defaultMessage: 'file',
   },
   lineTag: {
     id: 'commentEditor.fileComments.lineTag',
-    defaultMessage: 'L{line}'
+    defaultMessage: 'L{line}',
   },
   replies: {
     id: 'commentEditor.fileComments.replies',
-    defaultMessage: '{count, plural, one {# reply} other {# replies}}'
+    defaultMessage: '{count, plural, one {# reply} other {# replies}}',
   },
   empty: {
     id: 'commentEditor.fileComments.empty',
-    defaultMessage: 'No comments on this file.'
+    defaultMessage: 'No comments on this file.',
   },
   newFileComment: {
     id: 'commentEditor.fileComments.newFileComment',
-    defaultMessage: 'New file comment'
-  }
-})
+    defaultMessage: 'New file comment',
+  },
+});
 
 interface FileCommentsProps {
-  path: string
+  path: string;
 }
 
 const Snippet = styled(Ellipsis)`
   color: ${({ theme }) => theme.colors.fg};
-`
+`;
 
 function ThreadSummary({ thread }: { thread: ReviewThread }): React.JSX.Element {
-  const root = thread.comments[0]
-  const replies = thread.comments.length - 1
+  const root = thread.comments[0];
+  const replies = thread.comments.length - 1;
   return (
     <>
       <LineTag>
@@ -67,30 +66,30 @@ function ThreadSummary({ thread }: { thread: ReviewThread }): React.JSX.Element 
       )}
       {thread.isResolved && <ResolvedBadge />}
     </>
-  )
+  );
 }
 
 export function FileComments({ path }: FileCommentsProps): React.JSX.Element {
-  const state = useAppState()
-  const checkedOutHead = state.checkout?.head ?? null
-  const { data: threads = [] } = useComments()
-  const [openId, setOpenId] = useState<string | null>(null)
-  const [addingNew, setAddingNew] = useState(false)
+  const state = useAppState();
+  const checkedOutHead = state.checkout?.head ?? null;
+  const { data: threads = [] } = useComments();
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [addingNew, setAddingNew] = useState(false);
 
   // Must stay in sync with the inline gutter filter in components/CodeEditor/commentWidgets.ts.
   const fileThreads = useMemo(
     () =>
       threads
         .filter(
-          (t) => t.anchor.path === path && !t.isOutdated && t.anchor.commitOid === checkedOutHead
+          (t) => t.anchor.path === path && !t.isOutdated && t.anchor.commitOid === checkedOutHead,
         )
         .sort(
           (a, b) =>
             (a.anchor.line ?? Number.POSITIVE_INFINITY) -
-            (b.anchor.line ?? Number.POSITIVE_INFINITY)
+            (b.anchor.line ?? Number.POSITIVE_INFINITY),
         ),
-    [threads, path, checkedOutHead]
-  )
+    [threads, path, checkedOutHead],
+  );
 
   return (
     <Stack>
@@ -119,7 +118,7 @@ export function FileComments({ path }: FileCommentsProps): React.JSX.Element {
             side: 'RIGHT',
             line: null,
             startLine: null,
-            startSide: null
+            startSide: null,
           }}
           onClose={() => setAddingNew(false)}
         />
@@ -131,5 +130,5 @@ export function FileComments({ path }: FileCommentsProps): React.JSX.Element {
         </div>
       )}
     </Stack>
-  )
+  );
 }

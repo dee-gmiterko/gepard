@@ -1,53 +1,52 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react'
-import styled from 'styled-components'
-import { FormattedMessage } from 'react-intl'
-import { defineMessages } from '../i18n/defineMessages'
-import { Button } from '../components/Button'
-import { Message, centerLayout } from '../components/Message'
-import { Stack } from '../components/Layout'
-import { reportError } from './report'
+import { Component, type ErrorInfo, type ReactNode } from 'react';
+import styled from 'styled-components';
+import { defineMessages, FormattedMessage } from 'react-intl';
+import { Button } from '../components/Button';
+import { Message, centerLayout } from '../components/Message';
+import { Stack } from '../components/Layout';
+import { reportError } from './report';
 
 const messages = defineMessages({
   crashed: {
     id: 'errors.errorBoundary.crashed',
-    defaultMessage: 'This view crashed and could not continue.'
+    defaultMessage: 'This view crashed and could not continue.',
   },
   reload: {
     id: 'errors.errorBoundary.reload',
-    defaultMessage: 'Reload'
-  }
-})
+    defaultMessage: 'Reload',
+  },
+});
 
 const Centered = styled.div`
   ${centerLayout}
   height: 100vh;
-`
+`;
 
 interface Props {
-  children: ReactNode
+  children: ReactNode;
 }
 
 interface State {
-  crashed: boolean
+  crashed: boolean;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { crashed: false }
+  state: State = { crashed: false };
 
   static getDerivedStateFromError(): State {
-    return { crashed: true }
+    return { crashed: true };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     reportError({
       scope: 'render',
       message: error.message || String(error),
-      detail: [error.stack, info.componentStack].filter(Boolean).join('\n')
-    })
+      detail: [error.stack, info.componentStack].filter(Boolean).join('\n'),
+    });
   }
 
   render(): ReactNode {
-    if (!this.state.crashed) return this.props.children
+    if (!this.state.crashed) return this.props.children;
     return (
       <Centered>
         <Stack $gap={3} $align="center">
@@ -59,6 +58,6 @@ export class ErrorBoundary extends Component<Props, State> {
           </Button>
         </Stack>
       </Centered>
-    )
+    );
   }
 }

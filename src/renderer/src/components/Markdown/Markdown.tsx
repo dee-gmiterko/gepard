@@ -1,5 +1,5 @@
-import MarkdownToJsx from 'markdown-to-jsx/react'
-import styled, { css } from 'styled-components'
+import MarkdownToJsx from 'markdown-to-jsx/react';
+import styled, { css } from 'styled-components';
 
 const linkAndCode = css`
   a {
@@ -12,7 +12,7 @@ const linkAndCode = css`
     border-radius: ${({ theme }) => theme.radius.sm};
     padding: 0 3px;
   }
-`
+`;
 
 const Prose = styled.div`
   color: ${({ theme }) => theme.colors.fg};
@@ -54,27 +54,27 @@ const Prose = styled.div`
     border-left: 2px solid ${({ theme }) => theme.colors.border};
     color: ${({ theme }) => theme.colors.fgMuted};
   }
-`
+`;
 
 const InlineProse = styled.span`
   color: inherit;
   font: inherit;
 
   ${linkAndCode}
-`
+`;
 
 export interface MarkdownProps {
-  children: string
-  inline?: boolean
+  children: string;
+  inline?: boolean;
 }
 
 export function Markdown({ children, inline = false }: MarkdownProps): React.JSX.Element {
-  const Wrapper = inline ? InlineProse : Prose
+  const Wrapper = inline ? InlineProse : Prose;
   return (
     <Wrapper>
       <MarkdownToJsx options={{ disableParsingRawHTML: true, forceInline: inline }}>
         {children}
       </MarkdownToJsx>
     </Wrapper>
-  )
+  );
 }

@@ -1,48 +1,48 @@
-let userDataDir: string | null = null
+let userDataDir: string | null = null;
 
 export interface EmittedEvent {
-  channel: string
-  payload: unknown
+  channel: string;
+  payload: unknown;
 }
 
-export const emittedEvents: EmittedEvent[] = []
+export const emittedEvents: EmittedEvent[] = [];
 
 export function __setUserDataDir(dir: string): void {
-  userDataDir = dir
+  userDataDir = dir;
 }
 
 export function __clearEmittedEvents(): void {
-  emittedEvents.length = 0
+  emittedEvents.length = 0;
 }
 
 const fakeWindow = {
   isDestroyed: () => false,
   webContents: {
     send: (channel: string, payload: unknown): void => {
-      emittedEvents.push({ channel, payload })
-    }
-  }
-}
+      emittedEvents.push({ channel, payload });
+    },
+  },
+};
 
 export const app = {
   isPackaged: true,
   getPath(name: string): string {
     if (userDataDir === null) {
       throw new Error(
-        `electron mock: app.getPath('${name}') called before __setUserDataDir() (test/support/electron.ts)`
-      )
+        `electron mock: app.getPath('${name}') called before __setUserDataDir() (test/support/electron.ts)`,
+      );
     }
-    return userDataDir
+    return userDataDir;
   },
-  setName: (): void => undefined
-}
+  setName: (): void => undefined,
+};
 
 export const BrowserWindow = {
   getAllWindows: () => [fakeWindow],
-  fromWebContents: () => null
-}
+  fromWebContents: () => null,
+};
 
 export const ipcMain = {
   handle: (): void => undefined,
-  on: (): void => undefined
-}
+  on: (): void => undefined,
+};

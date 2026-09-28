@@ -1,1 +1,1 @@
-export { TextInput, TextArea, textFieldBase, fieldChrome } from './TextInput'
+export { TextInput, TextArea, textFieldBase, fieldChrome } from './TextInput';

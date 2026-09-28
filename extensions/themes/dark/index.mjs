@@ -4,7 +4,7 @@ export default {
   mode: 'dark',
   shadow: {
     popover: '0 4px 12px rgba(1, 4, 9, 0.6)',
-    floating: '0 4px 16px rgba(1, 4, 9, 0.7)'
+    floating: '0 4px 16px rgba(1, 4, 9, 0.7)',
   },
   colors: {
     bg: '#0d1117',
@@ -28,7 +28,7 @@ export default {
     diffDelFg: '#f85149',
     diffHunk: '#122447',
     commentBg: '#3b2b00',
-    overlay: 'rgba(1, 4, 9, 0.6)'
+    overlay: 'rgba(1, 4, 9, 0.6)',
   },
   syntax: {
     keyword: '#ff7b72',
@@ -40,6 +40,6 @@ export default {
     property: '#79c0ff',
     constant: '#79c0ff',
     tag: '#7ee787',
-    invalid: '#ffa198'
-  }
-}
+    invalid: '#ffa198',
+  },
+};

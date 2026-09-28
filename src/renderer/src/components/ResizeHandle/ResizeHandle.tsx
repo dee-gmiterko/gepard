@@ -1,4 +1,4 @@
-import styled from 'styled-components'
+import styled from 'styled-components';
 
 export const ResizeHandle = styled.div`
   position: absolute;
@@ -14,4 +14,4 @@ export const ResizeHandle = styled.div`
     background: ${({ theme }) => theme.colors.accent};
     opacity: 0.5;
   }
-`
+`;

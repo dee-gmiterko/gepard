@@ -1,6 +1,6 @@
-import styled from 'styled-components'
+import styled from 'styled-components';
 
-export type SurfaceElevation = 'flat' | 'popover' | 'floating'
+export type SurfaceElevation = 'flat' | 'popover' | 'floating';
 
 export const Surface = styled.div<{ $elevation?: SurfaceElevation }>`
   border: 1px solid ${({ theme }) => theme.colors.border};
@@ -12,4 +12,4 @@ export const Surface = styled.div<{ $elevation?: SurfaceElevation }>`
       : $elevation === 'flat'
         ? 'none'
         : theme.shadow.popover};
-`
+`;

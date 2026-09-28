@@ -1,2 +1,2 @@
-export { Combobox, NO_HIGHLIGHT } from './Combobox'
-export { fuzzyRanges } from './fuzzy'
+export { Combobox, NO_HIGHLIGHT } from './Combobox';
+export { fuzzyRanges } from './fuzzy';

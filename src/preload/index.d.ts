@@ -1,7 +1,7 @@
-import type { IpcBridge } from './ipcBridge'
+import type { IpcBridge } from './ipcBridge';
 
 declare global {
   interface Window {
-    ipc: IpcBridge
+    ipc: IpcBridge;
   }
 }

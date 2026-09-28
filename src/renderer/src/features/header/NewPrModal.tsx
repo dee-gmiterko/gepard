@@ -1,64 +1,63 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
-import styled from 'styled-components'
-import { FormattedMessage, useIntl } from 'react-intl'
-import { defineMessages } from '../../i18n/defineMessages'
-import { Button } from '../../components/Button'
-import { Message } from '../../components/Message'
-import { Modal } from '../../components/Modal'
-import { Select } from '../../components/Select'
-import { TextArea, TextInput } from '../../components/TextInput'
-import { ActionRow, Stack } from '../../components/Layout'
-import { useBranches, useCreatePr } from '../../queries/prs'
-import { localizedErrorMessage } from '../../errors/errorMessage'
-import type { PrSummary } from '@shared/ipc/schemas/pr'
+import { useState, type FormEvent, type ReactNode } from 'react';
+import styled from 'styled-components';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { Button } from '../../components/Button';
+import { Message } from '../../components/Message';
+import { Modal } from '../../components/Modal';
+import { Select } from '../../components/Select';
+import { TextArea, TextInput } from '../../components/TextInput';
+import { ActionRow, Stack } from '../../components/Layout';
+import { useBranches, useCreatePr } from '../../queries/prs';
+import { localizedErrorMessage } from '../../errors/errorMessage';
+import type { PrSummary } from '@shared/ipc/schemas/pr';
 
 const messages = defineMessages({
   title: {
     id: 'header.newPrModal.title',
-    defaultMessage: 'New pull request'
+    defaultMessage: 'New pull request',
   },
   close: {
     id: 'header.newPrModal.close',
-    defaultMessage: 'Close'
+    defaultMessage: 'Close',
   },
   base: {
     id: 'header.newPrModal.base',
-    defaultMessage: 'Base'
+    defaultMessage: 'Base',
   },
   head: {
     id: 'header.newPrModal.head',
-    defaultMessage: 'Head'
+    defaultMessage: 'Head',
   },
   selectBranch: {
     id: 'header.newPrModal.selectBranch',
-    defaultMessage: 'Select branch…'
+    defaultMessage: 'Select branch…',
   },
   titleField: {
     id: 'header.newPrModal.titleField',
-    defaultMessage: 'Title'
+    defaultMessage: 'Title',
   },
   descriptionField: {
     id: 'header.newPrModal.descriptionField',
-    defaultMessage: 'Description'
+    defaultMessage: 'Description',
   },
   cancel: {
     id: 'header.newPrModal.cancel',
-    defaultMessage: 'Cancel'
+    defaultMessage: 'Cancel',
   },
   creating: {
     id: 'header.newPrModal.creating',
-    defaultMessage: 'Creating…'
+    defaultMessage: 'Creating…',
   },
   create: {
     id: 'header.newPrModal.create',
-    defaultMessage: 'Create'
-  }
-})
+    defaultMessage: 'Create',
+  },
+});
 
 const BranchRow = styled.div`
   display: flex;
   gap: ${({ theme }) => theme.space[2]};
-`
+`;
 
 const Field = styled.label`
   display: flex;
@@ -67,11 +66,11 @@ const Field = styled.label`
   gap: ${({ theme }) => theme.space[1]};
   font-size: ${({ theme }) => theme.font.size.xs};
   color: ${({ theme }) => theme.colors.fgMuted};
-`
+`;
 
 const Actions = styled(ActionRow)`
   margin-top: ${({ theme }) => theme.space[4]};
-`
+`;
 
 function BranchSelect({
   label,
@@ -79,14 +78,14 @@ function BranchSelect({
   branches,
   loading,
   placeholder,
-  onChange
+  onChange,
 }: {
-  label: ReactNode
-  value: string
-  branches: string[] | undefined
-  loading: boolean
-  placeholder: string
-  onChange: (value: string) => void
+  label: ReactNode;
+  value: string;
+  branches: string[] | undefined;
+  loading: boolean;
+  placeholder: string;
+  onChange: (value: string) => void;
 }): React.JSX.Element {
   return (
     <Field>
@@ -102,30 +101,30 @@ function BranchSelect({
         ))}
       </Select>
     </Field>
-  )
+  );
 }
 
 interface NewPrModalProps {
-  onClose: () => void
-  onCreated: (pr: PrSummary) => void
+  onClose: () => void;
+  onCreated: (pr: PrSummary) => void;
 }
 
 export function NewPrModal({ onClose, onCreated }: NewPrModalProps): React.JSX.Element {
-  const intl = useIntl()
-  const { data, isLoading: branchesLoading } = useBranches()
-  const branches = data?.branches
-  const createPr = useCreatePr()
+  const intl = useIntl();
+  const { data, isLoading: branchesLoading } = useBranches();
+  const branches = data?.branches;
+  const createPr = useCreatePr();
 
-  const [base, setBase] = useState('')
-  const [head, setHead] = useState('')
-  const [title, setTitle] = useState('')
-  const [body, setBody] = useState('')
-  const [defaultsApplied, setDefaultsApplied] = useState(false)
+  const [base, setBase] = useState('');
+  const [head, setHead] = useState('');
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const [defaultsApplied, setDefaultsApplied] = useState(false);
 
   if (data && !defaultsApplied) {
-    setBase(data.defaultBranch ?? '')
-    setHead(data.defaultBranch ?? '')
-    setDefaultsApplied(true)
+    setBase(data.defaultBranch ?? '');
+    setHead(data.defaultBranch ?? '');
+    setDefaultsApplied(true);
   }
 
   const canSubmit =
@@ -133,12 +132,12 @@ export function NewPrModal({ onClose, onCreated }: NewPrModalProps): React.JSX.E
     head.length > 0 &&
     base !== head &&
     title.trim().length > 0 &&
-    !createPr.isPending
+    !createPr.isPending;
 
   function handleSubmit(e: FormEvent): void {
-    e.preventDefault()
-    if (!canSubmit) return
-    createPr.mutate({ base, head, title: title.trim(), body }, { onSuccess: onCreated })
+    e.preventDefault();
+    if (!canSubmit) return;
+    createPr.mutate({ base, head, title: title.trim(), body }, { onSuccess: onCreated });
   }
 
   return (
@@ -190,5 +189,5 @@ export function NewPrModal({ onClose, onCreated }: NewPrModalProps): React.JSX.E
         </Button>
       </Actions>
     </Modal>
-  )
+  );
 }

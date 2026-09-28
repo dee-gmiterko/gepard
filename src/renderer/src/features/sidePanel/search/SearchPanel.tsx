@@ -1,59 +1,58 @@
-import { useMemo, useState } from 'react'
-import styled from 'styled-components'
-import { AtSign, Hash } from 'react-feather'
-import { FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl'
-import { defineMessages } from '../../../i18n/defineMessages'
-import { useAppState, useAppDispatch } from '../../../state/AppContext'
-import { useCurrentHead } from '../../../queries/projects'
-import { useTargetedFiles } from '../../../queries/files'
-import { useSearch, useWorkspaceSymbols, type SearchParams } from '../../../queries/search'
-import { IconButton } from '../../../components/IconButton'
-import { Tree, TreeLabel, buildTree, buildFlatList, type TreeNode } from '../../../components/Tree'
-import { Combobox, fuzzyRanges } from '../../../components/Combobox'
-import { HighlightedText } from '../../../components/HighlightedText'
-import { Toolbar } from '../../../components/Toolbar'
-import { ScopeToggle, type SearchScope } from '../../../components/ScopeToggle'
-import { ViewModeToggle, type ViewMode } from '../../../components/ViewModeToggle'
-import { MatchLine } from '../../../components/MatchLine'
-import { Caption } from '../../../components/Caption'
-import { Inline } from '../../../components/Layout'
-import { Message } from '../../../components/Message'
-import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
-import { FileRowMarks } from '../fileRows/FileRowMarks'
-import { useRowData } from '../fileRows/rowData'
-import type { GroupedResult, WorkspaceSymbol } from '@shared/ipc/schemas/search'
+import { useMemo, useState } from 'react';
+import styled from 'styled-components';
+import { AtSign, Hash } from 'react-feather';
+import { defineMessages, FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl';
+import { useAppState, useAppDispatch } from '../../../state/AppContext';
+import { useCurrentHead } from '../../../queries/projects';
+import { useTargetedFiles } from '../../../queries/files';
+import { useSearch, useWorkspaceSymbols, type SearchParams } from '../../../queries/search';
+import { IconButton } from '../../../components/IconButton';
+import { Tree, TreeLabel, buildTree, buildFlatList, type TreeNode } from '../../../components/Tree';
+import { Combobox, fuzzyRanges } from '../../../components/Combobox';
+import { HighlightedText } from '../../../components/HighlightedText';
+import { Toolbar } from '../../../components/Toolbar';
+import { ScopeToggle, type SearchScope } from '../../../components/ScopeToggle';
+import { ViewModeToggle, type ViewMode } from '../../../components/ViewModeToggle';
+import { MatchLine } from '../../../components/MatchLine';
+import { Caption } from '../../../components/Caption';
+import { Inline } from '../../../components/Layout';
+import { Message } from '../../../components/Message';
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
+import { FileRowMarks } from '../fileRows/FileRowMarks';
+import { useRowData } from '../fileRows/rowData';
+import type { GroupedResult, WorkspaceSymbol } from '@shared/ipc/schemas/search';
 
-type FileMatches = GroupedResult['files'][number]
-type MatchItem = FileMatches['matches'][number]
-type SymbolKind = WorkspaceSymbol['kind']
+type FileMatches = GroupedResult['files'][number];
+type MatchItem = FileMatches['matches'][number];
+type SymbolKind = WorkspaceSymbol['kind'];
 
 type SearchRowData =
-  { kind: 'file'; file: FileMatches } | { kind: 'match'; match: MatchItem; filePath: string }
+  { kind: 'file'; file: FileMatches } | { kind: 'match'; match: MatchItem; filePath: string };
 
 const messages = defineMessages({
   placeholder: {
     id: 'sidePanel.search.placeholder',
-    defaultMessage: 'Search…'
+    defaultMessage: 'Search…',
   },
   regex: {
     id: 'sidePanel.search.regex',
-    defaultMessage: 'Regex'
+    defaultMessage: 'Regex',
   },
   symbol: {
     id: 'sidePanel.search.symbol',
-    defaultMessage: 'Symbol'
+    defaultMessage: 'Symbol',
   },
   typeToSearch: {
     id: 'sidePanel.search.typeToSearch',
-    defaultMessage: 'Type to search.'
+    defaultMessage: 'Type to search.',
   },
   searching: {
     id: 'sidePanel.search.searching',
-    defaultMessage: 'Searching…'
+    defaultMessage: 'Searching…',
   },
   noMatches: {
     id: 'sidePanel.search.noMatches',
-    defaultMessage: 'No matches.'
+    defaultMessage: 'No matches.',
   },
   symbolKindNamespace: { id: 'sidePanel.search.symbolKind.namespace', defaultMessage: 'namespace' },
   symbolKindClass: { id: 'sidePanel.search.symbolKind.class', defaultMessage: 'class' },
@@ -61,12 +60,12 @@ const messages = defineMessages({
   symbolKindEnum: { id: 'sidePanel.search.symbolKind.enum', defaultMessage: 'enum' },
   symbolKindEnumMember: {
     id: 'sidePanel.search.symbolKind.enumMember',
-    defaultMessage: 'enum member'
+    defaultMessage: 'enum member',
   },
   symbolKindType: { id: 'sidePanel.search.symbolKind.type', defaultMessage: 'type' },
   symbolKindTypeParameter: {
     id: 'sidePanel.search.symbolKind.typeParameter',
-    defaultMessage: 'type parameter'
+    defaultMessage: 'type parameter',
   },
   symbolKindFunction: { id: 'sidePanel.search.symbolKind.function', defaultMessage: 'function' },
   symbolKindMethod: { id: 'sidePanel.search.symbolKind.method', defaultMessage: 'method' },
@@ -74,8 +73,8 @@ const messages = defineMessages({
   symbolKindVariable: { id: 'sidePanel.search.symbolKind.variable', defaultMessage: 'variable' },
   symbolKindParameter: { id: 'sidePanel.search.symbolKind.parameter', defaultMessage: 'parameter' },
   symbolKindConstant: { id: 'sidePanel.search.symbolKind.constant', defaultMessage: 'constant' },
-  symbolKindUnknown: { id: 'sidePanel.search.symbolKind.unknown', defaultMessage: 'unknown' }
-})
+  symbolKindUnknown: { id: 'sidePanel.search.symbolKind.unknown', defaultMessage: 'unknown' },
+});
 
 const symbolKindMessages: Record<SymbolKind, MessageDescriptor> = {
   namespace: messages.symbolKindNamespace,
@@ -91,33 +90,33 @@ const symbolKindMessages: Record<SymbolKind, MessageDescriptor> = {
   variable: messages.symbolKindVariable,
   parameter: messages.symbolKindParameter,
   constant: messages.symbolKindConstant,
-  unknown: messages.symbolKindUnknown
-}
+  unknown: messages.symbolKindUnknown,
+};
 
 const Container = styled.div`
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
-`
+`;
 
 const InputArea = styled.div`
   padding: ${({ theme }) => theme.space[2]};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-`
+`;
 
 const Results = styled.div`
   flex: 1;
   min-height: 0;
   overflow: auto;
-`
+`;
 
 function toSearchTree(nodes: TreeNode<FileMatches>[]): TreeNode<SearchRowData>[] {
   return nodes.map((n) => {
     if (n.isFolder) {
-      return { path: n.path, name: n.name, isFolder: true, children: toSearchTree(n.children) }
+      return { path: n.path, name: n.name, isFolder: true, children: toSearchTree(n.children) };
     }
-    const file = n.data as FileMatches
+    const file = n.data as FileMatches;
     return {
       path: n.path,
       name: n.name,
@@ -128,60 +127,60 @@ function toSearchTree(nodes: TreeNode<FileMatches>[]): TreeNode<SearchRowData>[]
         name: String(match.line),
         isFolder: false,
         children: [],
-        data: { kind: 'match', match, filePath: n.path } as SearchRowData
-      }))
-    }
-  })
+        data: { kind: 'match', match, filePath: n.path } as SearchRowData,
+      })),
+    };
+  });
 }
 
 export function SearchPanel(): React.JSX.Element {
-  const intl = useIntl()
-  const state = useAppState()
-  const dispatch = useAppDispatch()
-  const sha = useCurrentHead() ?? ''
-  const targetedPaths = useTargetedFiles()
+  const intl = useIntl();
+  const state = useAppState();
+  const dispatch = useAppDispatch();
+  const sha = useCurrentHead() ?? '';
+  const targetedPaths = useTargetedFiles();
 
-  const [text, setText] = useState('')
-  const [regex, setRegex] = useState(false)
-  const [symbolFlag, setSymbolFlag] = useState(false)
-  const [scope, setScope] = useState<SearchScope>('all')
-  const [mode, setMode] = useState<ViewMode>('tree')
+  const [text, setText] = useState('');
+  const [regex, setRegex] = useState(false);
+  const [symbolFlag, setSymbolFlag] = useState(false);
+  const [scope, setScope] = useState<SearchScope>('all');
+  const [mode, setMode] = useState<ViewMode>('tree');
   const [selectedAt, setSelectedAt] = useState<{
-    path: string
-    pos: { line: number; col: number }
-  } | null>(null)
+    path: string;
+    pos: { line: number; col: number };
+  } | null>(null);
 
-  const debouncedText = useDebouncedValue(text)
-  const suggestions = useWorkspaceSymbols(debouncedText, 8)
-  const suggestionList = text.length > 0 ? (suggestions.data ?? []) : []
-  const { rowFor } = useRowData()
+  const debouncedText = useDebouncedValue(text);
+  const suggestions = useWorkspaceSymbols(debouncedText, 8);
+  const suggestionList = text.length > 0 ? (suggestions.data ?? []) : [];
+  const { rowFor } = useRowData();
 
   function pickSymbol(symbol: WorkspaceSymbol): void {
-    setText(symbol.name)
-    if (symbolFlag) setSelectedAt({ path: symbol.location.path, pos: symbol.location.range.start })
+    setText(symbol.name);
+    if (symbolFlag) setSelectedAt({ path: symbol.location.path, pos: symbol.location.range.start });
   }
 
   const params = useMemo<SearchParams | null>(() => {
-    if (!debouncedText) return null
+    if (!debouncedText) return null;
     if (symbolFlag && selectedAt) {
-      return { kind: 'references', scope, targetedPaths, text: debouncedText, at: selectedAt }
+      return { kind: 'references', scope, targetedPaths, text: debouncedText, at: selectedAt };
     }
-    if (regex) return { kind: 'regex', scope, targetedPaths, text: debouncedText }
-    return { kind: 'pattern', scope, targetedPaths, text: debouncedText }
-  }, [symbolFlag, selectedAt, regex, scope, targetedPaths, debouncedText])
+    if (regex) return { kind: 'regex', scope, targetedPaths, text: debouncedText };
+    return { kind: 'pattern', scope, targetedPaths, text: debouncedText };
+  }, [symbolFlag, selectedAt, regex, scope, targetedPaths, debouncedText]);
 
-  const { data: result, isFetching } = useSearch(sha, params)
-  const active = Boolean(params) && Boolean(sha)
+  const { data: result, isFetching } = useSearch(sha, params);
+  const active = Boolean(params) && Boolean(sha);
 
   const items = useMemo(
     () => (result?.files ?? []).map((f) => ({ path: f.path, data: f })),
-    [result]
-  )
+    [result],
+  );
 
   const nodes = useMemo(() => {
-    const base = mode === 'flat' ? buildFlatList(items) : buildTree(items)
-    return toSearchTree(base)
-  }, [items, mode])
+    const base = mode === 'flat' ? buildFlatList(items) : buildTree(items);
+    return toSearchTree(base);
+  }, [items, mode]);
 
   return (
     <Container>
@@ -192,10 +191,10 @@ export function SearchPanel(): React.JSX.Element {
           freeText={{
             text,
             onTextChange: (next) => {
-              setText(next)
-              setSelectedAt(null)
+              setText(next);
+              setSelectedAt(null);
             },
-            searchText: debouncedText
+            searchText: debouncedText,
           }}
           onSelect={(symbol) => symbol && pickSymbol(symbol)}
           getKey={(symbol) =>
@@ -232,11 +231,11 @@ export function SearchPanel(): React.JSX.Element {
             active={symbolFlag}
             onClick={() => {
               if (symbolFlag) {
-                setSelectedAt(null)
+                setSelectedAt(null);
               } else {
-                setRegex(false)
+                setRegex(false);
               }
-              setSymbolFlag(!symbolFlag)
+              setSymbolFlag(!symbolFlag);
             }}
           />
           <ScopeToggle value={scope} onChange={setScope} />
@@ -272,10 +271,10 @@ export function SearchPanel(): React.JSX.Element {
                 dispatch({
                   type: 'file/open',
                   path: node.data.filePath,
-                  line: node.data.match.line
-                })
+                  line: node.data.match.line,
+                });
               } else if (node.data?.kind === 'file') {
-                dispatch({ type: 'file/open', path: node.path })
+                dispatch({ type: 'file/open', path: node.path });
               }
             }}
             renderFile={(node) =>
@@ -297,5 +296,5 @@ export function SearchPanel(): React.JSX.Element {
         )}
       </Results>
     </Container>
-  )
+  );
 }

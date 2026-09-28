@@ -1,8 +1,8 @@
-import type { ButtonHTMLAttributes } from 'react'
-import styled, { css } from 'styled-components'
-import { disabledControl } from './disabledControl'
+import type { ButtonHTMLAttributes } from 'react';
+import styled, { css } from 'styled-components';
+import { disabledControl } from './disabledControl';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger'
+export type ButtonVariant = 'primary' | 'secondary' | 'danger';
 
 const StyledButton = styled.button<{ $variant: ButtonVariant; $block: boolean }>`
   display: ${({ $block }) => ($block ? 'flex' : 'inline-flex')};
@@ -45,11 +45,11 @@ const StyledButton = styled.button<{ $variant: ButtonVariant; $block: boolean }>
           `}
 
   ${disabledControl}
-`
+`;
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: ButtonVariant
-  block?: boolean
+  variant?: ButtonVariant;
+  block?: boolean;
 }
 
 export function Button({
@@ -58,5 +58,5 @@ export function Button({
   type = 'button',
   ...rest
 }: ButtonProps): React.JSX.Element {
-  return <StyledButton type={type} $variant={variant} $block={block} {...rest} />
+  return <StyledButton type={type} $variant={variant} $block={block} {...rest} />;
 }

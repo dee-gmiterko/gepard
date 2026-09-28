@@ -1,16 +1,16 @@
-import { useSyncExternalStore } from 'react'
-import { createPortal } from 'react-dom'
-import type { CommentPortals } from '../../../components/CodeEditor/commentWidgets'
-import { ThreadWidget } from '../../commentEditor/ThreadWidget'
+import { useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
+import type { CommentPortals } from '../../../components/CodeEditor/commentWidgets';
+import { ThreadWidget } from '../../commentEditor/ThreadWidget';
 
 export function CommentPortalHost({
   portals,
-  onCloseDraft
+  onCloseDraft,
 }: {
-  portals: CommentPortals
-  onCloseDraft: () => void
+  portals: CommentPortals;
+  onCloseDraft: () => void;
 }): React.JSX.Element {
-  const mounted = useSyncExternalStore(portals.subscribe, portals.getSnapshot)
+  const mounted = useSyncExternalStore(portals.subscribe, portals.getSnapshot);
   return (
     <>
       {mounted.map(({ key, dom, entry }) =>
@@ -24,9 +24,9 @@ export function CommentPortalHost({
             )}
           </>,
           dom,
-          String(key)
-        )
+          String(key),
+        ),
       )}
     </>
-  )
+  );
 }

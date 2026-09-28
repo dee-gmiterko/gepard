@@ -1,64 +1,63 @@
-import { useState } from 'react'
-import styled from 'styled-components'
-import { Edit2, Trash2, X } from 'react-feather'
-import { FormattedMessage, useIntl } from 'react-intl'
-import { defineMessages } from '../../i18n/defineMessages'
-import type { Comment, DraftAnchor, ReviewThread } from '@shared/ipc/schemas/comment'
-import { useAppState } from '../../state/AppContext'
-import { IconButton } from '../../components/IconButton'
-import { Button } from '../../components/Button'
-import { Inline, Stack } from '../../components/Layout'
-import { Caption } from '../../components/Caption'
-import { PathAndLine } from '../../components/PathAndLine'
-import { OutdatedBadge, ResolvedBadge } from '../../components/StatusBadge'
-import { Byline } from '../../components/Byline'
-import { Surface } from '../../components/Surface'
-import { fieldChrome, textFieldBase } from '../../components/TextInput'
-import { Markdown } from '../../components/Markdown'
-import { useDeleteComment } from '../../queries/comments'
-import { useViewer } from '../../queries/projects'
-import { authorDisplayName } from '@shared/model/actor'
-import { refAnchorFromDraft, refAnchorFromThread } from './anchorLine'
-import { CommentEditor } from './CommentEditor'
+import { useState } from 'react';
+import styled from 'styled-components';
+import { Edit2, Trash2, X } from 'react-feather';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import type { Comment, DraftAnchor, ReviewThread } from '@shared/ipc/schemas/comment';
+import { useAppState } from '../../state/AppContext';
+import { IconButton } from '../../components/IconButton';
+import { Button } from '../../components/Button';
+import { Inline, Stack } from '../../components/Layout';
+import { Caption } from '../../components/Caption';
+import { PathAndLine } from '../../components/PathAndLine';
+import { OutdatedBadge, ResolvedBadge } from '../../components/StatusBadge';
+import { Byline } from '../../components/Byline';
+import { Surface } from '../../components/Surface';
+import { fieldChrome, textFieldBase } from '../../components/TextInput';
+import { Markdown } from '../../components/Markdown';
+import { useDeleteComment } from '../../queries/comments';
+import { useViewer } from '../../queries/projects';
+import { authorDisplayName } from '@shared/model/actor';
+import { refAnchorFromDraft, refAnchorFromThread } from './anchorLine';
+import { CommentEditor } from './CommentEditor';
 
 const messages = defineMessages({
   editComment: {
     id: 'commentEditor.threadWidget.editComment',
-    defaultMessage: 'Edit comment'
+    defaultMessage: 'Edit comment',
   },
   deleteComment: {
     id: 'commentEditor.threadWidget.deleteComment',
-    defaultMessage: 'Delete comment'
+    defaultMessage: 'Delete comment',
   },
   confirmDeleteQuestion: {
     id: 'commentEditor.threadWidget.confirmDeleteQuestion',
-    defaultMessage: 'Delete this comment?'
+    defaultMessage: 'Delete this comment?',
   },
   cancelDelete: {
     id: 'commentEditor.threadWidget.cancelDelete',
-    defaultMessage: 'Cancel'
+    defaultMessage: 'Cancel',
   },
   close: {
     id: 'commentEditor.threadWidget.close',
-    defaultMessage: 'Close'
+    defaultMessage: 'Close',
   },
   replyPlaceholder: {
     id: 'commentEditor.threadWidget.replyPlaceholder',
-    defaultMessage: 'Reply…'
-  }
-})
+    defaultMessage: 'Reply…',
+  },
+});
 
 interface ThreadWidgetProps {
-  thread?: ReviewThread
-  draftAnchor?: DraftAnchor
-  onClose?: () => void
+  thread?: ReviewThread;
+  draftAnchor?: DraftAnchor;
+  onClose?: () => void;
 }
 
 const Wrapper = styled(Surface)`
   padding: ${({ theme }) => theme.space[2]};
   width: 100%;
   max-width: 480px;
-`
+`;
 
 const CommentRow = styled.div`
   display: flex;
@@ -70,14 +69,14 @@ const CommentRow = styled.div`
   &:last-child {
     border-bottom: none;
   }
-`
+`;
 
 const RowActions = styled.div`
   margin-left: auto;
   display: flex;
   align-items: center;
   gap: ${({ theme }) => theme.space[1]};
-`
+`;
 
 const ReplyPlaceholder = styled.button`
   ${textFieldBase}
@@ -91,27 +90,27 @@ const ReplyPlaceholder = styled.button`
   &:hover {
     border-color: ${({ theme }) => theme.colors.borderStrong};
   }
-`
+`;
 
 export function ThreadWidget({
   thread,
   draftAnchor,
-  onClose
+  onClose,
 }: ThreadWidgetProps): React.JSX.Element | null {
-  const intl = useIntl()
-  const state = useAppState()
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
-  const [replyOpen, setReplyOpen] = useState(false)
-  const del = useDeleteComment()
-  const viewer = useViewer().data ?? null
+  const intl = useIntl();
+  const state = useAppState();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [replyOpen, setReplyOpen] = useState(false);
+  const del = useDeleteComment();
+  const viewer = useViewer().data ?? null;
 
-  const anchor = thread?.anchor ?? draftAnchor
-  if (!anchor) return null
-  const isGeneral = anchor.subjectType === 'PR'
+  const anchor = thread?.anchor ?? draftAnchor;
+  if (!anchor) return null;
+  const isGeneral = anchor.subjectType === 'PR';
   const refAnchor = thread
     ? refAnchorFromThread(thread.anchor, state.checkout)
-    : refAnchorFromDraft(anchor, state.checkout)
+    : refAnchorFromDraft(anchor, state.checkout);
 
   function renderComment(comment: Comment): React.JSX.Element {
     if (editingId === comment.id) {
@@ -124,17 +123,17 @@ export function ThreadWidget({
             id: comment.id,
             threadId: comment.threadId,
             initialBody: comment.body,
-            initialReferences: comment.local?.references ?? []
+            initialReferences: comment.local?.references ?? [],
           }}
           onSubmitted={() => setEditingId(null)}
           onCancel={() => setEditingId(null)}
         />
-      )
+      );
     }
-    const isLocalDraft = comment.local?.status === 'new'
-    const canEdit = comment.viewerDidAuthor
-    const canDelete = comment.viewerCanDelete || isLocalDraft
-    const confirming = confirmDeleteId === comment.id
+    const isLocalDraft = comment.local?.status === 'new';
+    const canEdit = comment.viewerDidAuthor;
+    const canDelete = comment.viewerCanDelete || isLocalDraft;
+    const confirming = confirmDeleteId === comment.id;
     return (
       <CommentRow key={comment.id}>
         <Inline>
@@ -149,8 +148,8 @@ export function ThreadWidget({
                 <Button
                   variant="danger"
                   onClick={() => {
-                    del.mutate(comment.id)
-                    setConfirmDeleteId(null)
+                    del.mutate(comment.id);
+                    setConfirmDeleteId(null);
                   }}
                   disabled={del.isPending}
                 >
@@ -184,7 +183,7 @@ export function ThreadWidget({
         </Inline>
         <Markdown>{comment.body}</Markdown>
       </CommentRow>
-    )
+    );
   }
 
   return (
@@ -229,5 +228,5 @@ export function ThreadWidget({
         )}
       </Stack>
     </Wrapper>
-  )
+  );
 }

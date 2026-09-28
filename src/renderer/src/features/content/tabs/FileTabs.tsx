@@ -1,31 +1,30 @@
-import type { KeyboardEvent } from 'react'
-import { Bookmark, MessageSquare, X } from 'react-feather'
-import styled from 'styled-components'
-import { FormattedMessage, useIntl } from 'react-intl'
-import { defineMessages } from '../../../i18n/defineMessages'
-import { useAppDispatch, useAppState } from '../../../state/AppContext'
-import { openTabs } from '../../../state/selectors'
-import { IconButton, focusVisible } from '../../../components/IconButton'
-import { Ellipsis } from '../../../components/Ellipsis'
+import type { KeyboardEvent } from 'react';
+import { Bookmark, MessageSquare, X } from 'react-feather';
+import styled from 'styled-components';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { useAppDispatch, useAppState } from '../../../state/AppContext';
+import { openTabs } from '../../../state/selectors';
+import { IconButton, focusVisible } from '../../../components/IconButton';
+import { Ellipsis } from '../../../components/Ellipsis';
 
 const messages = defineMessages({
   allComments: {
     id: 'content.fileTabs.allComments',
-    defaultMessage: 'All comments'
+    defaultMessage: 'All comments',
   },
   comments: {
     id: 'content.fileTabs.comments',
-    defaultMessage: 'Comments'
+    defaultMessage: 'Comments',
   },
   close: {
     id: 'content.fileTabs.close',
-    defaultMessage: 'Close {path}'
+    defaultMessage: 'Close {path}',
   },
   pin: {
     id: 'content.fileTabs.pin',
-    defaultMessage: 'Pin {path}'
-  }
-})
+    defaultMessage: 'Pin {path}',
+  },
+});
 
 const TabStrip = styled.div`
   display: flex;
@@ -34,7 +33,7 @@ const TabStrip = styled.div`
   overflow-x: auto;
   background: ${({ theme }) => theme.colors.bgSubtle};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-`
+`;
 
 const Tab = styled.div<{ $active: boolean; $preview: boolean }>`
   display: flex;
@@ -56,30 +55,30 @@ const Tab = styled.div<{ $active: boolean; $preview: boolean }>`
   }
 
   ${focusVisible}
-`
+`;
 
 const Label = styled(Ellipsis)`
   max-width: 200px;
-`
+`;
 
 function basename(path: string): string {
-  const i = path.lastIndexOf('/')
-  return i === -1 ? path : path.slice(i + 1)
+  const i = path.lastIndexOf('/');
+  return i === -1 ? path : path.slice(i + 1);
 }
 
 function onTabKeyDown(onActivate: () => void): (e: KeyboardEvent<HTMLDivElement>) => void {
   return (e) => {
-    if (e.key !== 'Enter' && e.key !== ' ') return
-    e.preventDefault()
-    onActivate()
-  }
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    onActivate();
+  };
 }
 
 export function FileTabs(): React.JSX.Element {
-  const intl = useIntl()
-  const state = useAppState()
-  const dispatch = useAppDispatch()
-  const tabs = openTabs(state)
+  const intl = useIntl();
+  const state = useAppState();
+  const dispatch = useAppDispatch();
+  const tabs = openTabs(state);
 
   return (
     <TabStrip role="tablist">
@@ -101,8 +100,8 @@ export function FileTabs(): React.JSX.Element {
         </Tab>
       )}
       {tabs.map((path) => {
-        const isPinned = state.pinnedFiles.includes(path)
-        const isActive = state.mainTab === 'files' && state.activeFile === path
+        const isPinned = state.pinnedFiles.includes(path);
+        const isActive = state.mainTab === 'files' && state.activeFile === path;
         return (
           <Tab
             key={path}
@@ -115,7 +114,7 @@ export function FileTabs(): React.JSX.Element {
             onClick={() => dispatch({ type: 'file/focus', path })}
             onKeyDown={onTabKeyDown(() => dispatch({ type: 'file/focus', path }))}
             onDoubleClick={() => {
-              if (!isPinned) dispatch({ type: 'file/pin', path })
+              if (!isPinned) dispatch({ type: 'file/pin', path });
             }}
           >
             <Label>{basename(path)}</Label>
@@ -125,8 +124,8 @@ export function FileTabs(): React.JSX.Element {
                 size={12}
                 label={intl.formatMessage(messages.close, { path })}
                 onClick={(e) => {
-                  e.stopPropagation()
-                  dispatch({ type: 'file/unpin', path })
+                  e.stopPropagation();
+                  dispatch({ type: 'file/unpin', path });
                 }}
               />
             ) : (
@@ -135,14 +134,14 @@ export function FileTabs(): React.JSX.Element {
                 size={12}
                 label={intl.formatMessage(messages.pin, { path })}
                 onClick={(e) => {
-                  e.stopPropagation()
-                  dispatch({ type: 'file/pin', path })
+                  e.stopPropagation();
+                  dispatch({ type: 'file/pin', path });
                 }}
               />
             )}
           </Tab>
-        )
+        );
       })}
     </TabStrip>
-  )
+  );
 }

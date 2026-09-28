@@ -1,63 +1,62 @@
-import type { ReactNode } from 'react'
-import { FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl'
-import { defineMessages } from '../../i18n/defineMessages'
-import { Accordion } from '../../components/Accordion'
-import { Checkbox } from '../../components/Checkbox'
-import { Stack } from '../../components/Layout'
-import { PathLabel } from '../../components/PathLabel'
-import { MatchLine } from '../../components/MatchLine'
-import { Message } from '../../components/Message'
-import { ScopeToggle, type SearchScope } from '../../components/ScopeToggle'
-import { Select } from '../../components/Select'
-import { SymbolDefinitionSection, type LineSymbol } from './SymbolDefinitionSection'
-import { toggleRefIn } from './refs'
-import type { CommentReference } from '@shared/ipc/schemas/comment'
-import type { GroupedResult } from '@shared/ipc/schemas/search'
-import type { RefAnchor } from './anchorLine'
-import type { ReferenceChoices } from './referenceChoices'
+import type { ReactNode } from 'react';
+import { defineMessages, FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl';
+import { Accordion } from '../../components/Accordion';
+import { Checkbox } from '../../components/Checkbox';
+import { Stack } from '../../components/Layout';
+import { PathLabel } from '../../components/PathLabel';
+import { MatchLine } from '../../components/MatchLine';
+import { Message } from '../../components/Message';
+import { ScopeToggle, type SearchScope } from '../../components/ScopeToggle';
+import { Select } from '../../components/Select';
+import { SymbolDefinitionSection, type LineSymbol } from './SymbolDefinitionSection';
+import { toggleRefIn } from './refs';
+import type { CommentReference } from '@shared/ipc/schemas/comment';
+import type { GroupedResult } from '@shared/ipc/schemas/search';
+import type { RefAnchor } from './anchorLine';
+import type { ReferenceChoices } from './referenceChoices';
 
 const messages = defineMessages({
   searching: {
     id: 'commentEditor.referencesPanel.searching',
-    defaultMessage: 'Searching…'
+    defaultMessage: 'Searching…',
   },
   noMatches: {
     id: 'commentEditor.referencesPanel.noMatches',
-    defaultMessage: 'No matches — nothing will be included.'
+    defaultMessage: 'No matches — nothing will be included.',
   },
   alsoIn: {
     id: 'commentEditor.referencesPanel.alsoIn',
-    defaultMessage: 'Also in'
+    defaultMessage: 'Also in',
   },
   alsoInDisabledHint: {
     id: 'commentEditor.referencesPanel.alsoInDisabledHint',
-    defaultMessage: 'This line has no text to match elsewhere.'
+    defaultMessage: 'This line has no text to match elsewhere.',
   },
   samePatternIn: {
     id: 'commentEditor.referencesPanel.samePatternIn',
-    defaultMessage: 'Same pattern in'
+    defaultMessage: 'Same pattern in',
   },
   samePatternDisabledHint: {
     id: 'commentEditor.referencesPanel.samePatternDisabledHint',
-    defaultMessage: 'No symbols on this line to match a pattern on.'
+    defaultMessage: 'No symbols on this line to match a pattern on.',
   },
   noAnchor: {
     id: 'commentEditor.referencesPanel.noAnchor',
-    defaultMessage: 'References are not available for this comment (no anchor line).'
-  }
-})
+    defaultMessage: 'References are not available for this comment (no anchor line).',
+  },
+});
 
 interface SearchRefsSectionProps {
-  title: MessageDescriptor
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  disabled?: boolean
-  disabledHint?: MessageDescriptor
-  scope: SearchScope
-  onScopeChange: (scope: SearchScope) => void
-  data: GroupedResult | undefined
-  isFetching: boolean
-  extra?: ReactNode
+  title: MessageDescriptor;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  disabled?: boolean;
+  disabledHint?: MessageDescriptor;
+  scope: SearchScope;
+  onScopeChange: (scope: SearchScope) => void;
+  data: GroupedResult | undefined;
+  isFetching: boolean;
+  extra?: ReactNode;
 }
 
 function SearchRefsSection({
@@ -70,9 +69,9 @@ function SearchRefsSection({
   onScopeChange,
   data,
   isFetching,
-  extra
+  extra,
 }: SearchRefsSectionProps): React.JSX.Element {
-  const intl = useIntl()
+  const intl = useIntl();
 
   return (
     <Accordion
@@ -119,23 +118,23 @@ function SearchRefsSection({
         ))}
       </Stack>
     </Accordion>
-  )
+  );
 }
 
 interface ReferencesPanelProps {
-  refAnchor: RefAnchor | null
-  choices: ReferenceChoices
-  onChoicesChange: React.Dispatch<React.SetStateAction<ReferenceChoices>>
-  symbols: LineSymbol[]
-  symbolsLoading: boolean
-  symbolsError: Error | null
-  exactDisabled: boolean
-  exactData: GroupedResult | undefined
-  exactFetching: boolean
-  patternDisabled: boolean
-  patternData: GroupedResult | undefined
-  patternFetching: boolean
-  effectivePatternSymbol: string
+  refAnchor: RefAnchor | null;
+  choices: ReferenceChoices;
+  onChoicesChange: React.Dispatch<React.SetStateAction<ReferenceChoices>>;
+  symbols: LineSymbol[];
+  symbolsLoading: boolean;
+  symbolsError: Error | null;
+  exactDisabled: boolean;
+  exactData: GroupedResult | undefined;
+  exactFetching: boolean;
+  patternDisabled: boolean;
+  patternData: GroupedResult | undefined;
+  patternFetching: boolean;
+  effectivePatternSymbol: string;
 }
 
 export function ReferencesPanel({
@@ -151,31 +150,31 @@ export function ReferencesPanel({
   patternDisabled,
   patternData,
   patternFetching,
-  effectivePatternSymbol
+  effectivePatternSymbol,
 }: ReferencesPanelProps): React.JSX.Element {
   function toggleSymbolRef(symbolRef: CommentReference): void {
-    onChoicesChange((prev) => ({ ...prev, symbols: toggleRefIn(prev.symbols, symbolRef) }))
+    onChoicesChange((prev) => ({ ...prev, symbols: toggleRefIn(prev.symbols, symbolRef) }));
   }
 
   function setSymbolOpen(open: boolean): void {
     onChoicesChange((prev) =>
-      open ? { ...prev, symbolOpen: true } : { ...prev, symbolOpen: false, symbols: [] }
-    )
+      open ? { ...prev, symbolOpen: true } : { ...prev, symbolOpen: false, symbols: [] },
+    );
   }
   function setExactOpen(open: boolean): void {
-    onChoicesChange((prev) => ({ ...prev, exactOpen: open }))
+    onChoicesChange((prev) => ({ ...prev, exactOpen: open }));
   }
   function setPatternOpen(open: boolean): void {
-    onChoicesChange((prev) => ({ ...prev, patternOpen: open }))
+    onChoicesChange((prev) => ({ ...prev, patternOpen: open }));
   }
   function setExactScope(scope: SearchScope): void {
-    onChoicesChange((prev) => ({ ...prev, exactScope: scope }))
+    onChoicesChange((prev) => ({ ...prev, exactScope: scope }));
   }
   function setPatternScope(scope: SearchScope): void {
-    onChoicesChange((prev) => ({ ...prev, patternScope: scope }))
+    onChoicesChange((prev) => ({ ...prev, patternScope: scope }));
   }
   function setPatternSymbol(symbol: string): void {
-    onChoicesChange((prev) => ({ ...prev, patternSymbol: symbol }))
+    onChoicesChange((prev) => ({ ...prev, patternSymbol: symbol }));
   }
 
   if (!refAnchor) {
@@ -183,7 +182,7 @@ export function ReferencesPanel({
       <Message layout="inline">
         <FormattedMessage {...messages.noAnchor} />
       </Message>
-    )
+    );
   }
 
   return (
@@ -237,5 +236,5 @@ export function ReferencesPanel({
         }
       />
     </Stack>
-  )
+  );
 }

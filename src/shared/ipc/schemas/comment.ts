@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from 'zod';
 import {
   Actor,
   ChangeType,
@@ -9,8 +9,8 @@ import {
   ReviewState,
   Sha,
   SubjectType,
-  ViewedState
-} from './pr'
+  ViewedState,
+} from './pr';
 
 // Matches GitHub's GraphQL PullRequestChangedFile shape.
 export const RemoteViewedFile = z.object({
@@ -18,9 +18,9 @@ export const RemoteViewedFile = z.object({
   additions: z.number(),
   deletions: z.number(),
   changeType: ChangeType,
-  viewerViewedState: ViewedState
-})
-export type RemoteViewedFile = z.infer<typeof RemoteViewedFile>
+  viewerViewedState: ViewedState,
+});
+export type RemoteViewedFile = z.infer<typeof RemoteViewedFile>;
 
 export const LocalViewedState = z.object({
   prId: NodeId,
@@ -28,16 +28,16 @@ export const LocalViewedState = z.object({
   viewed: z.boolean(),
   remote: ViewedState.nullable(),
   localUpdatedAt: IsoDate.nullable(),
-  remoteFetchedAt: IsoDate.nullable()
-})
-export type LocalViewedState = z.infer<typeof LocalViewedState>
+  remoteFetchedAt: IsoDate.nullable(),
+});
+export type LocalViewedState = z.infer<typeof LocalViewedState>;
 
 export const CommentReference = z.object({
   path: z.string(),
   line: z.int(),
-  kind: z.enum(['symbol', 'exact', 'pattern'])
-})
-export type CommentReference = z.infer<typeof CommentReference>
+  kind: z.enum(['symbol', 'exact', 'pattern']),
+});
+export type CommentReference = z.infer<typeof CommentReference>;
 
 export const Comment = z.object({
   id: NodeId,
@@ -57,11 +57,11 @@ export const Comment = z.object({
     .object({
       status: z.enum(['synced', 'new', 'edited', 'deleted']),
       updatedAt: IsoDate,
-      references: z.array(CommentReference).default([])
+      references: z.array(CommentReference).default([]),
     })
-    .optional()
-})
-export type Comment = z.infer<typeof Comment>
+    .optional(),
+});
+export type Comment = z.infer<typeof Comment>;
 
 export const Anchor = z.object({
   path: z.string(),
@@ -73,9 +73,9 @@ export const Anchor = z.object({
   originalLine: z.int().nullable(),
   originalStartLine: z.int().nullable(),
   commitOid: Sha.nullable(),
-  originalCommitOid: Sha.nullable()
-})
-export type Anchor = z.infer<typeof Anchor>
+  originalCommitOid: Sha.nullable(),
+});
+export type Anchor = z.infer<typeof Anchor>;
 
 export function generalCommentAnchor(): Anchor {
   return {
@@ -88,8 +88,8 @@ export function generalCommentAnchor(): Anchor {
     originalLine: null,
     originalStartLine: null,
     commitOid: null,
-    originalCommitOid: null
-  }
+    originalCommitOid: null,
+  };
 }
 
 export const ReviewThread = z.object({
@@ -102,22 +102,22 @@ export const ReviewThread = z.object({
   local: z
     .object({
       status: z.enum(['synced', 'new', 'deleted']),
-      updatedAt: IsoDate
+      updatedAt: IsoDate,
     })
-    .optional()
-})
-export type ReviewThread = z.infer<typeof ReviewThread>
+    .optional(),
+});
+export type ReviewThread = z.infer<typeof ReviewThread>;
 
 export const GqlPageInfo = z.object({
   hasNextPage: z.boolean(),
-  endCursor: z.string().nullable()
-})
+  endCursor: z.string().nullable(),
+});
 export const GqlError = z.object({
   type: z.string().optional(),
   message: z.string(),
-  path: z.array(z.union([z.string(), z.number()])).optional()
-})
-export type GqlError = z.infer<typeof GqlError>
+  path: z.array(z.union([z.string(), z.number()])).optional(),
+});
+export type GqlError = z.infer<typeof GqlError>;
 export const GqlReviewCommentRaw = z.object({
   id: NodeId,
   author: z.object({ login: z.string().min(1) }).nullable(), // GitHub returns null when the user account was deleted
@@ -137,9 +137,9 @@ export const GqlReviewCommentRaw = z.object({
   replyTo: z.object({ id: NodeId }).nullable(),
   pullRequestReview: z.object({ id: NodeId, state: ReviewState }).nullable(),
   viewerDidAuthor: z.boolean(),
-  viewerCanDelete: z.boolean()
-})
-export type GqlReviewCommentRaw = z.infer<typeof GqlReviewCommentRaw>
+  viewerCanDelete: z.boolean(),
+});
+export type GqlReviewCommentRaw = z.infer<typeof GqlReviewCommentRaw>;
 
 export const GqlReviewThreadRaw = z.object({
   id: NodeId,
@@ -156,10 +156,10 @@ export const GqlReviewThreadRaw = z.object({
   comments: z.object({
     totalCount: z.number(),
     pageInfo: GqlPageInfo,
-    nodes: z.array(GqlReviewCommentRaw)
-  })
-})
-export type GqlReviewThreadRaw = z.infer<typeof GqlReviewThreadRaw>
+    nodes: z.array(GqlReviewCommentRaw),
+  }),
+});
+export type GqlReviewThreadRaw = z.infer<typeof GqlReviewThreadRaw>;
 
 // GitHub's IssueComment: a general PR conversation comment, not tied to a
 // file/line and not part of a review.
@@ -171,9 +171,9 @@ export const GqlIssueCommentRaw = z.object({
   updatedAt: IsoDate,
   lastEditedAt: IsoDate.nullable(),
   viewerDidAuthor: z.boolean(),
-  viewerCanDelete: z.boolean()
-})
-export type GqlIssueCommentRaw = z.infer<typeof GqlIssueCommentRaw>
+  viewerCanDelete: z.boolean(),
+});
+export type GqlIssueCommentRaw = z.infer<typeof GqlIssueCommentRaw>;
 
 export const GqlReviewThreadsPage = z.object({
   data: z.object({
@@ -185,14 +185,14 @@ export const GqlReviewThreadsPage = z.object({
         reviewThreads: z.object({
           totalCount: z.number(),
           pageInfo: GqlPageInfo,
-          nodes: z.array(GqlReviewThreadRaw)
-        })
-      })
-    })
+          nodes: z.array(GqlReviewThreadRaw),
+        }),
+      }),
+    }),
   }),
-  errors: z.array(GqlError).optional()
-})
-export type GqlReviewThreadsPage = z.infer<typeof GqlReviewThreadsPage>
+  errors: z.array(GqlError).optional(),
+});
+export type GqlReviewThreadsPage = z.infer<typeof GqlReviewThreadsPage>;
 
 export const DraftAnchor = z.object({
   path: RepoPath,
@@ -200,9 +200,9 @@ export const DraftAnchor = z.object({
   side: DiffSide,
   line: z.int().positive().nullable(),
   startLine: z.int().positive().nullable(),
-  startSide: DiffSide.nullable()
-})
-export type DraftAnchor = z.infer<typeof DraftAnchor>
+  startSide: DiffSide.nullable(),
+});
+export type DraftAnchor = z.infer<typeof DraftAnchor>;
 
 export const CommentDraft = z
   .object({
@@ -214,9 +214,9 @@ export const CommentDraft = z
     general: z.boolean().default(false),
     prId: NodeId.nullable().default(null),
     body: z.string().min(1),
-    references: z.array(CommentReference).default([])
+    references: z.array(CommentReference).default([]),
   })
   .refine((d) => d.id !== null || d.threadId !== null || d.anchor !== null || d.general, {
-    message: 'a new thread needs an anchor'
-  })
-export type CommentDraft = z.input<typeof CommentDraft>
+    message: 'a new thread needs an anchor',
+  });
+export type CommentDraft = z.input<typeof CommentDraft>;

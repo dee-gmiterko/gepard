@@ -1,7 +1,7 @@
-import type { ThemeTemplate } from './tokens'
+import type { ThemeTemplate } from './tokens';
 
-export const SYSTEM_LIGHT_TEMPLATE_ID = 'light'
-export const SYSTEM_DARK_TEMPLATE_ID = 'dark'
+export const SYSTEM_LIGHT_TEMPLATE_ID = 'light';
+export const SYSTEM_DARK_TEMPLATE_ID = 'dark';
 
 // The built-in light/dark templates are runtime theme extensions
 // (`extensions/themes/{light,dark}`), fetched over IPC (`themes.list`) like
@@ -16,7 +16,7 @@ const FALLBACK_TEMPLATE: ThemeTemplate = {
   mode: 'light',
   shadow: {
     popover: '0 4px 12px rgba(31, 35, 40, 0.15)',
-    floating: '0 4px 16px rgba(31, 35, 40, 0.18)'
+    floating: '0 4px 16px rgba(31, 35, 40, 0.18)',
   },
   colors: {
     bg: '#ffffff',
@@ -40,7 +40,7 @@ const FALLBACK_TEMPLATE: ThemeTemplate = {
     diffDelFg: '#82071e',
     diffHunk: '#ddf4ff',
     commentBg: '#fff8c5',
-    overlay: 'rgba(31, 35, 40, 0.4)'
+    overlay: 'rgba(31, 35, 40, 0.4)',
   },
   syntax: {
     keyword: '#cf222e',
@@ -52,26 +52,26 @@ const FALLBACK_TEMPLATE: ThemeTemplate = {
     property: '#0550ae',
     constant: '#0550ae',
     tag: '#116329',
-    invalid: '#82071e'
-  }
-}
+    invalid: '#82071e',
+  },
+};
 
 export function resolveTemplate(
   selectedId: string | null,
   systemPrefersDark: boolean,
-  templates: readonly ThemeTemplate[]
+  templates: readonly ThemeTemplate[],
 ): ThemeTemplate {
   if (selectedId !== null) {
-    const selected = templates.find((template) => template.id === selectedId)
-    if (selected) return selected
+    const selected = templates.find((template) => template.id === selectedId);
+    if (selected) return selected;
   }
-  const systemId = systemPrefersDark ? SYSTEM_DARK_TEMPLATE_ID : SYSTEM_LIGHT_TEMPLATE_ID
-  const bySystemId = templates.find((template) => template.id === systemId)
-  if (bySystemId) return bySystemId
+  const systemId = systemPrefersDark ? SYSTEM_DARK_TEMPLATE_ID : SYSTEM_LIGHT_TEMPLATE_ID;
+  const bySystemId = templates.find((template) => template.id === systemId);
+  if (bySystemId) return bySystemId;
 
-  const systemMode = systemPrefersDark ? 'dark' : 'light'
-  const byMode = templates.find((template) => template.mode === systemMode)
-  if (byMode) return byMode
+  const systemMode = systemPrefersDark ? 'dark' : 'light';
+  const byMode = templates.find((template) => template.mode === systemMode);
+  if (byMode) return byMode;
 
-  return templates[0] ?? FALLBACK_TEMPLATE
+  return templates[0] ?? FALLBACK_TEMPLATE;
 }

@@ -1,11 +1,11 @@
-import type { ReactNode } from 'react'
-import styled from 'styled-components'
-import { ChevronDown, ChevronRight } from 'react-feather'
-import { Surface } from '../Surface'
-import { disabledInteractive } from '../Checkbox'
-import { focusVisible } from '../IconButton'
+import type { ReactNode } from 'react';
+import styled from 'styled-components';
+import { ChevronDown, ChevronRight } from 'react-feather';
+import { Surface } from '../Surface';
+import { disabledInteractive } from '../Checkbox';
+import { focusVisible } from '../IconButton';
 
-const Wrapper = styled(Surface).attrs({ $elevation: 'flat' as const })``
+const Wrapper = styled(Surface).attrs({ $elevation: 'flat' as const })``;
 
 const Header = styled.div<{ $disabled?: boolean }>`
   display: flex;
@@ -22,13 +22,13 @@ const Header = styled.div<{ $disabled?: boolean }>`
   }
 
   ${focusVisible}
-`
+`;
 
 const Leading = styled.span`
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-`
+`;
 
 const Title = styled.div`
   flex: 1;
@@ -36,28 +36,28 @@ const Title = styled.div`
   display: flex;
   align-items: center;
   gap: ${({ theme }) => theme.space[2]};
-`
+`;
 
 const Chevron = styled.span`
   display: inline-flex;
   align-items: center;
   color: ${({ theme }) => theme.colors.fgMuted};
   flex-shrink: 0;
-`
+`;
 
 const Body = styled.div`
   padding: ${({ theme }) => theme.space[2]};
   border-top: 1px solid ${({ theme }) => theme.colors.border};
-`
+`;
 
 export interface AccordionProps {
-  open: boolean
-  onToggle: () => void
-  leading?: ReactNode
-  title: ReactNode
-  trailing?: ReactNode
-  children?: ReactNode
-  disabled?: boolean
+  open: boolean;
+  onToggle: () => void;
+  leading?: ReactNode;
+  title: ReactNode;
+  trailing?: ReactNode;
+  children?: ReactNode;
+  disabled?: boolean;
 }
 
 export function Accordion({
@@ -67,7 +67,7 @@ export function Accordion({
   title,
   trailing,
   children,
-  disabled
+  disabled,
 }: AccordionProps): React.JSX.Element {
   return (
     <Wrapper>
@@ -78,13 +78,13 @@ export function Accordion({
         aria-disabled={disabled}
         $disabled={disabled}
         onClick={() => {
-          if (!disabled) onToggle()
+          if (!disabled) onToggle();
         }}
         onKeyDown={(e) => {
-          if (disabled) return
+          if (disabled) return;
           if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            onToggle()
+            e.preventDefault();
+            onToggle();
           }
         }}
       >
@@ -95,5 +95,5 @@ export function Accordion({
       </Header>
       {open && children != null && <Body>{children}</Body>}
     </Wrapper>
-  )
+  );
 }

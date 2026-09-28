@@ -1,4 +1,4 @@
-import { css } from 'styled-components'
+import { css } from 'styled-components';
 
 export const activeToggleBackground = css<{ $active?: boolean }>`
   background: ${({ $active, theme }) => ($active ? theme.colors.bgSelected : 'transparent')};
@@ -6,4 +6,4 @@ export const activeToggleBackground = css<{ $active?: boolean }>`
   &:hover {
     background: ${({ theme }) => theme.colors.bgHover};
   }
-`
+`;

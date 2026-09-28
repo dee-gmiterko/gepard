@@ -1,1 +1,1 @@
-export { PathLabel } from './PathLabel'
+export { PathLabel } from './PathLabel';

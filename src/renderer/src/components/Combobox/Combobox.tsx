@@ -1,57 +1,56 @@
-import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import styled from 'styled-components'
-import { X } from 'react-feather'
-import { useIntl } from 'react-intl'
-import { defineMessages } from '../../i18n/defineMessages'
-import { useOutsideClick } from '../../hooks/useOutsideClick'
-import { IconButton } from '../IconButton'
-import { Menu, MenuAnchor, MenuItem, MenuMessage } from '../Menu'
-import { HighlightedText } from '../HighlightedText'
-import { fieldChrome, textFieldBase } from '../TextInput'
-import { fuzzyFilter, fuzzyRanges } from './fuzzy'
+import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import styled from 'styled-components';
+import { X } from 'react-feather';
+import { defineMessages, useIntl } from 'react-intl';
+import { useOutsideClick } from '../../hooks/useOutsideClick';
+import { IconButton } from '../IconButton';
+import { Menu, MenuAnchor, MenuItem, MenuMessage } from '../Menu';
+import { HighlightedText } from '../HighlightedText';
+import { fieldChrome, textFieldBase } from '../TextInput';
+import { fuzzyFilter, fuzzyRanges } from './fuzzy';
 
 const messages = defineMessages({
   loading: {
     id: 'components.combobox.loading',
-    defaultMessage: 'Loading…'
+    defaultMessage: 'Loading…',
   },
   noMatches: {
     id: 'components.combobox.noMatches',
-    defaultMessage: 'No matches'
+    defaultMessage: 'No matches',
   },
   clear: {
     id: 'components.combobox.clear',
-    defaultMessage: 'Clear'
-  }
-})
+    defaultMessage: 'Clear',
+  },
+});
 
-export const NO_HIGHLIGHT = -1
+export const NO_HIGHLIGHT = -1;
 
 export interface ComboboxProps<T> {
-  items: readonly T[]
-  value: T | null
-  onSelect: (item: T | null) => void
-  getKey: (item: T) => string
-  getLabel: (item: T) => string
-  getFilterText?: (item: T) => string
-  onQueryChange?: (query: string) => void
-  unresolvedLabel?: string
-  placeholder?: string
-  disabled?: boolean
-  loading?: boolean
-  loadingLabel?: string
-  emptyLabel?: string
+  items: readonly T[];
+  value: T | null;
+  onSelect: (item: T | null) => void;
+  getKey: (item: T) => string;
+  getLabel: (item: T) => string;
+  getFilterText?: (item: T) => string;
+  onQueryChange?: (query: string) => void;
+  unresolvedLabel?: string;
+  placeholder?: string;
+  disabled?: boolean;
+  loading?: boolean;
+  loadingLabel?: string;
+  emptyLabel?: string;
   freeText?: {
-    text: string
-    onTextChange: (text: string) => void
-    searchText?: string
-  }
-  renderOption?: (item: T, ctx: { searchText: string }) => React.ReactNode
+    text: string;
+    onTextChange: (text: string) => void;
+    searchText?: string;
+  };
+  renderOption?: (item: T, ctx: { searchText: string }) => React.ReactNode;
 }
 
 const Container = styled(MenuAnchor)`
   width: 100%;
-`
+`;
 
 const InputRow = styled.div`
   display: flex;
@@ -59,7 +58,7 @@ const InputRow = styled.div`
   gap: 2px;
   padding: 0 2px 0 ${({ theme }) => theme.space[2]};
   ${fieldChrome}
-`
+`;
 
 const Input = styled.input`
   ${textFieldBase}
@@ -73,7 +72,7 @@ const Input = styled.input`
   &:disabled {
     color: ${({ theme }) => theme.colors.fgSubtle};
   }
-`
+`;
 
 export function Combobox<T>({
   items,
@@ -90,62 +89,62 @@ export function Combobox<T>({
   loadingLabel,
   emptyLabel,
   freeText,
-  renderOption
+  renderOption,
 }: ComboboxProps<T>): React.JSX.Element {
-  const intl = useIntl()
-  const resolvedLoadingLabel = loadingLabel ?? intl.formatMessage(messages.loading)
-  const resolvedEmptyLabel = emptyLabel ?? intl.formatMessage(messages.noMatches)
-  const resolvedClearLabel = intl.formatMessage(messages.clear)
-  const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState('')
-  const [highlight, setHighlight] = useState(NO_HIGHLIGHT)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const listboxId = useId()
-  const optionId = (i: number): string => `${listboxId}-option-${i}`
+  const intl = useIntl();
+  const resolvedLoadingLabel = loadingLabel ?? intl.formatMessage(messages.loading);
+  const resolvedEmptyLabel = emptyLabel ?? intl.formatMessage(messages.noMatches);
+  const resolvedClearLabel = intl.formatMessage(messages.clear);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [highlight, setHighlight] = useState(NO_HIGHLIGHT);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const listboxId = useId();
+  const optionId = (i: number): string => `${listboxId}-option-${i}`;
 
-  const searchText = freeText ? (freeText.searchText ?? freeText.text) : query
+  const searchText = freeText ? (freeText.searchText ?? freeText.text) : query;
 
   const filtered = useMemo(
     () => fuzzyFilter(items, searchText, getFilterText),
-    [items, searchText, getFilterText]
-  )
+    [items, searchText, getFilterText],
+  );
 
-  const active = filtered.length === 0 ? NO_HIGHLIGHT : Math.min(highlight, filtered.length - 1)
+  const active = filtered.length === 0 ? NO_HIGHLIGHT : Math.min(highlight, filtered.length - 1);
 
   function resetQuery(): void {
-    setQuery('')
-    onQueryChange?.('')
+    setQuery('');
+    onQueryChange?.('');
   }
 
   useOutsideClick(containerRef, () => {
-    setOpen(false)
-    resetQuery()
-  })
+    setOpen(false);
+    resetQuery();
+  });
 
   function selectItem(item: T | null): void {
-    onSelect(item)
-    resetQuery()
-    setOpen(false)
+    onSelect(item);
+    resetQuery();
+    setOpen(false);
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>): void {
     if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      setOpen(true)
-      setHighlight(Math.max(0, Math.min(active + 1, filtered.length - 1)))
+      e.preventDefault();
+      setOpen(true);
+      setHighlight(Math.max(0, Math.min(active + 1, filtered.length - 1)));
     } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setHighlight(Math.max(active - 1, NO_HIGHLIGHT))
+      e.preventDefault();
+      setHighlight(Math.max(active - 1, NO_HIGHLIGHT));
     } else if (e.key === 'Enter') {
-      if (active === NO_HIGHLIGHT) return
-      const item = filtered[active]
+      if (active === NO_HIGHLIGHT) return;
+      const item = filtered[active];
       if (item) {
-        e.preventDefault()
-        selectItem(item)
+        e.preventDefault();
+        selectItem(item);
       }
     } else if (e.key === 'Escape') {
-      setOpen(false)
-      resetQuery()
+      setOpen(false);
+      resetQuery();
     }
   }
 
@@ -155,7 +154,7 @@ export function Combobox<T>({
       ? query
       : value !== null
         ? getLabel(value)
-        : (unresolvedLabel ?? query)
+        : (unresolvedLabel ?? query);
 
   return (
     <Container ref={containerRef}>
@@ -170,20 +169,20 @@ export function Combobox<T>({
           placeholder={placeholder}
           disabled={disabled}
           onFocus={() => {
-            setOpen(true)
-            setHighlight(NO_HIGHLIGHT)
+            setOpen(true);
+            setHighlight(NO_HIGHLIGHT);
           }}
           onBlur={() => {
-            setOpen(false)
-            resetQuery()
+            setOpen(false);
+            resetQuery();
           }}
           onChange={(e) => {
-            const next = e.target.value
-            if (freeText) freeText.onTextChange(next)
-            else setQuery(next)
-            setHighlight(NO_HIGHLIGHT)
-            setOpen(true)
-            onQueryChange?.(next)
+            const next = e.target.value;
+            if (freeText) freeText.onTextChange(next);
+            else setQuery(next);
+            setHighlight(NO_HIGHLIGHT);
+            setOpen(true);
+            onQueryChange?.(next);
           }}
           onKeyDown={handleKeyDown}
         />
@@ -211,7 +210,7 @@ export function Combobox<T>({
                 onClick={() => selectItem(item)}
                 onMouseEnter={() => setHighlight(i)}
                 ref={(el) => {
-                  if (i === active) el?.scrollIntoView({ block: 'nearest' })
+                  if (i === active) el?.scrollIntoView({ block: 'nearest' });
                 }}
               >
                 {renderOption ? (
@@ -227,5 +226,5 @@ export function Combobox<T>({
         </Menu>
       )}
     </Container>
-  )
+  );
 }

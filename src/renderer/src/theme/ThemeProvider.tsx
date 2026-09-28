@@ -1,20 +1,20 @@
-import { useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
-import { ThemeProvider as StyledThemeProvider, createGlobalStyle } from 'styled-components'
-import { useIpcEvent } from '../ipc/client'
-import { useThemeTemplateId, useThemes } from '../queries/theme'
-import { buildTheme } from './tokens'
-import { resolveTemplate } from './resolveTemplate'
+import { useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { ThemeProvider as StyledThemeProvider, createGlobalStyle } from 'styled-components';
+import { useIpcEvent } from '../ipc/client';
+import { useThemeTemplateId, useThemes } from '../queries/theme';
+import { buildTheme } from './tokens';
+import { resolveTemplate } from './resolveTemplate';
 
-const DARK_QUERY = '(prefers-color-scheme: dark)'
+const DARK_QUERY = '(prefers-color-scheme: dark)';
 
 function subscribeToSystemTheme(callback: () => void): () => void {
-  const mql = window.matchMedia(DARK_QUERY)
-  mql.addEventListener('change', callback)
-  return () => mql.removeEventListener('change', callback)
+  const mql = window.matchMedia(DARK_QUERY);
+  mql.addEventListener('change', callback);
+  return () => mql.removeEventListener('change', callback);
 }
 
 function getSystemThemeSnapshot(): boolean {
-  return window.matchMedia(DARK_QUERY).matches
+  return window.matchMedia(DARK_QUERY).matches;
 }
 
 const GlobalStyle = createGlobalStyle`
@@ -45,34 +45,34 @@ const GlobalStyle = createGlobalStyle`
   pre {
     font-family: ${({ theme }) => theme.font.mono};
   }
-`
+`;
 
 export function AppThemeProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const systemDark = useSyncExternalStore(
     subscribeToSystemTheme,
     getSystemThemeSnapshot,
-    () => false
-  )
+    () => false,
+  );
   // The `prefers-color-scheme` matchMedia `change` event can arrive late in a
   // background-throttled Electron window, so the main process's own dark-mode
   // broadcast can override the system query result.
-  const [mainDark, setMainDark] = useState<boolean | null>(null)
-  const systemPrefersDark = mainDark ?? systemDark
+  const [mainDark, setMainDark] = useState<boolean | null>(null);
+  const systemPrefersDark = mainDark ?? systemDark;
 
-  useIpcEvent('theme.changed', (payload) => setMainDark(payload.dark))
+  useIpcEvent('theme.changed', (payload) => setMainDark(payload.dark));
 
-  const { data: templateId } = useThemeTemplateId()
-  const resolvedTemplateId = templateId ?? null
-  const { data: templates } = useThemes()
+  const { data: templateId } = useThemeTemplateId();
+  const resolvedTemplateId = templateId ?? null;
+  const { data: templates } = useThemes();
   const theme = useMemo(
     () => buildTheme(resolveTemplate(resolvedTemplateId, systemPrefersDark, templates ?? [])),
-    [resolvedTemplateId, systemPrefersDark, templates]
-  )
+    [resolvedTemplateId, systemPrefersDark, templates],
+  );
 
   return (
     <StyledThemeProvider theme={theme}>
       <GlobalStyle />
       {children}
     </StyledThemeProvider>
-  )
+  );
 }

@@ -1,25 +1,24 @@
-import styled from 'styled-components'
-import { AlertTriangle, X } from 'react-feather'
-import { useIntl } from 'react-intl'
-import { defineMessages } from '../../i18n/defineMessages'
-import { IconButton } from '../IconButton'
-import { Stack } from '../Layout'
-import { Surface } from '../Surface'
-import type { ReportTone } from '../../errors/report'
-import type { Toast } from '../../state/reducer'
+import styled from 'styled-components';
+import { AlertTriangle, X } from 'react-feather';
+import { defineMessages, useIntl } from 'react-intl';
+import { IconButton } from '../IconButton';
+import { Stack } from '../Layout';
+import { Surface } from '../Surface';
+import type { ReportTone } from '../../errors/report';
+import type { Toast } from '../../state/reducer';
 
 const messages = defineMessages({
   notifications: {
     id: 'components.toast.notifications',
-    defaultMessage: 'Notifications'
+    defaultMessage: 'Notifications',
   },
   dismiss: {
     id: 'components.toast.dismiss',
-    defaultMessage: 'Dismiss'
-  }
-})
+    defaultMessage: 'Dismiss',
+  },
+});
 
-export type ToastTone = ReportTone
+export type ToastTone = ReportTone;
 
 const Viewport = styled(Stack)`
   position: fixed;
@@ -28,7 +27,7 @@ const Viewport = styled(Stack)`
   z-index: ${({ theme }) => theme.z.popover};
   width: 320px;
   max-width: calc(100vw - ${({ theme }) => theme.space[6]});
-`
+`;
 
 const Card = styled(Surface)<{ $tone: ToastTone }>`
   display: flex;
@@ -37,13 +36,13 @@ const Card = styled(Surface)<{ $tone: ToastTone }>`
   padding: ${({ theme }) => theme.space[3]};
   border-color: ${({ theme, $tone }) =>
     $tone === 'danger' ? theme.colors.danger : theme.colors.warning};
-`
+`;
 
 const StyledIcon = styled(AlertTriangle)<{ $tone: ToastTone }>`
   flex-shrink: 0;
   margin-top: 2px;
   color: ${({ theme, $tone }) => ($tone === 'danger' ? theme.colors.danger : theme.colors.warning)};
-`
+`;
 
 const Text = styled.p`
   flex: 1;
@@ -53,17 +52,17 @@ const Text = styled.p`
   font-size: ${({ theme }) => theme.font.size.sm};
   white-space: pre-wrap;
   overflow-wrap: break-word;
-`
+`;
 
 export function ToastViewport({
   toasts,
-  onDismiss
+  onDismiss,
 }: {
-  toasts: Toast[]
-  onDismiss: (id: string) => void
+  toasts: Toast[];
+  onDismiss: (id: string) => void;
 }): React.JSX.Element | null {
-  const intl = useIntl()
-  if (toasts.length === 0) return null
+  const intl = useIntl();
+  if (toasts.length === 0) return null;
   return (
     <Viewport role="region" aria-label={intl.formatMessage(messages.notifications)}>
       {toasts.map((toast) => (
@@ -79,5 +78,5 @@ export function ToastViewport({
         </Card>
       ))}
     </Viewport>
-  )
+  );
 }

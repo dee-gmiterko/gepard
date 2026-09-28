@@ -1,1 +1,1 @@
-export { HighlightedText, type TextRange } from './HighlightedText'
+export { HighlightedText, type TextRange } from './HighlightedText';

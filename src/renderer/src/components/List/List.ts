@@ -1,17 +1,17 @@
-import styled, { css } from 'styled-components'
-import type { Theme } from '../../theme/tokens'
-import type { Gap } from '../Layout'
+import styled, { css } from 'styled-components';
+import type { Theme } from '../../theme/tokens';
+import type { Gap } from '../Layout';
 
 export const listReset = css`
   list-style: none;
   margin: 0;
   padding: 0;
-`
+`;
 
 export const List = styled.ul`
   ${listReset}
   border-top: 1px solid ${({ theme }) => theme.colors.border};
-`
+`;
 
 export const ListRow = styled.li<{ $gap?: Gap; $padding?: Gap; $clickable?: boolean }>`
   display: flex;
@@ -29,11 +29,11 @@ export const ListRow = styled.li<{ $gap?: Gap; $padding?: Gap; $clickable?: bool
         background: ${theme.colors.bgHover};
       }
     `}
-`
+`;
 
-type FontSize = keyof Theme['font']['size']
+type FontSize = keyof Theme['font']['size'];
 
 export const RowTitle = styled.div<{ $size?: FontSize }>`
   font-size: ${({ theme, $size = 'md' }) => theme.font.size[$size]};
   color: ${({ theme }) => theme.colors.fg};
-`
+`;

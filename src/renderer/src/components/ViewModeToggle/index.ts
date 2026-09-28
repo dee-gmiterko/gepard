@@ -1,1 +1,1 @@
-export { ViewModeToggle, type ViewMode } from './ViewModeToggle'
+export { ViewModeToggle, type ViewMode } from './ViewModeToggle';

@@ -1,5 +1,5 @@
-import { z } from 'zod'
-import { Location, Range, RepoPath, SymbolKind } from './search'
+import { z } from 'zod';
+import { Location, Range, RepoPath, SymbolKind } from './search';
 
 export const LineSymbol = z.object({
   name: z.string(),
@@ -8,24 +8,24 @@ export const LineSymbol = z.object({
   modifiers: z
     .array(z.enum(['declaration', 'readonly', 'static', 'async', 'defaultLibrary']))
     .default([]),
-  range: Range
-})
+  range: Range,
+});
 export const LineSymbolsResult = z.object({
   path: RepoPath,
   line: z.int().positive(),
-  symbols: z.array(LineSymbol)
-})
-export type LineSymbolsResult = z.infer<typeof LineSymbolsResult>
+  symbols: z.array(LineSymbol),
+});
+export type LineSymbolsResult = z.infer<typeof LineSymbolsResult>;
 
 export const DefinitionTarget = z.object({
   location: Location,
-  external: z.boolean().default(false)
-})
+  external: z.boolean().default(false),
+});
 export const DefinitionResult = z.object({
   symbol: z.string(),
-  definitions: z.array(DefinitionTarget)
-})
-export type DefinitionResult = z.infer<typeof DefinitionResult>
+  definitions: z.array(DefinitionTarget),
+});
+export type DefinitionResult = z.infer<typeof DefinitionResult>;
 
 export const IndexStatus = z.discriminatedUnion('state', [
   z.object({ state: z.literal('idle') }),
@@ -33,8 +33,8 @@ export const IndexStatus = z.discriminatedUnion('state', [
     state: z.literal('indexing'),
     phase: z.enum(['files', 'language']),
     done: z.int(),
-    total: z.int().optional()
+    total: z.int().optional(),
   }),
-  z.object({ state: z.literal('error'), message: z.string() })
-])
-export type IndexStatus = z.infer<typeof IndexStatus>
+  z.object({ state: z.literal('error'), message: z.string() }),
+]);
+export type IndexStatus = z.infer<typeof IndexStatus>;
