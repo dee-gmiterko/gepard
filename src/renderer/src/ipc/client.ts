@@ -26,6 +26,10 @@ export function isCancelledError(error: unknown): boolean {
   return error instanceof IpcError && error.code === 'CANCELLED';
 }
 
+export function isStaleShaError(error: unknown): boolean {
+  return error instanceof IpcError && error.code === 'STALE_SHA';
+}
+
 export async function invoke<C extends ChannelName>(
   channel: C,
   ...args: InvokeArgs<C>

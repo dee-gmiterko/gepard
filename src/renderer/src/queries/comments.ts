@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { invoke } from '../ipc/client';
 import { qk } from './keys';
-import { useAppState } from '../state/AppContext';
+import { useAppDispatch, useAppState } from '../state/AppContext';
 import { useTargetedPr } from './prs';
 import type { CommentDraft, LocalViewedState } from '@gepard/common/ipc/schemas/comment';
 
@@ -110,11 +110,18 @@ export function useSetViewed() {
 
 export function useSync() {
   const state = useAppState();
+  const dispatch = useAppDispatch();
   const projectId = state.projectId ?? '';
   const pr = state.targeting.pr ?? NaN;
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (mode: 'full' | 'pull' = 'full') => invoke('sync.run', { projectId, pr, mode }),
+    onSuccess: (result) => {
+      dispatch({
+        type: 'target/checkoutResult',
+        checkout: { base: result.base, head: result.head },
+      });
+    },
     onSettled: () => qc.invalidateQueries({ queryKey: qk.pr(projectId, pr) }),
   });
 }

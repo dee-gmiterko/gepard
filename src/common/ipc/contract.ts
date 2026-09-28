@@ -149,6 +149,7 @@ export const channels = {
     z.object({
       syncedAt: z.iso.datetime({ offset: true }),
       droppedRemoteDeleted: z.int().nonnegative(),
+      ...CheckoutResult.shape,
     }),
   ),
   'sync.pendingCount': ch(z.object(PrRef), z.int().nonnegative()),

@@ -1,4 +1,4 @@
-import { invoke, IpcError, isCancelledError } from '../ipc/client';
+import { invoke, IpcError, isCancelledError, isStaleShaError } from '../ipc/client';
 import { localizedErrorMessage } from './errorMessage';
 
 export type ReportTone = 'danger' | 'warning';
@@ -32,7 +32,7 @@ export function reportError(error: ReportedError): void {
 }
 
 export function reportQueryError(scope: string, error: unknown): void {
-  if (isCancelledError(error)) return;
+  if (isCancelledError(error) || isStaleShaError(error)) return;
   const { message, detail } = localizedErrorMessage(error);
   reportError({ scope, message, detail: mergeDetail(detail, errorDetail(error)) });
 }

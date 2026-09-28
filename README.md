@@ -1,8 +1,8 @@
 # Gepard - Great Pull Request Review Tool
 
 Gepard is an Electron desktop app for reviewing large GitHub pull requests.
-It drives the `gh` CLI to talk to GitHub, keeps a local working copy of each
-project on disk, and gives you a review flow: target a PR, commit, or file
+It drives the `gh` CLI to talk to GitHub and `git` to keep a local working
+copy of each project on disk, and gives you a review flow: target a PR, commit, or file
 path, browse the diff in a read-only CodeMirror viewer, leave threaded
 comments with quick file:line references, and sync everything back to
 GitHub when you're ready.
@@ -41,8 +41,13 @@ See `docs/gepard.md` for the full product spec.
 ## Prerequisites
 
 - [GitHub CLI](https://cli.github.com/) (`gh`), installed and authenticated
-  (`gh auth login`). Gepard uses it for every GitHub operation: listing your
-  repos and PRs, creating PRs, and syncing comments.
+  (`gh auth login`). Gepard uses it to talk to GitHub (listing your repos and
+  PRs, creating PRs, syncing comments) and as git's credential helper, so `git`
+  must be able to find it on your `PATH`.
+- [Git](https://git-scm.com/) (`git`) on your `PATH`. Gepard uses it to clone
+  each project and to fetch, check out, diff and read history in that clone.
+- [ripgrep](https://github.com/BurntSushi/ripgrep) (`rg`) powers text and regex
+  search. It ships inside Gepard, so there is nothing to install.
 
 ## Getting Gepard
 

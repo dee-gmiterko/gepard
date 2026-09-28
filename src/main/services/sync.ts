@@ -25,6 +25,8 @@ interface PushOutcome {
 export interface SyncResult {
   syncedAt: string;
   droppedRemoteDeleted: number;
+  base: string;
+  head: string;
 }
 
 export interface SyncContext {
@@ -329,8 +331,14 @@ export class SyncService {
 
     await this.git.fetchOrigin(projectId);
     const { head: currentHead } = await this.git.workingTree(projectId);
+    let checkout = { base: baseRefOid, head: currentHead };
     if (currentHead !== headRefOid) {
-      await this.git.checkoutTarget(projectId, { kind: 'pr', pr, headRefOid, baseRefOid });
+      checkout = await this.git.checkoutTarget(projectId, {
+        kind: 'pr',
+        pr,
+        headRefOid,
+        baseRefOid,
+      });
     }
 
     let pushedViewed = 0;
@@ -394,7 +402,12 @@ export class SyncService {
         `pushed=${pushedViewed + pushedComments} pulledThreads=${remoteThreads.length} ` +
         `pulledViewed=${viewedResult.files.length}`,
     );
-    return { syncedAt, droppedRemoteDeleted: goneRemotely };
+    return {
+      syncedAt,
+      droppedRemoteDeleted: goneRemotely,
+      base: checkout.base,
+      head: checkout.head,
+    };
   }
 
   async runSync(

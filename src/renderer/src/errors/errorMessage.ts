@@ -47,10 +47,6 @@ const codeMessages = defineMessages({
     id: 'errors.code.invalidProjectId',
     defaultMessage: 'This project is invalid.',
   },
-  NO_LANGUAGE_SESSION: {
-    id: 'errors.code.noLanguageSession',
-    defaultMessage: 'No language server is available for this file yet.',
-  },
   NOT_DELETABLE: {
     id: 'errors.code.notDeletable',
     defaultMessage: "This comment can't be deleted.",
@@ -68,6 +64,10 @@ const codeMessages = defineMessages({
   SCHEMA_MISMATCH: {
     id: 'errors.code.schemaMismatch',
     defaultMessage: 'Unexpected response from a command-line tool.',
+  },
+  STALE_SHA: {
+    id: 'errors.code.staleSha',
+    defaultMessage: 'The project moved to a different commit while this was loading.',
   },
   STORE_CORRUPT: {
     id: 'errors.code.storeCorrupt',
