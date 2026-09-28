@@ -17,6 +17,28 @@ export const LineSymbolsResult = z.object({
 });
 export type LineSymbolsResult = z.infer<typeof LineSymbolsResult>;
 
+export interface DocumentSymbol {
+  name: string;
+  kind: z.infer<typeof SymbolKind>;
+  range: z.infer<typeof Range>;
+  selectionRange: z.infer<typeof Range>;
+  children: DocumentSymbol[];
+}
+export const DocumentSymbol: z.ZodType<DocumentSymbol> = z.lazy(() =>
+  z.object({
+    name: z.string(),
+    kind: SymbolKind,
+    range: Range,
+    selectionRange: Range,
+    children: z.array(DocumentSymbol),
+  }),
+);
+export const DocumentSymbolsResult = z.object({
+  path: RepoPath,
+  symbols: z.array(DocumentSymbol),
+});
+export type DocumentSymbolsResult = z.infer<typeof DocumentSymbolsResult>;
+
 export const DefinitionTarget = z.object({
   location: Location,
   external: z.boolean().default(false),

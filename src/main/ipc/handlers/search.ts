@@ -56,7 +56,7 @@ export function searchRunKey(input: {
 
 export const searchHandlers: Pick<
   HandlerMap,
-  'search.run' | 'symbols.line' | 'symbols.definition' | 'symbols.workspace'
+  'search.run' | 'symbols.line' | 'symbols.definition' | 'symbols.workspace' | 'symbols.document'
 > = {
   'search.run': (input) =>
     withLatestWins(searchRunKey(input), async ({ signal, token }) => {
@@ -190,5 +190,13 @@ export const searchHandlers: Pick<
       requireCurrentSha(input.projectId, input.sha);
       const session = requireSession(input.projectId);
       return session.workspaceSymbols(input.query, input.limit ?? 50, token);
+    }),
+
+  'symbols.document': (input) =>
+    withLatestWins(`symbols.document:${input.projectId}:${input.path}`, async ({ token }) => {
+      requireCurrentSha(input.projectId, input.sha);
+      const session = requireSession(input.projectId);
+      const symbols = await session.documentSymbols(input.path, token);
+      return { path: input.path, symbols };
     }),
 };

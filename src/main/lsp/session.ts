@@ -23,7 +23,7 @@ import {
   DefinitionTarget as DefinitionTargetSchema,
   LineSymbol as LineSymbolSchema,
 } from '@shared/ipc/schemas/lsp';
-import type { IndexStatus } from '@shared/ipc/schemas/lsp';
+import type { IndexStatus, DocumentSymbol } from '@shared/ipc/schemas/lsp';
 
 export type LineSymbol = ReturnType<typeof LineSymbolSchema.parse>;
 export type FileMatches = ReturnType<typeof FileMatchesSchema.parse>;
@@ -68,6 +68,7 @@ export interface LanguageSession {
     limit: number,
     token?: CancellationToken,
   ): Promise<WorkspaceSymbol[]>;
+  documentSymbols(filePath: string, token?: CancellationToken): Promise<DocumentSymbol[]>;
   filesChanged(changes: FileChange[]): void;
   dispose(): Promise<void>;
 }
@@ -210,6 +211,66 @@ function toRange(r: LspRange): Range {
   };
 }
 
+// textDocument/documentSymbol replies with hierarchical DocumentSymbol[] when
+// the server supports it (the TypeScript native LSP does), or falls back to
+// flat SymbolInformation[] otherwise.
+interface LspDocumentSymbol {
+  name: string;
+  kind: number;
+  range: LspRange;
+  selectionRange: LspRange;
+  children?: LspDocumentSymbol[];
+}
+interface LspSymbolInformation {
+  name: string;
+  kind: number;
+  location: LspLocation;
+  containerName?: string;
+}
+
+function isDocumentSymbolArray(
+  raw: LspDocumentSymbol[] | LspSymbolInformation[],
+): raw is LspDocumentSymbol[] {
+  return raw.length === 0 || 'range' in raw[0];
+}
+
+function toDocumentSymbol(s: LspDocumentSymbol): DocumentSymbol {
+  return {
+    name: s.name,
+    kind: mapLspSymbolKind(s.kind),
+    range: toRange(s.range),
+    selectionRange: toRange(s.selectionRange),
+    children: (s.children ?? []).map(toDocumentSymbol),
+  };
+}
+
+// SymbolInformation carries a flat list with `containerName`; rebuild a tree
+// from that so the renderer only ever deals with one shape.
+function flatSymbolsToTree(raw: LspSymbolInformation[]): DocumentSymbol[] {
+  const nodes = raw.map((s): DocumentSymbol => ({
+    name: s.name,
+    kind: mapLspSymbolKind(s.kind),
+    range: toRange(s.location.range),
+    selectionRange: toRange(s.location.range),
+    children: [],
+  }));
+  const byName = new Map<string, DocumentSymbol[]>();
+  for (let i = 0; i < raw.length; i++) {
+    const list = byName.get(raw[i].name) ?? [];
+    list.push(nodes[i]);
+    byName.set(raw[i].name, list);
+  }
+  const roots: DocumentSymbol[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const containerName = raw[i].containerName;
+    const parentCandidates = containerName ? byName.get(containerName) : undefined;
+    const parent = parentCandidates?.find((p) => p !== nodes[i]);
+    if (parent) parent.children.push(nodes[i]);
+    else roots.push(nodes[i]);
+  }
+  return roots;
+}
+
 export class LspSession implements LanguageSession {
   private conn!: MessageConnection;
   private child!: ChildProcessWithoutNullStreams;
@@ -326,6 +387,7 @@ export class LspSession implements LanguageSession {
           synchronization: { dynamicRegistration: false },
           definition: { linkSupport: false },
           references: {},
+          documentSymbol: { hierarchicalDocumentSymbolSupport: true },
           semanticTokens: {
             requests: { range: true, full: false },
             tokenTypes: STANDARD_TOKEN_TYPES,
@@ -608,6 +670,23 @@ export class LspSession implements LanguageSession {
       if (out.length >= limit) break;
     }
     return out;
+  }
+
+  async documentSymbols(filePath: string, token?: CancellationToken): Promise<DocumentSymbol[]> {
+    const abs = this.absPath(filePath);
+    return this.withOpenDocument(abs, async () => {
+      const uri = pathToFileURL(abs).toString();
+      const raw = await this.sendRequest<LspDocumentSymbol[] | LspSymbolInformation[] | null>(
+        'textDocument/documentSymbol',
+        { textDocument: { uri } },
+        token,
+      );
+      if (!raw || raw.length === 0) return [];
+      // Hierarchical (DocumentSymbol[]) entries carry `range`/`selectionRange`;
+      // flat (SymbolInformation[]) entries carry `location` instead.
+      if (isDocumentSymbolArray(raw)) return raw.map(toDocumentSymbol);
+      return flatSymbolsToTree(raw);
+    });
   }
 
   filesChanged(changes: FileChange[]): void {

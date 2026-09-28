@@ -72,3 +72,14 @@ export function useDefinition(
     }),
   );
 }
+
+export function useDocumentSymbols(sha: string, path: string) {
+  const projectId = useAppState().projectId ?? '';
+  return ignoreCancelled(
+    useQuery({
+      queryKey: [...qk.file(projectId, sha, path), 'documentSymbols'] as const,
+      queryFn: () => invoke('symbols.document', { projectId, sha, path }),
+      enabled: Boolean(projectId) && Boolean(sha) && Boolean(path),
+    }),
+  );
+}

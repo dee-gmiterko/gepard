@@ -10,6 +10,7 @@ import { IconButton } from '../../../components/IconButton';
 import { ResizeHandle } from '../../../components/ResizeHandle';
 import { Inline } from '../../../components/Layout';
 import { FileComments } from '../../commentEditor/FileComments';
+import { SymbolsTree } from './SymbolsTree';
 
 const MIN_WIDTH = 220;
 const MAX_WIDTH = 640;
@@ -28,7 +29,7 @@ const messages = defineMessages({
 const Panel = styled.div<{ $width: number }>`
   position: relative;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 2fr) minmax(0, 1fr);
   width: ${({ $width }) => $width}px;
   min-height: 0;
   border-left: 1px solid ${({ theme }) => theme.colors.border};
@@ -105,6 +106,7 @@ export function FileCommentsPanel(): React.JSX.Element | null {
       <Body>
         <FileComments path={path} />
       </Body>
+      <SymbolsTree path={path} />
     </Panel>
   );
 }
