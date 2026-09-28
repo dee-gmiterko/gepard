@@ -36,8 +36,6 @@ const messages = defineMessages({
   }
 })
 
-// `scope` is a free-form main-process label (e.g. "lsp", "lsp:<projectId>");
-// pick a localized headline for it and keep the raw text as detail.
 function appErrorHeadline(scope: string): MessageDescriptor {
   if (scope === 'app' || scope.startsWith('app:')) return messages.appErrorHeadlineApp
   if (scope === 'lsp' || scope.startsWith('lsp:')) return messages.appErrorHeadlineLsp

@@ -17,7 +17,6 @@ describe('isTextEntryTarget', () => {
 
   it('treats a plain text input as text entry', () => {
     expect(isTextEntryTarget(target({ tagName: 'INPUT', type: 'text' }))).toBe(true)
-    // HTML defaults an <input> with no type attribute to type="text".
     expect(isTextEntryTarget(target({ tagName: 'INPUT' }))).toBe(true)
   })
 

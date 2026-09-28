@@ -6,7 +6,6 @@ const Mark = styled.mark`
   font-weight: 600;
 `
 
-// JavaScript string indices are UTF-16 code units, not Unicode code points.
 export type TextRange = readonly [number, number]
 
 export function HighlightedText({

@@ -3,7 +3,6 @@ export interface TargetDescriptor {
   type?: string
   isContentEditable?: boolean
   role?: string | null
-  // An `<a>` without an `href` is not a native interactive control.
   hasHref?: boolean
 }
 

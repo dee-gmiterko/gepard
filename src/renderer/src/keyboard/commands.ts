@@ -23,7 +23,6 @@ export function useCommands(): Commands {
 
   return useMemo<Commands>(() => {
     const viewedPaths = new Set(viewed?.filter((v) => v.viewed).map((v) => v.path))
-    // Viewed only exists for the PR's changed files.
     const changedPaths = new Set<string>()
     for (const f of changedFiles ?? []) {
       changedPaths.add(f.path)

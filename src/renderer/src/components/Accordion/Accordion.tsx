@@ -82,7 +82,6 @@ export function Accordion({
         }}
         onKeyDown={(e) => {
           if (disabled) return
-          // A `role="button"` element gets no native Space/Enter activation.
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
             onToggle()

@@ -29,9 +29,6 @@ interface FileEntry {
   wordKeys: Set<string>
 }
 
-// Each key's bucket is keyed by path, so removing one file's entries is a
-// handful of Map deletes (proportional to that file's own keys) rather than
-// a scan of every other file sharing the same line text or word.
 type Bucket<T> = Map<string, T[]>
 
 function pushEntry<T>(map: Map<string, Bucket<T>>, key: string, path: string, value: T): void {

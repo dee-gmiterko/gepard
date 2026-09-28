@@ -36,7 +36,6 @@ const TabStrip = styled.div`
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 `
 
-// A `<button>` cannot contain another `<button>`.
 const Tab = styled.div<{ $active: boolean; $preview: boolean }>`
   display: flex;
   align-items: center;

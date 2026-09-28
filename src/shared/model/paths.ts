@@ -41,13 +41,8 @@ export function globToRegExp(glob: string): RegExp {
     const segment = segments[i]
     if (segment === '**') {
       if (segments.length === 1) out += '.*'
-      // A leading or trailing `**` absorbs the one separator next to it, so
-      // that segment alone can also match zero path components.
       else if (i === 0) out += '(?:.*/)?'
       else if (i === segments.length - 1) out += '(?:/.*)?'
-      // A `**` in the middle matches whole path components only: it must
-      // still be followed by the separator required before the next
-      // segment, so it never merges into, or drops, a component boundary.
       else out += '(?:/.*)?'
       continue
     }

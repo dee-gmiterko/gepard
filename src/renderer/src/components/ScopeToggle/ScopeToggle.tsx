@@ -38,7 +38,6 @@ const Option = styled.button<{ $active: boolean }>`
   ${activeToggleBackground}
 `
 
-// In the ARIA radio group pattern, arrow keys move both focus and selection.
 function moveTo(
   scope: SearchScope,
   onChange: (scope: SearchScope) => void,

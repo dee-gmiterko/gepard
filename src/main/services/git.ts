@@ -25,9 +25,6 @@ const EMPTY_TREE_SHA = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
 const GIT_ENV: NodeJS.ProcessEnv = { ...process.env, GIT_TERMINAL_PROMPT: '0' }
 const GIT_TIMEOUT_MS = 2 * 60_000
 
-// Clears any credential helper from the user's own git config and routes
-// authentication through `gh` instead, so a private repo works without the
-// user having run `gh auth setup-git` separately.
 const GH_CREDENTIAL_ARGS = [
   '-c',
   'credential.helper=',
@@ -658,8 +655,7 @@ export function parseUnifiedDiff(diffText: string): DiffRow[] {
 
 // A pathspec-scoped `git diff --name-status` loses rename detection because
 // the pathspec hides the old path from the comparison, so callers need the
-// whole-tree status; cache it per (repo, base, head) so opening many files in
-// a row does not re-run the same whole-tree diff for each one.
+// whole-tree status.
 let statusCache: { key: string; entries: Promise<NameStatusEntry[]> } | null = null
 
 function statusEntriesFor(
