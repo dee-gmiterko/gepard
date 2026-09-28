@@ -1,4 +1,4 @@
-import { useEffect, useRef, type KeyboardEvent } from 'react';
+import { useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { X } from 'react-feather';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
@@ -20,16 +20,23 @@ const messages = defineMessages({
   },
 });
 
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-const Overlay = styled.div`
+const Overlay = styled.dialog`
   position: fixed;
   inset: 0;
-  z-index: ${({ theme }) => theme.z.modal};
+  margin: 0;
+  padding: 0;
+  border: none;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
   display: flex;
   flex-direction: column;
   background: ${({ theme }) => theme.colors.bg};
+
+  &::backdrop {
+    background: transparent;
+  }
 `;
 
 const OverlayHeader = styled.div`
@@ -56,51 +63,27 @@ export interface SettingsOverlayProps {
 
 export function SettingsOverlay({ onClose }: SettingsOverlayProps): React.JSX.Element {
   const intl = useIntl();
-  const overlayRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    const overlay = overlayRef.current;
-    const first = overlay?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
-    (first ?? overlay)?.focus();
-    return () => previouslyFocused?.focus();
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    dialog.showModal();
+
+    // Fires on Escape (before `close`) and on programmatic close via close().
+    // Keep the parent's open state in sync with both paths.
+    dialog.addEventListener('close', onClose);
+
+    return () => {
+      dialog.removeEventListener('close', onClose);
+      dialog.close();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function focusables(): HTMLElement[] {
-    return Array.from(overlayRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? []);
-  }
-
-  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>): void {
-    e.stopPropagation();
-    if (e.key === 'Escape') {
-      // A native <select>'s own open dropdown consumes Escape to close
-      // itself; that keydown still bubbles and must not also close the overlay.
-      if ((e.target as HTMLElement).tagName === 'SELECT') return;
-      onClose();
-      return;
-    }
-    if (e.key !== 'Tab') return;
-    const items = focusables();
-    if (items.length === 0) return;
-    const first = items[0];
-    const last = items[items.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  }
-
   return (
-    <Overlay
-      ref={overlayRef}
-      tabIndex={-1}
-      role="dialog"
-      aria-modal="true"
-      onKeyDown={handleKeyDown}
-    >
+    <Overlay ref={dialogRef}>
       <OverlayHeader>
         <SectionHeading
           as="h1"
