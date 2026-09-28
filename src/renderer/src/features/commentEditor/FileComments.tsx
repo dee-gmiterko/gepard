@@ -77,8 +77,7 @@ export function FileComments({ path }: FileCommentsProps): React.JSX.Element {
   const [openId, setOpenId] = useState<string | null>(null)
   const [addingNew, setAddingNew] = useState(false)
 
-  // Matches the inline gutter rule (codemirror/commentWidgets.ts): only
-  // threads anchored at the checked-out commit, and not outdated.
+  // Must stay in sync with the inline gutter filter in components/CodeEditor/commentWidgets.ts.
   const fileThreads = useMemo(
     () =>
       threads

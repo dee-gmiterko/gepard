@@ -7,19 +7,18 @@ import {
   type RefObject
 } from 'react'
 import styled, { css, keyframes } from 'styled-components'
-import { Move, RefreshCw } from 'react-feather'
+import { MessageSquare, Move, RefreshCw } from 'react-feather'
 import { FormattedMessage, useIntl } from 'react-intl'
 import { defineMessages } from '../../../i18n/defineMessages'
-import { useAppState } from '../../../state/AppContext'
+import { useAppDispatch, useAppState } from '../../../state/AppContext'
+import { useSetLayout } from '../../../queries/projects'
 import { usePendingCount, useSetViewed, useSync, useViewed } from '../../../queries/comments'
 import { useIsCheckedOutChangedFile } from '../commentScope'
 import { Checkbox } from '../../../components/Checkbox'
-import { Accordion } from '../../../components/Accordion'
 import { Button } from '../../../components/Button'
 import { IconButton } from '../../../components/IconButton'
 import { Inline, Stack } from '../../../components/Layout'
 import { Surface } from '../../../components/Surface'
-import { FileComments } from '../../commentEditor/FileComments'
 
 const messages = defineMessages({
   viewed: {
@@ -88,6 +87,7 @@ const Spinning = styled(RefreshCw)<{ $spinning: boolean }>`
 `
 
 const GRIP_STEP = 16
+const EDGE_PADDING = 12
 
 interface Point {
   x: number
@@ -101,9 +101,6 @@ interface NaturalBox {
   height: number
 }
 
-// `panel`'s current rect already includes `offset` (applied via CSS
-// transform); subtracting it back out gives the un-offset position to clamp
-// candidate offsets against, so the panel never ends up off-screen.
 function naturalBox(panel: HTMLElement, offset: Point): NaturalBox {
   const rect = panel.getBoundingClientRect()
   return {
@@ -114,28 +111,39 @@ function naturalBox(panel: HTMLElement, offset: Point): NaturalBox {
   }
 }
 
-function clampToViewport(natural: NaturalBox, candidate: Point): Point {
-  const minX = -natural.left
-  const minY = -natural.top
-  const maxX = Math.max(minX, window.innerWidth - natural.width - natural.left)
-  const maxY = Math.max(minY, window.innerHeight - natural.height - natural.top)
+function clampToContainer(panel: HTMLElement, natural: NaturalBox, candidate: Point): Point {
+  const container = (panel.offsetParent ?? panel.parentElement)?.getBoundingClientRect()
+  if (!container) return candidate
+  const minX = container.left + EDGE_PADDING - natural.left
+  const minY = container.top + EDGE_PADDING - natural.top
+  const maxX = Math.max(minX, container.right - EDGE_PADDING - natural.width - natural.left)
+  const maxY = Math.max(minY, container.bottom - EDGE_PADDING - natural.height - natural.top)
   return {
     x: Math.min(Math.max(candidate.x, minX), maxX),
     y: Math.min(Math.max(candidate.y, minY), maxY)
   }
 }
 
-function useDragOffset(panelRef: RefObject<HTMLElement | null>): {
+function useDragOffset(
+  panelRef: RefObject<HTMLElement | null>,
+  initial: Point,
+  onCommit: (offset: Point) => void
+): {
   offset: Point
   onPointerDown: (e: PointerEvent<HTMLElement>) => void
   onKeyDown: (e: KeyboardEvent<HTMLElement>) => void
 } {
-  const [offset, setOffset] = useState<Point>({ x: 0, y: 0 })
+  const [offset, setOffset] = useState<Point>(initial)
   const start = useRef<{ px: number; py: number; x: number; y: number } | null>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
+  const draggingRef = useRef(false)
 
-  // If this unmounts mid-drag, the listeners must not outlive it.
   useEffect(() => () => cleanupRef.current?.(), [])
+
+  useEffect(() => {
+    if (!draggingRef.current) setOffset(initial)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial.x, initial.y])
 
   function onPointerDown(e: PointerEvent<HTMLElement>): void {
     const el = e.currentTarget
@@ -143,16 +151,21 @@ function useDragOffset(panelRef: RefObject<HTMLElement | null>): {
     const panel = panelRef.current
     const natural = panel ? naturalBox(panel, offset) : null
     start.current = { px: e.clientX, py: e.clientY, ...offset }
+    draggingRef.current = true
+    let latest = offset
     const move = (ev: globalThis.PointerEvent): void => {
       const s = start.current
       if (!s) return
       const candidate = { x: s.x + ev.clientX - s.px, y: s.y + ev.clientY - s.py }
-      setOffset(natural ? clampToViewport(natural, candidate) : candidate)
+      latest = natural && panel ? clampToContainer(panel, natural, candidate) : candidate
+      setOffset(latest)
     }
     // Browsers fire pointercancel instead of pointerup when they interrupt a gesture.
     const end = (): void => {
       start.current = null
+      draggingRef.current = false
       cleanupRef.current?.()
+      onCommit(latest)
     }
     el.addEventListener('pointermove', move)
     el.addEventListener('pointerup', end)
@@ -189,7 +202,9 @@ function useDragOffset(panelRef: RefObject<HTMLElement | null>): {
     }
     e.preventDefault()
     const panel = panelRef.current
-    setOffset(panel ? clampToViewport(naturalBox(panel, offset), candidate) : candidate)
+    const next = panel ? clampToContainer(panel, naturalBox(panel, offset), candidate) : candidate
+    setOffset(next)
+    onCommit(next)
   }
 
   return { offset, onPointerDown, onKeyDown }
@@ -198,11 +213,16 @@ function useDragOffset(panelRef: RefObject<HTMLElement | null>): {
 export function FileControls(): React.JSX.Element | null {
   const intl = useIntl()
   const state = useAppState()
+  const dispatch = useAppDispatch()
+  const setLayout = useSetLayout()
   const pr = state.targeting.pr
   const path = state.activeFile
-  const [accordionOpen, setAccordionOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
-  const { offset, onPointerDown, onKeyDown } = useDragOffset(panelRef)
+  const initialPosition = state.layout.fileControlsPosition ?? { x: 0, y: 0 }
+  const { offset, onPointerDown, onKeyDown } = useDragOffset(panelRef, initialPosition, (next) => {
+    dispatch({ type: 'layout/setFileControlsPosition', position: next })
+    setLayout.mutate({ ...state.layout, fileControlsPosition: next })
+  })
 
   const { data: viewed } = useViewed()
   const { mutate: setViewed } = useSetViewed()
@@ -213,6 +233,12 @@ export function FileControls(): React.JSX.Element | null {
   if (pr === null) return null
 
   const isViewed = path !== null && (viewed?.find((v) => v.path === path)?.viewed ?? false)
+
+  function toggleFileComments(): void {
+    const open = !state.layout.fileCommentsPanelOpen
+    dispatch({ type: 'layout/setFileCommentsPanelOpen', open })
+    setLayout.mutate({ ...state.layout, fileCommentsPanelOpen: open })
+  }
 
   return (
     <Floating ref={panelRef} style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}>
@@ -225,6 +251,15 @@ export function FileControls(): React.JSX.Element | null {
               label={intl.formatMessage(messages.viewed)}
             />
           )}
+          {path !== null && isChangedFile && (
+            <IconButton
+              icon={MessageSquare}
+              size={14}
+              active={state.layout.fileCommentsPanelOpen}
+              label={intl.formatMessage(messages.fileComments)}
+              onClick={toggleFileComments}
+            />
+          )}
           <Grip
             icon={Move}
             size={14}
@@ -233,16 +268,6 @@ export function FileControls(): React.JSX.Element | null {
             onKeyDown={onKeyDown}
           />
         </Row>
-
-        {path !== null && isChangedFile && (
-          <Accordion
-            open={accordionOpen}
-            onToggle={() => setAccordionOpen((v) => !v)}
-            title={intl.formatMessage(messages.fileComments)}
-          >
-            <FileComments path={path} />
-          </Accordion>
-        )}
 
         <Button block disabled={syncing} onClick={() => runSync('full')}>
           <Spinning size={14} $spinning={syncing} />

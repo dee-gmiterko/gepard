@@ -21,7 +21,10 @@ export function FileViewer({ path }: { path: string }): React.JSX.Element {
           <FormattedMessage {...viewerMessages.loading} />
         </Message>
       )
-    if (isChangedFile) return <DiffViewer path={path} />
+    const changeType = changedFiles.find(
+      (f) => f.path === path || f.previousPath === path
+    )?.changeType
+    if (isChangedFile && changeType !== 'ADDED') return <DiffViewer path={path} />
     return <CodeViewer path={path} />
   }
 
