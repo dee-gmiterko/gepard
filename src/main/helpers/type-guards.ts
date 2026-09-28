@@ -1,3 +1,3 @@
 export function isFn(v: unknown): v is (...args: never[]) => unknown {
-  return typeof v === 'function'
+  return typeof v === 'function';
 }

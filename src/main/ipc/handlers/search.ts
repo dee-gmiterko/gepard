@@ -1,69 +1,57 @@
-import { readFile } from 'node:fs/promises'
-import type { HandlerMap } from '../registry'
-import { AppError } from '../registry'
-import { withLatestWins } from '../cancellation'
-import { ripgrepSearch, type RipgrepFileResult } from '../../helpers/ripgrep'
-import { resolveWithinRepo } from '../../helpers/repo-fs'
-import { indexer } from '../../lsp'
-import type { LanguageSession } from '../../lsp/session'
-import { projectRepoDir } from '../../paths'
-import { isTargeted } from '@shared/model/paths'
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import type { HandlerMap } from '../registry';
+import { AppError } from '../registry';
+import { withLatestWins } from '../cancellation';
+import { ripgrepSearch, type RipgrepFileResult } from '../../helpers/process/ripgrep';
+import { identifierAt } from '../../helpers/string';
+import { indexer } from '../../lsp';
+import type { LanguageSession } from '../../lsp/session';
+import { projectRepoDir } from '../../paths';
+import { isTargeted } from '@shared/model/paths';
 
 function staleShaError(requested: string, current: string): Error {
   const err = new Error(
-    `Requested sha ${requested} does not match the checked-out head ${current}; the project was checked out to a different target since this request was made`
-  )
-  err.name = 'AbortError'
-  return err
+    `Requested sha ${requested} does not match the checked-out head ${current}; the project was checked out to a different target since this request was made`,
+  );
+  err.name = 'AbortError';
+  return err;
 }
 
 function requireCurrentSha(projectId: string, sha: string): void {
-  const current = indexer.currentSha(projectId)
+  const current = indexer.currentSha(projectId);
   if (current !== null && current !== sha) {
-    throw staleShaError(sha, current)
+    throw staleShaError(sha, current);
   }
-}
-
-// LSP textDocument/definition does not return the name of the symbol under
-// the cursor.
-function identifierAt(lineText: string, col1: number): string {
-  const idx = col1 - 1
-  const isWordChar = (c: string | undefined): boolean => !!c && /[A-Za-z0-9_$]/.test(c)
-  let start = idx
-  while (start > 0 && isWordChar(lineText[start - 1])) start--
-  let end = idx
-  while (isWordChar(lineText[end])) end++
-  if (end <= start) return lineText.slice(Math.max(0, idx), idx + 1)
-  return lineText.slice(start, end)
 }
 
 function requireSession(projectId: string): LanguageSession {
-  const session = indexer.session(projectId)
+  const session = indexer.session(projectId);
   if (!session) {
     throw new AppError(
       'NO_LANGUAGE_SESSION',
-      'No language session is available for this project (still indexing, or no LSP extension matched any file)'
-    )
+      'No language session is available for this project (still indexing, or no LSP extension matched any file)',
+    );
   }
-  return session
+  return session;
 }
 
 export function searchRunKey(input: {
-  projectId: string
-  scope: 'all' | 'targeted'
-  text: string
-  kind: 'pattern' | 'regex' | 'exactLine' | 'references'
-  word?: boolean
-  origin?: { path: string; line: number }
-  at?: { path: string; pos: { line: number; col: number } }
+  projectId: string;
+  scope: 'all' | 'targeted';
+  text: string;
+  kind: 'pattern' | 'regex' | 'exactLine' | 'references';
+  word?: boolean;
+  origin?: { path: string; line: number };
+  at?: { path: string; pos: { line: number; col: number } };
 }): string {
-  const base = `search.run:${input.projectId}:${input.kind}`
+  const base = `search.run:${input.projectId}:${input.kind}`;
   if (input.kind === 'pattern')
-    return input.word ? `${base}:word:${input.scope}:${input.text}` : base
-  if (input.kind === 'exactLine') return `${base}:${input.origin!.path}:${input.origin!.line}`
+    return input.word ? `${base}:word:${input.scope}:${input.text}` : base;
+  if (input.kind === 'exactLine') return `${base}:${input.origin!.path}:${input.origin!.line}`;
   if (input.kind === 'references')
-    return `${base}:${input.at!.path}:${input.at!.pos.line}:${input.at!.pos.col}`
-  return base
+    return `${base}:${input.at!.path}:${input.at!.pos.line}:${input.at!.pos.col}`;
+  return base;
 }
 
 export const searchHandlers: Pick<
@@ -72,40 +60,40 @@ export const searchHandlers: Pick<
 > = {
   'search.run': (input) =>
     withLatestWins(searchRunKey(input), async ({ signal, token }) => {
-      requireCurrentSha(input.projectId, input.sha)
-      const repoRoot = projectRepoDir(input.projectId)
-      const targetedPaths = input.targetedPaths
+      requireCurrentSha(input.projectId, input.sha);
+      const repoRoot = projectRepoDir(input.projectId);
+      const targetedPaths = input.targetedPaths;
 
       if (input.kind === 'references') {
-        const session = requireSession(input.projectId)
-        const raw = await session.references(input.at.path, input.at.pos, token)
+        const session = requireSession(input.projectId);
+        const raw = await session.references(input.at.path, input.at.pos, token);
         const scoped =
-          input.scope === 'targeted' ? raw.filter((f) => isTargeted(f.path, targetedPaths)) : raw
-        const files = scoped.map((f) => ({ ...f, targeted: isTargeted(f.path, targetedPaths) }))
+          input.scope === 'targeted' ? raw.filter((f) => isTargeted(f.path, targetedPaths)) : raw;
+        const files = scoped.map((f) => ({ ...f, targeted: isTargeted(f.path, targetedPaths) }));
         return {
           query: { kind: 'references' as const, text: input.text, scope: input.scope },
           files,
-          totalMatches: files.reduce((n, f) => n + f.matches.length, 0)
-        }
+          totalMatches: files.reduce((n, f) => n + f.matches.length, 0),
+        };
       }
 
       if (input.scope === 'targeted' && targetedPaths.length === 0) {
         return {
           query: { kind: input.kind, text: input.text, scope: input.scope },
           files: [],
-          totalMatches: 0
-        }
+          totalMatches: 0,
+        };
       }
 
-      let rgResults: RipgrepFileResult[]
+      let rgResults: RipgrepFileResult[];
       if (input.kind === 'pattern') {
-        const lineIndex = input.word ? indexer.lineIndex(input.projectId) : null
+        const lineIndex = input.word ? indexer.lineIndex(input.projectId) : null;
         if (lineIndex && /^[A-Za-z0-9_]+$/.test(input.text)) {
-          const hits = await lineIndex.queryWord(input.text)
+          const hits = await lineIndex.queryWord(input.text);
           rgResults =
             input.scope === 'targeted'
               ? hits.filter((f) => isTargeted(f.path, targetedPaths))
-              : hits
+              : hits;
         } else {
           rgResults = await ripgrepSearch({
             cwd: repoRoot,
@@ -113,8 +101,8 @@ export const searchHandlers: Pick<
             fixedString: true,
             word: input.word,
             paths: input.scope === 'targeted' ? targetedPaths : undefined,
-            signal
-          })
+            signal,
+          });
         }
       } else if (input.kind === 'regex') {
         rgResults = await ripgrepSearch({
@@ -122,88 +110,85 @@ export const searchHandlers: Pick<
           pattern: input.text,
           fixedString: false,
           paths: input.scope === 'targeted' ? targetedPaths : undefined,
-          signal
-        })
+          signal,
+        });
       } else {
-        const trimmed = input.text.trim()
-        const lineIndex = indexer.lineIndex(input.projectId)
+        const trimmed = input.text.trim();
+        const lineIndex = indexer.lineIndex(input.projectId);
         if (lineIndex) {
-          const hits = await lineIndex.queryExactLine(trimmed, input.origin)
+          const hits = await lineIndex.queryExactLine(trimmed, input.origin);
           rgResults =
             input.scope === 'targeted'
               ? hits.filter((f) => isTargeted(f.path, targetedPaths))
-              : hits
+              : hits;
         } else {
           const all = await ripgrepSearch({
             cwd: repoRoot,
             pattern: trimmed,
             fixedString: true,
             paths: input.scope === 'targeted' ? targetedPaths : undefined,
-            signal
-          })
+            signal,
+          });
           rgResults = all
             .map((f) => ({
               path: f.path,
               matches: f.matches.filter(
                 (m) =>
                   m.preview.trim() === trimmed &&
-                  !(f.path === input.origin.path && m.line === input.origin.line)
-              )
+                  !(f.path === input.origin.path && m.line === input.origin.line),
+              ),
             }))
-            .filter((f) => f.matches.length > 0)
+            .filter((f) => f.matches.length > 0);
         }
       }
 
       const files = rgResults.map((f) => ({
         path: f.path,
         targeted: isTargeted(f.path, targetedPaths),
-        matches: f.matches
-      }))
+        matches: f.matches,
+      }));
       return {
         query: { kind: input.kind, text: input.text, scope: input.scope },
         files,
-        totalMatches: files.reduce((n, f) => n + f.matches.length, 0)
-      }
+        totalMatches: files.reduce((n, f) => n + f.matches.length, 0),
+      };
     }),
 
   'symbols.line': (input) =>
     withLatestWins(
       `symbols.line:${input.projectId}:${input.path}:${input.line}`,
       async ({ token }) => {
-        requireCurrentSha(input.projectId, input.sha)
-        const session = requireSession(input.projectId)
-        const symbols = await session.lineSymbols(input.path, input.line, token)
-        return { path: input.path, line: input.line, symbols }
-      }
+        requireCurrentSha(input.projectId, input.sha);
+        const session = requireSession(input.projectId);
+        const symbols = await session.lineSymbols(input.path, input.line, token);
+        return { path: input.path, line: input.line, symbols };
+      },
     ),
 
   'symbols.definition': (input) =>
     withLatestWins(
       `symbols.definition:${input.projectId}:${input.path}:${input.pos.line}:${input.pos.col}`,
       async ({ token }) => {
-        requireCurrentSha(input.projectId, input.sha)
-        const session = requireSession(input.projectId)
-        const repoRoot = projectRepoDir(input.projectId)
-        let symbol = ''
-        const real = await resolveWithinRepo(repoRoot, input.path)
-        if (real) {
-          try {
-            const text = await readFile(real, 'utf8')
-            const lineText = text.split('\n')[input.pos.line - 1] ?? ''
-            symbol = identifierAt(lineText, input.pos.col)
-          } catch {
-            symbol = ''
-          }
+        requireCurrentSha(input.projectId, input.sha);
+        const session = requireSession(input.projectId);
+        const repoRoot = projectRepoDir(input.projectId);
+        let symbol = '';
+        try {
+          const text = await readFile(join(repoRoot, input.path), 'utf8');
+          const lineText = text.split('\n')[input.pos.line - 1] ?? '';
+          symbol = identifierAt(lineText, input.pos.col);
+        } catch {
+          symbol = '';
         }
-        const definitions = await session.definition(input.path, input.pos, token)
-        return { symbol, definitions }
-      }
+        const definitions = await session.definition(input.path, input.pos, token);
+        return { symbol, definitions };
+      },
     ),
 
   'symbols.workspace': (input) =>
     withLatestWins(`symbols.workspace:${input.projectId}`, async ({ token }) => {
-      requireCurrentSha(input.projectId, input.sha)
-      const session = requireSession(input.projectId)
-      return session.workspaceSymbols(input.query, input.limit ?? 50, token)
-    })
-}
+      requireCurrentSha(input.projectId, input.sha);
+      const session = requireSession(input.projectId);
+      return session.workspaceSymbols(input.query, input.limit ?? 50, token);
+    }),
+};
