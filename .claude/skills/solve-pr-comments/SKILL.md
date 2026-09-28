@@ -3,72 +3,71 @@ name: solve-pr-comments
 description: Resolve all open/unresolved review comments on the current branch's PR by distributing fixes across parallel subagents, then verifying the combined result once. Use whenever the user asks to solve, resolve, address, or fix open PR comments/review threads/feedback for the current branch.
 ---
 
-You are coordinating the resolution of every unresolved review thread on the current branch's PR. Subagents will do the actual editing; you stay the single source of truth for what "resolved" actually means, and you are the only one who runs full verification.
+Coordinate resolution of every unresolved review thread on the current branch's PR. Subagents make the edits. The coordinator is the only one who runs full verification and the only one who marks a thread resolved.
 
-The failure mode this skill exists to prevent: treating "an agent said it's done" or "the GitHub thread shows resolved" as proof the comment is actually solved. Neither is proof. The only proof is your own read of the diff plus a clean, fully-green verification run across the _combined_ result of every agent's work.
+A thread counts as resolved only when the coordinator has personally verified — by reading the diff and by a clean verification run — that the code now does what the comment asked. An agent's self-report and a GitHub "resolved" checkmark are both claims, not proof.
 
 ## 1. Gather every unresolved thread
 
-Top-level PR comments and reviews miss inline review threads almost entirely — query GraphQL directly:
+Get owner/repo and PR number if not already known:
 
 ```
-gh api graphql -f query='
-query {
-  repository(owner: "<owner>", name: "<repo>") {
-    pullRequest(number: <N>) {
-      reviewThreads(first: 100) {
-        nodes {
-          id
-          isResolved
-          isOutdated
-          path
-          line
-          comments(first: 20) {
-            nodes { author { login } body createdAt url }
-          }
-        }
-      }
-    }
-  }
-}'
+gh repo view --json owner,name
+gh pr view --json number
 ```
 
-Filter to `isResolved: false`. Read every comment body yourself before delegating — some are terse, typo-heavy, or ambiguous, and you need to understand each one's actual intent before you can write a subagent prompt that isn't just forwarding confusion downstream.
+Query inline review threads directly via GraphQL — top-level PR comments and reviews miss them:
+
+```
+gh api graphql -f query='query { repository(owner: "<owner>", name: "<repo>") { pullRequest(number: <N>) { reviewThreads(first: 100) { nodes { id isResolved isOutdated path line comments(first: 20) { nodes { author { login } body createdAt url } } } } } } }'
+```
+
+Filter to `isResolved: false`. Read every comment body before delegating. Correct obvious typos when relaying a comment's text but preserve its intent — do not reinterpret an ambiguous comment into whatever is easiest to implement.
+
+Every unresolved thread is a task at the same bar, regardless of phrasing or length. A comment naming a feature, behavior, or UI element that does not yet exist ("add X," "settings should gain Y," "new feature: ...") is a task to build that thing, not a task to document its absence. It does not need to say "please implement" to count.
 
 ## 2. Group and dispatch to parallel subagents
 
-Group threads by file/area overlap so agents don't collide on the same files. Launch all groups in one message (one batch of Agent tool calls) so they run concurrently.
+Group threads by file/area overlap so agents don't collide on the same files. Launch all groups in one message so they run concurrently.
 
 Each agent's prompt must include, per thread it owns:
 
-- The thread ID (needed later to resolve it) and the full comment text, with obvious typos corrected but intent preserved — don't silently reinterpret an ambiguous comment into whatever's easiest to implement.
-- Enough surrounding code context that the agent can act without re-deriving your own investigation.
-- An explicit instruction to fix the actual code, not just post a reply or acknowledge the comment.
+- The thread ID and the full (typo-corrected, intent-preserved) comment text.
+- Enough surrounding code context that the agent can act without re-deriving the coordinator's own investigation.
+- An instruction to fix the actual code — not acknowledge the comment, not describe the fix in documentation only.
 
-Tell every agent explicitly **not** to run project-wide verification (typecheck/lint/format/build/test) on its own. Concurrent agents sharing one working tree will stomp on each other's caches, lockfiles, and build artifacts if each tries to verify independently mid-flight. Verification happens exactly once, after everyone is done, run by you.
+Tell every agent explicitly not to run project-wide verification (typecheck, lint, format, build, test, `yarn validate`, or any part of it) on its own. Concurrent agents in one working tree will collide on shared caches, lockfiles, and build artifacts if each verifies independently mid-flight. Verification runs exactly once, after every agent is done, by the coordinator.
 
-Agents may resolve their own GitHub threads via `gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: "..."}) { thread { isResolved } } }'` as they finish — that's fine as a convenience, but treat it as provisional. An agent's "resolved" is a claim about its own work, checked against nothing but its own judgment.
+Agents do not resolve their own GitHub threads. Thread resolution happens only after the combined verification pass in step 4 — an agent mid-flight cannot know whether its change will still hold once every other agent's work lands on top of it.
 
-## 3. Hold "validate this" comments to a higher bar
+## 3. Judge each agent's report against the original thread
 
-Some comments explicitly distrust existing code ("I don't trust this to be true," "validate in source," "why does this exist at all") or set a hard constraint on the fix ("get rid of this helper," "even a `.d.ts` is better than active code"). These need real verification against ground truth — the actual installed package types, the actual current code, not the first plausible story that resolves the discomfort.
+When an agent hands work back, check it against the thread text it was given, not against its own summary. Read the changed files. Confirm the code now does what the comment asked, in full. A report describing something adjacent to the ask — a partial implementation, a documentation note describing the change as planned, a claim that the issue "was already fine" without addressing the stated concern — does not satisfy the thread.
 
-Concretely: if an agent's fix is "I deleted X because Y's built-in behavior already covers it," that claim is only as good as what it was actually checked against. Wrong package, wrong version, wrong assumption — any of these produce a confident-sounding but false justification, and it will surface as breakage somewhere else in the tree. When you hit this kind of failure, don't paper over it by reverting to the old code (that ignores the reviewer's actual ask) and don't retry cosmetic variations of the same broken idea more than once. If a fix keeps almost-but-not-quite satisfying an explicit constraint, stop and rethink the actual mechanism — e.g. a stated "no runtime code" constraint means a type-only `.d.ts`-style construct with zero emitted JS, not a function with a body that merely looks type-focused.
+If the diff and the thread's ask don't match, send the agent back with the specific gap named, or dispatch a new agent. Do not mark the thread resolved and do not proceed to the next step for it.
 
-## 4. One combined verification pass, after everyone reports back
+For a comment that challenges an existing assumption ("I don't trust this," "validate in source," "why does this exist") or sets a hard constraint on the fix, verify against ground truth — the actual installed package version, the actual current code — before accepting a fix that relies on that claim. Do not accept a fix that satisfies part of a stated constraint while quietly violating another part of it.
 
-Once all subagents have finished, run the full verification suite yourself, once, against the merged working tree — typecheck, lint, format check, and tests. Not a subset, not skipped, not run per-agent. This is the only point where cross-agent conflicts actually surface: one agent moving a file another agent still imports by its old path, two agents touching the same shared module in incompatible ways, a deletion that looked locally safe but wasn't.
+## 4. One combined verification pass
 
-Fix everything the verification pass finds, regardless of which agent's change caused it — "not my assigned thread" isn't a reason to leave it broken. Iterate until everything is clean.
+Once every subagent's report has been judged against its thread, run `yarn validate` once against the merged working tree (typecheck, lint, format check, locale check — see `package.json`; this matches what the pre-commit hook runs). Also run `yarn test`, since `validate` does not include it. Run each exactly once, against the combined result of all agents' work, not per-agent and not skipped.
 
-## 5. Only then confirm resolution
+This step either ends in a fully green result or a named blocker — there is no third outcome. Fix every failure it surfaces, regardless of which agent's change caused it. Iterate until both commands are clean. If a failure cannot be resolved without a decision only the user can make (a genuine design ambiguity, a missing credential), stop and report that specific blocker instead of guessing past it or leaving the tree broken.
 
-A thread counts as genuinely resolved only when both are true: the GitHub thread is marked resolved, and you've personally verified (by reading the diff and by the clean verification pass) that the underlying code claim actually holds. If those disagree, trust the code, not the checkmark — reopen the thread or fix the code, whichever is actually wrong.
+## 5. Close resolved threads
 
-## 6. Stay inside what was authorized
+For every thread whose fix has been verified in step 3 and whose code has passed step 4, close it:
 
-Don't take actions beyond the scope you were actually given — e.g. don't resolve a GitHub thread the user never asked you to touch, just because it feels like a natural extension of "fix the code." If a tool call is denied or a permission is blocked, say plainly what happened and what you don't know; don't invent a plausible-sounding explanation to fill the gap.
+```
+gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: "<id>"}) { thread { isResolved } } }'
+```
+
+Do not leave a verified thread open. Do not close a thread whose fix has not been verified. If a thread's GitHub state and its actual code state disagree, trust the code: reopen a thread closed prematurely, or fix the code before closing one still open.
+
+## 6. Stay inside the authorized scope
+
+Do not take actions beyond what was requested — e.g. resolving a GitHub thread the user did not ask to have touched. If a tool call is denied or blocked, state plainly what happened and what is unknown; do not construct an explanation for it.
 
 ## Project convention: no narrative comments
 
-This repo's reviewers consistently reject comments that restate what the code visibly does. Only write a comment when it states a genuinely non-obvious fact (a hidden constraint, a subtle type-inference quirk, a workaround for a specific bug) — and keep it to one line wherever possible. This applies to any code a subagent writes as part of resolving these threads too; say so in their prompts.
+Comments that restate what code visibly does are rejected in this repo. Write a comment only when it states a non-obvious fact — a hidden constraint, a subtle behavior, a workaround for a specific bug — and keep it to one line where possible. Apply this to any code a subagent writes while resolving these threads.
