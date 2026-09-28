@@ -1,4 +1,4 @@
-import type { IpcBridge } from './index'
+import type { IpcBridge } from './ipcBridge'
 
 declare global {
   interface Window {
