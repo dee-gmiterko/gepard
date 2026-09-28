@@ -78,7 +78,7 @@ describe('symbols.workspace across sessions', () => {
     await expect(query()).rejects.toThrow('first crashed');
   });
 
-  it('reports NO_LANGUAGE_SESSION when the project has no session', async () => {
-    await expect(query()).rejects.toMatchObject({ code: 'NO_LANGUAGE_SESSION' });
+  it('returns no results when the project has no session', async () => {
+    expect(await query()).toEqual([]);
   });
 });
