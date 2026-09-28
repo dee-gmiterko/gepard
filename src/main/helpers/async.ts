@@ -15,3 +15,15 @@ export async function mapWithConcurrency<T, R>(
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
   return results;
 }
+
+export async function withBatches<T, R>(
+  items: T[],
+  size: number,
+  fn: (batch: T[]) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += size) {
+    results.push(await fn(items.slice(i, i + size)));
+  }
+  return results;
+}

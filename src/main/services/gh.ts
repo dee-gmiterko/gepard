@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { run, runJson, ExecError } from '../helpers/process/exec';
-import { mapWithConcurrency } from '../helpers/async';
+import { mapWithConcurrency, withBatches } from '../helpers/async';
 import { AppError } from '../ipc/registry';
 import { getProject as defaultGetProject } from '../store/projects';
 import {
@@ -25,7 +25,7 @@ import {
   PrSummary,
   Commit,
   Login,
-} from '@shared/ipc/schemas/pr';
+} from '@gepard/common/ipc/schemas/pr';
 import {
   GqlError,
   GqlIssueCommentRaw,
@@ -34,8 +34,8 @@ import {
   GqlReviewThreadRaw,
   GqlReviewThreadsPage,
   RemoteViewedFile,
-} from '@shared/ipc/schemas/comment';
-import type { Viewer, ViewerRepo } from '@shared/ipc/schemas/project';
+} from '@gepard/common/ipc/schemas/comment';
+import type { Viewer, ViewerRepo } from '@gepard/common/ipc/schemas/project';
 
 const GH_ENV: NodeJS.ProcessEnv = {
   ...process.env,
@@ -47,6 +47,7 @@ const GH_ENV: NodeJS.ProcessEnv = {
 };
 
 const DEFAULT_TIMEOUT_MS = 30_000;
+const VIEWED_MUTATION_CHUNK_SIZE = 50;
 
 function ghOpts(extra: { stdin?: string } = {}): {
   env: NodeJS.ProcessEnv;
@@ -855,20 +856,22 @@ export class GhService {
 
   async setFilesViewed(pullRequestId: string, changes: ViewedChange[]): Promise<void> {
     if (changes.length === 0) return;
-    const varDecls = ['$pr:ID!'];
-    const fields: string[] = [];
-    const variables: Record<string, unknown> = { pr: pullRequestId };
-    changes.forEach((c, i) => {
-      const pathVar = `p${i}`;
-      varDecls.push(`$${pathVar}:String!`);
-      variables[pathVar] = c.path;
-      const mutation = c.viewed ? 'markFileAsViewed' : 'unmarkFileAsViewed';
-      fields.push(
-        `f${i}: ${mutation}(input:{pullRequestId:$pr, path:$${pathVar}}) { clientMutationId }`,
-      );
+    await withBatches(changes, VIEWED_MUTATION_CHUNK_SIZE, async (batch) => {
+      const varDecls = ['$pr:ID!'];
+      const fields: string[] = [];
+      const variables: Record<string, unknown> = { pr: pullRequestId };
+      batch.forEach((c, i) => {
+        const pathVar = `p${i}`;
+        varDecls.push(`$${pathVar}:String!`);
+        variables[pathVar] = c.path;
+        const mutation = c.viewed ? 'markFileAsViewed' : 'unmarkFileAsViewed';
+        fields.push(
+          `f${i}: ${mutation}(input:{pullRequestId:$pr, path:$${pathVar}}) { clientMutationId }`,
+        );
+      });
+      const query = `mutation(${varDecls.join(', ')}) {\n${fields.join('\n')}\n}`;
+      await this.graphql(BatchMutationResponse, query, variables);
     });
-    const query = `mutation(${varDecls.join(', ')}) {\n${fields.join('\n')}\n}`;
-    await this.graphql(BatchMutationResponse, query, variables);
   }
 
   async findPendingReview(
