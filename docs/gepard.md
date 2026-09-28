@@ -68,8 +68,8 @@
 - Any new comments and viewed state is prepared in local copy (timestamped on each entity), synced only on explicit button.
 - Comment references can be added by checking them, they get automatically appended to the text when syncing to github, empty newline separated.
 ### Controls
-- `Enter` - Toggle viewed state
-- `Up/Down` - navigate files in targeted list for review, skipping viewed\
+- `Space` - Toggle viewed state
+- `PageUp/PageDown` - navigate files in targeted list for review, skipping viewed\
 ### Styling
 - heavy use of styled components - all dedicated locally defined in React components (any duplication is sign of missing component)
 - default fonts

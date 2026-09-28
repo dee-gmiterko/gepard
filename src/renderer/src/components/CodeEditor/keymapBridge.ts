@@ -8,21 +8,21 @@ export function keymapBridge(getCommands: () => Commands): Extension {
   return Prec.high(
     keymap.of([
       {
-        key: 'Enter',
+        key: 'Space',
         run: () => {
           getCommands().toggleViewed()
           return true
         }
       },
       {
-        key: 'ArrowUp',
+        key: 'PageUp',
         run: () => {
           getCommands().prevFile()
           return true
         }
       },
       {
-        key: 'ArrowDown',
+        key: 'PageDown',
         run: () => {
           getCommands().nextFile()
           return true

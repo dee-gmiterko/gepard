@@ -11,17 +11,17 @@ export function useGlobalKeys(): void {
       if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
       const target = describeTarget(e.target)
       if (target && isTextEntryTarget(target)) return
-      if (e.key === 'Enter' && target && isInteractiveControlTarget(target)) return
+      if (e.key === ' ' && target && isInteractiveControlTarget(target)) return
 
       let acted: boolean
       switch (e.key) {
-        case 'Enter':
+        case ' ':
           acted = commands.toggleViewed()
           break
-        case 'ArrowDown':
+        case 'PageDown':
           acted = commands.nextFile()
           break
-        case 'ArrowUp':
+        case 'PageUp':
           acted = commands.prevFile()
           break
         default:
