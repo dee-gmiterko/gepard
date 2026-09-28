@@ -6,9 +6,9 @@ import { withLatestWins } from '../cancellation';
 import { ripgrepSearch, type RipgrepFileResult } from '../../helpers/process/ripgrep';
 import { identifierAt } from '../../helpers/string';
 import { indexer } from '../../lsp';
-import type { LanguageSession } from '../../lsp/session';
+import type { LanguageSession, WorkspaceSymbol } from '../../lsp/session';
 import { projectRepoDir } from '../../paths';
-import { isTargeted } from '@shared/model/paths';
+import { isTargeted } from '@gepard/common/model/paths';
 
 function staleShaError(requested: string, current: string): Error {
   const err = new Error(
@@ -25,15 +25,23 @@ function requireCurrentSha(projectId: string, sha: string): void {
   }
 }
 
-function requireSession(projectId: string): LanguageSession {
-  const session = indexer.session(projectId);
-  if (!session) {
-    throw new AppError(
-      'NO_LANGUAGE_SESSION',
-      'No language session is available for this project (still indexing, or no LSP extension matched any file)',
-    );
-  }
+function noLanguageSessionError(): AppError {
+  return new AppError(
+    'NO_LANGUAGE_SESSION',
+    'No language session is available for this project (still indexing, or no LSP extension matched any file)',
+  );
+}
+
+function requireSession(projectId: string, filePath: string): LanguageSession {
+  const session = indexer.session(projectId, filePath);
+  if (!session) throw noLanguageSessionError();
   return session;
+}
+
+function requireSessions(projectId: string): LanguageSession[] {
+  const sessions = indexer.sessions(projectId);
+  if (sessions.length === 0) throw noLanguageSessionError();
+  return sessions;
 }
 
 export function searchRunKey(input: {
@@ -65,7 +73,7 @@ export const searchHandlers: Pick<
       const targetedPaths = input.targetedPaths;
 
       if (input.kind === 'references') {
-        const session = requireSession(input.projectId);
+        const session = requireSession(input.projectId, input.at.path);
         const raw = await session.references(input.at.path, input.at.pos, token);
         const scoped =
           input.scope === 'targeted' ? raw.filter((f) => isTargeted(f.path, targetedPaths)) : raw;
@@ -159,7 +167,7 @@ export const searchHandlers: Pick<
       `symbols.line:${input.projectId}:${input.path}:${input.line}`,
       async ({ token }) => {
         requireCurrentSha(input.projectId, input.sha);
-        const session = requireSession(input.projectId);
+        const session = requireSession(input.projectId, input.path);
         const symbols = await session.lineSymbols(input.path, input.line, token);
         return { path: input.path, line: input.line, symbols };
       },
@@ -170,7 +178,7 @@ export const searchHandlers: Pick<
       `symbols.definition:${input.projectId}:${input.path}:${input.pos.line}:${input.pos.col}`,
       async ({ token }) => {
         requireCurrentSha(input.projectId, input.sha);
-        const session = requireSession(input.projectId);
+        const session = requireSession(input.projectId, input.path);
         const repoRoot = projectRepoDir(input.projectId);
         let symbol = '';
         try {
@@ -188,14 +196,22 @@ export const searchHandlers: Pick<
   'symbols.workspace': (input) =>
     withLatestWins(`symbols.workspace:${input.projectId}`, async ({ token }) => {
       requireCurrentSha(input.projectId, input.sha);
-      const session = requireSession(input.projectId);
-      return session.workspaceSymbols(input.query, input.limit ?? 50, token);
+      const sessions = requireSessions(input.projectId);
+      const limit = input.limit ?? 50;
+      const settled = await Promise.allSettled(
+        sessions.map((session) => session.workspaceSymbols(input.query, limit, token)),
+      );
+      const fulfilled = settled.filter(
+        (r): r is PromiseFulfilledResult<WorkspaceSymbol[]> => r.status === 'fulfilled',
+      );
+      if (fulfilled.length === 0) throw (settled[0] as PromiseRejectedResult).reason;
+      return fulfilled.flatMap((r) => r.value).slice(0, limit);
     }),
 
   'symbols.document': (input) =>
     withLatestWins(`symbols.document:${input.projectId}:${input.path}`, async ({ token }) => {
       requireCurrentSha(input.projectId, input.sha);
-      const session = requireSession(input.projectId);
+      const session = requireSession(input.projectId, input.path);
       const symbols = await session.documentSymbols(input.path, token);
       return { path: input.path, symbols };
     }),

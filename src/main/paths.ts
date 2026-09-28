@@ -1,6 +1,6 @@
 import { app } from 'electron';
 import { join } from 'node:path';
-import { ProjectId } from '@shared/ipc/schemas/project';
+import { ProjectId } from '@gepard/common/ipc/schemas/project';
 import { AppError } from './ipc/registry';
 
 export function userDataDir(): string {
@@ -52,11 +52,15 @@ export function userExtensionsDir(kind: ExtensionKindDir): string {
   return join(extensionsRootDir(), kind);
 }
 
-// Bundled main process code always runs from out/main (electron-vite dev
-// and build alike), so the app root is two directories up, whether that is
-// the repo root or a packaged app.asar.
 export function builtinExtensionsDir(kind: ExtensionKindDir): string {
-  return join(__dirname, '..', '..', 'extensions', kind);
+  const root = app.isPackaged
+    ? join(process.resourcesPath, 'extensions')
+    : join(app.getAppPath(), '..', '..', 'extensions');
+  return join(root, kind);
+}
+
+export function extensionDataDir(id: string): string {
+  return join(userDataDir(), 'extensions-data', encodeURIComponent(id));
 }
 
 export function extensionsFilesJsonPath(): string {

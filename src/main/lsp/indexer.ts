@@ -1,14 +1,27 @@
-import type { IndexStatus } from '@shared/ipc/schemas/lsp';
+import { mkdir } from 'node:fs/promises';
+import type { IndexStatus } from '@gepard/common/ipc/schemas/lsp';
 import { emit } from '../ipc/registry';
 import { log } from '../log';
 import { isNotifiableLevel, notifyMainFailure } from '../notify';
+import { extensionDataDir } from '../paths';
 import { startLineIndex, type LineIndexHandle } from '../services/line-index-manager';
 import { extensionRegistry } from '../extensions/registry';
-import { LspSession, type ExtensionEvents, type FileChange, type LanguageSession } from './session';
+import {
+  LspSession,
+  type ExtensionEvents,
+  type FileChange,
+  type LanguageExtension,
+  type LanguageSession,
+} from './session';
+
+interface LanguageEntry {
+  extension: LanguageExtension;
+  session: LanguageSession;
+}
 
 interface ProjectState {
   status: IndexStatus;
-  session: LanguageSession | null;
+  sessions: LanguageEntry[];
   lineIndex: LineIndexHandle | null;
   pendingIndexChanges: FileChange[];
   pendingSessionChanges: FileChange[];
@@ -45,12 +58,37 @@ function makeSink(projectId: string, extensionId: string, state: ProjectState): 
   };
 }
 
-async function disposeSession(projectId: string): Promise<void> {
-  const session = projects.get(projectId)?.session;
-  if (!session) return;
-  await session.dispose().catch((e: Error) => {
-    notifyMainFailure('lsp', `projectId=${projectId} dispose failed: ${e.message}`);
-  });
+async function disposeSessions(projectId: string, entries: LanguageEntry[]): Promise<void> {
+  await Promise.all(
+    entries.map(({ session }) =>
+      session.dispose().catch((e: Error) => {
+        notifyMainFailure('lsp', `projectId=${projectId} dispose failed: ${e.message}`);
+      }),
+    ),
+  );
+}
+
+async function startLanguageSession(
+  projectId: string,
+  state: ProjectState,
+  extension: LanguageExtension,
+  repoRoot: string,
+  files: string[],
+): Promise<LanguageEntry> {
+  const sink = makeSink(projectId, extension.id, state);
+  const dataDir = extensionDataDir(extension.id);
+  await mkdir(dataDir, { recursive: true });
+  const plan = await extension.resolve({ root: repoRoot }, { dataDir });
+  const session = await LspSession.start(plan, sink, (filePath) => extension.languageId(filePath));
+  // Language servers load a project on the first request for one of its
+  // files, and workspace/symbol returns nothing until then.
+  const probe = extension.warmupFile?.(files) ?? files.find((f) => extension.matches(f));
+  if (probe) {
+    await session.lineSymbols(probe, 1).catch((e: Error) => {
+      sink.log('warn', `project warm-up failed: ${e.message}`);
+    });
+  }
+  return { extension, session };
 }
 
 async function disposeLineIndex(projectId: string): Promise<void> {
@@ -66,16 +104,17 @@ export const indexer: {
   onCheckout(projectId: string, changes: FileChange[], newSha: string, fileCount: number): void;
   close(projectId: string): Promise<void>;
   status(projectId: string): IndexStatus;
-  session(projectId: string): LanguageSession | null;
+  session(projectId: string, filePath: string): LanguageSession | null;
+  sessions(projectId: string): LanguageSession[];
   lineIndex(projectId: string): LineIndexHandle | null;
   currentSha(projectId: string): string | null;
 } = {
   async open(projectId, repoRoot, files, head): Promise<void> {
-    await disposeSession(projectId);
+    await disposeSessions(projectId, projects.get(projectId)?.sessions ?? []);
     await disposeLineIndex(projectId);
     const state: ProjectState = {
       status: { state: 'indexing', phase: 'files', done: 0, total: files.length },
-      session: null,
+      sessions: [],
       lineIndex: null,
       pendingIndexChanges: [],
       pendingSessionChanges: [],
@@ -117,8 +156,8 @@ export const indexer: {
     const extensions = await extensionRegistry.enabledLanguageExtensions();
     if (!isCurrent(projectId, state)) return;
 
-    const extension = extensions.find((ext) => files.some((f) => ext.matches(f)));
-    if (!extension) {
+    const matching = extensions.filter((ext) => files.some((f) => ext.matches(f)));
+    if (matching.length === 0) {
       state.pendingSessionChanges = [];
       state.sessionUnavailable = true;
       setStatus(projectId, { state: 'idle' });
@@ -126,63 +165,65 @@ export const indexer: {
     }
 
     setStatus(projectId, { state: 'indexing', phase: 'language', done: 0 });
-    try {
-      const sink = makeSink(projectId, extension.id, state);
-      const plan = await extension.resolve({ root: repoRoot });
-      const session = await LspSession.start(plan, sink);
-      // Language servers load a project on the first request for one of its
-      // files, and workspace/symbol returns nothing until then.
-      const probe = files.find((f) => extension.matches(f) && !f.endsWith('.d.ts'));
-      if (probe) {
-        await session.lineSymbols(probe, 1).catch((e: Error) => {
-          sink.log('warn', `project warm-up failed: ${e.message}`);
-        });
-      }
-      if (!isCurrent(projectId, state)) {
-        await session.dispose().catch((e: Error) => {
-          notifyMainFailure(
-            'lsp',
-            `projectId=${projectId} stale session dispose failed: ${e.message}`,
-          );
-        });
+    const results = await Promise.allSettled(
+      matching.map((extension) =>
+        startLanguageSession(projectId, state, extension, repoRoot, files),
+      ),
+    );
+    const started: LanguageEntry[] = [];
+    const failures: string[] = [];
+    results.forEach((result, i) => {
+      if (result.status === 'fulfilled') {
+        started.push(result.value);
         return;
       }
-      state.session = session;
-      if (state.pendingSessionChanges.length > 0) {
-        session.filesChanged(state.pendingSessionChanges);
-        state.pendingSessionChanges = [];
-      }
-      log.info('lsp', `projectId=${projectId} extension=${extension.id} session started`);
-      setStatus(projectId, { state: 'idle' });
-    } catch (e) {
-      const message = (e as Error).message;
+      const message = (result.reason as Error).message;
+      failures.push(`${matching[i].displayName}: ${message}`);
       log.error(
         'lsp',
-        `projectId=${projectId} extension=${extension.id} session start failed: ${message}`,
+        `projectId=${projectId} extension=${matching[i].id} session start failed: ${message}`,
       );
-      if (!isCurrent(projectId, state)) return;
+    });
+
+    if (!isCurrent(projectId, state)) {
+      await disposeSessions(projectId, started);
+      return;
+    }
+    if (started.length === 0) {
       state.pendingSessionChanges = [];
       state.sessionUnavailable = true;
       setStatus(projectId, {
         state: 'error',
-        message: `language session failed to start: ${message}`,
+        message: `language session failed to start: ${failures.join('; ')}`,
       });
+      return;
     }
+
+    state.sessions = started;
+    if (state.pendingSessionChanges.length > 0) {
+      for (const { session } of started) session.filesChanged(state.pendingSessionChanges);
+      state.pendingSessionChanges = [];
+    }
+    for (const { extension } of started) {
+      log.info('lsp', `projectId=${projectId} extension=${extension.id} session started`);
+    }
+    setStatus(projectId, { state: 'idle' });
   },
 
   onCheckout(projectId, changes, newSha, fileCount): void {
     const state = projects.get(projectId);
     if (!state) return;
     state.latest = { sha: newSha, fileCount };
-    if (state.session) state.session.filesChanged(changes);
-    else if (!state.sessionUnavailable) state.pendingSessionChanges.push(...changes);
+    if (state.sessions.length > 0) {
+      for (const { session } of state.sessions) session.filesChanged(changes);
+    } else if (!state.sessionUnavailable) state.pendingSessionChanges.push(...changes);
     if (state.lineIndex) state.lineIndex.applyChanges(changes);
     else if (!state.lineIndexUnavailable) state.pendingIndexChanges.push(...changes);
     if (state.status.state === 'idle') setStatus(projectId, { state: 'idle' });
   },
 
   async close(projectId): Promise<void> {
-    await disposeSession(projectId).catch(() => {});
+    await disposeSessions(projectId, projects.get(projectId)?.sessions ?? []).catch(() => {});
     await disposeLineIndex(projectId).catch(() => {});
     projects.delete(projectId);
   },
@@ -191,8 +232,15 @@ export const indexer: {
     return projects.get(projectId)?.status ?? { state: 'indexing', phase: 'files', done: 0 };
   },
 
-  session(projectId: string): LanguageSession | null {
-    return projects.get(projectId)?.session ?? null;
+  session(projectId: string, filePath: string): LanguageSession | null {
+    return (
+      projects.get(projectId)?.sessions.find((entry) => entry.extension.matches(filePath))
+        ?.session ?? null
+    );
+  },
+
+  sessions(projectId: string): LanguageSession[] {
+    return projects.get(projectId)?.sessions.map((entry) => entry.session) ?? [];
   },
 
   lineIndex(projectId: string): LineIndexHandle | null {

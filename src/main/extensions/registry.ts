@@ -1,8 +1,8 @@
 import { cp, mkdir } from 'node:fs/promises';
 import * as path from 'node:path';
-import type { ExtensionInfo, ExtensionKind } from '@shared/ipc/schemas/extensions';
-import { ThemeTemplateData } from '@shared/ipc/schemas/theme';
-import { LocaleData } from '@shared/ipc/schemas/locale';
+import type { ExtensionInfo, ExtensionKind } from '@gepard/common/ipc/schemas/extensions';
+import { ThemeTemplateData } from '@gepard/common/ipc/schemas/theme';
+import { LocaleData } from '@gepard/common/ipc/schemas/locale';
 import { AppError } from '../ipc/registry';
 import { builtinExtensionsDir, userExtensionsDir, type ExtensionKindDir } from '../paths';
 import * as extensionsStore from '../store/extensions';
@@ -28,6 +28,7 @@ export function isLanguageExtension(value: unknown): value is LanguageExtension 
     v.id.length > 0 &&
     typeof v.displayName === 'string' &&
     isFn(v.matches) &&
+    isFn(v.languageId) &&
     isFn(v.resolve)
   );
 }
@@ -88,10 +89,15 @@ class KindRegistry<T> {
   constructor(
     private readonly spec: KindSpec<T>,
     private readonly overrideUserDir?: string,
+    private readonly overrideBuiltinDir?: string,
   ) {}
 
   private get userDir(): string {
     return this.overrideUserDir ?? userExtensionsDir(this.spec.dirName);
+  }
+
+  private get builtinDir(): string {
+    return this.overrideBuiltinDir ?? builtinExtensionsDir(this.spec.dirName);
   }
 
   private async rescan(enabledMap: settingsStore.ExtensionsState): Promise<void> {
@@ -99,7 +105,7 @@ class KindRegistry<T> {
     const knownMap = new Map(Object.entries(knownDirs));
 
     const builtinResult = await loadExtensionPackages(
-      builtinExtensionsDir(this.spec.dirName),
+      this.builtinDir,
       this.spec.kind,
       this.spec.isValid,
       this.builtinScanCache,
@@ -221,12 +227,18 @@ export class ExtensionRegistry {
   private readonly theme: KindRegistry<ThemeTemplateData>;
   private readonly locale: KindRegistry<LocaleData>;
 
-  constructor(overrideUserRootDir?: string) {
-    const overrideDir = (dirName: ExtensionKindDir): string | undefined =>
-      overrideUserRootDir ? path.join(overrideUserRootDir, dirName) : undefined;
-    this.lsp = new KindRegistry(LSP_SPEC, overrideDir(LSP_SPEC.dirName));
-    this.theme = new KindRegistry(THEME_SPEC, overrideDir(THEME_SPEC.dirName));
-    this.locale = new KindRegistry(LOCALE_SPEC, overrideDir(LOCALE_SPEC.dirName));
+  constructor(overrideUserRootDir?: string, overrideBuiltinRootDir?: string) {
+    const override = (root: string | undefined, dirName: ExtensionKindDir): string | undefined =>
+      root ? path.join(root, dirName) : undefined;
+    const registryFor = <T>(spec: KindSpec<T>): KindRegistry<T> =>
+      new KindRegistry(
+        spec,
+        override(overrideUserRootDir, spec.dirName),
+        override(overrideBuiltinRootDir, spec.dirName),
+      );
+    this.lsp = registryFor(LSP_SPEC);
+    this.theme = registryFor(THEME_SPEC);
+    this.locale = registryFor(LOCALE_SPEC);
   }
 
   async list(): Promise<ExtensionInfo[]> {

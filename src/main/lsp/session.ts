@@ -18,12 +18,12 @@ import {
   Pos as PosSchema,
   Range as RangeSchema,
   SymbolKind as SymbolKindSchema,
-} from '@shared/ipc/schemas/search';
+} from '@gepard/common/ipc/schemas/search';
 import {
   DefinitionTarget as DefinitionTargetSchema,
   LineSymbol as LineSymbolSchema,
-} from '@shared/ipc/schemas/lsp';
-import type { IndexStatus, DocumentSymbol } from '@shared/ipc/schemas/lsp';
+} from '@gepard/common/ipc/schemas/lsp';
+import type { IndexStatus, DocumentSymbol } from '@gepard/common/ipc/schemas/lsp';
 
 export type LineSymbol = ReturnType<typeof LineSymbolSchema.parse>;
 export type FileMatches = ReturnType<typeof FileMatchesSchema.parse>;
@@ -47,11 +47,17 @@ export interface ExtensionEvents {
   log(level: 'info' | 'warn' | 'error', msg: string): void;
 }
 
+export interface ExtensionHost {
+  dataDir: string;
+}
+
 export interface LanguageExtension {
   id: string;
   displayName: string;
   matches(filePath: string): boolean;
-  resolve(project: { root: string }): Promise<LaunchPlan>;
+  languageId(filePath: string): string;
+  warmupFile?(files: string[]): string | undefined;
+  resolve(project: { root: string }, host: ExtensionHost): Promise<LaunchPlan>;
 }
 
 export interface FileChange {
@@ -113,14 +119,6 @@ const STANDARD_TOKEN_MODIFIERS = [
   'defaultLibrary',
 ];
 const KNOWN_MODIFIERS = new Set(['declaration', 'readonly', 'static', 'async', 'defaultLibrary']);
-
-function languageIdFor(filePath: string): string {
-  if (filePath.endsWith('.tsx')) return 'typescriptreact';
-  if (filePath.endsWith('.jsx')) return 'javascriptreact';
-  if (filePath.endsWith('.mjs') || filePath.endsWith('.cjs') || filePath.endsWith('.js'))
-    return 'javascript';
-  return 'typescript';
-}
 
 function mapSemanticTokenType(type: string | undefined, readonly: boolean): SymbolKind {
   switch (type) {
@@ -212,8 +210,7 @@ function toRange(r: LspRange): Range {
 }
 
 // textDocument/documentSymbol replies with hierarchical DocumentSymbol[] when
-// the server supports it (the TypeScript native LSP does), or falls back to
-// flat SymbolInformation[] otherwise.
+// the server supports it, or falls back to flat SymbolInformation[] otherwise.
 interface LspDocumentSymbol {
   name: string;
   kind: number;
@@ -294,10 +291,15 @@ export class LspSession implements LanguageSession {
   private constructor(
     private readonly plan: LaunchPlan,
     private readonly sink: ExtensionEvents,
+    private readonly languageId: (filePath: string) => string,
   ) {}
 
-  static async start(plan: LaunchPlan, sink: ExtensionEvents): Promise<LspSession> {
-    const session = new LspSession(plan, sink);
+  static async start(
+    plan: LaunchPlan,
+    sink: ExtensionEvents,
+    languageId: (filePath: string) => string,
+  ): Promise<LspSession> {
+    const session = new LspSession(plan, sink, languageId);
     await session.launch();
     return session;
   }
@@ -502,7 +504,7 @@ export class LspSession implements LanguageSession {
         const text = await readFile(filePath, 'utf8');
         const uri = pathToFileURL(filePath).toString();
         await this.conn.sendNotification('textDocument/didOpen', {
-          textDocument: { uri, languageId: languageIdFor(filePath), version: 1, text },
+          textDocument: { uri, languageId: this.languageId(filePath), version: 1, text },
         });
         try {
           return await fn(text);
