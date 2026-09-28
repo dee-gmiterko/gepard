@@ -9,7 +9,10 @@ import type {
 
 export type { LineIndexFileChange }
 
-// electron.vite.config.ts emits line-index-worker.js next to index.js.
+// electron-vite's main build keeps the "es" format's default .js extension
+// (package.json "type": "module" makes Node treat it as ESM); only preload
+// output is forced to .mjs, since Electron picks preload's module system by
+// file extension rather than by package.json.
 const WORKER_ENTRY = join(__dirname, 'line-index-worker.js')
 
 export interface LineIndexHandle {
