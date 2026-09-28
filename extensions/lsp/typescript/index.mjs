@@ -1,28 +1,54 @@
-import { createRequire } from 'node:module';
+import { access, mkdir, readFile, rename, rm } from 'node:fs/promises';
 import * as path from 'node:path';
-
-const require = createRequire(import.meta.url);
+import { fileURLToPath } from 'node:url';
+import { unpackPayload } from './payload.mjs';
 
 const TS_EXTENSIONS = /\.(tsx?|mts|cts|jsx?|mjs|cjs)$/;
 
-function bundledNativeExe() {
-  const platformPkg = `@typescript/typescript-${process.platform}-${process.arch}`;
-  let pkgJsonPath;
+const TARGET = `${process.platform}-${process.arch}`;
+const VENDOR_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'vendor', TARGET);
+const EXE_NAME = process.platform === 'win32' ? 'tsc.exe' : 'tsc';
+
+function languageId(filePath) {
+  if (filePath.endsWith('.tsx')) return 'typescriptreact';
+  if (filePath.endsWith('.jsx')) return 'javascriptreact';
+  if (/\.(mjs|cjs|js)$/.test(filePath)) return 'javascript';
+  return 'typescript';
+}
+
+async function exists(file) {
   try {
-    pkgJsonPath = require.resolve(`${platformPkg}/package.json`);
+    await access(file);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function materialize(dataDir) {
+  let version;
+  try {
+    version = (await readFile(path.join(VENDOR_DIR, 'version.txt'), 'utf8')).trim();
   } catch (e) {
     throw new Error(
-      `Bundled TypeScript native binary not found (${platformPkg} is not installed). ` +
-        `It is an optionalDependency of extensions/lsp/typescript/package.json. (${e.message})`,
+      `Bundled TypeScript payload for ${TARGET} not found; run the extension's vendor step (${e.message})`,
     );
   }
-  const exe = path.join(
-    path.dirname(pkgJsonPath),
-    'lib',
-    process.platform === 'win32' ? 'tsc.exe' : 'tsc',
-  );
-  // Electron cannot execute binaries from inside an asar archive.
-  return exe.includes('app.asar') ? exe.replace('app.asar', 'app.asar.unpacked') : exe;
+  const dir = path.join(dataDir, `${version}-${TARGET}`);
+  const exe = path.join(dir, EXE_NAME);
+  if (await exists(exe)) return exe;
+
+  await mkdir(dataDir, { recursive: true });
+  const tmp = `${dir}.tmp-${process.pid}`;
+  await rm(tmp, { recursive: true, force: true });
+  await unpackPayload(await readFile(path.join(VENDOR_DIR, 'payload.bin')), tmp);
+  try {
+    await rename(tmp, dir);
+  } catch (e) {
+    await rm(tmp, { recursive: true, force: true });
+    if (!(await exists(exe))) throw e;
+  }
+  return exe;
 }
 
 export default {
@@ -31,9 +57,13 @@ export default {
   matches(filePath) {
     return TS_EXTENSIONS.test(filePath);
   },
-  async resolve(project) {
+  languageId,
+  warmupFile(files) {
+    return files.find((f) => TS_EXTENSIONS.test(f) && !f.endsWith('.d.ts'));
+  },
+  async resolve(project, host) {
     return {
-      command: bundledNativeExe(),
+      command: await materialize(host.dataDir),
       args: ['--lsp', '--stdio'],
       cwd: project.root,
     };

@@ -7,12 +7,25 @@
   "gepard": {
     "type": "lsp"
   },
-  "optionalDependencies": {
+  "scripts": {
+    "vendor": "node vendor.mjs",
+    "postinstall": "node vendor.mjs",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@gepard/eslint-config": "workspace:*",
     "@typescript/typescript-darwin-arm64": "7.0.2",
     "@typescript/typescript-darwin-x64": "7.0.2",
     "@typescript/typescript-linux-arm64": "7.0.2",
     "@typescript/typescript-linux-x64": "7.0.2",
     "@typescript/typescript-win32-arm64": "7.0.2",
-    "@typescript/typescript-win32-x64": "7.0.2"
+    "@typescript/typescript-win32-x64": "7.0.2",
+    "eslint": "9.39.5",
+    "prettier": "3.9.9",
+    "vite": "7.3.6",
+    "vitest": "5.0.2"
   }
 }
