@@ -34,7 +34,7 @@
 ### Main window
 - Header panel - targeting:
 	- series of fuzzy search select boxes entering: PR, commit, path
-		- path accepts a folder prefix or a glob; the select suggests folders
+		- path accepts a glob, a folder prefix, an exact file, or a substring anywhere in the path; the select suggests folders
 		- path filters live as-you-type (each keystroke updates the target and narrows navigation), not only on Enter/selection
 	- `+` next to the PR select opens a New PR modal: base and head branch, title, description; creates the PR immediately and targets it
 	- Toggle for the file comments/right panel: shown whenever a PR is targeted and the active file is a changed file.

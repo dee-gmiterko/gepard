@@ -23,7 +23,8 @@ export function staticPrefixOf(target: string): string {
 }
 
 export function matchesTarget(path: string, target: string): boolean {
-  return isGlob(target) ? globToRegExp(target).test(path) : isWithin(path, target);
+  if (isGlob(target)) return globToRegExp(target).test(path);
+  return isWithin(path, target) || path.includes(target);
 }
 
 export function isTargeted(path: string, targetedPaths: readonly string[]): boolean {

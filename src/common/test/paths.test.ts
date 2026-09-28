@@ -104,6 +104,14 @@ describe('matchesTarget (the shared matcher)', () => {
     expect(matchesTarget('src/c.ts', 'src/[^ab].ts')).toBe(true);
     expect(matchesTarget('src/a.ts', 'src/[^ab].ts')).toBe(false);
   });
+
+  it('falls back to a substring match anywhere in the path for plain text', () => {
+    expect(matchesTarget('src/components/Button.tsx', 'Button.tsx')).toBe(true);
+    expect(matchesTarget('src/renderer/src/helpers/paths.ts', 'helpers')).toBe(true);
+    expect(matchesTarget('a/internal-other/b.ts', 'internal')).toBe(true);
+    expect(matchesTarget('src-extra/b.ts', 'src')).toBe(true);
+    expect(matchesTarget('src/a.ts', 'zzz')).toBe(false);
+  });
 });
 
 describe('staticPrefixOf', () => {

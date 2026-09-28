@@ -158,10 +158,10 @@ describe('filterPrsByPath', () => {
     expect(filterPrsByPath(prs, filesByNumber, 'internal')).toHaveLength(1);
   });
 
-  it('does not match a sibling directory with the same prefix', () => {
+  it('matches a sibling directory with the same prefix via the substring fallback', () => {
     const prs = [pr(1)];
     const filesByNumber = new Map<number, string[]>([[1, ['internal-other/x.go']]]);
-    expect(filterPrsByPath(prs, filesByNumber, 'internal')).toHaveLength(0);
+    expect(filterPrsByPath(prs, filesByNumber, 'internal')).toHaveLength(1);
   });
 
   it('drops a PR with no known files (missing from the files map)', () => {
