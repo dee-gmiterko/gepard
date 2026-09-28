@@ -40,10 +40,6 @@ const messages = defineMessages({
     id: 'settings.keybindings.reset',
     defaultMessage: 'Reset {name} to default',
   },
-  customized: {
-    id: 'settings.keybindings.customized',
-    defaultMessage: 'Customized',
-  },
   conflict: {
     id: 'settings.keybindings.conflict',
     defaultMessage: 'Also used by {name}',
@@ -173,12 +169,7 @@ export function KeybindingsPanel(): React.JSX.Element {
                     <FormattedMessage {...messages.listening} />
                   </ListeningKey>
                 ) : (
-                  <>
-                    {isCustom && (
-                      <Badge $tone="muted">{intl.formatMessage(messages.customized)}</Badge>
-                    )}
-                    <Key>{isCustom ? keyLabel(key) : binding.keyLabel}</Key>
-                  </>
+                  <Key>{isCustom ? keyLabel(key) : binding.keyLabel}</Key>
                 )}
                 {isCustom && !isListening && (
                   <IconButton

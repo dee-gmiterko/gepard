@@ -183,7 +183,6 @@
   "settings.extensions.loading": "Loading extensions…",
   "settings.extensions.title": "Extensions",
   "settings.keybindings.conflict": "Also used by {name}",
-  "settings.keybindings.customized": "Customized",
   "settings.keybindings.hint": "Click \"Rebind\" and press a key. Escape cancels.",
   "settings.keybindings.listening": "Press a key…",
   "settings.keybindings.rebind": "Rebind",
