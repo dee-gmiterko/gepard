@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  collectPendingGeneralReplies,
   composeBody,
   countPendingChanges,
   groupPendingByCommit,
@@ -12,6 +13,7 @@ import type {
   RemoteViewedFile,
   ReviewThread
 } from '@shared/ipc/schemas/comment'
+import { generalCommentAnchor } from '@shared/ipc/schemas/comment'
 
 function makeComment(overrides: Partial<Comment> & { id: string }): Comment {
   return {
@@ -198,6 +200,125 @@ describe('mergeThreads', () => {
     expect(result.find((t) => t.id === 'PRRT_gone')).toBeUndefined()
     const kept = result.find((t) => t.id === 'PRRT_pending')!
     expect(kept.local).toEqual({ status: 'deleted', updatedAt: '2024-01-01T00:00:00Z' })
+  })
+})
+
+describe('mergeThreads with a general (anchor-less) PR comment', () => {
+  it('keeps a not-yet-pushed general comment, anchor-agnostic like any other thread', () => {
+    const draft = makeThread({
+      id: 'local:general-1',
+      anchor: generalCommentAnchor(),
+      local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z' },
+      comments: [
+        makeComment({
+          id: 'local:general-comment',
+          local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z', references: [] }
+        })
+      ]
+    })
+    const result = mergeThreads([draft], [])
+    expect(result).toEqual([draft])
+  })
+
+  it('counts a pending general comment the same way as a pending review thread', () => {
+    const draft = makeThread({
+      id: 'local:general-1',
+      anchor: generalCommentAnchor(),
+      local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z' },
+      comments: [
+        makeComment({
+          id: 'local:general-comment',
+          local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z', references: [] }
+        })
+      ]
+    })
+    expect(
+      countPendingChanges({
+        threads: [draft],
+        viewed: [],
+        pendingReviewId: null,
+        lastSuccessfulSyncAt: null
+      })
+    ).toBe(1)
+  })
+})
+
+describe('collectPendingGeneralReplies', () => {
+  it('collects a still-new non-root comment on a general thread, but not its (already-synced) root', () => {
+    const thread = makeThread({
+      id: 'IC_root',
+      anchor: generalCommentAnchor(),
+      comments: [
+        makeComment({ id: 'IC_root' }),
+        makeComment({
+          id: 'local:reply-1',
+          local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z', references: [] }
+        })
+      ]
+    })
+
+    const pending = collectPendingGeneralReplies([thread])
+
+    expect(pending).toHaveLength(1)
+    expect(pending[0].comment.id).toBe('local:reply-1')
+    expect(pending[0].thread).toBe(thread)
+  })
+
+  it('also collects new replies on a not-yet-pushed general thread', () => {
+    const thread = makeThread({
+      id: 'local:general-1',
+      anchor: generalCommentAnchor(),
+      local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z' },
+      comments: [
+        makeComment({
+          id: 'local:root',
+          local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z', references: [] }
+        }),
+        makeComment({
+          id: 'local:reply-1',
+          local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z', references: [] }
+        })
+      ]
+    })
+
+    expect(collectPendingGeneralReplies([thread]).map((p) => p.comment.id)).toEqual([
+      'local:reply-1'
+    ])
+  })
+
+  it('ignores replies on non-general (file-anchored) threads', () => {
+    const thread = makeThread({
+      id: 'PRRT_1',
+      comments: [
+        makeComment({ id: 'root' }),
+        makeComment({
+          id: 'local:reply-1',
+          local: { status: 'new', updatedAt: '2024-01-01T00:00:00Z', references: [] }
+        })
+      ]
+    })
+
+    expect(collectPendingGeneralReplies([thread])).toEqual([])
+  })
+
+  it('ignores edited or deleted (not new) comments on a general thread', () => {
+    const thread = makeThread({
+      id: 'IC_root',
+      anchor: generalCommentAnchor(),
+      comments: [
+        makeComment({ id: 'IC_root' }),
+        makeComment({
+          id: 'IC_edited-reply',
+          local: { status: 'edited', updatedAt: '2024-01-01T00:00:00Z', references: [] }
+        }),
+        makeComment({
+          id: 'IC_deleted-reply',
+          local: { status: 'deleted', updatedAt: '2024-01-01T00:00:00Z', references: [] }
+        })
+      ]
+    })
+
+    expect(collectPendingGeneralReplies([thread])).toEqual([])
   })
 })
 

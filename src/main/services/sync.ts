@@ -6,12 +6,14 @@ import * as review from '../store/review'
 import { nowIso, withReviewLock, type ReviewStoreFile } from '../store/review'
 import type {
   Comment,
+  GqlIssueCommentRaw,
   GqlReviewCommentRaw,
   GqlReviewThreadRaw,
   LocalViewedState,
   RemoteViewedFile,
   ReviewThread
 } from '@shared/ipc/schemas/comment'
+import { generalCommentAnchor } from '@shared/ipc/schemas/comment'
 
 function mapComment(raw: GqlReviewCommentRaw, threadId: string): Comment {
   return {
@@ -53,6 +55,33 @@ function mapThread(raw: GqlReviewThreadRaw, prId: string): ReviewThread {
     isResolved: raw.isResolved,
     isOutdated: raw.isOutdated,
     comments
+  }
+}
+
+function mapGeneralComment(raw: GqlIssueCommentRaw, prId: string): ReviewThread {
+  // A general PR comment has no thread of its own on GitHub.
+  const comment: Comment = {
+    id: raw.id,
+    threadId: raw.id,
+    reviewId: null,
+    reviewState: null,
+    author: raw.author ? { login: raw.author.login } : { login: 'ghost' },
+    body: raw.body,
+    createdAt: raw.createdAt,
+    updatedAt: raw.updatedAt,
+    lastEditedAt: raw.lastEditedAt,
+    replyToId: null,
+    outdated: false,
+    viewerDidAuthor: raw.viewerDidAuthor,
+    viewerCanDelete: raw.viewerCanDelete
+  }
+  return {
+    id: raw.id,
+    prId,
+    anchor: generalCommentAnchor(),
+    isResolved: false,
+    isOutdated: false,
+    comments: [comment]
   }
 }
 
@@ -184,11 +213,13 @@ async function pushDeletions(
   let pushedCount = 0
   let goneRemotely = 0
   for (const thread of [...store.threads]) {
+    const isGeneral = thread.anchor.subjectType === 'PR'
     if (thread.local?.status === 'deleted') {
       const root = thread.comments[0]
       if (!root) throw new AppError('STORE_CORRUPT', `thread ${thread.id} has no root comment`)
       try {
-        await gh.deleteReviewComment(root.id)
+        if (isGeneral) await gh.deleteGeneralComment(root.id)
+        else await gh.deleteReviewComment(root.id)
         pushedCount++
       } catch (e) {
         if (!isRemoteNotFoundError(e)) throw e
@@ -201,7 +232,8 @@ async function pushDeletions(
     for (const comment of [...thread.comments]) {
       if (comment.local?.status !== 'deleted') continue
       try {
-        await gh.deleteReviewComment(comment.id)
+        if (isGeneral) await gh.deleteGeneralComment(comment.id)
+        else await gh.deleteReviewComment(comment.id)
         pushedCount++
       } catch (e) {
         if (!isRemoteNotFoundError(e)) throw e
@@ -222,11 +254,14 @@ async function pushEdits(
   let pushedCount = 0
   let goneRemotely = 0
   for (const thread of [...store.threads]) {
+    const isGeneral = thread.anchor.subjectType === 'PR'
     for (const comment of [...thread.comments]) {
       if (comment.local?.status !== 'edited') continue
       const body = composeBody(comment)
       try {
-        const result = await gh.updateReviewComment(comment.id, body)
+        const result = isGeneral
+          ? await gh.updateGeneralComment(comment.id, body)
+          : await gh.updateReviewComment(comment.id, body)
         comment.body = body
         comment.updatedAt = result.updatedAt
         comment.lastEditedAt = result.lastEditedAt
@@ -245,6 +280,73 @@ async function pushEdits(
     }
   }
   return { pushedCount, goneRemotely }
+}
+
+// GitHub's IssueComment (a general PR comment) has no reply target: unlike a
+// review thread, there is nothing on GitHub's side to nest a reply under.
+// A locally-drafted "reply" to a general comment is only a local grouping
+// convenience, so once pushed it becomes its own independent, top-level PR
+// comment - exactly like a fresh general comment.
+export function collectPendingGeneralReplies(
+  threads: ReviewThread[]
+): { thread: ReviewThread; comment: Comment }[] {
+  const pending: { thread: ReviewThread; comment: Comment }[] = []
+  for (const thread of threads) {
+    if (thread.anchor.subjectType !== 'PR') continue
+    const root = thread.comments[0]
+    for (const comment of thread.comments) {
+      if (comment === root || comment.local?.status !== 'new') continue
+      pending.push({ thread, comment })
+    }
+  }
+  return pending
+}
+
+// General PR comments post immediately, with no pending review to batch
+// them into, unlike a new review thread.
+async function pushGeneralComments(
+  projectId: string,
+  pr: number,
+  store: ReviewStoreFile,
+  prId: string
+): Promise<number> {
+  let pushedCount = 0
+  for (const thread of store.threads) {
+    if (thread.anchor.subjectType !== 'PR' || thread.local?.status !== 'new') continue
+    const root = thread.comments[0]
+    if (!root) throw new AppError('STORE_CORRUPT', `thread ${thread.id} has no root comment`)
+    const body = composeBody(root)
+    const result = await gh.addGeneralComment(prId, body)
+    const oldThreadId = thread.id
+    thread.id = result.id
+    thread.local = undefined
+    root.id = result.id
+    root.threadId = thread.id
+    root.createdAt = result.createdAt
+    root.updatedAt = result.updatedAt
+    root.body = body
+    root.local = undefined
+    for (const c of thread.comments) {
+      if (c.threadId === oldThreadId) c.threadId = thread.id
+    }
+    pushedCount++
+    await review.saveReview(projectId, pr, store)
+  }
+
+  for (const { thread, comment } of collectPendingGeneralReplies(store.threads)) {
+    const body = composeBody(comment)
+    const result = await gh.addGeneralComment(prId, body)
+    comment.id = result.id
+    comment.createdAt = result.createdAt
+    comment.updatedAt = result.updatedAt
+    comment.body = body
+    comment.local = undefined
+    thread.comments = thread.comments.filter((c) => c !== comment)
+    pushedCount++
+    await review.saveReview(projectId, pr, store)
+  }
+
+  return pushedCount
 }
 
 export interface PendingGroup {
@@ -415,7 +517,10 @@ async function pushComments(
   pushedCount += edits.pushedCount
   goneRemotely += edits.goneRemotely
 
-  const groups = groupPendingByCommit(store.threads, headRefOid)
+  pushedCount += await pushGeneralComments(projectId, pr, store, prId)
+
+  const reviewThreads = store.threads.filter((t) => t.anchor.subjectType !== 'PR')
+  const groups = groupPendingByCommit(reviewThreads, headRefOid)
   for (const group of groups) {
     pushedCount += await pushGroup(projectId, pr, owner, repo, prNumber, store, prId, group)
   }
@@ -495,11 +600,15 @@ async function runSyncLocked(
     }
   }
 
-  const [threadsResult, viewedResult] = await Promise.all([
+  const [threadsResult, generalResult, viewedResult] = await Promise.all([
     gh.fetchReviewThreads(ctx.owner, ctx.repo, pr),
+    gh.fetchGeneralComments(ctx.owner, ctx.repo, pr),
     gh.fetchViewedFiles(ctx.owner, ctx.repo, pr)
   ])
-  const remoteThreads = threadsResult.threads.map((t) => mapThread(t, threadsResult.prId))
+  const remoteThreads = [
+    ...threadsResult.threads.map((t) => mapThread(t, threadsResult.prId)),
+    ...generalResult.comments.map((c) => mapGeneralComment(c, generalResult.prId))
+  ]
   const mergedThreads = mergeThreads(store.threads, remoteThreads)
   const mergedViewed = mergeViewed(
     store.viewed,

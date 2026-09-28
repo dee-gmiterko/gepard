@@ -15,6 +15,7 @@ import {
 } from '@shared/ipc/schemas/pr'
 import {
   GqlError,
+  GqlIssueCommentRaw,
   GqlPageInfo,
   GqlReviewCommentRaw,
   GqlReviewThreadRaw,
@@ -364,8 +365,6 @@ export function matchesPrSearch(pr: PrListItem, search: string): boolean {
   )
 }
 
-// Bounds how many `gh pr view` processes run at once for a commit that
-// belongs to many PRs.
 const PR_VIEW_CONCURRENCY = 5
 
 async function mapWithConcurrency<T, R>(
@@ -1020,4 +1019,137 @@ mutation($reviewId:ID!, $body:String) {
 
 export async function submitReview(reviewId: string, body?: string): Promise<void> {
   await graphql(SubmitReviewResponse, SUBMIT_REVIEW_QUERY, { reviewId, body: body ?? null })
+}
+
+const GENERAL_COMMENT_FIELDS = `
+  id
+  author { login }
+  body createdAt updatedAt lastEditedAt
+  viewerDidAuthor viewerCanDelete
+`
+
+const GeneralCommentsPage = z.object({
+  data: z.object({
+    repository: z.object({
+      pullRequest: z.object({
+        id: NodeId,
+        comments: z.object({ pageInfo: GqlPageInfo, nodes: z.array(GqlIssueCommentRaw) })
+      })
+    })
+  }),
+  errors: z.array(GqlError).optional()
+})
+
+const GENERAL_COMMENTS_QUERY = `
+query($owner:String!, $name:String!, $number:Int!, $endCursor:String) {
+  repository(owner:$owner, name:$name) {
+    pullRequest(number:$number) {
+      id
+      comments(first:50, after:$endCursor) {
+        pageInfo { hasNextPage endCursor }
+        nodes { ${GENERAL_COMMENT_FIELDS} }
+      }
+    }
+  }
+}`
+
+export interface GeneralCommentsResult {
+  prId: string
+  comments: GqlIssueCommentRaw[]
+}
+
+// General PR comments (IssueComments) are a separate connection from
+// `reviewThreads`, with no path/line/side and no review/pending state.
+export async function fetchGeneralComments(
+  owner: string,
+  repo: string,
+  number: number
+): Promise<GeneralCommentsResult> {
+  const comments: GqlIssueCommentRaw[] = []
+  let prId = ''
+  let cursor: string | null = null
+  for (;;) {
+    const page = await graphql(GeneralCommentsPage, GENERAL_COMMENTS_QUERY, {
+      owner,
+      name: repo,
+      number,
+      endCursor: cursor
+    })
+    const pr = page.data.repository.pullRequest
+    prId = pr.id
+    comments.push(...pr.comments.nodes)
+    if (!pr.comments.pageInfo.hasNextPage) break
+    cursor = pr.comments.pageInfo.endCursor
+  }
+  return { prId, comments }
+}
+
+const AddGeneralCommentResponse = z.object({
+  data: z.object({
+    addComment: z
+      .object({ commentEdge: z.object({ node: GqlIssueCommentRaw }).nullable() })
+      .nullable()
+  }),
+  errors: z.array(GqlError).optional()
+})
+
+const ADD_GENERAL_COMMENT_QUERY = `
+mutation($subjectId:ID!, $body:String!) {
+  addComment(input:{ subjectId:$subjectId, body:$body }) {
+    commentEdge { node { ... on IssueComment { ${GENERAL_COMMENT_FIELDS} } } }
+  }
+}`
+
+export async function addGeneralComment(prId: string, body: string): Promise<GqlIssueCommentRaw> {
+  const res = await graphql(AddGeneralCommentResponse, ADD_GENERAL_COMMENT_QUERY, {
+    subjectId: prId,
+    body
+  })
+  const node = res.data.addComment?.commentEdge?.node
+  if (!node) throw new AppError('GRAPHQL_ERROR', 'addComment returned no comment')
+  return node
+}
+
+const UpdateGeneralCommentResponse = z.object({
+  data: z.object({
+    updateIssueComment: z.object({
+      issueComment: z.object({ id: NodeId, updatedAt: IsoDate, lastEditedAt: IsoDate.nullable() })
+    })
+  }),
+  errors: z.array(GqlError).optional()
+})
+
+const UPDATE_GENERAL_COMMENT_QUERY = `
+mutation($id:ID!, $body:String!) {
+  updateIssueComment(input:{ id:$id, body:$body }) {
+    issueComment { id updatedAt lastEditedAt }
+  }
+}`
+
+export async function updateGeneralComment(
+  commentId: string,
+  body: string
+): Promise<UpdatedComment> {
+  const res = await graphql(UpdateGeneralCommentResponse, UPDATE_GENERAL_COMMENT_QUERY, {
+    id: commentId,
+    body
+  })
+  const c = res.data.updateIssueComment.issueComment
+  return { updatedAt: c.updatedAt, lastEditedAt: c.lastEditedAt }
+}
+
+const DeleteGeneralCommentResponse = z.object({
+  data: z.object({
+    deleteIssueComment: z.object({ clientMutationId: z.string().nullable() }).nullable()
+  }),
+  errors: z.array(GqlError).optional()
+})
+
+const DELETE_GENERAL_COMMENT_QUERY = `
+mutation($id:ID!) {
+  deleteIssueComment(input:{id:$id}) { clientMutationId }
+}`
+
+export async function deleteGeneralComment(commentId: string): Promise<void> {
+  await graphql(DeleteGeneralCommentResponse, DELETE_GENERAL_COMMENT_QUERY, { id: commentId })
 }

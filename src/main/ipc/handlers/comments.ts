@@ -3,9 +3,6 @@ import { AppError } from '../registry'
 import * as git from '../../services/git'
 import * as review from '../../store/review'
 
-// The caller supplies the targeted PR's node id (from its own PR summary);
-// falling back to a previously synced copy keeps this a local, offline-safe
-// lookup rather than a `gh` call.
 async function resolvePrId(
   projectId: string,
   pr: number,
@@ -28,19 +25,24 @@ export const commentsHandlers: Pick<
   'comments.list': ({ projectId, pr }) => review.listThreads(projectId, pr),
 
   'comments.upsert': async (draft) => {
-    const { projectId, pr, id, threadId, anchor, body, references, prId } = draft
-    const isNewThread = id === null && threadId === null && anchor !== null
+    const { projectId, pr, id, threadId, anchor, general, body, references, prId } = draft
+    const isNewThread = id === null && threadId === null && (anchor !== null || general)
 
     let ctx: review.UpsertContext = { prId: '', commitOid: '' }
     if (isNewThread) {
-      const [{ head: commitOid }, resolvedPrId] = await Promise.all([
-        git.workingTree(projectId),
-        resolvePrId(projectId, pr, prId)
-      ])
+      const resolvedPrId = await resolvePrId(projectId, pr, prId)
+      const commitOid = anchor !== null ? (await git.workingTree(projectId)).head : ''
       ctx = { prId: resolvedPrId, commitOid }
     }
 
-    return review.upsertLocalComment(projectId, pr, ctx, { id, threadId, anchor, body, references })
+    return review.upsertLocalComment(projectId, pr, ctx, {
+      id,
+      threadId,
+      anchor,
+      general,
+      body,
+      references
+    })
   },
 
   'comments.delete': ({ projectId, pr, commentId }) =>

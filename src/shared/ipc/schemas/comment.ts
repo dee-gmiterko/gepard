@@ -77,6 +77,21 @@ export const Anchor = z.object({
 })
 export type Anchor = z.infer<typeof Anchor>
 
+export function generalCommentAnchor(): Anchor {
+  return {
+    path: '',
+    subjectType: 'PR',
+    side: 'RIGHT',
+    line: null,
+    startLine: null,
+    startSide: null,
+    originalLine: null,
+    originalStartLine: null,
+    commitOid: null,
+    originalCommitOid: null
+  }
+}
+
 export const ReviewThread = z.object({
   id: NodeId,
   prId: NodeId,
@@ -146,6 +161,20 @@ export const GqlReviewThreadRaw = z.object({
 })
 export type GqlReviewThreadRaw = z.infer<typeof GqlReviewThreadRaw>
 
+// GitHub's IssueComment: a general PR conversation comment, not tied to a
+// file/line and not part of a review.
+export const GqlIssueCommentRaw = z.object({
+  id: NodeId,
+  author: z.object({ login: z.string().min(1) }).nullable(),
+  body: z.string(),
+  createdAt: IsoDate,
+  updatedAt: IsoDate,
+  lastEditedAt: IsoDate.nullable(),
+  viewerDidAuthor: z.boolean(),
+  viewerCanDelete: z.boolean()
+})
+export type GqlIssueCommentRaw = z.infer<typeof GqlIssueCommentRaw>
+
 export const GqlReviewThreadsPage = z.object({
   data: z.object({
     repository: z.object({
@@ -182,13 +211,12 @@ export const CommentDraft = z
     id: NodeId.nullable().default(null),
     threadId: NodeId.nullable().default(null),
     anchor: DraftAnchor.nullable().default(null),
-    // The targeted PR's node id, required to start a brand-new thread; the
-    // renderer already has it from the PR's summary once a PR is targeted.
+    general: z.boolean().default(false),
     prId: NodeId.nullable().default(null),
     body: z.string().min(1),
     references: z.array(CommentReference).default([])
   })
-  .refine((d) => d.id !== null || d.threadId !== null || d.anchor !== null, {
+  .refine((d) => d.id !== null || d.threadId !== null || d.anchor !== null || d.general, {
     message: 'a new thread needs an anchor'
   })
 export type CommentDraft = z.input<typeof CommentDraft>

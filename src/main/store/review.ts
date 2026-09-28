@@ -3,7 +3,13 @@ import { z } from 'zod'
 import { AppError } from '../ipc/registry'
 import { readJsonFile, writeJsonFile } from './jsonFile'
 import { reviewJsonPath } from '../paths'
-import { Comment, CommentDraft, LocalViewedState, ReviewThread } from '@shared/ipc/schemas/comment'
+import {
+  Comment,
+  CommentDraft,
+  generalCommentAnchor,
+  LocalViewedState,
+  ReviewThread
+} from '@shared/ipc/schemas/comment'
 
 const ReviewStoreFile = z.object({
   threads: z.array(ReviewThread),
@@ -147,7 +153,9 @@ async function upsertLocalCommentLocked(
     return comment
   }
 
-  if (!draft.anchor) throw new AppError('BAD_INPUT', 'a new thread needs an anchor')
+  if (!draft.anchor && !draft.general) {
+    throw new AppError('BAD_INPUT', 'a new thread needs an anchor')
+  }
   const threadId = `local:${randomUUID()}`
   const comment: Comment = {
     id: `local:${randomUUID()}`,
@@ -168,18 +176,20 @@ async function upsertLocalCommentLocked(
   const thread: ReviewThread = {
     id: threadId,
     prId: ctx.prId,
-    anchor: {
-      path: draft.anchor.path,
-      subjectType: draft.anchor.subjectType,
-      side: draft.anchor.side,
-      line: draft.anchor.line,
-      startLine: draft.anchor.startLine,
-      startSide: draft.anchor.startSide,
-      originalLine: draft.anchor.line,
-      originalStartLine: draft.anchor.startLine,
-      commitOid: ctx.commitOid,
-      originalCommitOid: ctx.commitOid
-    },
+    anchor: draft.anchor
+      ? {
+          path: draft.anchor.path,
+          subjectType: draft.anchor.subjectType,
+          side: draft.anchor.side,
+          line: draft.anchor.line,
+          startLine: draft.anchor.startLine,
+          startSide: draft.anchor.startSide,
+          originalLine: draft.anchor.line,
+          originalStartLine: draft.anchor.startLine,
+          commitOid: ctx.commitOid,
+          originalCommitOid: ctx.commitOid
+        }
+      : generalCommentAnchor(),
     isResolved: false,
     isOutdated: false,
     comments: [comment],

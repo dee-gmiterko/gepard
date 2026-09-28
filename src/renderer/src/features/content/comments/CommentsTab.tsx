@@ -1,30 +1,51 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import styled, { css } from 'styled-components'
-import { FormattedMessage } from 'react-intl'
+import { FormattedMessage, useIntl } from 'react-intl'
 import { defineMessages } from '../../../i18n/defineMessages'
 import type { ReviewThread } from '@shared/ipc/schemas/comment'
 import { useAppDispatch, useAppState } from '../../../state/AppContext'
-import { useComments } from '../../../queries/comments'
+import { useComments, useUpsertComment } from '../../../queries/comments'
 import { useViewer } from '../../../queries/projects'
 import { authorDisplayName } from '@shared/model/actor'
+import { Button } from '../../../components/Button'
 import { Ellipsis } from '../../../components/Ellipsis'
-import { Inline } from '../../../components/Layout'
+import { ActionRow, Inline, Stack } from '../../../components/Layout'
 import { Markdown } from '../../../components/Markdown'
 import { PathAndLine } from '../../../components/PathAndLine'
 import { Byline } from '../../../components/Byline'
 import { Message } from '../../../components/Message'
 import { OutdatedBadge, ResolvedBadge } from '../../../components/StatusBadge'
+import { TextArea } from '../../../components/TextInput'
+import { ThreadWidget } from '../../commentEditor/ThreadWidget'
 import { sortThreadsChronologically } from './sortThreads'
+
+const Panel = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+`
 
 const ThreadList = styled.div`
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
+`
+
+const ComposerRow = styled.div`
+  flex-shrink: 0;
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  padding: ${({ theme }) => theme.space[3]};
 `
 
 const ThreadGroup = styled.div`
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+`
+
+const GeneralThreadGroup = styled(ThreadGroup)`
+  padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[3]};
 `
 
 const entryStyle = css`
@@ -69,8 +90,51 @@ const messages = defineMessages({
   empty: {
     id: 'content.commentsTab.empty',
     defaultMessage: 'No comments yet.'
+  },
+  addCommentPlaceholder: {
+    id: 'content.commentsTab.addCommentPlaceholder',
+    defaultMessage: 'Leave a comment on this pull request…'
+  },
+  addComment: {
+    id: 'content.commentsTab.addComment',
+    defaultMessage: 'Comment'
   }
 })
+
+function NewGeneralComment(): React.JSX.Element {
+  const intl = useIntl()
+  const [body, setBody] = useState('')
+  const upsert = useUpsertComment()
+
+  function handleSubmit(): void {
+    const trimmed = body.trim()
+    if (!trimmed) return
+    upsert.mutate(
+      { id: null, threadId: null, anchor: null, general: true, body: trimmed, references: [] },
+      { onSuccess: () => setBody('') }
+    )
+  }
+
+  return (
+    <Stack>
+      <TextArea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        placeholder={intl.formatMessage(messages.addCommentPlaceholder)}
+        rows={3}
+      />
+      <ActionRow>
+        <Button
+          variant="primary"
+          onClick={handleSubmit}
+          disabled={!body.trim() || upsert.isPending}
+        >
+          <FormattedMessage {...messages.addComment} />
+        </Button>
+      </ActionRow>
+    </Stack>
+  )
+}
 
 export function CommentsTab(): React.JSX.Element {
   const state = useAppState()
@@ -94,14 +158,9 @@ export function CommentsTab(): React.JSX.Element {
         <FormattedMessage {...messages.loading} />
       </Message>
     )
-  if (ordered.length === 0)
-    return (
-      <Message>
-        <FormattedMessage {...messages.empty} />
-      </Message>
-    )
 
   function openThread(thread: ReviewThread): void {
+    if (thread.anchor.subjectType === 'PR') return
     dispatch({
       type: 'file/open',
       path: thread.anchor.path,
@@ -111,39 +170,58 @@ export function CommentsTab(): React.JSX.Element {
   }
 
   return (
-    <ThreadList>
-      {ordered.map((thread) => {
-        const [root, ...replies] = thread.comments
-        return (
-          <ThreadGroup key={thread.id}>
-            <ThreadHeader type="button" onClick={() => openThread(thread)}>
-              <Inline>
-                <Byline author={authorDisplayName(root.author, viewer)} time={root.createdAt} />
-                <PathAndLine path={thread.anchor.path} line={thread.anchor.line} />
-                {root.outdated && <OutdatedBadge />}
-                {thread.isResolved && <ResolvedBadge />}
-              </Inline>
-              <Ellipsis>
-                <Markdown inline>{root.body}</Markdown>
-              </Ellipsis>
-            </ThreadHeader>
-            {replies.map((comment) => (
-              <Reply key={comment.id} type="button" onClick={() => openThread(thread)}>
-                <Inline>
-                  <Byline
-                    author={authorDisplayName(comment.author, viewer)}
-                    time={comment.createdAt}
-                  />
-                  {comment.outdated && <OutdatedBadge />}
-                </Inline>
-                <Ellipsis>
-                  <Markdown inline>{comment.body}</Markdown>
-                </Ellipsis>
-              </Reply>
-            ))}
-          </ThreadGroup>
-        )
-      })}
-    </ThreadList>
+    <Panel>
+      <ThreadList>
+        {ordered.length === 0 ? (
+          <Message>
+            <FormattedMessage {...messages.empty} />
+          </Message>
+        ) : (
+          ordered.map((thread) => {
+            const isGeneral = thread.anchor.subjectType === 'PR'
+            if (isGeneral) {
+              return (
+                <GeneralThreadGroup key={thread.id}>
+                  <ThreadWidget thread={thread} />
+                </GeneralThreadGroup>
+              )
+            }
+            const [root, ...replies] = thread.comments
+            return (
+              <ThreadGroup key={thread.id}>
+                <ThreadHeader type="button" onClick={() => openThread(thread)}>
+                  <Inline>
+                    <Byline author={authorDisplayName(root.author, viewer)} time={root.createdAt} />
+                    <PathAndLine path={thread.anchor.path} line={thread.anchor.line} />
+                    {root.outdated && <OutdatedBadge />}
+                    {thread.isResolved && <ResolvedBadge />}
+                  </Inline>
+                  <Ellipsis>
+                    <Markdown inline>{root.body}</Markdown>
+                  </Ellipsis>
+                </ThreadHeader>
+                {replies.map((comment) => (
+                  <Reply key={comment.id} type="button" onClick={() => openThread(thread)}>
+                    <Inline>
+                      <Byline
+                        author={authorDisplayName(comment.author, viewer)}
+                        time={comment.createdAt}
+                      />
+                      {comment.outdated && <OutdatedBadge />}
+                    </Inline>
+                    <Ellipsis>
+                      <Markdown inline>{comment.body}</Markdown>
+                    </Ellipsis>
+                  </Reply>
+                ))}
+              </ThreadGroup>
+            )
+          })
+        )}
+      </ThreadList>
+      <ComposerRow>
+        <NewGeneralComment />
+      </ComposerRow>
+    </Panel>
   )
 }

@@ -54,6 +54,7 @@ describe('store/review', () => {
         startLine: null,
         startSide: null
       },
+      general: false,
       body: 'root comment',
       references: [{ path: 'src/x.ts', line: 5, kind: 'exact' }]
     })
@@ -64,6 +65,7 @@ describe('store/review', () => {
       id: null,
       threadId: root.threadId,
       anchor: null,
+      general: false,
       body: 'a reply',
       references: []
     })
@@ -74,6 +76,7 @@ describe('store/review', () => {
       id: root.id,
       threadId: null,
       anchor: null,
+      general: false,
       body: 'edited root comment',
       references: []
     })
@@ -97,6 +100,7 @@ describe('store/review', () => {
         startLine: null,
         startSide: null
       },
+      general: false,
       body: 'root',
       references: []
     })
@@ -109,6 +113,7 @@ describe('store/review', () => {
       id: root.id,
       threadId: null,
       anchor: null,
+      general: false,
       body: 'edited after sync',
       references: []
     })
@@ -128,6 +133,7 @@ describe('store/review', () => {
         startLine: null,
         startSide: null
       },
+      general: false,
       body: 'root',
       references: []
     })
@@ -142,6 +148,7 @@ describe('store/review', () => {
         id: root.id,
         threadId: null,
         anchor: null,
+        general: false,
         body: 'too late',
         references: []
       })
@@ -160,6 +167,7 @@ describe('store/review', () => {
         startLine: null,
         startSide: null
       },
+      general: false,
       body: 'root',
       references: []
     })
@@ -167,6 +175,7 @@ describe('store/review', () => {
       id: null,
       threadId: root.threadId,
       anchor: null,
+      general: false,
       body: 'a reply',
       references: []
     })
@@ -198,6 +207,7 @@ describe('store/review', () => {
         startLine: null,
         startSide: null
       },
+      general: false,
       body: 'root',
       references: []
     })
@@ -205,6 +215,7 @@ describe('store/review', () => {
       id: null,
       threadId: root.threadId,
       anchor: null,
+      general: false,
       body: 'reply',
       references: []
     })
@@ -228,6 +239,7 @@ describe('store/review', () => {
         startLine: null,
         startSide: null
       },
+      general: false,
       body: 'synced root',
       references: []
     })
@@ -240,6 +252,79 @@ describe('store/review', () => {
     store = await review.loadReview('proj-d', 31)
     expect(store.threads[0].local).toEqual({ status: 'deleted', updatedAt: expect.any(String) })
     expect(await review.listThreads('proj-d', 31)).toEqual([])
+  })
+
+  it('upsertLocalComment creates a general (anchor-less) PR comment, editable and deletable like any other', async () => {
+    const root = await review.upsertLocalComment('proj-f', 50, ctx, {
+      id: null,
+      threadId: null,
+      anchor: null,
+      general: true,
+      body: 'general comment',
+      references: []
+    })
+    expect(root.local?.status).toBe('new')
+
+    const threads = await review.listThreads('proj-f', 50)
+    expect(threads).toHaveLength(1)
+    expect(threads[0].anchor).toMatchObject({ path: '', subjectType: 'PR', line: null })
+
+    const edited = await review.upsertLocalComment('proj-f', 50, ctx, {
+      id: root.id,
+      threadId: null,
+      anchor: null,
+      general: false,
+      body: 'edited general comment',
+      references: []
+    })
+    expect(edited.body).toBe('edited general comment')
+
+    await review.deleteLocalComment('proj-f', 50, root.id)
+    expect(await review.listThreads('proj-f', 50)).toEqual([])
+  })
+
+  it('replies to a general PR comment thread the same way as a file-anchored one', async () => {
+    const root = await review.upsertLocalComment('proj-f', 52, ctx, {
+      id: null,
+      threadId: null,
+      anchor: null,
+      general: true,
+      body: 'general comment',
+      references: []
+    })
+
+    const reply = await review.upsertLocalComment('proj-f', 52, ctx, {
+      id: null,
+      threadId: root.threadId,
+      anchor: null,
+      general: false,
+      body: 'a reply to the general comment',
+      references: []
+    })
+    expect(reply.threadId).toBe(root.threadId)
+    expect(reply.replyToId).toBe(root.id)
+    expect(reply.local?.status).toBe('new')
+
+    const threads = await review.listThreads('proj-f', 52)
+    expect(threads).toHaveLength(1)
+    expect(threads[0].anchor.subjectType).toBe('PR')
+    expect(threads[0].comments.map((c) => c.body)).toEqual([
+      'general comment',
+      'a reply to the general comment'
+    ])
+  })
+
+  it('rejects a brand-new comment with neither an anchor nor the general flag', async () => {
+    await expect(
+      review.upsertLocalComment('proj-f', 51, ctx, {
+        id: null,
+        threadId: null,
+        anchor: null,
+        general: false,
+        body: 'nowhere to go',
+        references: []
+      })
+    ).rejects.toMatchObject({ code: 'BAD_INPUT' })
   })
 
   it('setLocalViewed batches multiple paths and updates an existing row', async () => {
