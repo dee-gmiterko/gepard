@@ -5,7 +5,7 @@ import type { ReviewThread } from '@shared/ipc/schemas/comment';
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
 import { useComments, useUpsertComment } from '../../../queries/comments';
 import { useViewer } from '../../../queries/projects';
-import { authorDisplayName } from '@shared/model/actor';
+import { authorDisplayName } from '../../../helpers/actor';
 import { Button } from '../../../components/Button';
 import { Ellipsis } from '../../../components/Ellipsis';
 import { ActionRow, Inline, Stack } from '../../../components/Layout';

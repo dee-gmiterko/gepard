@@ -16,7 +16,7 @@ import { fieldChrome, textFieldBase } from '../../components/TextInput';
 import { Markdown } from '../../components/Markdown';
 import { useDeleteComment } from '../../queries/comments';
 import { useViewer } from '../../queries/projects';
-import { authorDisplayName } from '@shared/model/actor';
+import { authorDisplayName } from '../../helpers/actor';
 import { refAnchorFromDraft, refAnchorFromThread } from './anchorLine';
 import { CommentEditor } from './CommentEditor';
 
