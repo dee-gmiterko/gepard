@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { execFileSync } from 'node:child_process'
 import { createRequire } from 'node:module'
 import {
@@ -21,10 +20,25 @@ const LOCALES_DIR = path.join(ROOT_DIR, 'src/renderer/src/locales')
 const STALE_DIR = path.join(LOCALES_DIR, '.stale')
 const SOURCE_LOCALE = 'en'
 
-export function mergeLocaleCatalog(existing, extracted, oldSource, { isSource }) {
+export type LocaleCatalog = Record<string, string>
+export type ExtractedMessages = Record<string, { defaultMessage: string }>
+
+export interface RefreshedLocale {
+  file: string
+  locale: string
+  catalog: LocaleCatalog
+  staleIds: string[]
+}
+
+export function mergeLocaleCatalog(
+  existing: LocaleCatalog,
+  extracted: ExtractedMessages,
+  oldSource: LocaleCatalog,
+  { isSource }: { isSource: boolean }
+): { catalog: LocaleCatalog; staleIds: string[] } {
   const ids = Object.keys(extracted).sort()
-  const catalog = {}
-  const staleIds = []
+  const catalog: LocaleCatalog = {}
+  const staleIds: string[] = []
 
   for (const id of ids) {
     const defaultText = extracted[id].defaultMessage
@@ -52,7 +66,12 @@ export function mergeLocaleCatalog(existing, extracted, oldSource, { isSource })
   return { catalog, staleIds }
 }
 
-export function refreshCatalogs(extracted, localeFiles, readCatalog, localeOf) {
+export function refreshCatalogs(
+  extracted: ExtractedMessages,
+  localeFiles: string[],
+  readCatalog: (file: string) => LocaleCatalog,
+  localeOf: (file: string) => string
+): RefreshedLocale[] {
   const sourceFile = localeFiles.find((file) => localeOf(file) === SOURCE_LOCALE)
   const oldSource = sourceFile ? readCatalog(sourceFile) : {}
 
@@ -66,12 +85,12 @@ export function refreshCatalogs(extracted, localeFiles, readCatalog, localeOf) {
   })
 }
 
-function resolveFormatjsBin() {
+function resolveFormatjsBin(): string {
   const require = createRequire(import.meta.url)
   return require.resolve('@formatjs/cli/bin/formatjs')
 }
 
-function extractMessages() {
+function extractMessages(): ExtractedMessages {
   const tmpDir = mkdtempSync(path.join(tmpdir(), 'gepard-intl-'))
   const outFile = path.join(tmpDir, 'extracted.json')
   try {
@@ -94,26 +113,28 @@ function extractMessages() {
   }
 }
 
-function localeFileOf(fileName) {
+function localeFileOf(fileName: string): string {
   return fileName.replace(/\.json$/, '')
 }
 
-function readCatalogFile(file) {
-  let raw
+function readCatalogFile(file: string): LocaleCatalog {
+  let raw: string
   try {
     raw = readFileSync(file, 'utf8')
   } catch (error) {
-    if (error.code === 'ENOENT') return {}
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return {}
     throw error
   }
   try {
     return JSON.parse(raw)
   } catch (error) {
-    throw new Error(`${file} is not valid JSON, refusing to overwrite it: ${error.message}`)
+    throw new Error(
+      `${file} is not valid JSON, refusing to overwrite it: ${(error as Error).message}`
+    )
   }
 }
 
-function main() {
+function main(): void {
   const extracted = extractMessages()
   const localeFileNames = readdirSync(LOCALES_DIR).filter((name) => name.endsWith('.json'))
   const localeFiles = localeFileNames.map((name) => path.join(LOCALES_DIR, name))

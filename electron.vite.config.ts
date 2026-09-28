@@ -25,6 +25,17 @@ export default defineConfig({
         '@shared': resolve('src/shared')
       }
     },
+    build: {
+      // Electron's sandboxed preload loader only supports CommonJS, so the
+      // output must stay CJS (and use a .cjs extension) even though
+      // package.json sets "type": "module" for the rest of the app.
+      rollupOptions: {
+        output: {
+          format: 'cjs',
+          entryFileNames: '[name].cjs'
+        }
+      }
+    },
     plugins: [externalizeDepsPlugin()]
   },
   renderer: {

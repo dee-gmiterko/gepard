@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { mergeLocaleCatalog, refreshCatalogs } from '../scripts/refresh-locales.mjs'
+import type { LocaleCatalog } from '../scripts/refresh-locales'
+import { mergeLocaleCatalog, refreshCatalogs } from '../scripts/refresh-locales'
 
 describe('mergeLocaleCatalog', () => {
   it('mirrors the extracted default text for the source locale', () => {
@@ -55,7 +56,7 @@ describe('mergeLocaleCatalog', () => {
 describe('refreshCatalogs', () => {
   it('reads each locale file and merges it independently', () => {
     const extracted = { greeting: { defaultMessage: 'Hello' } }
-    const catalogsByFile = new Map([
+    const catalogsByFile = new Map<string, LocaleCatalog>([
       ['/locales/en.json', {}],
       ['/locales/cs.json', { greeting: 'Ahoj' }]
     ])
@@ -73,7 +74,7 @@ describe('refreshCatalogs', () => {
 
   it('compares non-source locales against the on-disk source catalog', () => {
     const extracted = { greeting: { defaultMessage: 'Hi there' } }
-    const catalogsByFile = new Map([
+    const catalogsByFile = new Map<string, LocaleCatalog>([
       ['/locales/en.json', { greeting: 'Hello' }],
       ['/locales/cs.json', { greeting: 'Ahoj' }]
     ])
@@ -83,7 +84,7 @@ describe('refreshCatalogs', () => {
       (file) => catalogsByFile.get(file) ?? {},
       (file) => file.replace('/locales/', '').replace('.json', '')
     )
-    const cs = result.find((entry) => entry.locale === 'cs')
+    const cs = result.find((entry) => entry.locale === 'cs')!
     expect(cs.staleIds).toEqual(['greeting'])
     expect(cs.catalog).toEqual({ greeting: 'Ahoj' })
   })
