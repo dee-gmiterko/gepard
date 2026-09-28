@@ -24,6 +24,7 @@
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck:test": "tsc --noEmit -p tsconfig.test.json --composite false",
     "typecheck": "yarn typecheck:node && yarn typecheck:web && yarn typecheck:test",
+    "validate": "yarn typecheck && yarn lint && yarn format && yarn locales:check",
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "build": "yarn typecheck && electron-vite build",
