@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useCommands } from './commands';
 import { describeTarget, isInteractiveControlTarget, isTextEntryTarget } from './keyTargets';
+import { keyBindings } from './bindings';
 
 export function useGlobalKeys(): void {
   const commands = useCommands();
@@ -13,21 +14,9 @@ export function useGlobalKeys(): void {
       if (target && isTextEntryTarget(target)) return;
       if (e.key === ' ' && target && isInteractiveControlTarget(target)) return;
 
-      let acted: boolean;
-      switch (e.key) {
-        case ' ':
-          acted = commands.toggleViewed();
-          break;
-        case 'PageDown':
-          acted = commands.nextFile();
-          break;
-        case 'PageUp':
-          acted = commands.prevFile();
-          break;
-        default:
-          return;
-      }
-      if (acted) e.preventDefault();
+      const binding = keyBindings.find((b) => b.key === e.key);
+      if (!binding) return;
+      if (binding.run(commands)) e.preventDefault();
     }
 
     window.addEventListener('keydown', onKeyDown);

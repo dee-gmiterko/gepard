@@ -112,8 +112,8 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <IntlRoot>
-      <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
+      <IntlRoot>
         <AppThemeProvider>
           <AppProvider>
             <ToastHost />
@@ -122,7 +122,7 @@ createRoot(document.getElementById('root')!).render(
             </ErrorBoundary>
           </AppProvider>
         </AppThemeProvider>
-      </QueryClientProvider>
-    </IntlRoot>
+      </IntlRoot>
+    </QueryClientProvider>
   </StrictMode>,
 );

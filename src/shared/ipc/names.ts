@@ -25,6 +25,7 @@ export const channelNames = [
   'symbols.line',
   'symbols.definition',
   'symbols.workspace',
+  'symbols.document',
   'comments.list',
   'comments.upsert',
   'comments.delete',
@@ -41,6 +42,8 @@ export const channelNames = [
   'theme.getTemplateId',
   'theme.setTemplateId',
   'themes.list',
+  'locale.getLocaleId',
+  'locale.setLocaleId',
   'locales.list',
 ] as const;
 

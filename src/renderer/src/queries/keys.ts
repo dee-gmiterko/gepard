@@ -8,6 +8,7 @@ export const qk = {
   themeTemplate: () => [...qk.all, 'themeTemplate'] as const,
   themes: () => [...qk.all, 'themes'] as const,
   locales: () => [...qk.all, 'locales'] as const,
+  localeId: () => [...qk.all, 'localeId'] as const,
   project: (projectId: string) => [...qk.all, 'project', projectId] as const,
   open: (p: string) => [...qk.project(p), 'open'] as const,
   commits: (p: string, search?: string, path?: string) =>

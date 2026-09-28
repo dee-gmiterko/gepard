@@ -5,6 +5,8 @@ import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { IconButton } from '../../components/IconButton';
 import { SectionHeading } from '../../components/SectionHeading';
 import { ThemePanel } from './ThemePanel';
+import { LocalePanel } from './LocalePanel';
+import { KeybindingsPanel } from './KeybindingsPanel';
 import { ExtensionsPanel } from './ExtensionsPanel';
 
 const messages = defineMessages({
@@ -112,6 +114,8 @@ export function SettingsOverlay({ onClose }: SettingsOverlayProps): React.JSX.El
       <OverlayBody>
         <Page>
           <ThemePanel />
+          <LocalePanel />
+          <KeybindingsPanel />
           <ExtensionsPanel />
         </Page>
       </OverlayBody>

@@ -10,21 +10,20 @@
 - Localization: all UI text is localizable, English default; a script refreshes every locale from the source strings
 - Scripts (media/locale refresh, ...) are Typescript, run directly with `tsx`, no build step; package itself is ESM
 ### Extensions
-- Independent packages, outside the main app bundle's own deps: `extensions/lsp/<name>` (language servers), `extensions/themes/<name>` (colour themes) - each its own manifest (`gepard.type`) and own dependencies.
+- Independent packages, outside the main app bundle's own deps: `extensions/lsp/<name>` (language servers), `extensions/themes/<name>` (colour themes), `extensions/locales/<name>` (UI translations) - each its own manifest (`gepard.type`) and own dependencies.
 - Typescript/JavaScript LSP extension is built in and enabled by default, using its own bundled native TypeScript LSP only (no workspace-toolchain detection - this is a review tool, not an editor).
-- Themes (light/dark, built in) are also shipped this way, not hardcoded in the app.
+- Themes (light/dark, built in) and locales (English, built in) are also shipped this way, not hardcoded in the app; a small bootstrap copy of the English strings and default light/dark templates is baked directly into the renderer bundle only so the UI has something to render before the real, IPC-fetched extension list has loaded.
 ### Projects (launchpad)
 - Start interface for managing projects - selecting one from GitHub url - with prefill from lovely signed `gh` profile.
 - When new project is added its cloned into an internal app storage in profile (git hooks are ignored).
 - Opened project is indexed in background for symbols and line search patterns (symbols only if an LSP extension covers the language).
 ### Settings
 - Fullscreen overlay, opened via a settings icon in the side panel or from the launchpad; not part of the launchpad page itself; closes on the header close button or `Escape`.
-- Current sections:
+- Sections:
 	- Theme - single select: Follow system, Light, Dark, plus any installed theme extensions.
-	- Extensions - list of installed extensions (built-in and external), each showing kind (language server/theme), source (built-in/external) badge and an enable/disable checkbox; `Add extension` opens a file picker to install an extension package from disk; shows the install directory path and per-extension load errors.
-- Planned/missing sections (TODO, not yet implemented):
-	- Language - a locale selector for the UI (the app already resolves a locale from the OS/browser preference at startup via `resolveLocale`/`availableLocales`, but there is no persisted user override and no settings UI for it yet).
-	- Controls/keybindings - a section to view and rebind keyboard shortcuts; shortcuts (`Space`, `PageUp`/`PageDown`, see Controls below) are currently hardcoded with no customization or persistence layer.
+	- Language - single select: Follow system (OS/browser-detected), plus each installed locale extension by display name; persisted selection wins over OS detection, applied live without restart.
+	- Controls - read-only list of the current global keyboard shortcuts (command name + key), sourced from the same binding table `useGlobalKeys` runs, so the list can't drift from actual behavior. Rebinding is not supported yet (TODO).
+	- Extensions - list of installed extensions (built-in and external), each showing kind (language server/theme/locale), source (built-in/external) badge and an enable/disable checkbox; `Add extension` opens a file picker to install an extension package from disk; shows the install directory path and per-extension load errors.
 ### Main window
 - Header panel - targeting:
 	- series of fuzzy search select boxes entering: PR, commit, path
@@ -48,7 +47,7 @@
 		- Draggable; position persisted per project, kept clamped inside the viewer area.
 	- Right panel (file comments sidebar): closeable, right-hand side, resizable the same way as the side panel (drag edge, width persisted per project); replaces the old floating comments overlay.
 		- Opened/closed via the toggle button in the header (moved there from the file controls floating panel).
-		- Planned: a symbol definitions tree at the bottom of the panel, listing definitions found in the active file (LSP-backed, same symbol resolution used by the comment editor's `Symbol definition` references) for quick in-file/cross-file navigation. Not yet implemented.
+		- Bottom section: a symbols tree for the active file, LSP-backed via a `symbols.document` IPC call (`LanguageSession.documentSymbols`, `textDocument/documentSymbol`) - shows the document's symbol hierarchy (name + kind), nested when the LSP replies hierarchically; clicking a symbol jumps to its line in the active file (same `file/open`/reveal-line mechanism as comment threads and search results).
 	- Comments tab: chronological view of all threads and replies; a composer below the list adds a new general (PR-level, no file/line anchor) comment.
 ### Components
 - Comment editor

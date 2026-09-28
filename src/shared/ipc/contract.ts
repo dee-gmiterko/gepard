@@ -16,7 +16,12 @@ import {
 } from './schemas/pr';
 import { Comment, CommentDraft, LocalViewedState, ReviewThread } from './schemas/comment';
 import { GroupedResult, Pos, SearchQuery, WorkspaceSymbol } from './schemas/search';
-import { DefinitionResult, IndexStatus, LineSymbolsResult } from './schemas/lsp';
+import {
+  DefinitionResult,
+  DocumentSymbolsResult,
+  IndexStatus,
+  LineSymbolsResult,
+} from './schemas/lsp';
 import { ExtensionInfo } from './schemas/extensions';
 import { ThemeTemplateData } from './schemas/theme';
 import { LocaleData } from './schemas/locale';
@@ -120,6 +125,10 @@ export const channels = {
     z.object({ ...ProjectRef, sha: Sha, query: z.string(), limit: z.int().positive().optional() }),
     z.array(WorkspaceSymbol),
   ),
+  'symbols.document': ch(
+    z.object({ ...ProjectRef, sha: Sha, path: RepoPath }),
+    DocumentSymbolsResult,
+  ),
 
   'comments.list': ch(z.object(PrRef), z.array(ReviewThread)),
   'comments.upsert': ch(CommentDraft, Comment),
@@ -166,6 +175,8 @@ export const channels = {
   'theme.setTemplateId': ch(z.object({ templateId: z.string().nullable() }), z.string().nullable()),
   'themes.list': ch(z.void(), z.array(ThemeTemplateData)),
 
+  'locale.getLocaleId': ch(z.void(), z.string().nullable()),
+  'locale.setLocaleId': ch(z.object({ localeId: z.string().nullable() }), z.string().nullable()),
   'locales.list': ch(z.void(), z.array(LocaleData)),
 } as const satisfies Record<ChannelNameList, { input: z.ZodType; output: z.ZodType }>;
 
