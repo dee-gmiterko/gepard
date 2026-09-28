@@ -9,6 +9,7 @@ export const qk = {
   themes: () => [...qk.all, 'themes'] as const,
   locales: () => [...qk.all, 'locales'] as const,
   localeId: () => [...qk.all, 'localeId'] as const,
+  keybindingOverrides: () => [...qk.all, 'keybindingOverrides'] as const,
   project: (projectId: string) => [...qk.all, 'project', projectId] as const,
   open: (p: string) => [...qk.project(p), 'open'] as const,
   commits: (p: string, search?: string, path?: string) =>

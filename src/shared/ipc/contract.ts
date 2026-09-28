@@ -178,6 +178,12 @@ export const channels = {
   'locale.getLocaleId': ch(z.void(), z.string().nullable()),
   'locale.setLocaleId': ch(z.object({ localeId: z.string().nullable() }), z.string().nullable()),
   'locales.list': ch(z.void(), z.array(LocaleData)),
+
+  'keybindings.getOverrides': ch(z.void(), z.record(z.string(), z.string())),
+  'keybindings.setOverride': ch(
+    z.object({ id: z.string(), key: z.string().nullable() }),
+    z.record(z.string(), z.string()),
+  ),
 } as const satisfies Record<ChannelNameList, { input: z.ZodType; output: z.ZodType }>;
 
 export const events = {

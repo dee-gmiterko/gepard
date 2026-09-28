@@ -1,5 +1,5 @@
-// A sandboxed preload cannot `require` modules other than `electron`, and
-// electron-vite externalizes `dependencies` by default.
+// electron-vite externalizes `dependencies` by default, so only `electron` is
+// safe to import here.
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import { channelNames, eventNames } from '@shared/ipc/names';
 

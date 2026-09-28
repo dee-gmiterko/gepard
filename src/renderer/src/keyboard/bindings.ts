@@ -2,10 +2,12 @@ import { defineMessages, type MessageDescriptor } from 'react-intl';
 import type { Commands } from './commands';
 
 // The single source of truth for global keyboard shortcuts: both the runtime
-// handler (`useGlobalKeys`) and the settings screen's read-only bindings list
-// are built from this table, so the two can never drift apart. Rebinding is
-// not supported yet - each entry's `key` is what `useGlobalKeys` matches
-// against `KeyboardEvent.key`, not a user-configurable value.
+// handler (`useGlobalKeys`) and the settings screen's bindings list are built
+// from this table, so the two can never drift apart. Each entry's `key` is
+// only the *default* - the effective key (what `useGlobalKeys` actually
+// matches against `KeyboardEvent.key`) is resolved via `effectiveKey`, which
+// applies a persisted override from `keybindings.getOverrides` when one
+// exists for that binding id. See `KeybindingsPanel` for the rebind UI.
 export interface KeyBinding {
   id: string;
   key: string;

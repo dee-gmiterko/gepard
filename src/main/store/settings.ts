@@ -10,6 +10,10 @@ const SettingsFile = z.object({
   // fall back to defaults itself.
   locale: z.object({ localeId: z.string().nullable() }).default({ localeId: null }),
   extensions: z.record(z.string(), z.boolean()),
+  // `.default({})` (rather than a required field) keeps `settings.json` files
+  // written before keybinding overrides existed loading fine, for the same
+  // reason `locale` above defaults instead of requiring the field.
+  keybindings: z.record(z.string(), z.string()).default({}),
 });
 type SettingsFile = z.infer<typeof SettingsFile>;
 
@@ -17,6 +21,7 @@ const EMPTY_SETTINGS: SettingsFile = {
   theme: { templateId: null },
   locale: { localeId: null },
   extensions: {},
+  keybindings: {},
 };
 
 async function readSettings(): Promise<SettingsFile> {
@@ -55,4 +60,22 @@ export async function setEnabled(id: string, enabled: boolean): Promise<void> {
   const settings = await readSettings();
   const extensions = { ...settings.extensions, [id]: enabled };
   await writeJsonFile(settingsJsonPath(), { ...settings, extensions });
+}
+
+export type KeybindingOverrides = SettingsFile['keybindings'];
+
+export async function getKeybindingOverrides(): Promise<KeybindingOverrides> {
+  return (await readSettings()).keybindings;
+}
+
+export async function setKeybindingOverride(
+  id: string,
+  key: string | null,
+): Promise<KeybindingOverrides> {
+  const settings = await readSettings();
+  const keybindings = { ...settings.keybindings };
+  if (key === null) delete keybindings[id];
+  else keybindings[id] = key;
+  await writeJsonFile(settingsJsonPath(), { ...settings, keybindings });
+  return keybindings;
 }

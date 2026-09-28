@@ -1,5 +1,3 @@
-// The sandboxed preload imports this file and cannot load modules other than
-// `electron`.
 export const channelNames = [
   'app.viewer',
   'app.viewerRepos',
@@ -45,6 +43,8 @@ export const channelNames = [
   'locale.getLocaleId',
   'locale.setLocaleId',
   'locales.list',
+  'keybindings.getOverrides',
+  'keybindings.setOverride',
 ] as const;
 
 export const eventNames = ['clone.progress', 'index.status', 'theme.changed', 'app.error'] as const;

@@ -22,7 +22,7 @@
 - Sections:
 	- Theme - single select: Follow system, Light, Dark, plus any installed theme extensions.
 	- Language - single select: Follow system (OS/browser-detected), plus each installed locale extension by display name; persisted selection wins over OS detection, applied live without restart.
-	- Controls - read-only list of the current global keyboard shortcuts (command name + key), sourced from the same binding table `useGlobalKeys` runs, so the list can't drift from actual behavior. Rebinding is not supported yet (TODO).
+	- Controls - list of the current global keyboard shortcuts (command name + effective key), sourced from the same binding table `useGlobalKeys` runs, so the list can't drift from actual behavior. Each shortcut can be rebound: click `Rebind`, press the new key (`Escape` cancels), the override is persisted and takes effect immediately, no restart; a `Reset` button clears a customized binding back to its default. If a rebind lands on a key another binding also effectively uses, both rows show a visible conflict note (not a hard block - the earlier-listed binding wins at runtime).
 	- Extensions - list of installed extensions (built-in and external), each showing kind (language server/theme/locale), source (built-in/external) badge and an enable/disable checkbox; `Add extension` opens a file picker to install an extension package from disk; shows the install directory path and per-extension load errors.
 ### Main window
 - Header panel - targeting:
@@ -76,8 +76,9 @@
 - Any new comments and viewed state is prepared in local copy (timestamped on each entity), synced only on explicit button.
 - Comment references can be added by checking them, they get automatically appended to the text when syncing to github, empty newline separated.
 ### Controls
-- `Space` - Toggle viewed state
-- `PageUp/PageDown` - navigate files in targeted list for review, skipping viewed\
+- Defaults (rebindable in Settings > Controls, see above):
+	- `Space` - Toggle viewed state
+	- `PageUp/PageDown` - navigate files in targeted list for review, skipping viewed\
 ### Styling
 - heavy use of styled components - all dedicated locally defined in React components (any duplication is sign of missing component)
 - default fonts
