@@ -1,13 +1,20 @@
+import { useEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
-import { FileText, Layers, Search } from 'react-feather'
+import { FileText, Layers, Search, Settings } from 'react-feather'
 import { useIntl, type IntlShape, type MessageDescriptor } from 'react-intl'
 import { defineMessages } from '../../i18n/defineMessages'
 import { useAppDispatch, useAppState } from '../../state/AppContext'
 import type { SidePanelTab } from '../../state/reducer'
+import { useSetLayout } from '../../queries/projects'
+import { useResizeHandle } from '../../hooks/useResizeHandle'
 import { IconButton } from '../../components/IconButton'
+import { ResizeHandle } from '../../components/ResizeHandle'
 import { FileTree } from './fileTree/FileTree'
 import { TargetedBrowser } from './targeted/TargetedBrowser'
 import { SearchPanel } from './search/SearchPanel'
+
+const MIN_WIDTH = 220
+const MAX_WIDTH = 640
 
 const messages = defineMessages({
   tablist: {
@@ -25,6 +32,10 @@ const messages = defineMessages({
   search: {
     id: 'sidePanel.tabs.search',
     defaultMessage: 'Search'
+  },
+  openSettings: {
+    id: 'sidePanel.openSettings',
+    defaultMessage: 'Settings'
   }
 })
 
@@ -36,29 +47,45 @@ function panelId(id: SidePanelTab): string {
   return `sidePanel-panel-${id}`
 }
 
-const Panel = styled.div`
+const Panel = styled.div<{ $width: number }>`
+  position: relative;
   display: grid;
   grid-template-columns: 32px 1fr;
   grid-template-rows: minmax(0, 1fr);
-  min-width: 0;
+  width: ${({ $width }) => $width}px;
   min-height: 0;
   border-right: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.bgSubtle};
+`
+
+const Handle = styled(ResizeHandle)`
+  right: -3px;
 `
 
 const TabRail = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: ${({ theme }) => theme.space[1]};
   padding-top: ${({ theme }) => theme.space[2]};
+  padding-bottom: ${({ theme }) => theme.space[2]};
   border-right: 1px solid ${({ theme }) => theme.colors.border};
+`
+
+const TabList = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[1]};
+`
+
+const TabRailSpacer = styled.div`
+  flex: 1;
 `
 
 const TabContent = styled.div`
   grid-column: 2;
   grid-row: 1;
-  min-width: 240px;
+  min-width: 0;
   overflow: auto;
 
   &[hidden] {
@@ -80,27 +107,59 @@ export function SidePanel(): React.JSX.Element {
   const intl: IntlShape = useIntl()
   const state = useAppState()
   const dispatch = useAppDispatch()
+  const setLayout = useSetLayout()
+
+  const [width, setWidth] = useState(state.layout.sidePanelWidth)
+  const draggingRef = useRef(false)
+  useEffect(() => {
+    if (!draggingRef.current) setWidth(state.layout.sidePanelWidth)
+  }, [state.layout.sidePanelWidth])
+
+  const { onPointerDown } = useResizeHandle({
+    min: MIN_WIDTH,
+    max: MAX_WIDTH,
+    sign: 1,
+    getValue: () => width,
+    onChange: (value) => {
+      draggingRef.current = true
+      setWidth(value)
+    },
+    onCommit: (value) => {
+      draggingRef.current = false
+      dispatch({ type: 'layout/setSidePanelWidth', width: value })
+      setLayout.mutate({ ...state.layout, sidePanelWidth: value })
+    }
+  })
 
   return (
-    <Panel>
-      <TabRail role="tablist" aria-label={intl.formatMessage(messages.tablist)}>
-        {TABS.map((tab) => {
-          const selected = state.sidePanelTab === tab.id
-          return (
-            <IconButton
-              key={tab.id}
-              id={tabId(tab.id)}
-              role="tab"
-              aria-selected={selected}
-              aria-controls={panelId(tab.id)}
-              tabIndex={selected ? 0 : -1}
-              icon={tab.icon}
-              label={intl.formatMessage(tab.label)}
-              active={selected}
-              onClick={() => dispatch({ type: 'sidePanel/setTab', tab: tab.id })}
-            />
-          )
-        })}
+    <Panel $width={width}>
+      <Handle onPointerDown={onPointerDown} />
+      <TabRail>
+        <TabList role="tablist" aria-label={intl.formatMessage(messages.tablist)}>
+          {TABS.map((tab) => {
+            const selected = state.sidePanelTab === tab.id
+            return (
+              <IconButton
+                key={tab.id}
+                id={tabId(tab.id)}
+                role="tab"
+                aria-selected={selected}
+                aria-controls={panelId(tab.id)}
+                tabIndex={selected ? 0 : -1}
+                icon={tab.icon}
+                label={intl.formatMessage(tab.label)}
+                active={selected}
+                onClick={() => dispatch({ type: 'sidePanel/setTab', tab: tab.id })}
+              />
+            )
+          })}
+        </TabList>
+        <TabRailSpacer />
+        <IconButton
+          icon={Settings}
+          label={intl.formatMessage(messages.openSettings)}
+          onClick={() => dispatch({ type: 'settings/setOpen', open: true })}
+        />
       </TabRail>
       <TabContent
         id={panelId('files')}

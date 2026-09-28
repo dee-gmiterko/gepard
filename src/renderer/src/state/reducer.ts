@@ -15,9 +15,24 @@ export interface Targeting {
   path: string | null
 }
 
+export interface Layout {
+  sidePanelWidth: number
+  fileCommentsPanelWidth: number
+  fileCommentsPanelOpen: boolean
+  fileControlsPosition: { x: number; y: number } | null
+}
+
+export const defaultLayout: Layout = {
+  sidePanelWidth: 300,
+  fileCommentsPanelWidth: 300,
+  fileCommentsPanelOpen: false,
+  fileControlsPosition: null
+}
+
 export interface AppState {
   projectId: string | null
   targeting: Targeting
+  layout: Layout
   sidePanelTab: SidePanelTab
   pinnedFiles: string[]
   previewFile: string | null
@@ -26,11 +41,13 @@ export interface AppState {
   checkout: { base: string; head: string } | null
   toasts: Toast[]
   revealLine: { line: number; side: 'LEFT' | 'RIGHT' } | null
+  settingsOpen: boolean
 }
 
 export const initialAppState: AppState = {
   projectId: null,
   targeting: { pr: null, commit: null, path: null },
+  layout: defaultLayout,
   sidePanelTab: 'files',
   pinnedFiles: [],
   previewFile: null,
@@ -38,17 +55,22 @@ export const initialAppState: AppState = {
   mainTab: 'files',
   checkout: null,
   toasts: [],
-  revealLine: null
+  revealLine: null,
+  settingsOpen: false
 }
 
 export type AppAction =
-  | { type: 'project/open'; projectId: string; targeting: Targeting }
+  | { type: 'project/open'; projectId: string; targeting: Targeting; layout: Layout }
   | { type: 'project/close' }
   | { type: 'target/pr'; pr: number | null }
   | { type: 'target/commit'; sha: string | null }
   | { type: 'target/path'; path: string | null }
   | { type: 'target/checkoutResult'; checkout: { base: string; head: string } | null }
   | { type: 'sidePanel/setTab'; tab: SidePanelTab }
+  | { type: 'layout/setSidePanelWidth'; width: number }
+  | { type: 'layout/setFileCommentsPanelWidth'; width: number }
+  | { type: 'layout/setFileCommentsPanelOpen'; open: boolean }
+  | { type: 'layout/setFileControlsPosition'; position: { x: number; y: number } | null }
   | { type: 'file/open'; path: string; line?: number | null; side?: 'LEFT' | 'RIGHT' }
   | { type: 'file/focus'; path: string }
   | { type: 'file/pin'; path: string }
@@ -56,6 +78,7 @@ export type AppAction =
   | { type: 'mainTab/set'; tab: MainTab }
   | { type: 'toast/push'; toast: Toast }
   | { type: 'toast/dismiss'; id: string }
+  | { type: 'settings/setOpen'; open: boolean }
 
 function withTarget(state: AppState, targeting: Targeting, set: boolean): AppState {
   const mainTab = targeting.pr === null && state.mainTab === 'comments' ? 'files' : state.mainTab
@@ -66,12 +89,18 @@ export function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'project/open': {
       if (state.projectId === action.projectId) return state
-      const opened = { ...initialAppState, projectId: action.projectId, toasts: state.toasts }
+      const opened = {
+        ...initialAppState,
+        projectId: action.projectId,
+        layout: action.layout,
+        toasts: state.toasts,
+        settingsOpen: state.settingsOpen
+      }
       const { pr, commit, path } = action.targeting
       return withTarget(opened, action.targeting, pr !== null || commit !== null || path !== null)
     }
     case 'project/close':
-      return { ...initialAppState, toasts: state.toasts }
+      return { ...initialAppState, toasts: state.toasts, settingsOpen: state.settingsOpen }
     case 'target/pr':
       if (state.targeting.pr === action.pr) return state
       return withTarget(
@@ -89,6 +118,14 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, checkout: action.checkout }
     case 'sidePanel/setTab':
       return { ...state, sidePanelTab: action.tab }
+    case 'layout/setSidePanelWidth':
+      return { ...state, layout: { ...state.layout, sidePanelWidth: action.width } }
+    case 'layout/setFileCommentsPanelWidth':
+      return { ...state, layout: { ...state.layout, fileCommentsPanelWidth: action.width } }
+    case 'layout/setFileCommentsPanelOpen':
+      return { ...state, layout: { ...state.layout, fileCommentsPanelOpen: action.open } }
+    case 'layout/setFileControlsPosition':
+      return { ...state, layout: { ...state.layout, fileControlsPosition: action.position } }
     case 'file/open': {
       const revealLine =
         action.line != null ? { line: action.line, side: action.side ?? ('RIGHT' as const) } : null
@@ -126,6 +163,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, toasts: [...state.toasts, action.toast] }
     case 'toast/dismiss':
       return { ...state, toasts: state.toasts.filter((t) => t.id !== action.id) }
+    case 'settings/setOpen':
+      return { ...state, settingsOpen: action.open }
     default:
       return state
   }

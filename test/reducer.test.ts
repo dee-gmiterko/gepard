@@ -41,7 +41,8 @@ describe('opening a project', () => {
     const next = appReducer(s, {
       type: 'project/open',
       projectId: 'proj-b',
-      targeting: { pr: null, commit: null, path: null }
+      targeting: { pr: null, commit: null, path: null },
+      layout: initialAppState.layout
     })
     expect(next).toEqual({ ...initialAppState, projectId: 'proj-b' })
   })
@@ -51,7 +52,8 @@ describe('opening a project', () => {
     const next = appReducer(s, {
       type: 'project/open',
       projectId: 'proj-b',
-      targeting: { pr: 7, commit: 'deadbeef', path: 'src' }
+      targeting: { pr: 7, commit: 'deadbeef', path: 'src' },
+      layout: initialAppState.layout
     })
     expect(next.targeting).toEqual({ pr: 7, commit: 'deadbeef', path: 'src' })
     expect(next.sidePanelTab).toBe('targeted')
@@ -63,7 +65,8 @@ describe('opening a project', () => {
     const next = appReducer(s, {
       type: 'project/open',
       projectId: 'proj-b',
-      targeting: { pr: null, commit: null, path: null }
+      targeting: { pr: null, commit: null, path: null },
+      layout: initialAppState.layout
     })
     expect(next.sidePanelTab).toBe('files')
   })
@@ -151,9 +154,31 @@ describe('toast slice', () => {
       appReducer(withToast, {
         type: 'project/open',
         projectId: 'q',
-        targeting: { pr: null, commit: null, path: null }
+        targeting: { pr: null, commit: null, path: null },
+        layout: initialAppState.layout
       }).toasts
     ).toEqual([toast('1')])
     expect(appReducer(withToast, { type: 'project/close' }).toasts).toEqual([toast('1')])
+  })
+})
+
+describe('settings overlay', () => {
+  it('opens and closes via settings/setOpen', () => {
+    const opened = appReducer(state(), { type: 'settings/setOpen', open: true })
+    expect(opened.settingsOpen).toBe(true)
+    expect(appReducer(opened, { type: 'settings/setOpen', open: false }).settingsOpen).toBe(false)
+  })
+
+  it('stays open across project open/close (it is not project state)', () => {
+    const withSettings = state({ projectId: 'p', settingsOpen: true })
+    expect(
+      appReducer(withSettings, {
+        type: 'project/open',
+        projectId: 'q',
+        targeting: { pr: null, commit: null, path: null },
+        layout: initialAppState.layout
+      }).settingsOpen
+    ).toBe(true)
+    expect(appReducer(withSettings, { type: 'project/close' }).settingsOpen).toBe(true)
   })
 })

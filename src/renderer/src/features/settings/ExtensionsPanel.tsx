@@ -20,52 +20,56 @@ import {
 
 const messages = defineMessages({
   title: {
-    id: 'launchpad.extensions.title',
+    id: 'settings.extensions.title',
     defaultMessage: 'Extensions'
   },
   addExtension: {
-    id: 'launchpad.extensions.addExtension',
+    id: 'settings.extensions.addExtension',
     defaultMessage: 'Add extension'
   },
   installedIn: {
-    id: 'launchpad.extensions.installedIn',
+    id: 'settings.extensions.installedIn',
     defaultMessage: 'Installed extensions live in {dir}'
   },
   loading: {
-    id: 'launchpad.extensions.loading',
+    id: 'settings.extensions.loading',
     defaultMessage: 'Loading extensions…'
   },
   failed: {
-    id: 'launchpad.extensions.failed',
+    id: 'settings.extensions.failed',
     defaultMessage: 'Failed to load extensions.'
   },
   empty: {
-    id: 'launchpad.extensions.empty',
+    id: 'settings.extensions.empty',
     defaultMessage: 'No extensions found.'
   },
   loadFailed: {
-    id: 'launchpad.extensions.loadFailed',
+    id: 'settings.extensions.loadFailed',
     defaultMessage: 'Failed to load: {error}'
   },
   builtin: {
-    id: 'launchpad.extensions.builtin',
+    id: 'settings.extensions.builtin',
     defaultMessage: 'Built-in'
   },
   external: {
-    id: 'launchpad.extensions.external',
+    id: 'settings.extensions.external',
     defaultMessage: 'External'
   },
+  kindLsp: {
+    id: 'settings.extensions.kindLsp',
+    defaultMessage: 'Language server'
+  },
+  kindTheme: {
+    id: 'settings.extensions.kindTheme',
+    defaultMessage: 'Theme'
+  },
   enableExtension: {
-    id: 'launchpad.extensions.enableExtension',
+    id: 'settings.extensions.enableExtension',
     defaultMessage: 'Enable {name}'
   },
   installDialogTitle: {
-    id: 'launchpad.extensions.installDialogTitle',
-    defaultMessage: 'Add extension'
-  },
-  installFilterName: {
-    id: 'launchpad.extensions.installFilterName',
-    defaultMessage: 'Extension module'
+    id: 'settings.extensions.installDialogTitle',
+    defaultMessage: 'Add extension package'
   }
 })
 
@@ -95,8 +99,7 @@ export function ExtensionsPanel(): React.JSX.Element {
           <Button
             onClick={() =>
               install.mutate({
-                dialogTitle: intl.formatMessage(messages.installDialogTitle),
-                filterName: intl.formatMessage(messages.installFilterName)
+                dialogTitle: intl.formatMessage(messages.installDialogTitle)
               })
             }
             disabled={install.isPending}
@@ -135,6 +138,11 @@ export function ExtensionsPanel(): React.JSX.Element {
               <Stack $gap={1}>
                 <Inline $gap={2}>
                   <RowTitle $size="sm">{ext.displayName}</RowTitle>
+                  <Badge $tone="muted">
+                    <FormattedMessage
+                      {...(ext.kind === 'lsp' ? messages.kindLsp : messages.kindTheme)}
+                    />
+                  </Badge>
                   <Badge $tone={ext.source === 'builtin' ? 'muted' : undefined}>
                     <FormattedMessage
                       {...(ext.source === 'builtin' ? messages.builtin : messages.external)}

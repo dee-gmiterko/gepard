@@ -2,27 +2,27 @@ import type { ChangeEvent } from 'react'
 import { FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl'
 import { defineMessages } from '../../i18n/defineMessages'
 import { Select } from '../../components/Select'
-import { themeTemplates, type ThemeTemplate } from '../../theme/templates'
+import type { ThemeTemplate } from '../../theme/tokens'
 import { SYSTEM_DARK_TEMPLATE_ID, SYSTEM_LIGHT_TEMPLATE_ID } from '../../theme/resolveTemplate'
-import { useSetThemeTemplate, useThemeTemplateId } from '../../queries/theme'
+import { useSetThemeTemplate, useThemeTemplateId, useThemes } from '../../queries/theme'
 import { Section } from '../../components/Section'
 import { SectionHeading } from '../../components/SectionHeading'
 
 const messages = defineMessages({
   title: {
-    id: 'launchpad.theme.title',
+    id: 'settings.theme.title',
     defaultMessage: 'Theme'
   },
   followSystem: {
-    id: 'launchpad.theme.followSystem',
+    id: 'settings.theme.followSystem',
     defaultMessage: 'Follow system'
   },
   light: {
-    id: 'launchpad.theme.light',
+    id: 'settings.theme.light',
     defaultMessage: 'Light'
   },
   dark: {
-    id: 'launchpad.theme.dark',
+    id: 'settings.theme.dark',
     defaultMessage: 'Dark'
   }
 })
@@ -37,6 +37,7 @@ const SYSTEM_OPTION = 'system'
 export function ThemePanel(): React.JSX.Element {
   const intl = useIntl()
   const { data: templateId } = useThemeTemplateId()
+  const { data: themeTemplates } = useThemes()
   const setTemplate = useSetThemeTemplate()
 
   function handleChange(e: ChangeEvent<HTMLSelectElement>): void {
@@ -54,7 +55,7 @@ export function ThemePanel(): React.JSX.Element {
       <SectionHeading title={<FormattedMessage {...messages.title} />} />
       <Select value={templateId ?? SYSTEM_OPTION} onChange={handleChange}>
         <option value={SYSTEM_OPTION}>{intl.formatMessage(messages.followSystem)}</option>
-        {themeTemplates.map((template) => (
+        {(themeTemplates ?? []).map((template) => (
           <option key={template.id} value={template.id}>
             {templateLabel(template)}
           </option>

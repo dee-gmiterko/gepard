@@ -1,10 +1,11 @@
 import styled from 'styled-components'
-import { useAppState } from './state/AppContext'
+import { useAppDispatch, useAppState } from './state/AppContext'
 import { useGlobalKeys } from './keyboard/useGlobalKeys'
 import { Launchpad } from './features/launchpad/Launchpad'
 import { Header } from './features/header/Header'
 import { SidePanel } from './features/sidePanel/SidePanel'
 import { Content } from './features/content/Content'
+import { SettingsOverlay } from './features/settings/SettingsOverlay'
 
 const Shell = styled.div`
   display: grid;
@@ -21,8 +22,18 @@ const Body = styled.div`
 function App(): React.JSX.Element {
   useGlobalKeys()
   const state = useAppState()
+  const dispatch = useAppDispatch()
 
-  if (!state.projectId) return <Launchpad />
+  const closeSettings = (): void => dispatch({ type: 'settings/setOpen', open: false })
+
+  if (!state.projectId) {
+    return (
+      <>
+        <Launchpad />
+        {state.settingsOpen && <SettingsOverlay onClose={closeSettings} />}
+      </>
+    )
+  }
 
   return (
     <Shell>
@@ -31,6 +42,7 @@ function App(): React.JSX.Element {
         <SidePanel />
         <Content />
       </Body>
+      {state.settingsOpen && <SettingsOverlay onClose={closeSettings} />}
     </Shell>
   )
 }

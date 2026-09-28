@@ -1,6 +1,6 @@
 import { mkdir, readdir, rm, stat } from 'node:fs/promises'
 import { z } from 'zod'
-import { Project } from '@shared/ipc/schemas/project'
+import { Project, PersistedLayout } from '@shared/ipc/schemas/project'
 import { PersistedTargeting } from '@shared/ipc/schemas/pr'
 import { AppError } from '../ipc/registry'
 import { readJsonFile, writeJsonFile } from './jsonFile'
@@ -13,15 +13,17 @@ import {
 } from '../paths'
 
 const ProjectFile = Project.omit({ cloned: true }).extend({
-  lastTargeting: PersistedTargeting.optional()
+  lastTargeting: PersistedTargeting.optional(),
+  layout: PersistedLayout.optional()
 })
 type ProjectFile = z.infer<typeof ProjectFile>
 
 const NO_TARGETING: PersistedTargeting = { pr: null, commit: null, path: null }
+const DEFAULT_LAYOUT: PersistedLayout = PersistedLayout.parse({})
 
 function toProject(file: ProjectFile, cloned: boolean): Project {
-  const { id, url, owner, repo, addedAt, trustWorkspaceToolchain } = file
-  return { id, url, owner, repo, addedAt, cloned, trustWorkspaceToolchain }
+  const { id, url, owner, repo, addedAt } = file
+  return { id, url, owner, repo, addedAt, cloned }
 }
 
 async function pathExists(path: string): Promise<boolean> {
@@ -76,11 +78,15 @@ export async function setLastTargeting(id: string, targeting: PersistedTargeting
   await writeProjectFile(id, { ...file, lastTargeting: targeting })
 }
 
-export async function setTrustWorkspaceToolchain(id: string, trust: boolean): Promise<Project> {
+export async function getLayout(id: string): Promise<PersistedLayout> {
+  const file = await readProjectFile(id)
+  return file?.layout ?? DEFAULT_LAYOUT
+}
+
+export async function setLayout(id: string, layout: PersistedLayout): Promise<void> {
   const file = await readProjectFile(id)
   if (!file) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${id}`)
-  await writeProjectFile(id, { ...file, trustWorkspaceToolchain: trust })
-  return toProject({ ...file, trustWorkspaceToolchain: trust }, await isCloned(id))
+  await writeProjectFile(id, { ...file, layout })
 }
 
 const NAME_RE = /^[A-Za-z0-9_.-]+$/
@@ -117,8 +123,7 @@ export async function addProject(url: string): Promise<Project> {
     url: `https://github.com/${owner}/${repo}`,
     owner,
     repo,
-    addedAt: new Date().toISOString(),
-    trustWorkspaceToolchain: false
+    addedAt: new Date().toISOString()
   }
   await writeProjectFile(id, data)
   return { ...data, cloned: false }

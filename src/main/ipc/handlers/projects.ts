@@ -15,7 +15,7 @@ export const projectsHandlers: Pick<
   | 'projects.add'
   | 'projects.open'
   | 'projects.setTargeting'
-  | 'projects.setTrustWorkspaceToolchain'
+  | 'projects.setLayout'
   | 'projects.remove'
   | 'clone.start'
 > = {
@@ -32,25 +32,23 @@ export const projectsHandlers: Pick<
     if (!project) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${projectId}`)
     if (!project.cloned)
       throw new AppError('PROJECT_NOT_CLONED', `project ${projectId} is not cloned yet`)
-    const [{ head, files }, targeting] = await Promise.all([
+    const [{ head, files }, targeting, layout] = await Promise.all([
       git.workingTree(projectId),
-      store.getLastTargeting(projectId)
+      store.getLastTargeting(projectId),
+      store.getLayout(projectId)
     ])
-    indexer
-      .open(projectId, projectRepoDir(projectId), files, head, project.trustWorkspaceToolchain)
-      .catch((e) => {
-        const message = e instanceof Error ? e.message : String(e)
-        log.error('projects.open', `indexer failed for ${projectId}: ${message}`)
-        emit('index.status', { projectId, status: { state: 'error', message } })
-      })
-    return { project, head, targeting }
+    indexer.open(projectId, projectRepoDir(projectId), files, head).catch((e) => {
+      const message = e instanceof Error ? e.message : String(e)
+      log.error('projects.open', `indexer failed for ${projectId}: ${message}`)
+      emit('index.status', { projectId, status: { state: 'error', message } })
+    })
+    return { project, head, targeting, layout }
   },
 
   'projects.setTargeting': ({ projectId, targeting }) =>
     store.setLastTargeting(projectId, targeting),
 
-  'projects.setTrustWorkspaceToolchain': ({ projectId, trustWorkspaceToolchain }) =>
-    store.setTrustWorkspaceToolchain(projectId, trustWorkspaceToolchain),
+  'projects.setLayout': ({ projectId, layout }) => store.setLayout(projectId, layout),
 
   'projects.remove': async ({ projectId }) => {
     await indexer.close(projectId)

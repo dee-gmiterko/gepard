@@ -1,13 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import styled from 'styled-components'
-import { Download, Folder, Trash2 } from 'react-feather'
+import { Download, Folder, Settings, Trash2 } from 'react-feather'
 import { FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl'
 import { defineMessages } from '../../i18n/defineMessages'
 import { IconButton } from '../../components/IconButton'
 import { Button } from '../../components/Button'
 import { Caption } from '../../components/Caption'
-import { Checkbox } from '../../components/Checkbox'
 import { Ellipsis } from '../../components/Ellipsis'
 import { Inline } from '../../components/Layout'
 import { List, ListRow, RowTitle } from '../../components/List'
@@ -20,14 +19,11 @@ import {
   useCloneStart,
   useProjects,
   useRemoveProject,
-  useSetTrustWorkspaceToolchain,
   useViewer,
   useViewerRepos
 } from '../../queries/projects'
 import { useAppDispatch } from '../../state/AppContext'
 import { RepoUrlCombobox } from './RepoUrlCombobox'
-import { ExtensionsPanel } from './ExtensionsPanel'
-import { ThemePanel } from './ThemePanel'
 import type { EventPayload } from '@shared/ipc/contract'
 
 type CloneProgress = EventPayload<'clone.progress'>
@@ -64,6 +60,10 @@ const messages = defineMessages({
   remove: {
     id: 'launchpad.remove',
     defaultMessage: 'Remove'
+  },
+  openSettings: {
+    id: 'launchpad.openSettings',
+    defaultMessage: 'Settings'
   },
   confirmRemoveQuestion: {
     id: 'launchpad.confirmRemoveQuestion',
@@ -116,10 +116,6 @@ const messages = defineMessages({
   projectSlug: {
     id: 'launchpad.projectSlug',
     defaultMessage: '{owner}/{repo}'
-  },
-  trustWorkspaceToolchain: {
-    id: 'launchpad.trustWorkspaceToolchain',
-    defaultMessage: 'Trust workspace TypeScript'
   }
 })
 
@@ -232,7 +228,6 @@ export function Launchpad(): React.JSX.Element {
   const addProject = useAddProject()
   const removeProject = useRemoveProject()
   const cloneStart = useCloneStart()
-  const setTrustWorkspaceToolchain = useSetTrustWorkspaceToolchain()
 
   const [url, setUrl] = useState('')
   const [urlTouched, setUrlTouched] = useState(false)
@@ -289,7 +284,12 @@ export function Launchpad(): React.JSX.Element {
         queryFn: () => invoke('projects.open', { projectId }),
         staleTime: Infinity
       })
-      dispatch({ type: 'project/open', projectId, targeting: opened.targeting })
+      dispatch({
+        type: 'project/open',
+        projectId,
+        targeting: opened.targeting,
+        layout: opened.layout
+      })
     } catch {
       // Reported via the query cache's global error handler.
     }
@@ -314,12 +314,19 @@ export function Launchpad(): React.JSX.Element {
           size="lg"
           title={<FormattedMessage {...messages.title} />}
           actions={
-            viewer && (
-              <ViewerBadge>
-                <Avatar src={viewer.avatarUrl} alt="" />
-                <span>{viewer.name ?? viewer.login}</span>
-              </ViewerBadge>
-            )
+            <Inline $gap={2}>
+              {viewer && (
+                <ViewerBadge>
+                  <Avatar src={viewer.avatarUrl} alt="" />
+                  <span>{viewer.name ?? viewer.login}</span>
+                </ViewerBadge>
+              )}
+              <IconButton
+                icon={Settings}
+                label={intl.formatMessage(messages.openSettings)}
+                onClick={() => dispatch({ type: 'settings/setOpen', open: true })}
+              />
+            </Inline>
           }
         />
       </TopBar>
@@ -393,16 +400,6 @@ export function Launchpad(): React.JSX.Element {
                   })()}
               </RowMain>
               <Inline $gap={1} onClick={(e) => e.stopPropagation()}>
-                <Checkbox
-                  checked={project.trustWorkspaceToolchain}
-                  onChange={(checked) =>
-                    setTrustWorkspaceToolchain.mutate({
-                      projectId: project.id,
-                      trustWorkspaceToolchain: checked
-                    })
-                  }
-                  label={intl.formatMessage(messages.trustWorkspaceToolchain)}
-                />
                 {project.cloned ? (
                   <IconButton
                     icon={Folder}
@@ -446,9 +443,6 @@ export function Launchpad(): React.JSX.Element {
           )
         })}
       </ProjectsList>
-
-      <ThemePanel />
-      <ExtensionsPanel />
     </Page>
   )
 }
