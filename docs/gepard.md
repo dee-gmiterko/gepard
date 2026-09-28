@@ -37,7 +37,7 @@
 	- File controls floating panel (default close to top right)
 		- Viewed checkbox
 		- Toggle for the file comments sidebar
-		- Sync button - saves any new comments to `gh`, publishes viewed, pulls remote ones (timestamp based merging into local)
+		- Sync button - saves any new comments to `gh`, publishes viewed, pulls remote ones (timestamp based merging into local); also fetches the repo and checks out the targeted PR's latest head if it moved
 		- Draggable; position persisted per project, kept clamped inside the viewer area.
 	- File comments sidebar: closeable, right-hand side, resizable the same way as the side panel (drag edge, width persisted per project); replaces the old floating comments overlay.
 	- Comments tab: chronological view of all threads and replies; a composer below the list adds a new general (PR-level, no file/line anchor) comment.

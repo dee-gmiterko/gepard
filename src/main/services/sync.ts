@@ -1,6 +1,7 @@
 import { AppError } from '../ipc/registry'
 import { log } from '../log'
 import * as gh from './gh'
+import * as git from './git'
 import { ExecError } from './exec'
 import * as review from '../store/review'
 import { nowIso, withReviewLock, type ReviewStoreFile } from '../store/review'
@@ -568,7 +569,13 @@ async function runSyncLocked(
   log.info('sync', `projectId=${projectId} pr=${pr} mode=${mode} start`)
   const store = await review.loadReview(projectId, pr)
 
-  const { id: prId, headRefOid } = await gh.viewPr(ctx.owner, ctx.repo, pr)
+  const { id: prId, headRefOid, baseRefOid } = await gh.viewPr(ctx.owner, ctx.repo, pr)
+
+  await git.fetchOrigin(projectId)
+  const { head: currentHead } = await git.workingTree(projectId)
+  if (currentHead !== headRefOid) {
+    await git.checkoutTarget(projectId, { kind: 'pr', pr, headRefOid, baseRefOid })
+  }
 
   let pushedViewed = 0
   let pushedComments = 0

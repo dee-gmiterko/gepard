@@ -398,7 +398,13 @@ export function parseDiffTreeStdinFiles(
   return map
 }
 
-// Fetched objects stay in git's object database regardless of what is checked out.
+export function fetchOrigin(projectId: string): Promise<void> {
+  return enqueue(projectId, async () => {
+    const repoRoot = projectRepoDir(projectId)
+    await gitRun(repoRoot, ['fetch', 'origin', '--prune'])
+  })
+}
+
 export function ensurePrCommitsFetched(
   projectId: string,
   pr: number,
