@@ -57,7 +57,7 @@ export function useDerivedReferences(
     refAnchor && choices.exactOpen && !exactDisabled
       ? {
           scope: choices.exactScope,
-          targetedPaths,
+          targetedPaths: choices.exactScope === 'targeted' ? targetedPaths : [],
           kind: 'exactLine',
           text: lineText!.trim(),
           origin: { path: refAnchor.path, line: refAnchor.line },
@@ -70,7 +70,7 @@ export function useDerivedReferences(
     refAnchor && choices.patternOpen && !patternDisabled && effectivePatternSymbol
       ? {
           scope: choices.patternScope,
-          targetedPaths,
+          targetedPaths: choices.patternScope === 'targeted' ? targetedPaths : [],
           kind: 'pattern',
           text: effectivePatternSymbol,
           word: true,
