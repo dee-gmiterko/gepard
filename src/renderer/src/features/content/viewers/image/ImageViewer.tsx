@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import type { ImageData } from '@shared/ipc/schemas/pr';
 import { Image } from '../../../../components/Image';
 import { ViewerFrame } from '../ViewerFrame';
-import { imageSrc } from '../utils/imageSrc';
+import { imageSrc } from '../../../../helpers/image';
 
 export function ImageViewer({
   path,
