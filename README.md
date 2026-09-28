@@ -11,73 +11,44 @@ See `docs/gepard.md` for the full product spec.
 
 ## Highlights
 
-- **Projects launchpad** - add a project from a GitHub URL (prefilled from
-  your signed-in `gh` profile); it's cloned into local app storage with git
-  hooks disabled.
-- **Targeting** - fuzzy search boxes for PR, commit, and path narrow what's
-  shown everywhere else in the app; a `+` next to the PR select opens a New
-  PR modal to create and target a PR immediately.
-- **Side panel navigation** - full file tree, a tree/list scoped to targeted
-  files, and a symbol/text search view (exact, regex, or symbol-aware).
-- **Review workspace** - pinned and active file/diff tabs, inline comments,
-  a viewed checkbox and comments accordion per file, and a chronological
-  comments tab across all threads.
-- **Comment editor** - attach quick references (symbol definitions, exact
-  matches) to a comment by checking them; they're appended automatically
-  when the comment is synced.
-- **Explicit sync** - new comments and viewed state are kept locally
-  (timestamped) and only pushed to GitHub, and remote state pulled back,
-  when you hit Sync.
-- **Background indexing** - opened projects are indexed for symbol and line
-  search; TypeScript symbol support comes from an LSP extension enabled by
-  default.
-- Localizable UI (English default) and full colour templates that follow
-  the system preference.
+- **Point at a repo, start reviewing** - add a project from its GitHub URL
+  (prefilled from your signed-in `gh` account); it's cloned to a local
+  working copy so you review real files, not a web diff.
+- **Target anything** - fuzzy-narrow the whole app to a PR, a commit, or a
+  file/folder/glob path; open a New PR flow to create and target one on the
+  spot.
+- **Find your way around fast** - browse the full repo, jump straight to
+  just the files a target touched, or search by exact text, regex, or
+  symbol.
+- **Review many files without losing your place** - keep files pinned open,
+  read inline comments as you go, mark files viewed, and step through every
+  thread and reply across the PR in one chronological view - including
+  comments that aren't tied to any file or line.
+- **New files read as text, not noise** - a freshly added file opens as
+  plain text instead of an all-green diff, so you can actually read it.
+- **Comments that carry proof** - attach the exact matching lines or symbol
+  definitions a comment refers to; they're appended to it automatically
+  when you sync.
+- **Nothing reaches GitHub until you say so** - comments and viewed state
+  are kept locally and only pushed - and remote changes only pulled - when
+  you hit Sync.
+- **Instant symbol and text search** - projects are indexed in the
+  background as soon as you open them; TypeScript symbol search works out
+  of the box, with more languages addable as extensions.
+- **Comfortable wherever you work** - localized UI (English by default) and
+  full light/dark colour themes that follow your system preference.
 
-## Project setup
+## Prerequisites
 
-### Install
+- [GitHub CLI](https://cli.github.com/) (`gh`), installed and authenticated
+  (`gh auth login`). Gepard uses it for every GitHub operation: listing your
+  repos and PRs, creating PRs, and syncing comments.
 
-```bash
-yarn install
-```
+## Getting Gepard
 
-### Development
+Download the latest build for your platform from the project's
+[Releases](https://github.com/dee-gmiterko/gepard/releases) page (Windows,
+macOS, or Linux AppImage).
 
-```bash
-yarn dev
-```
-
-### Test
-
-```bash
-yarn test
-```
-
-### Typecheck / lint / format
-
-```bash
-yarn typecheck
-yarn lint
-yarn format:check   # or `yarn format` to write fixes
-```
-
-### Build
-
-```bash
-# For Windows
-yarn build:win
-
-# For macOS
-yarn build:mac
-
-# For Linux
-yarn build:linux
-```
-
-`yarn build:unpack` produces an unpacked build (via `electron-builder --dir`)
-for quick local testing of a packaged app without generating installers.
-
-## Recommended IDE setup
-
-- [VSCode](https://code.visualstudio.com/) + [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) + [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
+Want to build it from source, or work on Gepard itself? See
+[CONTRIBUTING.md](CONTRIBUTING.md).
