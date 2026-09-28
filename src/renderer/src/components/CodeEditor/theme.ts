@@ -107,6 +107,11 @@ export function editorTheme(theme: Theme): Extension {
         borderTop: `1px solid ${c.border}`,
         borderBottom: `1px solid ${c.border}`,
         padding: `${theme.space[2]} ${theme.space[3]}`,
+        // The editor content sets `white-space: pre` for code lines; reset it
+        // here so comment text wraps instead of overflowing the scroller.
+        whiteSpace: 'normal',
+        overflowWrap: 'anywhere',
+        wordBreak: 'break-word',
       },
     },
     { dark: theme.mode === 'dark' },
