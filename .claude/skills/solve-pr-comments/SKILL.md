@@ -28,12 +28,12 @@ Every unresolved thread is a task at the same bar, regardless of phrasing or len
 
 ## 2. Group and dispatch to parallel subagents
 
-Group threads by file/area overlap so agents don't collide on the same files. Launch all groups in one message so they run concurrently.
+Do not pre-investigate a thread's cause or pre-decide its fix before dispatch — that judgment belongs to the agent doing the work, not the coordinator. Launch all groups in one message so they run concurrently.
 
 Each agent's prompt must include, per thread it owns:
 
 - The thread ID and the full (typo-corrected, intent-preserved) comment text.
-- Enough surrounding code context that the agent can act without re-deriving the coordinator's own investigation.
+- The file and line the thread is anchored to.
 - An instruction to fix the actual code — not acknowledge the comment, not describe the fix in documentation only.
 
 Tell every agent explicitly not to run project-wide verification (typecheck, lint, format, build, test, `yarn validate`, or any part of it) on its own. Concurrent agents in one working tree will collide on shared caches, lockfiles, and build artifacts if each verifies independently mid-flight. Verification runs exactly once, after every agent is done, by the coordinator.
