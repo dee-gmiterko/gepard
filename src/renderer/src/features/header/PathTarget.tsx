@@ -1,38 +1,32 @@
-import { useMemo, useState } from 'react'
-import { Folder, X } from 'react-feather'
-import styled from 'styled-components'
-import { useIntl } from 'react-intl'
-import { defineMessages } from '../../i18n/defineMessages'
-import { Combobox } from '../../components/Combobox'
-import { IconField } from '../../components/IconField'
-import { IconButton } from '../../components/IconButton'
-import { useChangedFiles, useTree } from '../../queries/files'
-import { useAppState } from '../../state/AppContext'
-import { useTargetActions } from './useTargetActions'
-import { activeTargetRef, folderSourcePaths } from '../../state/selectors'
-import { foldersOf } from '../../helpers/paths'
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Folder, X } from 'react-feather';
+import { defineMessages, useIntl } from 'react-intl';
+import { Combobox } from '../../components/Combobox';
+import { IconField } from '../../components/IconField';
+import { IconButton } from '../../components/IconButton';
+import { useChangedFiles, useTree } from '../../queries/files';
+import { useAppState } from '../../state/AppContext';
+import { useTargetActions } from './useTargetActions';
+import { activeTargetRef, folderSourcePaths } from '../../state/selectors';
+import { foldersOf } from '../../helpers/paths';
 
 const messages = defineMessages({
   placeholder: {
     id: 'header.pathTarget.placeholder',
-    defaultMessage: 'Path…'
+    defaultMessage: 'Path…',
   },
   clear: {
     id: 'header.pathTarget.clear',
-    defaultMessage: 'Clear'
-  }
-})
-
-const KeydownCatcher = styled.div`
-  display: contents;
-`
+    defaultMessage: 'Clear',
+  },
+});
 
 interface PathTargetInputProps {
-  committed: string | null
-  folders: string[]
-  isFetching: boolean
-  placeholder: string
-  onCommit: (raw: string) => void
+  committed: string | null;
+  folders: string[];
+  isFetching: boolean;
+  placeholder: string;
+  onCommit: (raw: string) => void;
 }
 
 function PathTargetInput({
@@ -40,53 +34,63 @@ function PathTargetInput({
   folders,
   isFetching,
   placeholder,
-  onCommit
+  onCommit,
 }: PathTargetInputProps): React.JSX.Element {
-  const [text, setText] = useState(committed ?? '')
+  const [text, setText] = useState(committed ?? '');
+  // Typing live-updates the committed target, so `committed` changes on every
+  // keystroke too; only resync from it when it changed for some other reason
+  // (cleared elsewhere, restored on project open, ...).
+  const lastOwnCommit = useRef(committed ?? '');
+
+  useEffect(() => {
+    const normalized = committed ?? '';
+    if (normalized === lastOwnCommit.current) return;
+    lastOwnCommit.current = normalized;
+    setText(normalized);
+  }, [committed]);
+
+  function handleTextChange(next: string): void {
+    setText(next);
+    lastOwnCommit.current = next.trim();
+    onCommit(next);
+  }
 
   return (
-    <KeydownCatcher
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' && !e.defaultPrevented) onCommit(text)
-      }}
-    >
-      <Combobox<string>
-        items={folders}
-        value={null}
-        getKey={(f) => f}
-        getLabel={(f) => f}
-        loading={isFetching}
-        placeholder={placeholder}
-        onSelect={(folder) => onCommit(folder ?? '')}
-        freeText={{ text, onTextChange: setText }}
-      />
-    </KeydownCatcher>
-  )
+    <Combobox<string>
+      items={folders}
+      value={null}
+      getKey={(f) => f}
+      getLabel={(f) => f}
+      loading={isFetching}
+      placeholder={placeholder}
+      onSelect={(folder) => onCommit(folder ?? '')}
+      freeText={{ text, onTextChange: handleTextChange }}
+    />
+  );
 }
 
 export function PathTarget(): React.JSX.Element {
-  const intl = useIntl()
-  const state = useAppState()
-  const { setPath } = useTargetActions()
-  const tree = useTree()
-  const changed = useChangedFiles()
-  const scoped = activeTargetRef(state.targeting) !== null
+  const intl = useIntl();
+  const state = useAppState();
+  const { setPath } = useTargetActions();
+  const tree = useTree();
+  const changed = useChangedFiles();
+  const scoped = activeTargetRef(state.targeting) !== null;
 
   const folders = useMemo(() => {
-    const changedPaths = changed.data?.map((f) => f.path)
-    const source = folderSourcePaths(state.targeting, changedPaths, tree.data ?? [])
-    return foldersOf(source)
-  }, [state.targeting, changed.data, tree.data])
-  const isFetching = scoped ? changed.isFetching : tree.isFetching
+    const changedPaths = changed.data?.map((f) => f.path);
+    const source = folderSourcePaths(state.targeting, changedPaths, tree.data ?? []);
+    return foldersOf(source);
+  }, [state.targeting, changed.data, tree.data]);
+  const isFetching = scoped ? changed.isFetching : tree.isFetching;
 
   function commit(raw: string): void {
-    setPath(raw.trim() || null)
+    setPath(raw.trim() || null);
   }
 
   return (
     <IconField icon={Folder} width={220}>
       <PathTargetInput
-        key={state.targeting.path ?? ''}
         committed={state.targeting.path}
         folders={folders}
         isFetching={isFetching}
@@ -102,5 +106,5 @@ export function PathTarget(): React.JSX.Element {
         />
       )}
     </IconField>
-  )
+  );
 }

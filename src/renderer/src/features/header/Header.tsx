@@ -1,31 +1,35 @@
-import styled from 'styled-components'
-import { FormattedMessage, useIntl } from 'react-intl'
-import { defineMessages } from '../../i18n/defineMessages'
-import { PrTarget } from './PrTarget'
-import { CommitTarget } from './CommitTarget'
-import { PathTarget } from './PathTarget'
-import { useTargetingEffects } from './useTargetingEffects'
-import { Grid } from 'react-feather'
-import { IconButton } from '../../components/IconButton'
-import { Ellipsis } from '../../components/Ellipsis'
-import { Inline } from '../../components/Layout'
-import { useIndexStatus } from '../../queries/projects'
-import { useAppDispatch } from '../../state/AppContext'
+import styled from 'styled-components';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { PrTarget } from './PrTarget';
+import { CommitTarget } from './CommitTarget';
+import { PathTarget } from './PathTarget';
+import { useTargetingEffects } from './useTargetingEffects';
+import { Grid, MessageSquare } from 'react-feather';
+import { IconButton } from '../../components/IconButton';
+import { Ellipsis } from '../../components/Ellipsis';
+import { Inline } from '../../components/Layout';
+import { useIndexStatus, useSetLayout } from '../../queries/projects';
+import { useAppDispatch, useAppState } from '../../state/AppContext';
+import { useIsCheckedOutChangedFile } from '../content/commentScope';
 
 const messages = defineMessages({
   projects: {
     id: 'header.projects',
-    defaultMessage: 'Projects'
+    defaultMessage: 'Projects',
   },
   checkingOut: {
     id: 'header.checkingOut',
-    defaultMessage: 'Checking out…'
+    defaultMessage: 'Checking out…',
   },
   indexing: {
     id: 'header.indexing',
-    defaultMessage: 'Indexing…'
-  }
-})
+    defaultMessage: 'Indexing…',
+  },
+  fileComments: {
+    id: 'content.fileControls.fileComments',
+    defaultMessage: 'File comments',
+  },
+});
 
 const Bar = styled.header`
   display: flex;
@@ -35,22 +39,32 @@ const Bar = styled.header`
   padding: 0 ${({ theme }) => theme.space[3]};
   background: ${({ theme }) => theme.colors.bgSubtle};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-`
+`;
 
 const Status = styled(Ellipsis)`
   font-size: ${({ theme }) => theme.font.size.xs};
   color: ${({ theme }) => theme.colors.fgMuted};
-`
+`;
 
 const Spacer = styled.div`
   flex: 1;
-`
+`;
 
 export function Header(): React.JSX.Element {
-  const intl = useIntl()
-  const { pending } = useTargetingEffects()
-  const dispatch = useAppDispatch()
-  const { data: index } = useIndexStatus()
+  const intl = useIntl();
+  const { pending } = useTargetingEffects();
+  const dispatch = useAppDispatch();
+  const state = useAppState();
+  const setLayout = useSetLayout();
+  const { data: index } = useIndexStatus();
+  const path = state.activeFile;
+  const isChangedFile = useIsCheckedOutChangedFile(path);
+
+  function toggleFileComments(): void {
+    const open = !state.layout.fileCommentsPanelOpen;
+    dispatch({ type: 'layout/setFileCommentsPanelOpen', open });
+    setLayout.mutate({ ...state.layout, fileCommentsPanelOpen: open });
+  }
 
   return (
     <Bar>
@@ -75,6 +89,14 @@ export function Header(): React.JSX.Element {
           <FormattedMessage {...messages.indexing} />
         </Status>
       )}
+      {state.targeting.pr !== null && path !== null && isChangedFile && (
+        <IconButton
+          icon={MessageSquare}
+          active={state.layout.fileCommentsPanelOpen}
+          label={intl.formatMessage(messages.fileComments)}
+          onClick={toggleFileComments}
+        />
+      )}
     </Bar>
-  )
+  );
 }

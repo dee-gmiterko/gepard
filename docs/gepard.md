@@ -18,12 +18,20 @@
 - When new project is added its cloned into an internal app storage in profile (git hooks are ignored).
 - Opened project is indexed in background for symbols and line search patterns (symbols only if an LSP extension covers the language).
 ### Settings
-- Fullscreen overlay, opened via a settings icon in the side panel or from the launchpad; holds theme selection and extensions management (install/enable/disable). Not part of the launchpad page itself.
+- Fullscreen overlay, opened via a settings icon in the side panel or from the launchpad; not part of the launchpad page itself; closes on the header close button or `Escape`.
+- Current sections:
+	- Theme - single select: Follow system, Light, Dark, plus any installed theme extensions.
+	- Extensions - list of installed extensions (built-in and external), each showing kind (language server/theme), source (built-in/external) badge and an enable/disable checkbox; `Add extension` opens a file picker to install an extension package from disk; shows the install directory path and per-extension load errors.
+- Planned/missing sections (TODO, not yet implemented):
+	- Language - a locale selector for the UI (the app already resolves a locale from the OS/browser preference at startup via `resolveLocale`/`availableLocales`, but there is no persisted user override and no settings UI for it yet).
+	- Controls/keybindings - a section to view and rebind keyboard shortcuts; shortcuts (`Space`, `PageUp`/`PageDown`, see Controls below) are currently hardcoded with no customization or persistence layer.
 ### Main window
 - Header panel - targeting:
 	- series of fuzzy search select boxes entering: PR, commit, path
 		- path accepts a folder prefix or a glob; the select suggests folders
+		- path filters live as-you-type (each keystroke updates the target and narrows navigation), not only on Enter/selection
 	- `+` next to the PR select opens a New PR modal: base and head branch, title, description; creates the PR immediately and targets it
+	- Toggle for the file comments/right panel: shown whenever a PR is targeted and the active file is a changed file.
 - Side panel - navigation: vertical tabs:
 	- file browser - full tree.
 	- targeted file browser - limited to targeted files changed (or path targeted). Tree or flat list.
@@ -36,10 +44,11 @@
 		- A newly added file (nothing to diff against) always opens in the plain file (text) view, never diff - an all-green diff carries no information.
 	- File controls floating panel (default close to top right)
 		- Viewed checkbox
-		- Toggle for the file comments sidebar
 		- Sync button - saves any new comments to `gh`, publishes viewed, pulls remote ones (timestamp based merging into local); also fetches the repo and checks out the targeted PR's latest head if it moved
 		- Draggable; position persisted per project, kept clamped inside the viewer area.
-	- File comments sidebar: closeable, right-hand side, resizable the same way as the side panel (drag edge, width persisted per project); replaces the old floating comments overlay.
+	- Right panel (file comments sidebar): closeable, right-hand side, resizable the same way as the side panel (drag edge, width persisted per project); replaces the old floating comments overlay.
+		- Opened/closed via the toggle button in the header (moved there from the file controls floating panel).
+		- Planned: a symbol definitions tree at the bottom of the panel, listing definitions found in the active file (LSP-backed, same symbol resolution used by the comment editor's `Symbol definition` references) for quick in-file/cross-file navigation. Not yet implemented.
 	- Comments tab: chronological view of all threads and replies; a composer below the list adds a new general (PR-level, no file/line anchor) comment.
 ### Components
 - Comment editor
