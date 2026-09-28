@@ -1,0 +1,7 @@
+{
+  "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
+  "include": ["electron.vite.config.ts", "scripts"],
+  "compilerOptions": {
+    "types": ["electron-vite/node"]
+  }
+}

@@ -11,8 +11,15 @@
 - Scripts (media/locale refresh, ...) are Typescript, run directly with `tsx`, no build step; package itself is ESM
 ### Extensions
 - Independent packages, outside the main app bundle's own deps: `extensions/lsp/<name>` (language servers), `extensions/themes/<name>` (colour themes), `extensions/locales/<name>` (UI translations) - each its own manifest (`gepard.type`) and own dependencies.
-- Typescript/JavaScript LSP extension is built in and enabled by default, using its own bundled native TypeScript LSP only (no workspace-toolchain detection - this is a review tool, not an editor).
-- Themes (light/dark, built in) and locales (English, built in) are also shipped this way, not hardcoded in the app; a small bootstrap copy of the English strings and default light/dark templates is baked directly into the renderer bundle only so the UI has something to render before the real, IPC-fetched extension list has loaded.
+- Typescript/JavaScript LSP extension is built in and enabled by default, shipping its own native TypeScript LSP inside its package (no workspace-toolchain detection - this is a review tool, not an editor).
+- Themes (light/dark, built in) and locales (English, built in) are also shipped this way, not hardcoded in the app; the renderer bakes only a fallback theme template, used before the IPC-fetched theme list has loaded (message default texts live in the code, so no locale catalog is needed at bootstrap).
+#### Extension requirements
+- Kinds: language server, theme, locale.
+- Built-in and user-installed extensions are handled identically.
+- Each extension is self-contained: it ships everything it needs to run, with no changes to app code or build configuration.
+- Language-specific behavior lives entirely in the language server extension; the app's language handling is language-agnostic.
+- Install, enable and disable take effect at runtime, no restart.
+- A failing extension does not affect the app or other extensions.
 ### Projects (launchpad)
 - Start interface for managing projects - selecting one from GitHub url - with prefill from lovely signed `gh` profile.
 - When new project is added its cloned into an internal app storage in profile (git hooks are ignored).

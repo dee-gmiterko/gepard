@@ -10,7 +10,7 @@ import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useAppState } from '../../state/AppContext';
 import { useTargetActions } from './useTargetActions';
 import { NewPrModal } from './NewPrModal';
-import type { PrListItem } from '@shared/ipc/schemas/pr';
+import type { PrListItem } from '@gepard/common/ipc/schemas/pr';
 
 const messages = defineMessages({
   placeholder: {

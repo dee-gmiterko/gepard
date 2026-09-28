@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { Plus } from 'react-feather';
 import { defineMessages, FormattedMessage } from 'react-intl';
-import type { ReviewThread } from '@shared/ipc/schemas/comment';
+import type { ReviewThread } from '@gepard/common/ipc/schemas/comment';
 import { useAppState } from '../../state/AppContext';
 import { Accordion } from '../../components/Accordion';
 import { Button } from '../../components/Button';

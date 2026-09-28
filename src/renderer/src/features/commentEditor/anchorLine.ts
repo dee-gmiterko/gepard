@@ -1,4 +1,4 @@
-import type { Anchor, DraftAnchor } from '@shared/ipc/schemas/comment';
+import type { Anchor, DraftAnchor } from '@gepard/common/ipc/schemas/comment';
 
 export interface RefAnchor {
   sha: string;

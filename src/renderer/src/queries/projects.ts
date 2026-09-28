@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { invoke, useIpcEvent } from '../ipc/client';
 import { qk } from './keys';
 import { useAppState } from '../state/AppContext';
-import type { ChannelInput } from '@shared/ipc/contract';
+import type { ChannelInput } from '@gepard/common/ipc/contract';
 
 export function useViewer() {
   return useQuery({ queryKey: qk.viewer(), queryFn: () => invoke('app.viewer') });

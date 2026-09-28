@@ -1,4 +1,4 @@
-import type { ReviewThread } from '@shared/ipc/schemas/comment';
+import type { ReviewThread } from '@gepard/common/ipc/schemas/comment';
 
 export function sortThreadsChronologically(threads: readonly ReviewThread[]): ReviewThread[] {
   return [...threads].sort((a, b) =>

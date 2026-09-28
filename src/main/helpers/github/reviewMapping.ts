@@ -9,8 +9,8 @@ import type {
   LocalViewedState,
   RemoteViewedFile,
   ReviewThread,
-} from '@shared/ipc/schemas/comment';
-import { generalCommentAnchor } from '@shared/ipc/schemas/comment';
+} from '@gepard/common/ipc/schemas/comment';
+import { generalCommentAnchor } from '@gepard/common/ipc/schemas/comment';
 
 export function mapComment(raw: GqlReviewCommentRaw, threadId: string): Comment {
   return {

@@ -9,7 +9,7 @@ import {
   generalCommentAnchor,
   LocalViewedState,
   ReviewThread,
-} from '@shared/ipc/schemas/comment';
+} from '@gepard/common/ipc/schemas/comment';
 
 const ReviewStoreFile = z.object({
   threads: z.array(ReviewThread),

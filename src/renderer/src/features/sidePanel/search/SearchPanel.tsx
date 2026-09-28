@@ -20,7 +20,7 @@ import { Message } from '../../../components/Message';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import { FileRowMarks } from '../fileRows/FileRowMarks';
 import { useRowData } from '../fileRows/rowData';
-import type { GroupedResult, WorkspaceSymbol } from '@shared/ipc/schemas/search';
+import type { GroupedResult, WorkspaceSymbol } from '@gepard/common/ipc/schemas/search';
 
 type FileMatches = GroupedResult['files'][number];
 type MatchItem = FileMatches['matches'][number];

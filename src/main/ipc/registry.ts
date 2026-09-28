@@ -9,7 +9,7 @@ import {
   type EventName,
   type EventPayload,
   type IpcErrorShape,
-} from '@shared/ipc/contract';
+} from '@gepard/common/ipc/contract';
 
 export interface HandlerCtx {
   event: IpcMainInvokeEvent;

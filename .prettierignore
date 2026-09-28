@@ -1,7 +1,5 @@
 out
 dist
-tsconfig.json
-tsconfig.*.json
 
 docs
 .yarnrc.yml

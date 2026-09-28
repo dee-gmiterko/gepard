@@ -1,7 +1,7 @@
 import { mkdir, readdir, rm, stat } from 'node:fs/promises';
 import { z } from 'zod';
-import { Project, PersistedLayout } from '@shared/ipc/schemas/project';
-import { PersistedTargeting } from '@shared/ipc/schemas/pr';
+import { Project, PersistedLayout } from '@gepard/common/ipc/schemas/project';
+import { PersistedTargeting } from '@gepard/common/ipc/schemas/pr';
 import { AppError } from '../ipc/registry';
 import { readJsonFile, writeJsonFile } from '../helpers/fs/jsonFile';
 import {

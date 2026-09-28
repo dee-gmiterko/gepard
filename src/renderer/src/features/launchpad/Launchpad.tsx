@@ -23,7 +23,7 @@ import {
 } from '../../queries/projects';
 import { useAppDispatch } from '../../state/AppContext';
 import { RepoUrlCombobox } from './RepoUrlCombobox';
-import type { EventPayload } from '@shared/ipc/contract';
+import type { EventPayload } from '@gepard/common/ipc/contract';
 
 type CloneProgress = EventPayload<'clone.progress'>;
 

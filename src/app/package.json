@@ -1,0 +1,53 @@
+{
+  "name": "gepard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Gepard - Great Pull Request Review Tool",
+  "main": "./out/main/index.js",
+  "desktopName": "io.github.dee-gmiterko.gepard.desktop",
+  "author": "d.gmiterko@gmail.com",
+  "homepage": "https://github.com/dee-gmiterko/gepard",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dee-gmiterko/gepard"
+  },
+  "scripts": {
+    "dev": "electron-vite dev",
+    "start": "electron-vite preview",
+    "build": "electron-vite build",
+    "build:unpack": "yarn build && electron-builder --dir",
+    "build:win": "yarn build && electron-builder --win",
+    "build:mac": "yarn build && electron-builder --mac",
+    "build:linux": "yarn build && electron-builder --linux",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "@electron-toolkit/utils": "4.0.0",
+    "@vscode/ripgrep": "1.18.0",
+    "mime-types": "^3.0.2",
+    "picomatch": "^4.0.7",
+    "vscode-jsonrpc": "9.0.3",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@electron-toolkit/tsconfig": "2.0.0",
+    "@gepard/common": "workspace:*",
+    "@gepard/eslint-config": "workspace:*",
+    "@gepard/main": "workspace:*",
+    "@gepard/preload": "workspace:*",
+    "@gepard/renderer": "workspace:*",
+    "@types/node": "24.19.0",
+    "@vitejs/plugin-react": "5.2.0",
+    "electron": "44.4.5",
+    "electron-builder": "26.16.1",
+    "electron-vite": "5.0.0",
+    "eslint": "9.39.5",
+    "prettier": "3.9.9",
+    "typescript": "5.9.3",
+    "vite": "7.3.6"
+  }
+}

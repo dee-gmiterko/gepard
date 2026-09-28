@@ -4,8 +4,8 @@ import { useFileContent, useTargetedFiles } from '../../queries/files';
 import type { ReferenceChoices } from './referenceChoices';
 import type { LineSymbol } from './SymbolDefinitionSection';
 import type { RefAnchor } from './anchorLine';
-import type { CommentReference } from '@shared/ipc/schemas/comment';
-import type { GroupedResult } from '@shared/ipc/schemas/search';
+import type { CommentReference } from '@gepard/common/ipc/schemas/comment';
+import type { GroupedResult } from '@gepard/common/ipc/schemas/search';
 
 function referencesFromResult(
   data: GroupedResult | undefined,

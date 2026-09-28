@@ -1,0 +1,24 @@
+{
+  "name": "@gepard/preload",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "@gepard/common": "workspace:*"
+  },
+  "devDependencies": {
+    "@electron-toolkit/tsconfig": "2.0.0",
+    "@gepard/eslint-config": "workspace:*",
+    "@types/node": "24.19.0",
+    "electron": "44.4.5",
+    "eslint": "9.39.5",
+    "prettier": "3.9.9",
+    "typescript": "5.9.3"
+  }
+}

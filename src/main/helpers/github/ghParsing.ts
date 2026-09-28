@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { AppError } from '../../ipc/registry';
-import { GqlPageInfo } from '@shared/ipc/schemas/comment';
-import type { PrListItem } from '@shared/ipc/schemas/pr';
-import { matchesTarget } from '@shared/model/paths';
+import { GqlPageInfo } from '@gepard/common/ipc/schemas/comment';
+import type { PrListItem } from '@gepard/common/ipc/schemas/pr';
+import { matchesTarget } from '@gepard/common/model/paths';
 
 const PR_LIST_FIELDS =
   'number,id,title,author,headRefName,baseRefName,headRefOid,createdAt,changedFiles,labels,url';

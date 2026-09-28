@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import styled, { css } from 'styled-components';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
-import type { ReviewThread } from '@shared/ipc/schemas/comment';
+import type { ReviewThread } from '@gepard/common/ipc/schemas/comment';
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
 import { useComments, useUpsertComment } from '../../../queries/comments';
 import { useViewer } from '../../../queries/projects';

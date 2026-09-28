@@ -7,7 +7,7 @@ import type {
   Envelope,
   InvokeArgs,
   IpcErrorShape,
-} from '@shared/ipc/contract';
+} from '@gepard/common/ipc/contract';
 
 export class IpcError extends Error {
   code: string;

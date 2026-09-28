@@ -3,7 +3,7 @@ import { invoke } from '../ipc/client';
 import { qk } from './keys';
 import { useAppState } from '../state/AppContext';
 import { useTargetedPr } from './prs';
-import type { CommentDraft, LocalViewedState } from '@shared/ipc/schemas/comment';
+import type { CommentDraft, LocalViewedState } from '@gepard/common/ipc/schemas/comment';
 
 export function useComments() {
   const state = useAppState();

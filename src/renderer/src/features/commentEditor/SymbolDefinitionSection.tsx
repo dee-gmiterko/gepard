@@ -10,9 +10,9 @@ import { ScopeToggle, type SearchScope } from '../../components/ScopeToggle';
 import { useDefinition } from '../../queries/search';
 import { useTargetedFiles } from '../../queries/files';
 import { sameRef } from './refs';
-import { isTargeted } from '@shared/model/paths';
-import type { CommentReference } from '@shared/ipc/schemas/comment';
-import type { LineSymbolsResult } from '@shared/ipc/schemas/lsp';
+import { isTargeted } from '@gepard/common/model/paths';
+import type { CommentReference } from '@gepard/common/ipc/schemas/comment';
+import type { LineSymbolsResult } from '@gepard/common/ipc/schemas/lsp';
 import type { RefAnchor } from './anchorLine';
 
 export type LineSymbol = LineSymbolsResult['symbols'][number];

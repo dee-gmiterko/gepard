@@ -1,6 +1,6 @@
 import { RangeSetBuilder, Text, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, GutterMarker, gutter } from '@codemirror/view';
-import type { DiffRow } from '@shared/ipc/schemas/pr';
+import type { DiffRow } from '@gepard/common/ipc/schemas/pr';
 
 interface DiffLineInfo {
   kind: DiffRow['kind'];

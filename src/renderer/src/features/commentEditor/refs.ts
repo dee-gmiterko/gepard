@@ -1,4 +1,4 @@
-import type { CommentReference } from '@shared/ipc/schemas/comment';
+import type { CommentReference } from '@gepard/common/ipc/schemas/comment';
 
 export function sameRef(a: CommentReference, b: CommentReference): boolean {
   return a.kind === b.kind && a.path === b.path && a.line === b.line;

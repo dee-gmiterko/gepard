@@ -3,7 +3,7 @@ import { useAppState } from '../../../state/AppContext';
 import { isDiffView } from '../../../state/selectors';
 import { useChangedFiles } from '../../../queries/files';
 import { useViewed } from '../../../queries/comments';
-import type { ChangedFile } from '@shared/ipc/schemas/pr';
+import type { ChangedFile } from '@gepard/common/ipc/schemas/pr';
 
 export interface RowData {
   additions: number;

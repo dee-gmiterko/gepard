@@ -5,7 +5,7 @@ import { useAppState } from '../state/AppContext';
 import { isDiffView } from '../state/selectors';
 import { useCurrentHead } from './projects';
 import { qk } from './keys';
-import { matchesTarget } from '@shared/model/paths';
+import { matchesTarget } from '@gepard/common/model/paths';
 
 const immutable = { staleTime: Infinity, gcTime: 10 * 60 * 1000 } as const;
 

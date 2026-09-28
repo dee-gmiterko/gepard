@@ -1,0 +1,11 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [".prettierrc.yaml", ".prettierignore", ".editorconfig"],
+  "tasks": {
+    "typecheck": {},
+    "lint": {},
+    "format": { "cache": false },
+    "format:check": {},
+    "test": {}
+  }
+}

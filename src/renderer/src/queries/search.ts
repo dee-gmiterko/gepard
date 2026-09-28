@@ -3,7 +3,7 @@ import { invoke, isCancelledError } from '../ipc/client';
 import { qk } from './keys';
 import { useAppState } from '../state/AppContext';
 import { useCurrentHead } from './projects';
-import type { SearchQuery } from '@shared/ipc/schemas/search';
+import type { SearchQuery } from '@gepard/common/ipc/schemas/search';
 
 // React Query keeps `data` at its last successful value when a fetch fails.
 function ignoreCancelled<TData, TError>(

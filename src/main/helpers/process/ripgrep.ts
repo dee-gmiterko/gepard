@@ -1,5 +1,5 @@
 import { rgPath as rgPathRaw } from '@vscode/ripgrep';
-import { matchesTarget } from '@shared/model/paths';
+import { matchesTarget } from '@gepard/common/model/paths';
 import { run, ExecError } from './exec';
 
 // Electron cannot execute binaries from inside an asar archive.

@@ -1,15 +1,9 @@
 import type { ThemeTemplate } from './tokens';
 
-export const SYSTEM_LIGHT_TEMPLATE_ID = 'light';
-export const SYSTEM_DARK_TEMPLATE_ID = 'dark';
-
-// The built-in light/dark templates are runtime theme extensions
-// (`extensions/themes/{light,dark}`), fetched over IPC (`themes.list`) like
-// any other extension - they are not guaranteed to be loaded yet (first
-// paint, still fetching) or even available at all (extension broken,
-// disabled, or missing). This is the one theme baked directly into the app
-// itself, used only as a last resort so the UI never renders unstyled or
-// blank.
+// Themes are fetched over IPC (`themes.list`), so none is guaranteed to be
+// loaded yet (first paint, still fetching) or even available at all. This is
+// the one theme baked directly into the app itself, used only as a last resort
+// so the UI never renders unstyled or blank.
 const FALLBACK_TEMPLATE: ThemeTemplate = {
   id: '__fallback__',
   name: 'Fallback',
@@ -65,10 +59,6 @@ export function resolveTemplate(
     const selected = templates.find((template) => template.id === selectedId);
     if (selected) return selected;
   }
-  const systemId = systemPrefersDark ? SYSTEM_DARK_TEMPLATE_ID : SYSTEM_LIGHT_TEMPLATE_ID;
-  const bySystemId = templates.find((template) => template.id === systemId);
-  if (bySystemId) return bySystemId;
-
   const systemMode = systemPrefersDark ? 'dark' : 'light';
   const byMode = templates.find((template) => template.mode === systemMode);
   if (byMode) return byMode;

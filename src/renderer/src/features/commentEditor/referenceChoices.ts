@@ -1,5 +1,5 @@
 import type { SearchScope } from '../../components/ScopeToggle';
-import type { CommentReference } from '@shared/ipc/schemas/comment';
+import type { CommentReference } from '@gepard/common/ipc/schemas/comment';
 
 export interface ReferenceChoices {
   symbolOpen: boolean;

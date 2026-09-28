@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { invoke } from '../ipc/client';
 import { qk } from './keys';
 import { useAppState } from '../state/AppContext';
-import type { ChannelInput } from '@shared/ipc/contract';
-import type { PrSummary, TargetRef } from '@shared/ipc/schemas/pr';
+import type { ChannelInput } from '@gepard/common/ipc/contract';
+import type { PrSummary, TargetRef } from '@gepard/common/ipc/schemas/pr';
 
 export function unionByKey<T>(a: readonly T[], b: readonly T[], getKey: (item: T) => string): T[] {
   const seen = new Set<string>();

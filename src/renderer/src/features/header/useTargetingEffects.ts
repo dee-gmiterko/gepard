@@ -3,7 +3,7 @@ import { useAppDispatch, useAppState } from '../../state/AppContext';
 import { useCheckoutTarget } from '../../queries/prs';
 import { useSync } from '../../queries/comments';
 import { activeTargetRef } from '../../state/selectors';
-import type { TargetRef } from '@shared/ipc/schemas/pr';
+import type { TargetRef } from '@gepard/common/ipc/schemas/pr';
 
 interface TargetingEffectsStatus {
   pending: boolean;

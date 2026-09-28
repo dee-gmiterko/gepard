@@ -7,7 +7,7 @@ import { useDocumentSymbols } from '../../../queries/search';
 import { Tree, TreeLabel, type TreeNode } from '../../../components/Tree';
 import { Caption } from '../../../components/Caption';
 import { Message } from '../../../components/Message';
-import type { DocumentSymbol } from '@shared/ipc/schemas/lsp';
+import type { DocumentSymbol } from '@gepard/common/ipc/schemas/lsp';
 
 type SymbolKind = DocumentSymbol['kind'];
 

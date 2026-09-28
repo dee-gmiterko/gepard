@@ -5,7 +5,7 @@ import { Decoration, EditorView, GutterMarker, WidgetType, gutter } from '@codem
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Plus } from 'react-feather';
-import type { DraftAnchor, ReviewThread } from '@shared/ipc/schemas/comment';
+import type { DraftAnchor, ReviewThread } from '@gepard/common/ipc/schemas/comment';
 import { intl } from '../../i18n/intl';
 
 const messages = defineMessages({

@@ -4,6 +4,21 @@ This covers building Gepard from source, day-to-day development, testing,
 packaging, and writing extensions. For what the app does, see `README.md`
 (user-facing) and `docs/gepard.md` (full product spec).
 
+## Code structure
+
+Yarn workspaces + Turborepo.
+
+| Path | Package | Role |
+| --- | --- | --- |
+| `src/app` | `gepard` | electron-vite / electron-builder config, build assets |
+| `src/main` | `@gepard/main` | Electron main process |
+| `src/preload` | `@gepard/preload` | preload bridge |
+| `src/renderer` | `@gepard/renderer` | React UI |
+| `src/common` | `@gepard/common` | IPC contract, schemas, models |
+| `tools/eslint-config` | `@gepard/eslint-config` | shared ESLint configs |
+| `tools/locales` | `@gepard/locales-tools` | locale catalog refresh/check |
+| `extensions/*` | see [Extensions](#extensions) | |
+
 ## Project setup
 
 ### Install

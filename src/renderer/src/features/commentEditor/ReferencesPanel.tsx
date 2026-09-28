@@ -10,8 +10,8 @@ import { ScopeToggle, type SearchScope } from '../../components/ScopeToggle';
 import { Select } from '../../components/Select';
 import { SymbolDefinitionSection, type LineSymbol } from './SymbolDefinitionSection';
 import { toggleRefIn } from './refs';
-import type { CommentReference } from '@shared/ipc/schemas/comment';
-import type { GroupedResult } from '@shared/ipc/schemas/search';
+import type { CommentReference } from '@gepard/common/ipc/schemas/comment';
+import type { GroupedResult } from '@gepard/common/ipc/schemas/search';
 import type { RefAnchor } from './anchorLine';
 import type { ReferenceChoices } from './referenceChoices';
 

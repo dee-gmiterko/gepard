@@ -23,8 +23,14 @@ import { indexer as defaultIndexer, type FileChange } from '../lsp';
 import { nohooksDir, projectCloneTmpDir, projectRepoDir } from '../paths';
 import { isCloned } from '../store/projects';
 import { log } from '../log';
-import type { ChangedFile, Commit, FileContent, FileDiff, ImageData } from '@shared/ipc/schemas/pr';
-import { isGlob, matchesTarget, staticPrefixOf } from '@shared/model/paths';
+import type {
+  ChangedFile,
+  Commit,
+  FileContent,
+  FileDiff,
+  ImageData,
+} from '@gepard/common/ipc/schemas/pr';
+import { isGlob, matchesTarget, staticPrefixOf } from '@gepard/common/model/paths';
 
 const EMPTY_TREE_SHA = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl';
-import type { ImageData } from '@shared/ipc/schemas/pr';
+import type { ImageData } from '@gepard/common/ipc/schemas/pr';
 import { Image } from '../../../../components/Image';
 import { Message } from '../../../../components/Message';
 import { ViewerFrame } from '../ViewerFrame';

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import styled from 'styled-components';
 import { Edit2, Trash2, X } from 'react-feather';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
-import type { Comment, DraftAnchor, ReviewThread } from '@shared/ipc/schemas/comment';
+import type { Comment, DraftAnchor, ReviewThread } from '@gepard/common/ipc/schemas/comment';
 import { useAppState } from '../../state/AppContext';
 import { IconButton } from '../../components/IconButton';
 import { Button } from '../../components/Button';

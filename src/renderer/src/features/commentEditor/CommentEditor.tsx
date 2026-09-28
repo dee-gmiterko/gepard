@@ -7,7 +7,7 @@ import { useUpsertComment, type CommentDraftBody } from '../../queries/comments'
 import { Button } from '../../components/Button';
 import { ActionRow, Stack } from '../../components/Layout';
 import { TextArea } from '../../components/TextInput';
-import type { CommentReference, DraftAnchor } from '@shared/ipc/schemas/comment';
+import type { CommentReference, DraftAnchor } from '@gepard/common/ipc/schemas/comment';
 import type { RefAnchor } from './anchorLine';
 
 const messages = defineMessages({

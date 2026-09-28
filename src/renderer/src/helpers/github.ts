@@ -1,4 +1,4 @@
-import type { ViewerRepo } from '@shared/ipc/schemas/project';
+import type { ViewerRepo } from '@gepard/common/ipc/schemas/project';
 
 const GITHUB_URL_PREFIX_RE = /^https?:\/\/(www\.)?github\.com\//i;
 

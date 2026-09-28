@@ -1,5 +1,5 @@
 import { AppError } from '../../ipc/registry';
-import type { ChangedFile, Commit, DiffRow } from '@shared/ipc/schemas/pr';
+import type { ChangedFile, Commit, DiffRow } from '@gepard/common/ipc/schemas/pr';
 
 type ChangeType = ChangedFile['changeType'];
 

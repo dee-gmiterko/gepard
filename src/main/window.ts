@@ -2,7 +2,7 @@ import { BrowserWindow, shell } from 'electron';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { is } from '@electron-toolkit/utils';
-import icon from '../../resources/icon.png?asset';
+import icon from './resources/icon.png?asset';
 import { isAllowedExternalUrl } from './helpers/url';
 
 export function createMainWindow(): BrowserWindow {

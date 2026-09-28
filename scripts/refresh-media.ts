@@ -6,9 +6,9 @@ import { BICUBIC2, createICNS, createICO } from 'png2icons';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(__dirname, '..');
-const LOGO_SVG = path.join(ROOT_DIR, 'resources/logo.svg');
-const BUILD_DIR = path.join(ROOT_DIR, 'build');
-const RESOURCES_DIR = path.join(ROOT_DIR, 'resources');
+const LOGO_SVG = path.join(ROOT_DIR, 'src/app/resources/logo.svg');
+const BUILD_DIR = path.join(ROOT_DIR, 'src/app/build');
+const ICON_DIR = path.join(ROOT_DIR, 'src/main/resources');
 
 const ICON_PNG_SIZE = 512;
 // icns/ico embed multiple sizes up to 1024/256; render from a large master
@@ -21,10 +21,10 @@ async function renderPng(size: number): Promise<Buffer> {
 
 async function main(): Promise<void> {
   await mkdir(BUILD_DIR, { recursive: true });
-  await mkdir(RESOURCES_DIR, { recursive: true });
+  await mkdir(ICON_DIR, { recursive: true });
 
   const icon = await renderPng(ICON_PNG_SIZE);
-  await writeFile(path.join(RESOURCES_DIR, 'icon.png'), icon);
+  await writeFile(path.join(ICON_DIR, 'icon.png'), icon);
   await writeFile(path.join(BUILD_DIR, 'icon.png'), icon);
 
   const master = await renderPng(ICON_MASTER_SIZE);
@@ -40,7 +40,7 @@ async function main(): Promise<void> {
   await writeFile(path.join(BUILD_DIR, 'icon.ico'), ico);
 
   console.log(
-    'Regenerated build/icon.png, build/icon.ico, build/icon.icns, resources/icon.png from resources/logo.svg.',
+    'Regenerated build/icon.png, build/icon.ico, build/icon.icns, ../main/resources/icon.png from resources/logo.svg.',
   );
 }
 

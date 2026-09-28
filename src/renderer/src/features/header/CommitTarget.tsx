@@ -7,7 +7,7 @@ import { usePrCommits, useCommits, unionByKey } from '../../queries/prs';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useAppState } from '../../state/AppContext';
 import { useTargetActions } from './useTargetActions';
-import type { Commit } from '@shared/ipc/schemas/pr';
+import type { Commit } from '@gepard/common/ipc/schemas/pr';
 
 const messages = defineMessages({
   placeholder: {
