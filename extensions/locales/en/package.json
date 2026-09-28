@@ -1,0 +1,10 @@
+{
+  "name": "gepard-locale-en",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Built-in English locale extension for Gepard.",
+  "main": "index.mjs",
+  "gepard": {
+    "type": "locale"
+  }
+}

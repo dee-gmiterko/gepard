@@ -7,6 +7,7 @@ export const qk = {
   extensionsDir: () => [...qk.all, 'extensionsDir'] as const,
   themeTemplate: () => [...qk.all, 'themeTemplate'] as const,
   themes: () => [...qk.all, 'themes'] as const,
+  locales: () => [...qk.all, 'locales'] as const,
   project: (projectId: string) => [...qk.all, 'project', projectId] as const,
   open: (p: string) => [...qk.project(p), 'open'] as const,
   commits: (p: string, search?: string, path?: string) =>
@@ -30,5 +31,5 @@ export const qk = {
     [...qk.project(p), 'diff', base, head, 'file', path] as const,
   search: (p: string, sha: string, query: string, opts?: unknown) =>
     [...qk.commit(p, sha), 'search', query, opts] as const,
-  index: (p: string) => [...qk.project(p), 'index'] as const
-}
+  index: (p: string) => [...qk.project(p), 'index'] as const,
+};

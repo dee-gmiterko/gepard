@@ -40,10 +40,11 @@ export const channelNames = [
   'extensions.dir',
   'theme.getTemplateId',
   'theme.setTemplateId',
-  'themes.list'
-] as const
+  'themes.list',
+  'locales.list',
+] as const;
 
-export const eventNames = ['clone.progress', 'index.status', 'theme.changed', 'app.error'] as const
+export const eventNames = ['clone.progress', 'index.status', 'theme.changed', 'app.error'] as const;
 
-export type ChannelNameList = (typeof channelNames)[number]
-export type EventNameList = (typeof eventNames)[number]
+export type ChannelNameList = (typeof channelNames)[number];
+export type EventNameList = (typeof eventNames)[number];

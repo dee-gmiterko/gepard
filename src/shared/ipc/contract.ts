@@ -1,5 +1,5 @@
-import { z } from 'zod'
-import { Viewer, ViewerRepo, Project, ProjectId, PersistedLayout } from './schemas/project'
+import { z } from 'zod';
+import { Viewer, ViewerRepo, Project, ProjectId, PersistedLayout } from './schemas/project';
 import {
   ChangedFile,
   CheckoutResult,
@@ -12,26 +12,27 @@ import {
   PrSummary,
   RepoPath,
   Sha,
-  TargetRef
-} from './schemas/pr'
-import { Comment, CommentDraft, LocalViewedState, ReviewThread } from './schemas/comment'
-import { GroupedResult, Pos, SearchQuery, WorkspaceSymbol } from './schemas/search'
-import { DefinitionResult, IndexStatus, LineSymbolsResult } from './schemas/lsp'
-import { ExtensionInfo } from './schemas/extensions'
-import { ThemeTemplateData } from './schemas/theme'
-import type { ChannelNameList, EventNameList } from './names'
-export { channelNames, eventNames } from './names'
+  TargetRef,
+} from './schemas/pr';
+import { Comment, CommentDraft, LocalViewedState, ReviewThread } from './schemas/comment';
+import { GroupedResult, Pos, SearchQuery, WorkspaceSymbol } from './schemas/search';
+import { DefinitionResult, IndexStatus, LineSymbolsResult } from './schemas/lsp';
+import { ExtensionInfo } from './schemas/extensions';
+import { ThemeTemplateData } from './schemas/theme';
+import { LocaleData } from './schemas/locale';
+import type { ChannelNameList, EventNameList } from './names';
+export { channelNames, eventNames } from './names';
 
 const ch = <I extends z.ZodType, O extends z.ZodType>(
   input: I,
-  output: O
+  output: O,
 ): { input: I; output: O } => ({
   input,
-  output
-})
+  output,
+});
 
-const ProjectRef = { projectId: ProjectId }
-const PrRef = { projectId: ProjectId, pr: z.int().positive() }
+const ProjectRef = { projectId: ProjectId };
+const PrRef = { projectId: ProjectId, pr: z.int().positive() };
 
 export const channels = {
   'app.viewer': ch(z.void(), Viewer.nullable()),
@@ -43,10 +44,10 @@ export const channels = {
       url: z.url({
         protocol: /^https$/,
         hostname: /^github\.com$/,
-        error: 'expected https://github.com/<owner>/<repo>'
-      })
+        error: 'expected https://github.com/<owner>/<repo>',
+      }),
     }),
-    Project
+    Project,
   ),
   'projects.open': ch(
     z.object(ProjectRef),
@@ -54,8 +55,8 @@ export const channels = {
       project: Project,
       head: Sha,
       targeting: PersistedTargeting,
-      layout: PersistedLayout
-    })
+      layout: PersistedLayout,
+    }),
   ),
   'projects.setTargeting': ch(z.object({ ...ProjectRef, targeting: PersistedTargeting }), z.void()),
   'projects.setLayout': ch(z.object({ ...ProjectRef, layout: PersistedLayout }), z.void()),
@@ -67,9 +68,9 @@ export const channels = {
       ...ProjectRef,
       search: z.string().optional(),
       commit: Sha.optional(),
-      path: RepoPath.optional()
+      path: RepoPath.optional(),
     }),
-    z.array(PrListItem)
+    z.array(PrListItem),
   ),
   'pr.view': ch(z.object(PrRef), PrSummary),
   'pr.commits': ch(z.object({ ...PrRef, path: RepoPath.optional() }), z.array(Commit)),
@@ -78,8 +79,8 @@ export const channels = {
     z.object(ProjectRef),
     z.object({
       branches: z.array(z.string().min(1)),
-      defaultBranch: z.string().min(1).nullable()
-    })
+      defaultBranch: z.string().min(1).nullable(),
+    }),
   ),
   'pr.create': ch(
     z.object({
@@ -87,18 +88,18 @@ export const channels = {
       base: z.string().min(1),
       head: z.string().min(1),
       title: z.string().min(1),
-      body: z.string().default('')
+      body: z.string().default(''),
     }),
-    PrSummary
+    PrSummary,
   ),
   'commits.list': ch(
     z.object({
       ...ProjectRef,
       search: z.string().optional(),
       path: RepoPath.optional(),
-      limit: z.int().positive().optional()
+      limit: z.int().positive().optional(),
     }),
-    z.array(Commit)
+    z.array(Commit),
   ),
 
   'files.changed': ch(z.object({ ...ProjectRef, base: Sha, head: Sha }), z.array(ChangedFile)),
@@ -109,15 +110,15 @@ export const channels = {
   'search.run': ch(SearchQuery, GroupedResult),
   'symbols.line': ch(
     z.object({ ...ProjectRef, sha: Sha, path: RepoPath, line: z.int().positive() }),
-    LineSymbolsResult
+    LineSymbolsResult,
   ),
   'symbols.definition': ch(
     z.object({ ...ProjectRef, sha: Sha, path: RepoPath, pos: Pos }),
-    DefinitionResult
+    DefinitionResult,
   ),
   'symbols.workspace': ch(
     z.object({ ...ProjectRef, sha: Sha, query: z.string(), limit: z.int().positive().optional() }),
-    z.array(WorkspaceSymbol)
+    z.array(WorkspaceSymbol),
   ),
 
   'comments.list': ch(z.object(PrRef), z.array(ReviewThread)),
@@ -129,17 +130,17 @@ export const channels = {
       ...PrRef,
       paths: z.array(RepoPath).min(1),
       viewed: z.boolean(),
-      prId: NodeId.nullable().default(null)
+      prId: NodeId.nullable().default(null),
     }),
-    z.array(LocalViewedState)
+    z.array(LocalViewedState),
   ),
 
   'sync.run': ch(
     z.object({ ...PrRef, mode: z.enum(['full', 'pull']).default('full') }),
     z.object({
       syncedAt: z.iso.datetime({ offset: true }),
-      droppedRemoteDeleted: z.int().nonnegative()
-    })
+      droppedRemoteDeleted: z.int().nonnegative(),
+    }),
   ),
   'sync.pendingCount': ch(z.object(PrRef), z.int().nonnegative()),
   'index.get': ch(z.object(ProjectRef), IndexStatus),
@@ -148,23 +149,25 @@ export const channels = {
     z.object({
       level: z.enum(['info', 'warn', 'error']),
       scope: z.string(),
-      message: z.string()
+      message: z.string(),
     }),
-    z.void()
+    z.void(),
   ),
 
   'extensions.list': ch(z.void(), z.array(ExtensionInfo)),
   'extensions.setEnabled': ch(
     z.object({ id: z.string(), enabled: z.boolean() }),
-    z.array(ExtensionInfo)
+    z.array(ExtensionInfo),
   ),
   'extensions.install': ch(z.object({ dialogTitle: z.string().min(1) }), z.array(ExtensionInfo)),
   'extensions.dir': ch(z.void(), z.string()),
 
   'theme.getTemplateId': ch(z.void(), z.string().nullable()),
   'theme.setTemplateId': ch(z.object({ templateId: z.string().nullable() }), z.string().nullable()),
-  'themes.list': ch(z.void(), z.array(ThemeTemplateData))
-} as const satisfies Record<ChannelNameList, { input: z.ZodType; output: z.ZodType }>
+  'themes.list': ch(z.void(), z.array(ThemeTemplateData)),
+
+  'locales.list': ch(z.void(), z.array(LocaleData)),
+} as const satisfies Record<ChannelNameList, { input: z.ZodType; output: z.ZodType }>;
 
 export const events = {
   'clone.progress': z.object({
@@ -176,42 +179,42 @@ export const events = {
       'resolving',
       'checkout',
       'done',
-      'error'
+      'error',
     ]),
     percent: z.number().min(0).max(100).nullable(),
-    message: z.string().optional()
+    message: z.string().optional(),
   }),
   'index.status': z.object({ projectId: z.string(), status: IndexStatus }),
   'theme.changed': z.object({ dark: z.boolean() }),
-  'app.error': z.object({ scope: z.string(), message: z.string() })
-} as const satisfies Record<EventNameList, z.ZodType>
+  'app.error': z.object({ scope: z.string(), message: z.string() }),
+} as const satisfies Record<EventNameList, z.ZodType>;
 
-type ExtraChannel = Exclude<keyof typeof channels, ChannelNameList>
-type ExtraEvent = Exclude<keyof typeof events, EventNameList>
+type ExtraChannel = Exclude<keyof typeof channels, ChannelNameList>;
+type ExtraEvent = Exclude<keyof typeof events, EventNameList>;
 const _namesComplete: [ExtraChannel, ExtraEvent] extends [never, never]
   ? true
-  : ['add to names.ts:', ExtraChannel | ExtraEvent] = true
-void _namesComplete
+  : ['add to names.ts:', ExtraChannel | ExtraEvent] = true;
+void _namesComplete;
 
-export type Channels = typeof channels
-export type ChannelName = keyof Channels
+export type Channels = typeof channels;
+export type ChannelName = keyof Channels;
 // zod's `z.input` leaves fields with `.default()` optional.
-export type ChannelInput<C extends ChannelName> = z.input<Channels[C]['input']>
+export type ChannelInput<C extends ChannelName> = z.input<Channels[C]['input']>;
 // zod's `z.output` has `.default()` values applied.
-export type ChannelParsedInput<C extends ChannelName> = z.output<Channels[C]['input']>
-export type ChannelOutput<C extends ChannelName> = z.output<Channels[C]['output']>
+export type ChannelParsedInput<C extends ChannelName> = z.output<Channels[C]['input']>;
+export type ChannelOutput<C extends ChannelName> = z.output<Channels[C]['output']>;
 
-export type Events = typeof events
-export type EventName = keyof Events
-export type EventPayload<E extends EventName> = z.output<Events[E]>
+export type Events = typeof events;
+export type EventName = keyof Events;
+export type EventPayload<E extends EventName> = z.output<Events[E]>;
 
 // Electron keeps only `.message` of an error rejected from `ipcMain.handle`.
 export interface IpcErrorShape {
-  code: string
-  message: string
-  details?: unknown
+  code: string;
+  message: string;
+  details?: unknown;
 }
-export type Envelope<T> = { ok: true; value: T } | { ok: false; error: IpcErrorShape }
+export type Envelope<T> = { ok: true; value: T } | { ok: false; error: IpcErrorShape };
 
 export type InvokeArgs<C extends ChannelName> =
-  undefined extends ChannelInput<C> ? [input?: ChannelInput<C>] : [input: ChannelInput<C>]
+  undefined extends ChannelInput<C> ? [input?: ChannelInput<C>] : [input: ChannelInput<C>];

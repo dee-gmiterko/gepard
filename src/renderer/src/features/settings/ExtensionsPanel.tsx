@@ -1,95 +1,104 @@
-import styled from 'styled-components'
-import { Plus } from 'react-feather'
-import { FormattedMessage, useIntl } from 'react-intl'
-import { defineMessages } from '../../i18n/defineMessages'
-import { Checkbox } from '../../components/Checkbox'
-import { Badge } from '../../components/Badge'
-import { Button } from '../../components/Button'
-import { Caption } from '../../components/Caption'
-import { Message } from '../../components/Message'
-import { List, ListRow, RowTitle } from '../../components/List'
-import { Stack, Inline } from '../../components/Layout'
-import { Section } from '../../components/Section'
-import { SectionHeading } from '../../components/SectionHeading'
+import styled from 'styled-components';
+import { Plus } from 'react-feather';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { Checkbox } from '../../components/Checkbox';
+import { Badge } from '../../components/Badge';
+import { Button } from '../../components/Button';
+import { Caption } from '../../components/Caption';
+import { Message } from '../../components/Message';
+import { List, ListRow, RowTitle } from '../../components/List';
+import { Stack, Inline } from '../../components/Layout';
+import { Section } from '../../components/Section';
+import { SectionHeading } from '../../components/SectionHeading';
 import {
   useExtensions,
   useExtensionsDir,
   useInstallExtension,
-  useSetExtensionEnabled
-} from '../../queries/extensions'
+  useSetExtensionEnabled,
+} from '../../queries/extensions';
 
 const messages = defineMessages({
   title: {
     id: 'settings.extensions.title',
-    defaultMessage: 'Extensions'
+    defaultMessage: 'Extensions',
   },
   addExtension: {
     id: 'settings.extensions.addExtension',
-    defaultMessage: 'Add extension'
+    defaultMessage: 'Add extension',
   },
   installedIn: {
     id: 'settings.extensions.installedIn',
-    defaultMessage: 'Installed extensions live in {dir}'
+    defaultMessage: 'Installed extensions live in {dir}',
   },
   loading: {
     id: 'settings.extensions.loading',
-    defaultMessage: 'Loading extensions…'
+    defaultMessage: 'Loading extensions…',
   },
   failed: {
     id: 'settings.extensions.failed',
-    defaultMessage: 'Failed to load extensions.'
+    defaultMessage: 'Failed to load extensions.',
   },
   empty: {
     id: 'settings.extensions.empty',
-    defaultMessage: 'No extensions found.'
+    defaultMessage: 'No extensions found.',
   },
   loadFailed: {
     id: 'settings.extensions.loadFailed',
-    defaultMessage: 'Failed to load: {error}'
+    defaultMessage: 'Failed to load: {error}',
   },
   builtin: {
     id: 'settings.extensions.builtin',
-    defaultMessage: 'Built-in'
+    defaultMessage: 'Built-in',
   },
   external: {
     id: 'settings.extensions.external',
-    defaultMessage: 'External'
+    defaultMessage: 'External',
   },
   kindLsp: {
     id: 'settings.extensions.kindLsp',
-    defaultMessage: 'Language server'
+    defaultMessage: 'Language server',
   },
   kindTheme: {
     id: 'settings.extensions.kindTheme',
-    defaultMessage: 'Theme'
+    defaultMessage: 'Theme',
+  },
+  kindLocale: {
+    id: 'settings.extensions.kindLocale',
+    defaultMessage: 'Locale',
   },
   enableExtension: {
     id: 'settings.extensions.enableExtension',
-    defaultMessage: 'Enable {name}'
+    defaultMessage: 'Enable {name}',
   },
   installDialogTitle: {
     id: 'settings.extensions.installDialogTitle',
-    defaultMessage: 'Add extension package'
-  }
-})
+    defaultMessage: 'Add extension package',
+  },
+});
+
+const kindMessages = {
+  lsp: messages.kindLsp,
+  theme: messages.kindTheme,
+  locale: messages.kindLocale,
+} as const;
 
 const DirCaption = styled(Caption)`
   display: block;
   margin-bottom: ${({ theme }) => theme.space[2]};
   font-family: ${({ theme }) => theme.font.mono};
-`
+`;
 
 const RowError = styled.div`
   font-size: ${({ theme }) => theme.font.size.xs};
   color: ${({ theme }) => theme.colors.danger};
-`
+`;
 
 export function ExtensionsPanel(): React.JSX.Element {
-  const intl = useIntl()
-  const { data: extensions, isLoading, isError } = useExtensions()
-  const { data: dir } = useExtensionsDir()
-  const setEnabled = useSetExtensionEnabled()
-  const install = useInstallExtension()
+  const intl = useIntl();
+  const { data: extensions, isLoading, isError } = useExtensions();
+  const { data: dir } = useExtensionsDir();
+  const setEnabled = useSetExtensionEnabled();
+  const install = useInstallExtension();
 
   return (
     <Section>
@@ -99,7 +108,7 @@ export function ExtensionsPanel(): React.JSX.Element {
           <Button
             onClick={() =>
               install.mutate({
-                dialogTitle: intl.formatMessage(messages.installDialogTitle)
+                dialogTitle: intl.formatMessage(messages.installDialogTitle),
               })
             }
             disabled={install.isPending}
@@ -139,9 +148,7 @@ export function ExtensionsPanel(): React.JSX.Element {
                 <Inline $gap={2}>
                   <RowTitle $size="sm">{ext.displayName}</RowTitle>
                   <Badge $tone="muted">
-                    <FormattedMessage
-                      {...(ext.kind === 'lsp' ? messages.kindLsp : messages.kindTheme)}
-                    />
+                    <FormattedMessage {...kindMessages[ext.kind]} />
                   </Badge>
                   <Badge $tone={ext.source === 'builtin' ? 'muted' : undefined}>
                     <FormattedMessage
@@ -166,5 +173,5 @@ export function ExtensionsPanel(): React.JSX.Element {
         </List>
       )}
     </Section>
-  )
+  );
 }

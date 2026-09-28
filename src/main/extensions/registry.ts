@@ -1,11 +1,13 @@
-import { cp, mkdir } from 'node:fs/promises'
-import * as path from 'node:path'
-import type { ExtensionInfo, ExtensionKind } from '@shared/ipc/schemas/extensions'
-import { ThemeTemplateData } from '@shared/ipc/schemas/theme'
-import { AppError } from '../ipc/registry'
-import { builtinExtensionsDir, userExtensionsDir, type ExtensionKindDir } from '../paths'
-import * as extensionsStore from '../store/extensions'
-import type { LanguageExtension } from '../lsp/session'
+import { cp, mkdir } from 'node:fs/promises';
+import * as path from 'node:path';
+import type { ExtensionInfo, ExtensionKind } from '@shared/ipc/schemas/extensions';
+import { ThemeTemplateData } from '@shared/ipc/schemas/theme';
+import { LocaleData } from '@shared/ipc/schemas/locale';
+import { AppError } from '../ipc/registry';
+import { builtinExtensionsDir, userExtensionsDir, type ExtensionKindDir } from '../paths';
+import * as extensionsStore from '../store/extensions';
+import * as settingsStore from '../store/settings';
+import type { LanguageExtension } from '../lsp/session';
 import {
   loadExtensionPackages,
   readManifest,
@@ -14,32 +16,36 @@ import {
   type LoadedExtensionPackage,
   type PackageManifest,
   type ScanCache,
-  type Sourced
-} from './scanner'
-import { isFn } from '../helpers/type-guards'
+  type Sourced,
+} from './scanner';
+import { isFn } from '../helpers/type-guards';
 
 export function isLanguageExtension(value: unknown): value is LanguageExtension {
-  if (!value || typeof value !== 'object') return false
-  const v = value as Record<string, unknown>
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
   return (
     typeof v.id === 'string' &&
     v.id.length > 0 &&
     typeof v.displayName === 'string' &&
     isFn(v.matches) &&
     isFn(v.resolve)
-  )
+  );
 }
 
 export function isThemeTemplate(value: unknown): value is ThemeTemplateData {
-  return ThemeTemplateData.safeParse(value).success
+  return ThemeTemplateData.safeParse(value).success;
+}
+
+export function isLocaleData(value: unknown): value is LocaleData {
+  return LocaleData.safeParse(value).success;
 }
 
 interface KindSpec<T> {
-  kind: ExtensionKind
-  dirName: ExtensionKindDir
-  isValid: (value: unknown) => value is T
-  getId: (item: T) => string
-  getDisplayName: (item: T) => string
+  kind: ExtensionKind;
+  dirName: ExtensionKindDir;
+  isValid: (value: unknown) => value is T;
+  getId: (item: T) => string;
+  getDisplayName: (item: T) => string;
 }
 
 const LSP_SPEC: KindSpec<LanguageExtension> = {
@@ -47,42 +53,50 @@ const LSP_SPEC: KindSpec<LanguageExtension> = {
   dirName: 'lsp',
   isValid: isLanguageExtension,
   getId: (item) => item.id,
-  getDisplayName: (item) => item.displayName
-}
+  getDisplayName: (item) => item.displayName,
+};
 
 const THEME_SPEC: KindSpec<ThemeTemplateData> = {
   kind: 'theme',
   dirName: 'themes',
   isValid: isThemeTemplate,
   getId: (item) => item.id,
-  getDisplayName: (item) => item.name
-}
+  getDisplayName: (item) => item.name,
+};
+
+const LOCALE_SPEC: KindSpec<LocaleData> = {
+  kind: 'locale',
+  dirName: 'locales',
+  isValid: isLocaleData,
+  getId: (item) => item.id,
+  getDisplayName: (item) => item.displayName,
+};
 
 interface KnownExtension<T> {
-  extension: T
-  source: 'builtin' | 'external'
+  extension: T;
+  source: 'builtin' | 'external';
 }
 
 class KindRegistry<T> {
-  private builtin: LoadedExtensionPackage<T>[] = []
-  private external: LoadedExtensionPackage<T>[] = []
-  private failed: Sourced<FailedExtensionPackage>[] = []
-  private allDisabled: Sourced<DisabledExtensionPackage>[] = []
-  private builtinScanCache: ScanCache<T> = new Map()
-  private externalScanCache: ScanCache<T> = new Map()
+  private builtin: LoadedExtensionPackage<T>[] = [];
+  private external: LoadedExtensionPackage<T>[] = [];
+  private failed: Sourced<FailedExtensionPackage>[] = [];
+  private allDisabled: Sourced<DisabledExtensionPackage>[] = [];
+  private builtinScanCache: ScanCache<T> = new Map();
+  private externalScanCache: ScanCache<T> = new Map();
 
   constructor(
     private readonly spec: KindSpec<T>,
-    private readonly overrideUserDir?: string
+    private readonly overrideUserDir?: string,
   ) {}
 
   private get userDir(): string {
-    return this.overrideUserDir ?? userExtensionsDir(this.spec.dirName)
+    return this.overrideUserDir ?? userExtensionsDir(this.spec.dirName);
   }
 
-  private async rescan(enabledMap: extensionsStore.ExtensionsState): Promise<void> {
-    const knownDirs = await extensionsStore.getKnownFiles()
-    const knownMap = new Map(Object.entries(knownDirs))
+  private async rescan(enabledMap: settingsStore.ExtensionsState): Promise<void> {
+    const knownDirs = await extensionsStore.getKnownFiles();
+    const knownMap = new Map(Object.entries(knownDirs));
 
     const builtinResult = await loadExtensionPackages(
       builtinExtensionsDir(this.spec.dirName),
@@ -90,49 +104,49 @@ class KindRegistry<T> {
       this.spec.isValid,
       this.builtinScanCache,
       knownMap,
-      (id) => enabledMap[id] ?? true
-    )
+      (id) => enabledMap[id] ?? true,
+    );
     const externalResult = await loadExtensionPackages(
       this.userDir,
       this.spec.kind,
       this.spec.isValid,
       this.externalScanCache,
       knownMap,
-      (id) => enabledMap[id] ?? true
-    )
+      (id) => enabledMap[id] ?? true,
+    );
 
-    this.builtin = builtinResult.loaded
-    this.external = externalResult.loaded
+    this.builtin = builtinResult.loaded;
+    this.external = externalResult.loaded;
     this.failed = [
       ...builtinResult.failed.map((f) => ({ ...f, source: 'builtin' as const })),
-      ...externalResult.failed.map((f) => ({ ...f, source: 'external' as const }))
-    ]
+      ...externalResult.failed.map((f) => ({ ...f, source: 'external' as const })),
+    ];
     this.allDisabled = [
       ...builtinResult.disabled.map((d) => ({ ...d, source: 'builtin' as const })),
-      ...externalResult.disabled.map((d) => ({ ...d, source: 'external' as const }))
-    ]
-    this.builtinScanCache = builtinResult.cache
-    this.externalScanCache = externalResult.cache
-    await this.persistKnownDirs([...builtinResult.loaded, ...externalResult.loaded], knownDirs)
+      ...externalResult.disabled.map((d) => ({ ...d, source: 'external' as const })),
+    ];
+    this.builtinScanCache = builtinResult.cache;
+    this.externalScanCache = externalResult.cache;
+    await this.persistKnownDirs([...builtinResult.loaded, ...externalResult.loaded], knownDirs);
   }
 
   private async persistKnownDirs(
     loaded: LoadedExtensionPackage<T>[],
-    known: extensionsStore.KnownFilesState
+    known: extensionsStore.KnownFilesState,
   ): Promise<void> {
-    if (loaded.length === 0) return
-    const next = { ...known }
-    let changed = false
+    if (loaded.length === 0) return;
+    const next = { ...known };
+    let changed = false;
     for (const { extension, dir } of loaded) {
-      const id = this.spec.getId(extension)
-      const displayName = this.spec.getDisplayName(extension)
-      const prev = next[dir]
+      const id = this.spec.getId(extension);
+      const displayName = this.spec.getDisplayName(extension);
+      const prev = next[dir];
       if (!prev || prev.id !== id || prev.displayName !== displayName) {
-        next[dir] = { id, displayName }
-        changed = true
+        next[dir] = { id, displayName };
+        changed = true;
       }
     }
-    if (changed) await extensionsStore.setKnownFiles(next)
+    if (changed) await extensionsStore.setKnownFiles(next);
   }
 
   private known(): KnownExtension<T>[] {
@@ -140,121 +154,133 @@ class KindRegistry<T> {
       ...this.builtin.map(({ extension }): KnownExtension<T> => ({ extension, source: 'builtin' })),
       ...this.external.map(({ extension }): KnownExtension<T> => ({
         extension,
-        source: 'external'
-      }))
-    ]
+        source: 'external',
+      })),
+    ];
   }
 
   async list(): Promise<ExtensionInfo[]> {
-    const enabledMap = await extensionsStore.getEnabledMap()
-    await this.rescan(enabledMap)
+    const enabledMap = await settingsStore.getEnabledMap();
+    await this.rescan(enabledMap);
     const known = this.known().map(({ extension, source }): ExtensionInfo => ({
       id: this.spec.getId(extension),
       displayName: this.spec.getDisplayName(extension),
       kind: this.spec.kind,
       source,
-      enabled: enabledMap[this.spec.getId(extension)] ?? true
-    }))
+      enabled: enabledMap[this.spec.getId(extension)] ?? true,
+    }));
     const broken = this.failed.map(({ dir, error, source }): ExtensionInfo => ({
       id: dir,
       displayName: path.basename(dir),
       kind: this.spec.kind,
       source,
       enabled: false,
-      error
-    }))
+      error,
+    }));
     const disabled = this.allDisabled.map(({ id, displayName, source }): ExtensionInfo => ({
       id,
       displayName,
       kind: this.spec.kind,
       source,
-      enabled: false
-    }))
-    return [...known, ...broken, ...disabled]
+      enabled: false,
+    }));
+    return [...known, ...broken, ...disabled];
   }
 
   async install(srcDir: string): Promise<void> {
-    const name = path.basename(srcDir)
-    await mkdir(this.userDir, { recursive: true })
+    const name = path.basename(srcDir);
+    await mkdir(this.userDir, { recursive: true });
     try {
       await cp(srcDir, path.join(this.userDir, name), {
         recursive: true,
         errorOnExist: true,
-        force: false
-      })
+        force: false,
+      });
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code === 'ERR_FS_CP_EEXIST') {
         throw new AppError(
           'EXTENSION_ALREADY_EXISTS',
-          `An extension named "${name}" already exists.`
-        )
+          `An extension named "${name}" already exists.`,
+        );
       }
-      throw e
+      throw e;
     }
   }
 
   async enabledExtensions(): Promise<T[]> {
-    const enabledMap = await extensionsStore.getEnabledMap()
-    await this.rescan(enabledMap)
+    const enabledMap = await settingsStore.getEnabledMap();
+    await this.rescan(enabledMap);
     return this.known()
       .filter(({ extension }) => enabledMap[this.spec.getId(extension)] ?? true)
-      .map(({ extension }) => extension)
+      .map(({ extension }) => extension);
   }
 }
 
 export class ExtensionRegistry {
-  private readonly lsp: KindRegistry<LanguageExtension>
-  private readonly theme: KindRegistry<ThemeTemplateData>
+  private readonly lsp: KindRegistry<LanguageExtension>;
+  private readonly theme: KindRegistry<ThemeTemplateData>;
+  private readonly locale: KindRegistry<LocaleData>;
 
   constructor(overrideUserRootDir?: string) {
     const overrideDir = (dirName: ExtensionKindDir): string | undefined =>
-      overrideUserRootDir ? path.join(overrideUserRootDir, dirName) : undefined
-    this.lsp = new KindRegistry(LSP_SPEC, overrideDir(LSP_SPEC.dirName))
-    this.theme = new KindRegistry(THEME_SPEC, overrideDir(THEME_SPEC.dirName))
+      overrideUserRootDir ? path.join(overrideUserRootDir, dirName) : undefined;
+    this.lsp = new KindRegistry(LSP_SPEC, overrideDir(LSP_SPEC.dirName));
+    this.theme = new KindRegistry(THEME_SPEC, overrideDir(THEME_SPEC.dirName));
+    this.locale = new KindRegistry(LOCALE_SPEC, overrideDir(LOCALE_SPEC.dirName));
   }
 
   async list(): Promise<ExtensionInfo[]> {
-    const [lsp, theme] = await Promise.all([this.lsp.list(), this.theme.list()])
-    return [...lsp, ...theme]
+    const [lsp, theme, locale] = await Promise.all([
+      this.lsp.list(),
+      this.theme.list(),
+      this.locale.list(),
+    ]);
+    return [...lsp, ...theme, ...locale];
   }
 
   async setEnabled(id: string, enabled: boolean): Promise<ExtensionInfo[]> {
-    await extensionsStore.setEnabled(id, enabled)
-    return this.list()
+    await settingsStore.setEnabled(id, enabled);
+    return this.list();
   }
 
   async install(srcDir: string): Promise<ExtensionInfo[]> {
-    const name = path.basename(srcDir)
-    let manifest: PackageManifest
+    const name = path.basename(srcDir);
+    let manifest: PackageManifest;
     try {
-      manifest = await readManifest(srcDir)
+      manifest = await readManifest(srcDir);
     } catch (e) {
       throw new AppError(
         'EXTENSION_INVALID_PACKAGE',
-        `"${name}" has no valid package.json (${(e as Error).message})`
-      )
+        `"${name}" has no valid package.json (${(e as Error).message})`,
+      );
     }
-    const type = manifest.gepard?.type
+    const type = manifest.gepard?.type;
     if (type === LSP_SPEC.kind) {
-      await this.lsp.install(srcDir)
+      await this.lsp.install(srcDir);
     } else if (type === THEME_SPEC.kind) {
-      await this.theme.install(srcDir)
+      await this.theme.install(srcDir);
+    } else if (type === LOCALE_SPEC.kind) {
+      await this.locale.install(srcDir);
     } else {
       throw new AppError(
         'EXTENSION_INVALID_PACKAGE',
-        `"${name}"'s package.json must set "gepard": { "type": "lsp" | "theme" } (got ${JSON.stringify(type ?? null)})`
-      )
+        `"${name}"'s package.json must set "gepard": { "type": "lsp" | "theme" | "locale" } (got ${JSON.stringify(type ?? null)})`,
+      );
     }
-    return this.list()
+    return this.list();
   }
 
   async enabledLanguageExtensions(): Promise<LanguageExtension[]> {
-    return this.lsp.enabledExtensions()
+    return this.lsp.enabledExtensions();
   }
 
   async enabledThemeTemplates(): Promise<ThemeTemplateData[]> {
-    return this.theme.enabledExtensions()
+    return this.theme.enabledExtensions();
+  }
+
+  async enabledLocales(): Promise<LocaleData[]> {
+    return this.locale.enabledExtensions();
   }
 }
 
-export const extensionRegistry = new ExtensionRegistry()
+export const extensionRegistry = new ExtensionRegistry();

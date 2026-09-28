@@ -1,10 +1,10 @@
-import { z } from 'zod'
+import { z } from 'zod';
 
-export const ExtensionSource = z.enum(['builtin', 'external'])
-export type ExtensionSource = z.infer<typeof ExtensionSource>
+export const ExtensionSource = z.enum(['builtin', 'external']);
+export type ExtensionSource = z.infer<typeof ExtensionSource>;
 
-export const ExtensionKind = z.enum(['lsp', 'theme'])
-export type ExtensionKind = z.infer<typeof ExtensionKind>
+export const ExtensionKind = z.enum(['lsp', 'theme', 'locale']);
+export type ExtensionKind = z.infer<typeof ExtensionKind>;
 
 export const ExtensionInfo = z.object({
   id: z.string(),
@@ -12,6 +12,6 @@ export const ExtensionInfo = z.object({
   kind: ExtensionKind,
   source: ExtensionSource,
   enabled: z.boolean(),
-  error: z.string().optional()
-})
-export type ExtensionInfo = z.infer<typeof ExtensionInfo>
+  error: z.string().optional(),
+});
+export type ExtensionInfo = z.infer<typeof ExtensionInfo>;

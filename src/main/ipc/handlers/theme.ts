@@ -1,6 +1,6 @@
-import type { HandlerMap } from '../registry'
-import { getTemplateId, setTemplateId } from '../../store/theme'
-import { extensionRegistry } from '../../extensions/registry'
+import type { HandlerMap } from '../registry';
+import { getTemplateId, setTemplateId } from '../../store/settings';
+import { extensionRegistry } from '../../extensions/registry';
 
 export const themeHandlers: Pick<
   HandlerMap,
@@ -8,5 +8,5 @@ export const themeHandlers: Pick<
 > = {
   'theme.getTemplateId': () => getTemplateId(),
   'theme.setTemplateId': ({ templateId }) => setTemplateId(templateId),
-  'themes.list': () => extensionRegistry.enabledThemeTemplates()
-}
+  'themes.list': () => extensionRegistry.enabledThemeTemplates(),
+};
