@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+yarn install --immutable | tail -n 5
+yarn typecheck
+yarn lint
+yarn format
+
+branch_name="$(git symbolic-ref --short HEAD)"
+if [ "$branch_name" = "main" ]; then
+  echo "You can't commit directly to main branch. Please use a feature branch."
+  exit 1
+fi
