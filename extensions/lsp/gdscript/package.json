@@ -1,0 +1,33 @@
+{
+  "name": "gepard-ext-gdscript",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Bundled GDScript language extension for Gepard (headless Godot editor language server).",
+  "main": "dist/index.js",
+  "gepard": {
+    "type": "lsp"
+  },
+  "scripts": {
+    "build": "tsc",
+    "postinstall": "tsc",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "vscode-jsonrpc": "9.0.3"
+  },
+  "devDependencies": {
+    "@gepard/eslint-config": "workspace:*",
+    "@types/node": "24.19.0",
+    "eslint": "9.39.5",
+    "prettier": "3.9.9",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vite": "7.3.6",
+    "vitest": "5.0.2"
+  }
+}
