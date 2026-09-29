@@ -119,10 +119,21 @@ export function Tree<T>({
 }: TreeProps<T>): React.JSX.Element {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   const listRef = useRef<HTMLUListElement>(null);
+  const scrolled = useRef(false);
 
   useEffect(() => {
-    listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
+    scrolled.current = false;
   }, [selectedPath]);
+
+  // The selected row may not exist or be visible yet (rows still loading, a
+  // hidden tab), so keep trying on later renders until it has been scrolled to.
+  useEffect(() => {
+    if (scrolled.current) return;
+    const row = listRef.current?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!row?.checkVisibility()) return;
+    row.scrollIntoView({ block: 'nearest' });
+    scrolled.current = true;
+  });
 
   function toggle(path: string): void {
     setCollapsed((prev) => {
