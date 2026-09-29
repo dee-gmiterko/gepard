@@ -1,32 +1,28 @@
-import { useEffect, useRef, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useRef, type FormEvent, type ReactNode } from 'react';
 import styled from 'styled-components';
 import { X } from 'react-feather';
 import { IconButton } from '../IconButton';
 import { SectionHeading } from '../SectionHeading';
 import { Surface } from '../Surface';
 
-const Backdrop = styled.div`
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: ${({ theme }) => theme.colors.overlay};
-  z-index: ${({ theme }) => theme.z.modal};
-`;
-
-const Dialog = styled(Surface).attrs({ $elevation: 'floating' })`
+const Dialog = styled(Surface).attrs({ $elevation: 'floating' as const })`
   width: 420px;
   max-width: calc(100vw - ${({ theme }) => theme.space[6]});
+  padding: 0;
+  color: ${({ theme }) => theme.colors.fg};
+
+  &::backdrop {
+    background: ${({ theme }) => theme.colors.overlay};
+  }
+`;
+
+const Body = styled.div`
   padding: ${({ theme }) => theme.space[4]};
 `;
 
 const DialogHeader = styled.div`
   margin-bottom: ${({ theme }) => theme.space[3]};
 `;
-
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export interface ModalProps {
   title: ReactNode;
@@ -43,51 +39,25 @@ export function Modal({
   onSubmit,
   children,
 }: ModalProps): React.JSX.Element {
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
-    const previouslyFocused = document.activeElement as HTMLElement | null;
     const dialog = dialogRef.current;
-    const first = dialog?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
-    (first ?? dialog)?.focus();
-    return () => previouslyFocused?.focus();
+    dialog?.showModal();
+    return () => dialog?.close();
   }, []);
 
-  function focusables(): HTMLElement[] {
-    return Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? []);
-  }
-
-  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>): void {
-    e.stopPropagation();
-    if (e.key === 'Escape') {
-      // A native <select>'s own open dropdown consumes Escape to close
-      // itself; that keydown still bubbles and must not also close the modal.
-      if ((e.target as HTMLElement).tagName === 'SELECT') return;
-      onClose();
-      return;
-    }
-    if (e.key !== 'Tab') return;
-    const items = focusables();
-    if (items.length === 0) return;
-    const first = items[0];
-    const last = items[items.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  }
-
   return (
-    <Backdrop
+    <Dialog
+      as="dialog"
+      ref={dialogRef}
+      onClose={onClose}
+      // Clicks on ::backdrop are dispatched to the dialog element itself.
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      onKeyDown={handleKeyDown}
     >
-      <Dialog ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true">
+      <Body>
         <DialogHeader>
           <SectionHeading
             title={title}
@@ -95,7 +65,7 @@ export function Modal({
           />
         </DialogHeader>
         {onSubmit ? <form onSubmit={onSubmit}>{children}</form> : children}
-      </Dialog>
-    </Backdrop>
+      </Body>
+    </Dialog>
   );
 }

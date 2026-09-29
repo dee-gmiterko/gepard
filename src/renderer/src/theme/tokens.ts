@@ -8,7 +8,7 @@ export interface Theme {
   };
   space: { 1: string; 2: string; 3: string; 4: string; 5: string; 6: string };
   radius: { sm: string; md: string };
-  z: { floating: number; modal: number; popover: number };
+  z: { floating: number; popover: number };
   shadow: { popover: string; floating: string };
   colors: {
     bg: string;
@@ -64,7 +64,7 @@ const space: Theme['space'] = {
   6: '32px',
 };
 const radius: Theme['radius'] = { sm: '3px', md: '6px' };
-const z: Theme['z'] = { floating: 20, modal: 25, popover: 30 };
+const z: Theme['z'] = { floating: 20, popover: 30 };
 
 export interface ThemeTemplate {
   id: string;
