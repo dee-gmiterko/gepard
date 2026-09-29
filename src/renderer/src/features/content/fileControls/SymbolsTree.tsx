@@ -68,6 +68,7 @@ interface SymbolRowData {
 const Section = styled.div`
   display: flex;
   flex-direction: column;
+  min-width: 0;
   min-height: 0;
   border-top: 1px solid ${({ theme }) => theme.colors.border};
 `;
@@ -115,11 +116,11 @@ export function SymbolsTree({ path }: { path: string }): React.JSX.Element {
       </SectionTitle>
       <TreeBody>
         {isLoading || (isFetching && nodes.length === 0) ? (
-          <Message layout="inline">
+          <Message>
             <FormattedMessage {...messages.loading} />
           </Message>
         ) : empty ? (
-          <Message layout="inline">
+          <Message>
             <FormattedMessage {...messages.empty} />
           </Message>
         ) : (

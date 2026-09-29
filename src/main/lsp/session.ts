@@ -155,7 +155,9 @@ function mapSemanticTokenType(type: string | undefined, readonly: boolean): Symb
 
 function mapLspSymbolKind(k: number): SymbolKind {
   switch (k) {
+    case 2:
     case 3:
+    case 4:
       return 'namespace';
     case 5:
       return 'class';
