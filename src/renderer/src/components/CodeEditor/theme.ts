@@ -105,7 +105,7 @@ export function editorTheme(theme: Theme): Extension {
       '.cm-gutterElement:hover .cm-comment-affordance, .cm-comment-affordance:focus-visible': {
         opacity: 1,
       },
-      '&light .cm-tooltip, &dark .cm-tooltip': {
+      '.cm-tooltip': {
         border: `1px solid ${c.border}`,
         borderRadius: theme.radius.md,
         backgroundColor: c.bgElevated,
