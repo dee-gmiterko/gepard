@@ -94,7 +94,7 @@ export function FileComments({ path }: FileCommentsProps): React.JSX.Element {
   return (
     <Stack>
       {fileThreads.length === 0 && !addingNew && (
-        <Message layout="inline">
+        <Message>
           <FormattedMessage {...messages.empty} />
         </Message>
       )}

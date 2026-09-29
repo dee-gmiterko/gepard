@@ -124,25 +124,27 @@ export function ExtensionsPanel(): React.JSX.Element {
         </DirCaption>
       )}
 
-      {isLoading && (
-        <Message>
-          <FormattedMessage {...messages.loading} />
-        </Message>
-      )}
-      {isError && (
-        <Message tone="danger">
-          <FormattedMessage {...messages.failed} />
-        </Message>
-      )}
-      {!isLoading && !isError && (extensions?.length ?? 0) === 0 && (
-        <Message>
-          <FormattedMessage {...messages.empty} />
-        </Message>
-      )}
-
-      {!isLoading && !isError && (extensions?.length ?? 0) > 0 && (
-        <List>
-          {extensions?.map((ext) => (
+      <List>
+        {isLoading ? (
+          <ListRow $padding={2}>
+            <Message layout="inline">
+              <FormattedMessage {...messages.loading} />
+            </Message>
+          </ListRow>
+        ) : isError ? (
+          <ListRow $padding={2}>
+            <Message tone="danger" layout="inline">
+              <FormattedMessage {...messages.failed} />
+            </Message>
+          </ListRow>
+        ) : (extensions?.length ?? 0) === 0 ? (
+          <ListRow $padding={2}>
+            <Message layout="inline">
+              <FormattedMessage {...messages.empty} />
+            </Message>
+          </ListRow>
+        ) : (
+          extensions?.map((ext) => (
             <ListRow key={ext.id} $padding={2}>
               <Stack $gap={1}>
                 <Inline $gap={2}>
@@ -165,13 +167,13 @@ export function ExtensionsPanel(): React.JSX.Element {
               <Checkbox
                 checked={ext.enabled}
                 disabled={Boolean(ext.error) || setEnabled.isPending}
-                label={intl.formatMessage(messages.enableExtension, { name: ext.displayName })}
+                ariaLabel={intl.formatMessage(messages.enableExtension, { name: ext.displayName })}
                 onChange={(checked) => setEnabled.mutate({ id: ext.id, enabled: checked })}
               />
             </ListRow>
-          ))}
-        </List>
-      )}
+          ))
+        )}
+      </List>
     </Section>
   );
 }

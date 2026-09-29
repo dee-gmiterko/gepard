@@ -350,18 +350,21 @@ export function Launchpad(): React.JSX.Element {
         </Button>
       </AddForm>
 
-      {isLoading && (
-        <Message>
-          <FormattedMessage {...messages.loading} />
-        </Message>
-      )}
-      {!isLoading && (projects?.length ?? 0) === 0 && (
-        <Message>
-          <FormattedMessage {...messages.empty} />
-        </Message>
-      )}
-
       <ProjectsList>
+        {isLoading && (
+          <ListRow>
+            <Message layout="inline">
+              <FormattedMessage {...messages.loading} />
+            </Message>
+          </ListRow>
+        )}
+        {!isLoading && (projects?.length ?? 0) === 0 && (
+          <ListRow>
+            <Message layout="inline">
+              <FormattedMessage {...messages.empty} />
+            </Message>
+          </ListRow>
+        )}
         {projects?.map((project) => {
           const progress = progressById[project.id];
           const cloning = isActiveClone(progress);
