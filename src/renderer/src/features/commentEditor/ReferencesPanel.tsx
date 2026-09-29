@@ -14,6 +14,7 @@ import type { CommentReference } from '@gepard/common/ipc/schemas/comment';
 import type { GroupedResult } from '@gepard/common/ipc/schemas/search';
 import type { RefAnchor } from './anchorLine';
 import type { ReferenceChoices } from './referenceChoices';
+import type { ExactDisabledReason } from './useDerivedReferences';
 
 const messages = defineMessages({
   searching: {
@@ -32,6 +33,10 @@ const messages = defineMessages({
     id: 'commentEditor.referencesPanel.alsoInDisabledHint',
     defaultMessage: 'This line has no text to match elsewhere.',
   },
+  alsoInNoOtherMatchHint: {
+    id: 'commentEditor.referencesPanel.alsoInNoOtherMatchHint',
+    defaultMessage: 'No other line matches this one.',
+  },
   samePatternIn: {
     id: 'commentEditor.referencesPanel.samePatternIn',
     defaultMessage: 'Same pattern in',
@@ -49,6 +54,11 @@ const messages = defineMessages({
     defaultMessage: 'References are not available for this comment (no anchor line).',
   },
 });
+
+const exactDisabledHints: Record<ExactDisabledReason, MessageDescriptor> = {
+  blankLine: messages.alsoInDisabledHint,
+  noOtherMatch: messages.alsoInNoOtherMatchHint,
+};
 
 interface SearchRefsSectionProps {
   title: MessageDescriptor;
@@ -137,7 +147,7 @@ interface ReferencesPanelProps {
   symbols: LineSymbol[];
   symbolsLoading: boolean;
   symbolsError: Error | null;
-  exactDisabled: boolean;
+  exactDisabled: ExactDisabledReason | null;
   exactData: GroupedResult | undefined;
   exactFetching: boolean;
   patternDisabled: boolean;
@@ -211,8 +221,8 @@ export function ReferencesPanel({
         title={messages.alsoIn}
         open={choices.exactOpen}
         onOpenChange={setExactOpen}
-        disabled={exactDisabled}
-        disabledHint={messages.alsoInDisabledHint}
+        disabled={exactDisabled !== null}
+        disabledHint={exactDisabled ? exactDisabledHints[exactDisabled] : undefined}
         scope={choices.exactScope}
         onScopeChange={setExactScope}
         data={exactData}

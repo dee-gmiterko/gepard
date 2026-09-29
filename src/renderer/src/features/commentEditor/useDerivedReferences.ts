@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useLineSymbols, useSearch, type SearchParams } from '../../queries/search';
 import { useFileContent, useTargetedFiles } from '../../queries/files';
+import type { SearchScope } from '../../components/ScopeToggle';
 import type { ReferenceChoices } from './referenceChoices';
 import type { LineSymbol } from './SymbolDefinitionSection';
 import type { RefAnchor } from './anchorLine';
@@ -15,12 +16,14 @@ function referencesFromResult(
   return data.files.flatMap((f) => f.matches.map((m) => ({ path: f.path, line: m.line, kind })));
 }
 
+export type ExactDisabledReason = 'blankLine' | 'noOtherMatch';
+
 export interface DerivedReferences {
   references: CommentReference[];
   symbols: LineSymbol[];
   symbolsLoading: boolean;
   symbolsError: Error | null;
-  exactDisabled: boolean;
+  exactDisabled: ExactDisabledReason | null;
   exactData: GroupedResult | undefined;
   exactFetching: boolean;
   patternDisabled: boolean;
@@ -52,18 +55,28 @@ export function useDerivedReferences(
     return c.text.split('\n')[refAnchor.line - 1] ?? null;
   }, [fileContent.data, refAnchor]);
 
-  const exactDisabled = !lineText || !lineText.trim();
-  const exactParams: SearchParams | null =
-    refAnchor && choices.exactOpen && !exactDisabled
-      ? {
-          scope: choices.exactScope,
-          targetedPaths: choices.exactScope === 'targeted' ? targetedPaths : [],
-          kind: 'exactLine',
-          text: lineText!.trim(),
-          origin: { path: refAnchor.path, line: refAnchor.line },
-        }
+  const exactText = lineText?.trim() ?? '';
+  function exactParams(scope: SearchScope): SearchParams | null {
+    if (!refAnchor || !exactText) return null;
+    return {
+      scope,
+      targetedPaths: scope === 'targeted' ? targetedPaths : [],
+      kind: 'exactLine',
+      text: exactText,
+      // The search itself drops the origin line, so any hit is another line.
+      origin: { path: refAnchor.path, line: refAnchor.line },
+    };
+  }
+  const exactAnywhere = useSearch(refAnchor?.sha ?? '', exactParams('all'));
+  const exactSearch = useSearch(
+    refAnchor?.sha ?? '',
+    choices.exactOpen ? exactParams(choices.exactScope) : null,
+  );
+  const exactDisabled: ExactDisabledReason | null = !exactText
+    ? 'blankLine'
+    : exactAnywhere.data?.files.length === 0
+      ? 'noOtherMatch'
       : null;
-  const exactSearch = useSearch(refAnchor?.sha ?? '', exactParams);
 
   const patternDisabled = symbols.length === 0;
   const patternParams: SearchParams | null =

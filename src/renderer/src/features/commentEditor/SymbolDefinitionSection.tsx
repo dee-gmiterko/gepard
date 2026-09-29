@@ -72,7 +72,10 @@ function DefinitionRow({
     );
 
   const targets = (data?.definitions ?? []).filter(
-    (d) => !d.external && (scope === 'all' || isTargeted(d.location.path, targetedPaths)),
+    (d) =>
+      !d.external &&
+      !(d.location.path === refAnchor.path && d.location.range.start.line === refAnchor.line) &&
+      (scope === 'all' || isTargeted(d.location.path, targetedPaths)),
   );
   if (targets.length === 0) return null;
 
