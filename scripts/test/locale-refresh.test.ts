@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { LocaleCatalog } from '../scripts/refresh-locales';
-import { mergeLocaleCatalog, refreshCatalogs } from '../scripts/refresh-locales';
+import type { LocaleCatalog } from '../refresh-locales';
+import { mergeLocaleCatalog, refreshCatalogs } from '../refresh-locales';
 
 describe('mergeLocaleCatalog', () => {
   it('mirrors the extracted default text for the source locale', () => {
