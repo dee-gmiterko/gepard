@@ -89,7 +89,7 @@ export function PathTarget(): React.JSX.Element {
   }
 
   return (
-    <IconField icon={Folder} width={220}>
+    <IconField icon={Folder}>
       <PathTargetInput
         committed={state.targeting.path}
         folders={folders}

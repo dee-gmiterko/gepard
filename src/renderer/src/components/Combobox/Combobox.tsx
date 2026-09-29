@@ -68,6 +68,7 @@ const Input = styled.input`
   outline: none;
   background: transparent;
   padding: 5px 0;
+  text-overflow: ellipsis;
 
   &:disabled {
     color: ${({ theme }) => theme.colors.fgSubtle};

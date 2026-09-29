@@ -70,7 +70,7 @@ export function CommitTarget(): React.JSX.Element {
       : undefined;
 
   return (
-    <IconField icon={GitCommit} width={240}>
+    <IconField icon={GitCommit}>
       <Combobox<Commit>
         items={items}
         value={value}
