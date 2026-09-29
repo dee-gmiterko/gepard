@@ -1,11 +1,12 @@
-import { useMemo } from 'react';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useCallback, useMemo } from 'react';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { invoke, isCancelledError } from '../ipc/client';
 import { qk } from './keys';
 import { useAppState } from '../state/AppContext';
 import { useCurrentHead } from './projects';
 import { digestPaths } from '../helpers/pathsDigest';
 import type { SearchQuery } from '@gepard/common/ipc/schemas/search';
+import type { DefinitionResult } from '@gepard/common/ipc/schemas/lsp';
 
 const SEARCH_PAGE_SIZE = 50;
 const SEARCH_GC_MS = 30_000;
@@ -88,18 +89,34 @@ export function useLineSymbols(sha: string, path: string, line: number) {
   );
 }
 
-export function useDefinition(
-  sha: string,
-  path: string,
-  pos: { line: number; col: number } | null,
-) {
+type Pos = { line: number; col: number };
+
+function definitionQuery(projectId: string, sha: string, path: string, pos: Pos | null) {
+  return {
+    queryKey: [...qk.file(projectId, sha, path), 'definition', pos] as const,
+    queryFn: () => invoke('symbols.definition', { projectId, sha, path, pos: pos! }),
+  };
+}
+
+export function useDefinition(sha: string, path: string, pos: Pos | null) {
   const projectId = useAppState().projectId ?? '';
   return ignoreCancelled(
     useQuery({
-      queryKey: [...qk.file(projectId, sha, path), 'definition', pos] as const,
-      queryFn: () => invoke('symbols.definition', { projectId, sha, path, pos: pos! }),
+      ...definitionQuery(projectId, sha, path, pos),
       enabled: Boolean(projectId) && Boolean(sha) && Boolean(path) && Boolean(pos),
     }),
+  );
+}
+
+export function useDefinitionLookup(sha: string, path: string) {
+  const projectId = useAppState().projectId ?? '';
+  const qc = useQueryClient();
+  return useCallback(
+    (pos: Pos): Promise<DefinitionResult> => {
+      if (!projectId || !sha || !path) return Promise.resolve({ symbol: '', definitions: [] });
+      return qc.fetchQuery({ ...definitionQuery(projectId, sha, path, pos), staleTime: Infinity });
+    },
+    [qc, projectId, sha, path],
   );
 }
 

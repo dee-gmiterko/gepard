@@ -95,12 +95,24 @@ export function editorTheme(theme: Theme): Extension {
         justifyContent: 'center',
         width: '100%',
         height: '100%',
+        padding: 0,
+        border: 'none',
+        background: 'none',
         color: c.accent,
         cursor: 'pointer',
         opacity: 0,
       },
-      '.cm-gutterElement:hover .cm-comment-affordance': {
+      '.cm-gutterElement:hover .cm-comment-affordance, .cm-comment-affordance:focus-visible': {
         opacity: 1,
+      },
+      '&light .cm-tooltip, &dark .cm-tooltip': {
+        border: `1px solid ${c.border}`,
+        borderRadius: theme.radius.md,
+        backgroundColor: c.bgElevated,
+        color: c.fg,
+        boxShadow: theme.shadow.popover,
+        fontFamily: theme.font.ui,
+        fontSize: theme.font.size.sm,
       },
       '.cm-comment-widget': {
         backgroundColor: c.commentBg,
