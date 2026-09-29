@@ -9,7 +9,7 @@ import { usePrList, unionByKey } from '../../queries/prs';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useAppState } from '../../state/AppContext';
 import { useTargetActions } from './useTargetActions';
-import { NewPrModal } from './NewPrModal';
+import { NewPrModal } from '../pr/NewPrModal';
 import type { PrListItem } from '@gepard/common/ipc/schemas/pr';
 
 const messages = defineMessages({
@@ -80,7 +80,7 @@ export function PrTarget(): React.JSX.Element {
 
   return (
     <Inline $gap={1}>
-      <IconField icon={GitPullRequest} width={280}>
+      <IconField icon={GitPullRequest}>
         <Combobox<PrListItem>
           items={prs}
           value={value}

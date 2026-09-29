@@ -13,43 +13,43 @@ import type { PrSummary } from '@gepard/common/ipc/schemas/pr';
 
 const messages = defineMessages({
   title: {
-    id: 'header.newPrModal.title',
+    id: 'pr.newPrModal.title',
     defaultMessage: 'New pull request',
   },
   close: {
-    id: 'header.newPrModal.close',
+    id: 'pr.newPrModal.close',
     defaultMessage: 'Close',
   },
   base: {
-    id: 'header.newPrModal.base',
+    id: 'pr.newPrModal.base',
     defaultMessage: 'Base',
   },
   head: {
-    id: 'header.newPrModal.head',
+    id: 'pr.newPrModal.head',
     defaultMessage: 'Head',
   },
   selectBranch: {
-    id: 'header.newPrModal.selectBranch',
+    id: 'pr.newPrModal.selectBranch',
     defaultMessage: 'Select branch…',
   },
   titleField: {
-    id: 'header.newPrModal.titleField',
+    id: 'pr.newPrModal.titleField',
     defaultMessage: 'Title',
   },
   descriptionField: {
-    id: 'header.newPrModal.descriptionField',
+    id: 'pr.newPrModal.descriptionField',
     defaultMessage: 'Description',
   },
   cancel: {
-    id: 'header.newPrModal.cancel',
+    id: 'pr.newPrModal.cancel',
     defaultMessage: 'Cancel',
   },
   creating: {
-    id: 'header.newPrModal.creating',
+    id: 'pr.newPrModal.creating',
     defaultMessage: 'Creating…',
   },
   create: {
-    id: 'header.newPrModal.create',
+    id: 'pr.newPrModal.create',
     defaultMessage: 'Create',
   },
 });
