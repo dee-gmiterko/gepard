@@ -1,9 +1,9 @@
 {
-  "name": "gepard-ext-typescript",
+  "name": "gepard-ext-python",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Bundled TypeScript/JavaScript language extension for Gepard (native TypeScript LSP).",
+  "description": "Bundled Python language extension for Gepard (vendored Pyright).",
   "main": "dist/index.js",
   "gepard": {
     "type": "lsp"
@@ -24,14 +24,9 @@
   "devDependencies": {
     "@gepard/eslint-config": "workspace:*",
     "@types/node": "24.19.0",
-    "@typescript/typescript-darwin-arm64": "7.0.2",
-    "@typescript/typescript-darwin-x64": "7.0.2",
-    "@typescript/typescript-linux-arm64": "7.0.2",
-    "@typescript/typescript-linux-x64": "7.0.2",
-    "@typescript/typescript-win32-arm64": "7.0.2",
-    "@typescript/typescript-win32-x64": "7.0.2",
     "eslint": "9.39.5",
     "prettier": "3.9.9",
+    "pyright": "1.1.414",
     "tsx": "4.23.15",
     "typescript": "5.9.3",
     "vite": "7.3.6",

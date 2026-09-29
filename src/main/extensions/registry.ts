@@ -29,7 +29,7 @@ export function isLanguageExtension(value: unknown): value is LanguageExtension 
     typeof v.displayName === 'string' &&
     isFn(v.matches) &&
     isFn(v.languageId) &&
-    isFn(v.resolve)
+    isFn(v.open)
   );
 }
 

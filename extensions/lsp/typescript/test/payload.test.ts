@@ -2,10 +2,10 @@ import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { packPayload, unpackPayload } from '../payload.mjs';
+import { packPayload, unpackPayload } from '../payload.js';
 
 describe('payload', () => {
-  let dir;
+  let dir: string;
 
   afterEach(async () => {
     await rm(dir, { recursive: true, force: true });

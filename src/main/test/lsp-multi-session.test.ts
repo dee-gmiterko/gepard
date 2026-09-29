@@ -5,7 +5,6 @@ import { makeTmpDir, type TmpDir } from './support/tmp';
 
 const mocks = vi.hoisted(() => ({
   extensions: [] as unknown[],
-  start: vi.fn(),
 }));
 
 vi.mock('../log', () => ({ log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
@@ -19,19 +18,8 @@ vi.mock('../services/line-index-manager', () => ({
 vi.mock('../extensions/registry', () => ({
   extensionRegistry: { enabledLanguageExtensions: async () => mocks.extensions },
 }));
-vi.mock('../lsp/session', () => ({ LspSession: { start: mocks.start } }));
 
 const { indexer } = await import('../lsp/indexer');
-
-function fakeExtension(id: string, suffix: string): LanguageExtension {
-  return {
-    id,
-    displayName: id.toUpperCase(),
-    matches: (f) => f.endsWith(suffix),
-    languageId: () => id,
-    resolve: async (project) => ({ command: id, args: [], cwd: project.root }),
-  };
-}
 
 function fakeSession(name: string): LanguageSession {
   return {
@@ -42,26 +30,35 @@ function fakeSession(name: string): LanguageSession {
   } as unknown as LanguageSession;
 }
 
+function fakeExtension(id: string, suffix: string): LanguageExtension {
+  return {
+    id,
+    displayName: id.toUpperCase(),
+    matches: (f) => f.endsWith(suffix),
+    languageId: () => id,
+    open: vi.fn(async () => {
+      if (id.startsWith('broken')) throw new Error(`${id} exploded`);
+      const session = fakeSession(id);
+      sessions.set(id, session);
+      return session;
+    }),
+  };
+}
+
+const sessions = new Map<string, LanguageSession>();
+
 describe('indexer with several language extensions', () => {
   let userData: TmpDir;
-  const sessions = new Map<string, LanguageSession>();
 
   beforeEach(async () => {
     userData = await makeTmpDir('lsp-multi');
     __setUserDataDir(userData.path);
     sessions.clear();
-    mocks.start.mockImplementation(async (plan: { command: string }) => {
-      if (plan.command.startsWith('broken')) throw new Error(`${plan.command} exploded`);
-      const session = fakeSession(plan.command);
-      sessions.set(plan.command, session);
-      return session;
-    });
   });
 
   afterEach(async () => {
     await indexer.close('p');
     await userData.cleanup();
-    mocks.start.mockReset();
   });
 
   it('starts one session per matching extension and routes by file path', async () => {
@@ -77,11 +74,14 @@ describe('indexer with several language extensions', () => {
   });
 
   it('does not start an extension that matches none of the files', async () => {
-    mocks.extensions = [fakeExtension('alpha', '.a'), fakeExtension('beta', '.b')];
+    const alpha = fakeExtension('alpha', '.a');
+    const beta = fakeExtension('beta', '.b');
+    mocks.extensions = [alpha, beta];
 
     await indexer.open('p', '/repo', ['x.a'], 'head');
 
-    expect(mocks.start).toHaveBeenCalledTimes(1);
+    expect(alpha.open).toHaveBeenCalledTimes(1);
+    expect(beta.open).not.toHaveBeenCalled();
     expect(indexer.session('p', 'y.b')).toBeNull();
   });
 

@@ -6,13 +6,7 @@ import { isNotifiableLevel, notifyMainFailure } from '../notify';
 import { extensionDataDir } from '../paths';
 import { startLineIndex, type LineIndexHandle } from '../services/line-index-manager';
 import { extensionRegistry } from '../extensions/registry';
-import {
-  LspSession,
-  type ExtensionEvents,
-  type FileChange,
-  type LanguageExtension,
-  type LanguageSession,
-} from './session';
+import type { ExtensionEvents, FileChange, LanguageExtension, LanguageSession } from './session';
 
 interface LanguageEntry {
   extension: LanguageExtension;
@@ -78,8 +72,7 @@ async function startLanguageSession(
   const sink = makeSink(projectId, extension.id, state);
   const dataDir = extensionDataDir(extension.id);
   await mkdir(dataDir, { recursive: true });
-  const plan = await extension.resolve({ root: repoRoot }, { dataDir });
-  const session = await LspSession.start(plan, sink, (filePath) => extension.languageId(filePath));
+  const session = await extension.open({ root: repoRoot }, { dataDir }, sink);
   // Language servers load a project on the first request for one of its
   // files, and workspace/symbol returns nothing until then.
   const probe = extension.warmupFile?.(files) ?? files.find((f) => extension.matches(f));

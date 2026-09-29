@@ -2,7 +2,13 @@ import { chmod, mkdir, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
 
-export function packPayload(entries) {
+export interface PayloadEntry {
+  name: string;
+  mode: number;
+  data: Buffer;
+}
+
+export function packPayload(entries: PayloadEntry[]): Buffer {
   const header = Buffer.from(
     JSON.stringify(entries.map(({ name, mode, data }) => ({ name, mode, size: data.length }))),
   );
@@ -11,10 +17,14 @@ export function packPayload(entries) {
   return gzipSync(Buffer.concat([headerLength, header, ...entries.map(({ data }) => data)]));
 }
 
-export async function unpackPayload(payload, dir) {
+export async function unpackPayload(payload: Buffer, dir: string): Promise<void> {
   const raw = gunzipSync(payload);
   const headerEnd = 4 + raw.readUInt32BE(0);
-  const files = JSON.parse(raw.subarray(4, headerEnd).toString('utf8'));
+  const files = JSON.parse(raw.subarray(4, headerEnd).toString('utf8')) as Array<{
+    name: string;
+    mode: number;
+    size: number;
+  }>;
   let offset = headerEnd;
   for (const { name, mode, size } of files) {
     const target = path.join(dir, name);

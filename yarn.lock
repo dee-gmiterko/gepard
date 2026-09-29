@@ -5261,11 +5261,61 @@ __metadata:
   languageName: node
   linkType: hard
 
+"gepard-ext-csharp@workspace:extensions/lsp/csharp":
+  version: 0.0.0-use.local
+  resolution: "gepard-ext-csharp@workspace:extensions/lsp/csharp"
+  dependencies:
+    "@gepard/eslint-config": "workspace:*"
+    "@types/node": "npm:24.19.0"
+    eslint: "npm:9.39.5"
+    prettier: "npm:3.9.9"
+    tsx: "npm:4.23.15"
+    typescript: "npm:5.9.3"
+    vite: "npm:7.3.6"
+    vitest: "npm:5.0.2"
+    vscode-jsonrpc: "npm:9.0.3"
+  languageName: unknown
+  linkType: soft
+
+"gepard-ext-java@workspace:extensions/lsp/java":
+  version: 0.0.0-use.local
+  resolution: "gepard-ext-java@workspace:extensions/lsp/java"
+  dependencies:
+    "@gepard/eslint-config": "workspace:*"
+    "@types/node": "npm:24.19.0"
+    eslint: "npm:9.39.5"
+    prettier: "npm:3.9.9"
+    tsx: "npm:4.23.15"
+    typescript: "npm:5.9.3"
+    vite: "npm:7.3.6"
+    vitest: "npm:5.0.2"
+    vscode-jsonrpc: "npm:9.0.3"
+  languageName: unknown
+  linkType: soft
+
+"gepard-ext-python@workspace:extensions/lsp/python":
+  version: 0.0.0-use.local
+  resolution: "gepard-ext-python@workspace:extensions/lsp/python"
+  dependencies:
+    "@gepard/eslint-config": "workspace:*"
+    "@types/node": "npm:24.19.0"
+    eslint: "npm:9.39.5"
+    prettier: "npm:3.9.9"
+    pyright: "npm:1.1.414"
+    tsx: "npm:4.23.15"
+    typescript: "npm:5.9.3"
+    vite: "npm:7.3.6"
+    vitest: "npm:5.0.2"
+    vscode-jsonrpc: "npm:9.0.3"
+  languageName: unknown
+  linkType: soft
+
 "gepard-ext-typescript@workspace:extensions/lsp/typescript":
   version: 0.0.0-use.local
   resolution: "gepard-ext-typescript@workspace:extensions/lsp/typescript"
   dependencies:
     "@gepard/eslint-config": "workspace:*"
+    "@types/node": "npm:24.19.0"
     "@typescript/typescript-darwin-arm64": "npm:7.0.2"
     "@typescript/typescript-darwin-x64": "npm:7.0.2"
     "@typescript/typescript-linux-arm64": "npm:7.0.2"
@@ -5274,8 +5324,11 @@ __metadata:
     "@typescript/typescript-win32-x64": "npm:7.0.2"
     eslint: "npm:9.39.5"
     prettier: "npm:3.9.9"
+    tsx: "npm:4.23.15"
+    typescript: "npm:5.9.3"
     vite: "npm:7.3.6"
     vitest: "npm:5.0.2"
+    vscode-jsonrpc: "npm:9.0.3"
   languageName: unknown
   linkType: soft
 
@@ -7002,6 +7055,21 @@ __metadata:
   version: 1.2.0
   resolution: "pvutils@npm:1.2.0"
   checksum: 10c0/1206766f0b9947fd44a629e2ed7945fb5d1d8ee0f31f032ec58d60cec2165b0b3afb11bf3727215348bf19132ca34986302680b5930d45b0a0d23745fd54224b
+  languageName: node
+  linkType: hard
+
+"pyright@npm:1.1.414":
+  version: 1.1.414
+  resolution: "pyright@npm:1.1.414"
+  dependencies:
+    fsevents: "npm:~2.3.3"
+  dependenciesMeta:
+    fsevents:
+      optional: true
+  bin:
+    pyright: index.js
+    pyright-langserver: langserver.index.js
+  checksum: 10c0/3c20a4c391edae433141d4e89ee35bffb9db844da3d736f5c4303b0c7052154cf729305db82485481eccbe7fab2bc312cf025291242b9f11a035916ef29a38b5
   languageName: node
   linkType: hard
 

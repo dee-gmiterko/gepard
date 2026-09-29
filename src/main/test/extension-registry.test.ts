@@ -34,7 +34,15 @@ const DEMO_LANG_BODY = `module.exports = {
   displayName: 'Demo Lang',
   matches: (f) => f.endsWith('.demo'),
   languageId: () => 'demo',
-  resolve: async () => ({ command: 'true', args: [], cwd: '.' })
+  open: async () => ({
+    lineSymbols: async () => [],
+    definition: async () => [],
+    references: async () => [],
+    workspaceSymbols: async () => [],
+    documentSymbols: async () => [],
+    filesChanged: () => {},
+    dispose: async () => {},
+  })
 }`;
 
 const THEME_COLOR_KEYS = [
@@ -136,7 +144,7 @@ describe('loadExtensionPackages', () => {
   id: 'no-language-id',
   displayName: 'No Language Id',
   matches: () => false,
-  resolve: async () => ({})
+  open: async () => ({})
 }`,
     );
 
@@ -501,7 +509,7 @@ describe('ExtensionRegistry', () => {
       displayName: 'Late Lang',
       matches: () => false,
       languageId: () => 'late',
-      resolve: async () => ({})
+      open: async () => ({})
     }`,
     );
 

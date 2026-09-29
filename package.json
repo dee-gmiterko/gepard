@@ -15,7 +15,7 @@
     "build:unpack": "yarn workspace gepard run build:unpack",
     "build:win": "yarn workspace gepard run build:win",
     "build:mac": "yarn workspace gepard run build:mac",
-    "build:linux": "yarn workspace gepard run build:linux",
+    "build:linux": "turbo run build && yarn workspace gepard run build:linux",
     "test": "turbo run test && vitest run",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",

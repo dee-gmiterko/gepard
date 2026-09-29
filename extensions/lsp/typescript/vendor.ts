@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { packPayload } from './payload.mjs';
+import { packPayload, type PayloadEntry } from './payload.js';
 
 const require = createRequire(import.meta.url);
 const vendorRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), 'vendor');
@@ -12,12 +12,12 @@ const targets = (process.env.GEPARD_VENDOR_TARGETS ?? `${process.platform}-${pro
   .map((t) => t.trim())
   .filter(Boolean);
 
-async function vendorTarget(target) {
+async function vendorTarget(target: string): Promise<void> {
   const pkgJsonPath = require.resolve(`@typescript/typescript-${target}/package.json`);
   const pkgDir = path.dirname(pkgJsonPath);
-  const { version } = JSON.parse(await readFile(pkgJsonPath, 'utf8'));
+  const { version } = JSON.parse(await readFile(pkgJsonPath, 'utf8')) as { version: string };
   const libDir = path.join(pkgDir, 'lib');
-  const entries = [];
+  const entries: PayloadEntry[] = [];
   for (const name of (await readdir(libDir)).sort()) {
     const file = path.join(libDir, name);
     const info = await stat(file);
@@ -35,7 +35,7 @@ for (const target of targets) {
   try {
     await vendorTarget(target);
   } catch (e) {
-    console.error(`failed to vendor TypeScript for ${target}: ${e.message}`);
+    console.error(`failed to vendor TypeScript for ${target}: ${(e as Error).message}`);
     process.exitCode = 1;
   }
 }

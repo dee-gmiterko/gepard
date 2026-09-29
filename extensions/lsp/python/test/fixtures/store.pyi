@@ -1,0 +1,3 @@
+class Store:
+    items: list[str]
+    def add(self, item: str) -> None: ...

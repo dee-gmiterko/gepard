@@ -29,11 +29,10 @@ extraResources:
   - from: ../../extensions
     to: extensions
     filter:
-      - '*/*/**'
-      - '!**/node_modules/**'
-      - '!**/test/**'
-      - '!**/.turbo/**'
-      - '!**/{.gitignore,.prettierignore,eslint.config.mjs}'
+      - '*/*/dist/**'
+      - '*/*/vendor/**'
+      - '*/*/package.json'
+      - '*/*/{LICENSE,README.md,THIRD_PARTY_LICENSES,UPSTREAM_LICENSE}'
 win:
   executableName: Gepard
 nsis:

@@ -1,12 +1,16 @@
 {
-  "name": "gepard-ext-typescript",
+  "name": "gepard-ext-java",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Bundled TypeScript/JavaScript language extension for Gepard (native TypeScript LSP).",
+  "description": "Bundled Java language extension for Gepard (vendored Eclipse JDT Language Server).",
   "main": "dist/index.js",
   "gepard": {
-    "type": "lsp"
+    "type": "lsp",
+    "vendor": {
+      "url": "https://download.eclipse.org/jdtls/snapshots/jdt-language-server-latest.tar.gz",
+      "version": "1.62.0.202609282153"
+    }
   },
   "scripts": {
     "build": "tsc",
@@ -24,12 +28,6 @@
   "devDependencies": {
     "@gepard/eslint-config": "workspace:*",
     "@types/node": "24.19.0",
-    "@typescript/typescript-darwin-arm64": "7.0.2",
-    "@typescript/typescript-darwin-x64": "7.0.2",
-    "@typescript/typescript-linux-arm64": "7.0.2",
-    "@typescript/typescript-linux-x64": "7.0.2",
-    "@typescript/typescript-win32-arm64": "7.0.2",
-    "@typescript/typescript-win32-x64": "7.0.2",
     "eslint": "9.39.5",
     "prettier": "3.9.9",
     "tsx": "4.23.15",

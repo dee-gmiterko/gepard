@@ -1,5 +1,3 @@
-// vscode-jsonrpc does not reject pending requests when the underlying stream
-// closes, and Node may fire both 'error' and 'exit' for one child failure.
 function abandonedRequestError(): Error {
   const err = new Error('LSP session crashed; request abandoned');
   err.name = 'AbortError';
@@ -20,7 +18,6 @@ export class CrashGate {
     this.pending = new Promise<never>((_, reject) => {
       this.rejectPending = () => reject(abandonedRequestError());
     });
-    // Node reports a rejected promise with no handler as an unhandledRejection.
     this.pending.catch(() => {});
   }
 
