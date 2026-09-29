@@ -4,7 +4,7 @@ import { PrTarget } from './PrTarget';
 import { CommitTarget } from './CommitTarget';
 import { PathTarget } from './PathTarget';
 import { useTargetingEffects } from './useTargetingEffects';
-import { Grid, MessageSquare } from 'react-feather';
+import { Grid, Sidebar } from 'react-feather';
 import { IconButton } from '../../components/IconButton';
 import { Ellipsis } from '../../components/Ellipsis';
 import { Inline } from '../../components/Layout';
@@ -25,9 +25,9 @@ const messages = defineMessages({
     id: 'header.indexing',
     defaultMessage: 'Indexing…',
   },
-  fileComments: {
-    id: 'content.fileControls.fileComments',
-    defaultMessage: 'File comments',
+  fileDetails: {
+    id: 'content.fileControls.fileDetails',
+    defaultMessage: 'File details',
   },
 });
 
@@ -89,14 +89,13 @@ export function Header(): React.JSX.Element {
           <FormattedMessage {...messages.indexing} />
         </Status>
       )}
-      {state.targeting.pr !== null && path !== null && isChangedFile && (
-        <IconButton
-          icon={MessageSquare}
-          active={state.layout.fileCommentsPanelOpen}
-          label={intl.formatMessage(messages.fileComments)}
-          onClick={toggleFileComments}
-        />
-      )}
+      <IconButton
+        icon={Sidebar}
+        active={state.layout.fileCommentsPanelOpen}
+        disabled={!(state.targeting.pr !== null && path !== null && isChangedFile)}
+        label={intl.formatMessage(messages.fileDetails)}
+        onClick={toggleFileComments}
+      />
     </Bar>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { X } from 'react-feather';
-import { defineMessages, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
 import { useSetLayout } from '../../../queries/projects';
 import { useResizeHandle } from '../../../hooks/useResizeHandle';
@@ -9,6 +9,7 @@ import { useIsCheckedOutChangedFile } from '../useIsCheckedOutChangedFile';
 import { IconButton } from '../../../components/IconButton';
 import { ResizeHandle } from '../../../components/ResizeHandle';
 import { Inline } from '../../../components/Layout';
+import { Message } from '../../../components/Message';
 import { FileComments } from '../../commentEditor/FileComments';
 import { SymbolsTree } from './SymbolsTree';
 
@@ -18,11 +19,19 @@ const MAX_WIDTH = 640;
 const messages = defineMessages({
   title: {
     id: 'content.fileCommentsPanel.title',
-    defaultMessage: 'File comments',
+    defaultMessage: 'File details',
   },
   close: {
     id: 'content.fileCommentsPanel.close',
-    defaultMessage: 'Close file comments',
+    defaultMessage: 'Close file details',
+  },
+  noFileSelected: {
+    id: 'content.fileCommentsPanel.noFileSelected',
+    defaultMessage: 'No file selected',
+  },
+  notInDiff: {
+    id: 'content.fileCommentsPanel.notInDiff',
+    defaultMessage: 'This file is not part of the current diff.',
   },
 });
 
@@ -89,7 +98,7 @@ export function FileCommentsPanel(): React.JSX.Element | null {
     },
   });
 
-  if (path === null || !isChangedFile || !state.layout.fileCommentsPanelOpen) return null;
+  if (!state.layout.fileCommentsPanelOpen) return null;
 
   function close(): void {
     dispatch({ type: 'layout/setFileCommentsPanelOpen', open: false });
@@ -103,10 +112,26 @@ export function FileCommentsPanel(): React.JSX.Element | null {
         <Title>{intl.formatMessage(messages.title)}</Title>
         <IconButton icon={X} size={14} label={intl.formatMessage(messages.close)} onClick={close} />
       </Header>
-      <Body>
-        <FileComments path={path} />
-      </Body>
-      <SymbolsTree path={path} />
+      {path !== null ? (
+        <>
+          <Body>
+            {isChangedFile ? (
+              <FileComments path={path} />
+            ) : (
+              <Message tone="subtle">
+                <FormattedMessage {...messages.notInDiff} />
+              </Message>
+            )}
+          </Body>
+          <SymbolsTree path={path} />
+        </>
+      ) : (
+        <Body>
+          <Message tone="subtle">
+            <FormattedMessage {...messages.noFileSelected} />
+          </Message>
+        </Body>
+      )}
     </Panel>
   );
 }
