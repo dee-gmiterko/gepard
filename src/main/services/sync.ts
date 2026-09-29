@@ -46,19 +46,29 @@ export class SyncService {
     private readonly git: GitService = defaultGitService,
   ) {}
 
-  private async pushViewed(store: ReviewStoreFile, prId: string): Promise<number> {
+  private async pushViewed(
+    store: ReviewStoreFile,
+    prId: string,
+    prPaths: ReadonlySet<string>,
+  ): Promise<number> {
     const now = nowIso();
     const dirty = store.viewed.filter(isViewedDirty);
     if (dirty.length === 0) return 0;
+    const stalePaths = new Set(dirty.filter((v) => !prPaths.has(v.path)).map((v) => v.path));
+    if (stalePaths.size > 0) {
+      store.viewed = store.viewed.filter((v) => !stalePaths.has(v.path));
+    }
+    const pushable = dirty.filter((v) => !stalePaths.has(v.path));
+    if (pushable.length === 0) return 0;
     await this.gh.setFilesViewed(
       prId,
-      dirty.map((v) => ({ path: v.path, viewed: v.viewed })),
+      pushable.map((v) => ({ path: v.path, viewed: v.viewed })),
     );
-    for (const v of dirty) {
+    for (const v of pushable) {
       v.remote = v.viewed ? 'VIEWED' : 'UNVIEWED';
       v.remoteFetchedAt = now;
     }
-    return dirty.length;
+    return pushable.length;
   }
 
   // GitHub deletes and edits review comments without a pending review.
@@ -341,12 +351,19 @@ export class SyncService {
       });
     }
 
+    const [threadsResult, generalResult, viewedResult] = await Promise.all([
+      this.gh.fetchReviewThreads(ctx.owner, ctx.repo, pr),
+      this.gh.fetchGeneralComments(ctx.owner, ctx.repo, pr),
+      this.gh.fetchViewedFiles(ctx.owner, ctx.repo, pr),
+    ]);
+
     let pushedViewed = 0;
     let pushedComments = 0;
     let goneRemotely = 0;
     if (mode === 'full') {
       try {
-        pushedViewed = await this.pushViewed(store, prId);
+        const prPaths = new Set(viewedResult.files.map((f) => f.path));
+        pushedViewed = await this.pushViewed(store, prId, prPaths);
         const commentsOutcome = await this.pushComments(
           projectId,
           pr,
@@ -370,12 +387,6 @@ export class SyncService {
         );
       }
     }
-
-    const [threadsResult, generalResult, viewedResult] = await Promise.all([
-      this.gh.fetchReviewThreads(ctx.owner, ctx.repo, pr),
-      this.gh.fetchGeneralComments(ctx.owner, ctx.repo, pr),
-      this.gh.fetchViewedFiles(ctx.owner, ctx.repo, pr),
-    ]);
     const remoteThreads = [
       ...threadsResult.threads.map((t) => mapThread(t, threadsResult.prId)),
       ...generalResult.comments.map((c) => mapGeneralComment(c, generalResult.prId)),
