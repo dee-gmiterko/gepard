@@ -15,7 +15,12 @@ export function ToastHost(): React.JSX.Element {
       onReportedError((error) => {
         dispatch({
           type: 'toast/push',
-          toast: { id: crypto.randomUUID(), tone: error.tone ?? 'danger', message: error.message },
+          toast: {
+            id: crypto.randomUUID(),
+            tone: error.tone ?? 'danger',
+            message: error.message,
+            detail: error.detail,
+          },
         });
       }),
     [dispatch],
@@ -24,7 +29,7 @@ export function ToastHost(): React.JSX.Element {
   useEffect(() => {
     const timerMap = timers.current;
     for (const toast of state.toasts) {
-      if (timerMap.has(toast.id)) continue;
+      if (timerMap.has(toast.id) || toast.tone === 'danger') continue;
       timerMap.set(
         toast.id,
         setTimeout(() => {

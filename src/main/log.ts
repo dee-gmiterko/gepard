@@ -20,3 +20,7 @@ export const log = {
     electronLog.scope(scope).error(message);
   },
 };
+
+export function logFilePath(): string {
+  return electronLog.transports.file.getFile().path;
+}

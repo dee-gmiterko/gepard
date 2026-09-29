@@ -47,6 +47,7 @@
   "components.statusBadge.outdated": "outdated",
   "components.statusBadge.resolved": "resolved",
   "components.toast.dismiss": "Dismiss",
+  "components.toast.logPath": "Full log: {path}",
   "components.toast.notifications": "Notifications",
   "components.tree.collapse": "Collapse",
   "components.tree.expand": "Expand",

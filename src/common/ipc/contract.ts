@@ -163,6 +163,7 @@ export const channels = {
     }),
     z.void(),
   ),
+  'log.getPath': ch(z.void(), z.string()),
 
   'extensions.list': ch(z.void(), z.array(ExtensionInfo)),
   'extensions.setEnabled': ch(

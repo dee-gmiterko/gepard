@@ -7,6 +7,7 @@ export interface Toast {
   id: string;
   tone: ReportTone;
   message: string;
+  detail?: string;
 }
 
 export interface Targeting {

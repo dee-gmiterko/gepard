@@ -33,6 +33,7 @@ export const channelNames = [
   'sync.pendingCount',
   'index.get',
   'log.write',
+  'log.getPath',
   'extensions.list',
   'extensions.setEnabled',
   'extensions.install',
