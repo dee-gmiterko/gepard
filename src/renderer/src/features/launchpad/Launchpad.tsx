@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import styled from 'styled-components';
-import { Download, Folder, Settings, Trash2 } from 'react-feather';
+import styled, { keyframes } from 'styled-components';
+import { Download, Folder, RefreshCw, Settings, Trash2 } from 'react-feather';
 import { defineMessages, FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl';
 import { IconButton } from '../../components/IconButton';
 import { Button } from '../../components/Button';
@@ -16,6 +16,7 @@ import { qk } from '../../queries/keys';
 import {
   useAddProject,
   useCloneStart,
+  useFetchProject,
   useProjects,
   useRemoveProject,
   useViewer,
@@ -59,6 +60,10 @@ const messages = defineMessages({
   remove: {
     id: 'launchpad.remove',
     defaultMessage: 'Remove',
+  },
+  fetch: {
+    id: 'launchpad.fetch',
+    defaultMessage: 'Fetch',
   },
   openSettings: {
     id: 'launchpad.openSettings',
@@ -217,6 +222,19 @@ function isActiveClone(progress: CloneProgress | undefined): boolean {
   return progress !== undefined && progress.phase !== 'done' && progress.phase !== 'error';
 }
 
+const spin = keyframes`
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+`;
+
+const SpinningFetchIcon = styled(RefreshCw)`
+  animation: ${spin} 0.8s linear infinite;
+`;
+
 export function Launchpad(): React.JSX.Element {
   const intl = useIntl();
   const dispatch = useAppDispatch();
@@ -227,11 +245,13 @@ export function Launchpad(): React.JSX.Element {
   const addProject = useAddProject();
   const removeProject = useRemoveProject();
   const cloneStart = useCloneStart();
+  const fetchProject = useFetchProject();
 
   const [url, setUrl] = useState('');
   const [urlTouched, setUrlTouched] = useState(false);
   const [progressById, setProgressById] = useState<Record<string, CloneProgress>>({});
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const [fetchingId, setFetchingId] = useState<string | null>(null);
 
   const prefill = viewer ? `https://github.com/${viewer.login}/` : '';
   const urlValue = urlTouched ? url : prefill;
@@ -302,6 +322,13 @@ export function Launchpad(): React.JSX.Element {
       const next = { ...prev };
       delete next[projectId];
       return next;
+    });
+  }
+
+  function handleFetch(projectId: string): void {
+    setFetchingId(projectId);
+    fetchProject.mutate(projectId, {
+      onSettled: () => setFetchingId((current) => (current === projectId ? null : current)),
     });
   }
 
@@ -414,6 +441,14 @@ export function Launchpad(): React.JSX.Element {
                     label={intl.formatMessage(messages.clone)}
                     disabled={cloning}
                     onClick={() => startClone(project.id)}
+                  />
+                )}
+                {project.cloned && confirmRemoveId !== project.id && (
+                  <IconButton
+                    icon={fetchingId === project.id ? SpinningFetchIcon : RefreshCw}
+                    label={intl.formatMessage(messages.fetch)}
+                    disabled={cloning || fetchingId === project.id}
+                    onClick={() => handleFetch(project.id)}
                   />
                 )}
                 {confirmRemoveId === project.id ? (

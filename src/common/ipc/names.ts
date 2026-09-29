@@ -7,6 +7,7 @@ export const channelNames = [
   'projects.setTargeting',
   'projects.setLayout',
   'projects.remove',
+  'projects.fetch',
   'clone.start',
   'pr.list',
   'pr.view',

@@ -66,6 +66,7 @@ export const channels = {
   'projects.setTargeting': ch(z.object({ ...ProjectRef, targeting: PersistedTargeting }), z.void()),
   'projects.setLayout': ch(z.object({ ...ProjectRef, layout: PersistedLayout }), z.void()),
   'projects.remove': ch(z.object(ProjectRef), z.void()),
+  'projects.fetch': ch(z.object(ProjectRef), z.void()),
   'clone.start': ch(z.object(ProjectRef), z.void()),
 
   'pr.list': ch(

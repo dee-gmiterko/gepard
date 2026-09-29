@@ -20,6 +20,7 @@ export function createProjectsHandlers(
   | 'projects.setTargeting'
   | 'projects.setLayout'
   | 'projects.remove'
+  | 'projects.fetch'
   | 'clone.start'
 > {
   return {
@@ -57,6 +58,14 @@ export function createProjectsHandlers(
     'projects.remove': async ({ projectId }) => {
       await indexer.close(projectId);
       await store.removeProject(projectId);
+    },
+
+    'projects.fetch': async ({ projectId }) => {
+      const project = await store.getProject(projectId);
+      if (!project) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${projectId}`);
+      if (!project.cloned)
+        throw new AppError('PROJECT_NOT_CLONED', `project ${projectId} is not cloned yet`);
+      await git.fetchOrigin(projectId);
     },
 
     'clone.start': async ({ projectId }) => {

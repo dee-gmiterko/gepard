@@ -64,6 +64,12 @@ export function useRemoveProject() {
   });
 }
 
+export function useFetchProject() {
+  return useMutation({
+    mutationFn: (projectId: string) => invoke('projects.fetch', { projectId }),
+  });
+}
+
 export function useIndexStatus() {
   const projectId = useAppState().projectId ?? '';
   const qc = useQueryClient();
