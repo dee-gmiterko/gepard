@@ -1,6 +1,6 @@
-import type { KeyboardEvent } from 'react';
+import { useId } from 'react';
 import styled from 'styled-components';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl';
 import { activeToggleBackground } from '../IconButton';
 
 export type SearchScope = 'all' | 'targeted';
@@ -20,36 +20,37 @@ const messages = defineMessages({
   },
 });
 
-const Group = styled.div`
+const Group = styled.fieldset`
   display: inline-flex;
+  margin: 0;
+  padding: 0;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: ${({ theme }) => theme.radius.sm};
   overflow: hidden;
   flex-shrink: 0;
 `;
 
-const Option = styled.button<{ $active: boolean }>`
-  border: none;
+const Option = styled.label<{ $active: boolean }>`
+  position: relative;
   padding: 2px ${({ theme }) => theme.space[2]};
   font-size: ${({ theme }) => theme.font.size.xs};
   cursor: pointer;
   color: ${({ $active, theme }) => ($active ? theme.colors.accent : theme.colors.fgMuted)};
   ${activeToggleBackground}
+
+  &:has(:focus-visible) {
+    outline: 2px solid ${({ theme }) => theme.colors.accent};
+    outline-offset: -2px;
+  }
 `;
 
-function moveTo(
-  scope: SearchScope,
-  onChange: (scope: SearchScope) => void,
-  e: KeyboardEvent,
-): void {
-  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-  e.preventDefault();
-  onChange(scope);
-  const current = e.currentTarget as HTMLElement;
-  const sibling = (current.nextElementSibling ??
-    current.previousElementSibling) as HTMLElement | null;
-  sibling?.focus();
-}
+const Radio = styled.input`
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+`;
 
 export function ScopeToggle({
   value,
@@ -59,30 +60,25 @@ export function ScopeToggle({
   onChange: (scope: SearchScope) => void;
 }): React.JSX.Element {
   const intl = useIntl();
+  const name = useId();
+  const options: { scope: SearchScope; label: MessageDescriptor }[] = [
+    { scope: 'all', label: messages.all },
+    { scope: 'targeted', label: messages.targetedOnly },
+  ];
   return (
-    <Group role="radiogroup" aria-label={intl.formatMessage(messages.ariaLabel)}>
-      <Option
-        type="button"
-        role="radio"
-        aria-checked={value === 'all'}
-        tabIndex={value === 'all' ? 0 : -1}
-        $active={value === 'all'}
-        onClick={() => onChange('all')}
-        onKeyDown={(e) => moveTo('targeted', onChange, e)}
-      >
-        <FormattedMessage {...messages.all} />
-      </Option>
-      <Option
-        type="button"
-        role="radio"
-        aria-checked={value === 'targeted'}
-        tabIndex={value === 'targeted' ? 0 : -1}
-        $active={value === 'targeted'}
-        onClick={() => onChange('targeted')}
-        onKeyDown={(e) => moveTo('all', onChange, e)}
-      >
-        <FormattedMessage {...messages.targetedOnly} />
-      </Option>
+    <Group aria-label={intl.formatMessage(messages.ariaLabel)}>
+      {options.map(({ scope, label }) => (
+        <Option key={scope} $active={value === scope}>
+          <Radio
+            type="radio"
+            name={name}
+            value={scope}
+            checked={value === scope}
+            onChange={() => onChange(scope)}
+          />
+          <FormattedMessage {...label} />
+        </Option>
+      ))}
     </Group>
   );
 }

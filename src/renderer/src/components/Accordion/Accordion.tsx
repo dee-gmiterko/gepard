@@ -12,7 +12,6 @@ const Header = styled.div<{ $disabled?: boolean }>`
   align-items: center;
   gap: ${({ theme }) => theme.space[2]};
   padding: ${({ theme }) => theme.space[2]};
-  user-select: none;
   font-size: ${({ theme }) => theme.font.size.sm};
   color: ${({ theme }) => theme.colors.fg};
   ${disabledInteractive}
@@ -20,8 +19,6 @@ const Header = styled.div<{ $disabled?: boolean }>`
   &:hover {
     background: ${({ $disabled, theme }) => ($disabled ? 'transparent' : theme.colors.bgHover)};
   }
-
-  ${focusVisible}
 `;
 
 const Leading = styled.span`
@@ -30,7 +27,24 @@ const Leading = styled.span`
   flex-shrink: 0;
 `;
 
-const Title = styled.div`
+const Toggle = styled.button`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[2]};
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: inherit;
+
+  ${focusVisible}
+`;
+
+const Title = styled.span`
   flex: 1;
   min-width: 0;
   display: flex;
@@ -71,27 +85,13 @@ export function Accordion({
 }: AccordionProps): React.JSX.Element {
   return (
     <Wrapper>
-      <Header
-        role="button"
-        tabIndex={disabled ? -1 : 0}
-        aria-expanded={open}
-        aria-disabled={disabled}
-        $disabled={disabled}
-        onClick={() => {
-          if (!disabled) onToggle();
-        }}
-        onKeyDown={(e) => {
-          if (disabled) return;
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onToggle();
-          }
-        }}
-      >
-        {leading && <Leading onClick={(e) => e.stopPropagation()}>{leading}</Leading>}
-        <Title>{title}</Title>
+      <Header $disabled={disabled}>
+        {leading && <Leading>{leading}</Leading>}
+        <Toggle type="button" aria-expanded={open} disabled={disabled} onClick={onToggle}>
+          <Title>{title}</Title>
+          <Chevron>{open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</Chevron>
+        </Toggle>
         {trailing}
-        <Chevron>{open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</Chevron>
       </Header>
       {open && children != null && <Body>{children}</Body>}
     </Wrapper>

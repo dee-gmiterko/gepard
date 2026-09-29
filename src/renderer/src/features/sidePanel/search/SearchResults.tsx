@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import styled from 'styled-components';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
 import { Caption } from '../../../components/Caption';
@@ -6,6 +7,7 @@ import { Message } from '../../../components/Message';
 import { MatchLine } from '../../../components/MatchLine';
 import { Chevron, ChevronSlot, FileRow, FolderRow, TreeLabel } from '../../../components/Tree';
 import { VirtualList } from '../../../components/VirtualList';
+import { focusVisible } from '../../../components/IconButton';
 import { FileRowMarks } from '../fileRows/FileRowMarks';
 import { useRowData } from '../fileRows/rowData';
 import { buildSearchRows, type FileMatches, type SearchRow } from './searchRows';
@@ -26,6 +28,24 @@ const messages = defineMessages({
 });
 
 const ROW_HEIGHT = 28;
+
+const RowButton = styled.button`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  gap: ${({ theme }) => theme.space[1]};
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  ${focusVisible}
+`;
 
 export function SearchResults({
   files,
@@ -65,14 +85,6 @@ export function SearchResults({
     }
   }
 
-  function onKeyDown(activate: () => void): (e: React.KeyboardEvent) => void {
-    return (e) => {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      e.preventDefault();
-      activate();
-    };
-  }
-
   function renderRow(index: number): React.ReactNode {
     if (index >= rows.length) {
       return (
@@ -88,15 +100,14 @@ export function SearchResults({
       return (
         <FolderRow
           role="treeitem"
-          tabIndex={0}
           aria-level={row.depth + 1}
           aria-expanded={expanded}
           $depth={row.depth}
-          onClick={() => toggle(row.path)}
-          onKeyDown={onKeyDown(() => toggle(row.path))}
         >
           <Chevron expanded={expanded} onToggle={() => toggle(row.path)} />
-          <TreeLabel title={row.path}>{row.name}</TreeLabel>
+          <RowButton type="button" onClick={() => toggle(row.path)}>
+            <TreeLabel title={row.path}>{row.name}</TreeLabel>
+          </RowButton>
         </FolderRow>
       );
     }
@@ -106,27 +117,26 @@ export function SearchResults({
       return (
         <FileRow
           role="treeitem"
-          tabIndex={0}
           aria-level={row.depth + 1}
           aria-expanded={expanded}
           aria-selected={false}
           $depth={row.depth}
           $selected={false}
-          onClick={() => open(row)}
-          onKeyDown={onKeyDown(() => open(row))}
         >
           <Chevron expanded={expanded} onToggle={() => toggle(row.path)} />
-          <TreeLabel title={row.path}>{row.name}</TreeLabel>
-          <Caption
-            title={
-              row.file.moreMatches ? intl.formatMessage(messages.moreMatchesInFile) : undefined
-            }
-          >
-            {intl.formatMessage(messages.fileMatchCount, {
-              count: row.file.matches.length,
-              more: String(row.file.moreMatches),
-            })}
-          </Caption>
+          <RowButton type="button" onClick={() => open(row)}>
+            <TreeLabel title={row.path}>{row.name}</TreeLabel>
+            <Caption
+              title={
+                row.file.moreMatches ? intl.formatMessage(messages.moreMatchesInFile) : undefined
+              }
+            >
+              {intl.formatMessage(messages.fileMatchCount, {
+                count: row.file.matches.length,
+                more: String(row.file.moreMatches),
+              })}
+            </Caption>
+          </RowButton>
           <FileRowMarks data={rowFor(row.path)} paths={[row.path]} />
         </FileRow>
       );
@@ -136,16 +146,15 @@ export function SearchResults({
     return (
       <FileRow
         role="treeitem"
-        tabIndex={0}
         aria-level={row.depth + 1}
         aria-selected={selected}
         $depth={row.depth}
         $selected={selected}
-        onClick={() => open(row)}
-        onKeyDown={onKeyDown(() => open(row))}
       >
         <ChevronSlot aria-hidden="true" />
-        <MatchLine line={row.match.line} preview={row.match.preview} spans={row.match.spans} />
+        <RowButton type="button" onClick={() => open(row)}>
+          <MatchLine line={row.match.line} preview={row.match.preview} spans={row.match.spans} />
+        </RowButton>
       </FileRow>
     );
   }

@@ -3,7 +3,7 @@ import { HighlightedText, type TextRange } from '../HighlightedText';
 import { truncate } from '../Ellipsis';
 import { LineTag } from '../LineTag';
 
-const Row = styled.div`
+const Row = styled.span`
   display: flex;
   align-items: baseline;
   gap: ${({ theme }) => theme.space[2]};

@@ -135,20 +135,13 @@ class AffordanceMarker extends GutterMarker {
   }
   toDOM(): HTMLElement {
     plusIconMarkup ??= renderToStaticMarkup(createElement(Plus, { size: 12 }));
-    const span = document.createElement('span');
-    span.className = 'cm-comment-affordance';
-    span.innerHTML = plusIconMarkup;
-    // CodeMirror handles gutter clicks through a `click` event delegated at
-    // the gutter level.
-    span.tabIndex = 0;
-    span.setAttribute('role', 'button');
-    span.setAttribute('aria-label', intl.formatMessage(messages.addComment));
-    span.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      e.preventDefault();
-      span.click();
-    });
-    return span;
+    // A native button's Enter/Space click bubbles to CodeMirror's gutter-level click handler.
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'cm-comment-affordance';
+    button.innerHTML = plusIconMarkup;
+    button.setAttribute('aria-label', intl.formatMessage(messages.addComment));
+    return button;
   }
 }
 
