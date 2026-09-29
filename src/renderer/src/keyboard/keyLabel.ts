@@ -1,7 +1,5 @@
-// Display labels for arbitrary `KeyboardEvent.key` values captured live
-// during rebinding. `bindings.ts` ships a curated `keyLabel` for each
-// default key, but a captured override can be any key, so this derives a
-// reasonable label for the rest.
+import { splitChord, type Modifier } from './keyChord';
+
 const NAMED_KEYS: Record<string, string> = {
   ' ': 'Space',
   ArrowUp: '↑',
@@ -20,9 +18,20 @@ const NAMED_KEYS: Record<string, string> = {
   Insert: 'Insert',
 };
 
-export function keyLabel(key: string): string {
+const MODIFIER_LABELS: Record<Modifier, string> = {
+  Ctrl: 'Ctrl',
+  Alt: 'Alt',
+  Meta: 'Cmd',
+  Shift: 'Shift',
+};
+
+function plainKeyLabel(key: string): string {
   if (key in NAMED_KEYS) return NAMED_KEYS[key];
-  if (/^F[0-9]{1,2}$/.test(key)) return key;
   if (key.length === 1) return key.toUpperCase();
   return key;
+}
+
+export function keyLabel(chord: string): string {
+  const { modifiers, key } = splitChord(chord);
+  return [...modifiers.map((m) => MODIFIER_LABELS[m]), plainKeyLabel(key)].join('+');
 }

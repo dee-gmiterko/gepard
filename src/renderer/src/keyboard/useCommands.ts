@@ -1,13 +1,17 @@
 import { useMemo } from 'react';
 import { useAppDispatch, useAppState } from '../state/AppContext';
+import type { SidePanelTab } from '../state/reducer';
 import { useSetViewed, useViewed } from '../queries/comments';
 import { useChangedFiles, useTargetedFiles } from '../queries/files';
-import { nextTargetedFile } from './navigate';
+import { nextTargetedFile } from '../helpers/targetedFiles';
 
 export interface Commands {
   toggleViewed: (path?: string | null) => boolean;
   nextFile: () => boolean;
   prevFile: () => boolean;
+  acceptNext: () => boolean;
+  revertPrev: () => boolean;
+  showSidePanelTab: (tab: SidePanelTab) => boolean;
 }
 
 export function useCommands(): Commands {
@@ -19,6 +23,7 @@ export function useCommands(): Commands {
   const { mutate: setViewed } = useSetViewed();
   const { data: changedFiles } = useChangedFiles();
   const activePath = state.activeFile;
+  const acceptedFiles = state.acceptedFiles;
   const targetedFiles = useTargetedFiles();
 
   return useMemo<Commands>(() => {
@@ -27,6 +32,10 @@ export function useCommands(): Commands {
     for (const f of changedFiles ?? []) {
       changedPaths.add(f.path);
       if (f.previousPath) changedPaths.add(f.previousPath);
+    }
+
+    function canMarkViewed(path: string | null): path is string {
+      return pr !== null && path !== null && changedPaths.has(path);
     }
 
     function move(direction: 1 | -1): boolean {
@@ -38,12 +47,31 @@ export function useCommands(): Commands {
 
     return {
       toggleViewed: (path = activePath) => {
-        if (pr === null || path === null || !changedPaths.has(path)) return false;
+        if (!canMarkViewed(path)) return false;
         setViewed({ paths: [path], viewed: !viewedPaths.has(path) });
         return true;
       },
       nextFile: () => move(1),
       prevFile: () => move(-1),
+      acceptNext: () => {
+        if (!canMarkViewed(activePath)) return move(1);
+        setViewed({ paths: [activePath], viewed: true });
+        dispatch({ type: 'file/accept', path: activePath });
+        move(1);
+        return true;
+      },
+      revertPrev: () => {
+        const path = acceptedFiles.at(-1);
+        if (path === undefined) return false;
+        dispatch({ type: 'file/revert' });
+        if (pr !== null) setViewed({ paths: [path], viewed: false });
+        dispatch({ type: 'file/open', path });
+        return true;
+      },
+      showSidePanelTab: (tab) => {
+        dispatch({ type: 'sidePanel/setTab', tab, focus: true });
+        return true;
+      },
     };
-  }, [activePath, pr, viewed, changedFiles, setViewed, dispatch, targetedFiles]);
+  }, [activePath, acceptedFiles, pr, viewed, changedFiles, setViewed, dispatch, targetedFiles]);
 }

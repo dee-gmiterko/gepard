@@ -5,7 +5,7 @@ import { Compartment, EditorState, type Extension, type Text } from '@codemirror
 import { EditorView } from '@codemirror/view';
 import { LanguageDescription } from '@codemirror/language';
 import { languages } from '@codemirror/language-data';
-import { useCommands } from '../../keyboard/commands';
+import { useCommands } from '../../keyboard/useCommands';
 import { readOnlyExtensions } from './setup';
 import { editorTheme } from './theme';
 import { keymapBridge } from './keymapBridge';

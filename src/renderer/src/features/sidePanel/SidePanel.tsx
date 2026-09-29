@@ -114,6 +114,12 @@ export function SidePanel(): React.JSX.Element {
     if (!draggingRef.current) setWidth(state.layout.sidePanelWidth);
   }, [state.layout.sidePanelWidth]);
 
+  const searchPanelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (state.sidePanelFocusRequest === 0 || state.sidePanelTab !== 'search') return;
+    searchPanelRef.current?.querySelector('input')?.focus();
+  }, [state.sidePanelFocusRequest, state.sidePanelTab]);
+
   const { onPointerDown } = useResizeHandle({
     min: MIN_WIDTH,
     max: MAX_WIDTH,
@@ -144,11 +150,10 @@ export function SidePanel(): React.JSX.Element {
                 role="tab"
                 aria-selected={selected}
                 aria-controls={panelId(tab.id)}
-                tabIndex={selected ? 0 : -1}
                 icon={tab.icon}
                 label={intl.formatMessage(tab.label)}
                 active={selected}
-                onClick={() => dispatch({ type: 'sidePanel/setTab', tab: tab.id })}
+                onClick={() => dispatch({ type: 'sidePanel/setTab', tab: tab.id, focus: true })}
               />
             );
           })}
@@ -177,6 +182,7 @@ export function SidePanel(): React.JSX.Element {
         <TargetedBrowser />
       </TabContent>
       <TabContent
+        ref={searchPanelRef}
         id={panelId('search')}
         role="tabpanel"
         aria-labelledby={tabId('search')}

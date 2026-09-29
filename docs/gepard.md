@@ -85,7 +85,10 @@
 ### Controls
 - Defaults (rebindable in Settings > Controls, see above):
 	- `Space` - Toggle viewed state
-	- `PageUp/PageDown` - navigate files in targeted list for review, skipping viewed\
+	- `PageUp/PageDown` - navigate files in targeted list for review, skipping viewed
+	- `End` - accept: mark the current file viewed and go to the next unviewed one
+	- `Home` - revert: unmark the last accepted file and go back to it
+	- `Ctrl+Shift+E` / `Ctrl+Shift+G` / `Ctrl+Shift+F` (`Cmd` on macOS) - show the file browser / targeted files / search side panel tab; search focuses its input\
 ### Styling
 - heavy use of styled components - all dedicated locally defined in React components (any duplication is sign of missing component)
 - default fonts

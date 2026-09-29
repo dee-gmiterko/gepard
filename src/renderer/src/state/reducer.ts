@@ -34,7 +34,9 @@ export interface AppState {
   targeting: Targeting;
   layout: Layout;
   sidePanelTab: SidePanelTab;
+  sidePanelFocusRequest: number;
   pinnedFiles: string[];
+  acceptedFiles: string[];
   previewFile: string | null;
   activeFile: string | null;
   mainTab: MainTab;
@@ -49,7 +51,9 @@ export const initialAppState: AppState = {
   targeting: { pr: null, commit: null, path: null },
   layout: defaultLayout,
   sidePanelTab: 'files',
+  sidePanelFocusRequest: 0,
   pinnedFiles: [],
+  acceptedFiles: [],
   previewFile: null,
   activeFile: null,
   mainTab: 'files',
@@ -66,7 +70,7 @@ export type AppAction =
   | { type: 'target/commit'; sha: string | null }
   | { type: 'target/path'; path: string | null }
   | { type: 'target/checkoutResult'; checkout: { base: string; head: string } | null }
-  | { type: 'sidePanel/setTab'; tab: SidePanelTab }
+  | { type: 'sidePanel/setTab'; tab: SidePanelTab; focus?: boolean }
   | { type: 'layout/setSidePanelWidth'; width: number }
   | { type: 'layout/setFileCommentsPanelWidth'; width: number }
   | { type: 'layout/setFileCommentsPanelOpen'; open: boolean }
@@ -75,6 +79,8 @@ export type AppAction =
   | { type: 'file/focus'; path: string }
   | { type: 'file/pin'; path: string }
   | { type: 'file/unpin'; path: string }
+  | { type: 'file/accept'; path: string }
+  | { type: 'file/revert' }
   | { type: 'mainTab/set'; tab: MainTab }
   | { type: 'toast/push'; toast: Toast }
   | { type: 'toast/dismiss'; id: string }
@@ -82,7 +88,13 @@ export type AppAction =
 
 function withTarget(state: AppState, targeting: Targeting, set: boolean): AppState {
   const mainTab = targeting.pr === null && state.mainTab === 'comments' ? 'files' : state.mainTab;
-  return { ...state, targeting, mainTab, sidePanelTab: set ? 'targeted' : state.sidePanelTab };
+  return {
+    ...state,
+    targeting,
+    mainTab,
+    sidePanelTab: set ? 'targeted' : state.sidePanelTab,
+    acceptedFiles: [],
+  };
 }
 
 export function appReducer(state: AppState, action: AppAction): AppState {
@@ -117,7 +129,13 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case 'target/checkoutResult':
       return { ...state, checkout: action.checkout };
     case 'sidePanel/setTab':
-      return { ...state, sidePanelTab: action.tab };
+      return {
+        ...state,
+        sidePanelTab: action.tab,
+        sidePanelFocusRequest: action.focus
+          ? state.sidePanelFocusRequest + 1
+          : state.sidePanelFocusRequest,
+      };
     case 'layout/setSidePanelWidth':
       return { ...state, layout: { ...state.layout, sidePanelWidth: action.width } };
     case 'layout/setFileCommentsPanelWidth':
@@ -157,6 +175,13 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           : state.activeFile;
       return { ...state, pinnedFiles, activeFile, revealLine: null };
     }
+    case 'file/accept':
+      return {
+        ...state,
+        acceptedFiles: [...state.acceptedFiles.filter((p) => p !== action.path), action.path],
+      };
+    case 'file/revert':
+      return { ...state, acceptedFiles: state.acceptedFiles.slice(0, -1) };
     case 'mainTab/set':
       return { ...state, mainTab: action.tab };
     case 'toast/push':

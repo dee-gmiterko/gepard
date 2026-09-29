@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
-import { useCommands } from './commands';
+import { useCommands } from './useCommands';
 import { describeTarget, isInteractiveControlTarget, isTextEntryTarget } from './keyTargets';
 import { keyBindings } from './bindings';
 import { useKeybindingOverrides } from '../queries/keybindings';
 import { effectiveKey } from './effectiveKey';
+import { keyChord } from './keyChord';
 
 export function useGlobalKeys(): void {
   const commands = useCommands();
@@ -12,12 +13,14 @@ export function useGlobalKeys(): void {
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
       if (e.defaultPrevented || e.isComposing) return;
-      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      if (e.target instanceof Element && e.target.closest('dialog[open]')) return;
       const target = describeTarget(e.target);
-      if (target && isTextEntryTarget(target)) return;
-      if (e.key === ' ' && target && isInteractiveControlTarget(target)) return;
+      const typing = !(e.ctrlKey || e.altKey || e.metaKey);
+      if (typing && target && isTextEntryTarget(target)) return;
+      const chord = keyChord(e);
+      if (chord === ' ' && target && isInteractiveControlTarget(target)) return;
 
-      const binding = keyBindings.find((b) => effectiveKey(b, overrides) === e.key);
+      const binding = keyBindings.find((b) => effectiveKey(b, overrides) === chord);
       if (!binding) return;
       if (binding.run(commands)) e.preventDefault();
     }

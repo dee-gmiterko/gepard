@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextTargetedFile } from '../src/keyboard/navigate';
+import { nextTargetedFile } from '../src/helpers/targetedFiles';
 
 const files = ['a.ts', 'b.ts', 'c.ts', 'd.ts'];
 

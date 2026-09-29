@@ -1,17 +1,10 @@
 import { defineMessages, type MessageDescriptor } from 'react-intl';
-import type { Commands } from './commands';
+import type { Commands } from './useCommands';
+import { MOD } from './keyChord';
 
-// The single source of truth for global keyboard shortcuts: both the runtime
-// handler (`useGlobalKeys`) and the settings screen's bindings list are built
-// from this table, so the two can never drift apart. Each entry's `key` is
-// only the *default* - the effective key (what `useGlobalKeys` actually
-// matches against `KeyboardEvent.key`) is resolved via `effectiveKey`, which
-// applies a persisted override from `keybindings.getOverrides` when one
-// exists for that binding id. See `KeybindingsPanel` for the rebind UI.
 export interface KeyBinding {
   id: string;
   key: string;
-  keyLabel: string;
   label: MessageDescriptor;
   run: (commands: Commands) => boolean;
 }
@@ -29,28 +22,75 @@ const messages = defineMessages({
     id: 'keyboard.prevFile',
     defaultMessage: 'Previous file in targeted list (skips viewed)',
   },
+  acceptNext: {
+    id: 'keyboard.acceptNext',
+    defaultMessage: 'Mark viewed and go to next file',
+  },
+  revertPrev: {
+    id: 'keyboard.revertPrev',
+    defaultMessage: 'Unmark last accepted file and go back to it',
+  },
+  showFiles: {
+    id: 'keyboard.showFiles',
+    defaultMessage: 'Show file browser',
+  },
+  showTargeted: {
+    id: 'keyboard.showTargeted',
+    defaultMessage: 'Show targeted files',
+  },
+  showSearch: {
+    id: 'keyboard.showSearch',
+    defaultMessage: 'Show search',
+  },
 });
 
 export const keyBindings: readonly KeyBinding[] = [
   {
     id: 'toggleViewed',
     key: ' ',
-    keyLabel: 'Space',
     label: messages.toggleViewed,
     run: (commands) => commands.toggleViewed(),
   },
   {
     id: 'nextFile',
     key: 'PageDown',
-    keyLabel: 'Page Down',
     label: messages.nextFile,
     run: (commands) => commands.nextFile(),
   },
   {
     id: 'prevFile',
     key: 'PageUp',
-    keyLabel: 'Page Up',
     label: messages.prevFile,
     run: (commands) => commands.prevFile(),
+  },
+  {
+    id: 'acceptNext',
+    key: 'End',
+    label: messages.acceptNext,
+    run: (commands) => commands.acceptNext(),
+  },
+  {
+    id: 'revertPrev',
+    key: 'Home',
+    label: messages.revertPrev,
+    run: (commands) => commands.revertPrev(),
+  },
+  {
+    id: 'showFiles',
+    key: `${MOD}+Shift+E`,
+    label: messages.showFiles,
+    run: (commands) => commands.showSidePanelTab('files'),
+  },
+  {
+    id: 'showTargeted',
+    key: `${MOD}+Shift+G`,
+    label: messages.showTargeted,
+    run: (commands) => commands.showSidePanelTab('targeted'),
+  },
+  {
+    id: 'showSearch',
+    key: `${MOD}+Shift+F`,
+    label: messages.showSearch,
+    run: (commands) => commands.showSidePanelTab('search'),
   },
 ];

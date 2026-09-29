@@ -1,5 +1,5 @@
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
-import { useCommands } from '../../../keyboard/commands';
+import { useCommands } from '../../../keyboard/useCommands';
 import { Tree, TreeLabel, type TreeNode } from '../../../components/Tree';
 import { FileRowMarks } from './FileRowMarks';
 import type { RowData } from './rowData';

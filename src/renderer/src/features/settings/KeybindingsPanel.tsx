@@ -13,6 +13,7 @@ import { Inline, Stack } from '../../components/Layout';
 import { keyBindings, type KeyBinding } from '../../keyboard/bindings';
 import { effectiveKey } from '../../keyboard/effectiveKey';
 import { keyLabel } from '../../keyboard/keyLabel';
+import { keyChord, MODIFIER_KEYS } from '../../keyboard/keyChord';
 import { useKeybindingOverrides, useSetKeybindingOverride } from '../../queries/keybindings';
 
 const messages = defineMessages({
@@ -22,7 +23,7 @@ const messages = defineMessages({
   },
   hint: {
     id: 'settings.keybindings.hint',
-    defaultMessage: 'Click "Rebind" and press a key. Escape cancels.',
+    defaultMessage: 'Click "Rebind" and press a key or key combination. Escape cancels.',
   },
   rebind: {
     id: 'settings.keybindings.rebind',
@@ -70,9 +71,7 @@ const ConflictNote = styled.div`
   color: ${({ theme }) => theme.colors.danger};
 `;
 
-// Keys that must stay reserved so a binding can never be rebound onto
-// something that would break other keyboard interaction (closing the
-// listening state itself, or basic focus navigation).
+// Escape cancels listening and Tab is focus navigation, so neither can be bound.
 const RESERVED_KEYS = new Set(['Escape', 'Tab']);
 
 function conflictsFor(
@@ -99,10 +98,7 @@ export function KeybindingsPanel(): React.JSX.Element {
   }
 
   function handleCapture(binding: KeyBinding, e: ReactKeyboardEvent<HTMLSpanElement>): void {
-    // Stop this from reaching the settings overlay's own Escape/Tab handling
-    // and from reaching `useGlobalKeys`' window-level listener - the
-    // captured key must be consumed here, not also trigger a shortcut or
-    // close the overlay.
+    // The captured key must not also reach the overlay's Escape handling or `useGlobalKeys`.
     e.stopPropagation();
     e.preventDefault();
 
@@ -110,11 +106,10 @@ export function KeybindingsPanel(): React.JSX.Element {
       cancelListening();
       return;
     }
-    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
-    if (RESERVED_KEYS.has(e.key)) return;
+    if (MODIFIER_KEYS.has(e.key) || RESERVED_KEYS.has(e.key)) return;
 
     setListeningId(null);
-    setOverride.mutate({ id: binding.id, key: e.key });
+    setOverride.mutate({ id: binding.id, key: keyChord(e) });
   }
 
   function resetBinding(id: string): void {
@@ -169,7 +164,7 @@ export function KeybindingsPanel(): React.JSX.Element {
                     <FormattedMessage {...messages.listening} />
                   </ListeningKey>
                 ) : (
-                  <Key>{isCustom ? keyLabel(key) : binding.keyLabel}</Key>
+                  <Key>{keyLabel(key)}</Key>
                 )}
                 {isCustom && !isListening && (
                   <IconButton
