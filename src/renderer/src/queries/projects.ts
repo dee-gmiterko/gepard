@@ -65,8 +65,14 @@ export function useRemoveProject() {
 }
 
 export function useFetchProject() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (projectId: string) => invoke('projects.fetch', { projectId }),
+    onSuccess: (_data, projectId) => {
+      qc.invalidateQueries({ queryKey: qk.prsAll(projectId) });
+      qc.invalidateQueries({ queryKey: qk.branches(projectId) });
+      qc.invalidateQueries({ queryKey: qk.commitsAll(projectId) });
+    },
   });
 }
 

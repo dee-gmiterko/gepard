@@ -13,8 +13,9 @@ export const qk = {
   keybindingOverrides: () => [...qk.all, 'keybindingOverrides'] as const,
   project: (projectId: string) => [...qk.all, 'project', projectId] as const,
   open: (p: string) => [...qk.project(p), 'open'] as const,
+  commitsAll: (p: string) => [...qk.project(p), 'commits'] as const,
   commits: (p: string, search?: string, path?: string) =>
-    [...qk.project(p), 'commits', search, path] as const,
+    [...qk.commitsAll(p), search, path] as const,
   prsAll: (p: string) => [...qk.project(p), 'prs'] as const,
   prs: (p: string, search?: string, commit?: string, path?: string) =>
     [...qk.prsAll(p), search, commit, path] as const,
