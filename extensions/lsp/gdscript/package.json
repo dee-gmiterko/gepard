@@ -10,7 +10,6 @@
   },
   "scripts": {
     "build": "tsc",
-    "postinstall": "tsc",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "lint": "eslint .",

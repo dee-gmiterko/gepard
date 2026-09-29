@@ -11,7 +11,7 @@
   "scripts": {
     "build": "tsc",
     "vendor": "tsx vendor.ts",
-    "postinstall": "tsc && tsx vendor.ts",
+    "postinstall": "tsx vendor.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "lint": "eslint .",
