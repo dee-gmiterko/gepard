@@ -72,6 +72,16 @@ export const FolderRow = styled(Row)`
   }
 `;
 
+export const RootRow = styled(FolderRow)`
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.fg};
+  background: ${({ theme }) => theme.colors.bgSubtle};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
 function onRowKeyDown(onActivate: () => void): (e: React.KeyboardEvent) => void {
   return (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -161,9 +171,10 @@ export function Tree<T>({
       const hasChildren = node.children.length > 0;
       const expanded = !collapsed.has(node.path);
       if (node.isFolder) {
+        const Folder = node.path === '' ? RootRow : FolderRow;
         return (
           <li key={node.path} role="none">
-            <FolderRow
+            <Folder
               role="treeitem"
               tabIndex={0}
               aria-expanded={expanded}
@@ -172,9 +183,9 @@ export function Tree<T>({
               onKeyDown={onRowKeyDown(() => toggle(node.path))}
             >
               <Chevron expanded={expanded} onToggle={() => toggle(node.path)} />
-              <TreeLabel title={node.path}>{node.name}</TreeLabel>
+              <TreeLabel title={node.path || node.name}>{node.name}</TreeLabel>
               {renderFolder?.(node)}
-            </FolderRow>
+            </Folder>
             {expanded && <List role="group">{renderNodes(node.children, depth + 1)}</List>}
           </li>
         );

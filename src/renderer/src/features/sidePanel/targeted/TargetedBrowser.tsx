@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import { useAppState } from '../../../state/AppContext';
 import { isDiffView } from '../../../state/selectors';
+import { useOpenProject } from '../../../queries/projects';
 import { useTargetedFiles, useTree } from '../../../queries/files';
-import { buildTree, buildFlatList, type TreeNode } from '../../../components/Tree';
+import { buildTree, buildFlatList, withRoot, type TreeNode } from '../../../components/Tree';
 import { Message } from '../../../components/Message';
 import { Toolbar } from '../../../components/Toolbar';
 import { ViewModeToggle, type ViewMode } from '../../../components/ViewModeToggle';
@@ -50,17 +51,19 @@ export function TargetedBrowser(): React.JSX.Element {
   const { diffMode, changedLoading, rowFor } = useRowData();
   const targetedFiles = useTargetedFiles();
   const fullTree = useTree();
+  const rootName = useOpenProject().data?.project.repo ?? '';
 
   const items = useMemo(
     () => targetedFiles.map((p) => ({ path: p, data: rowFor(p) })),
     [targetedFiles, rowFor],
   );
 
-  const nodes = useMemo<TreeNode<RowData>[]>(
-    () =>
-      mode === 'flat' ? buildFlatList(items) : buildTree(items, { aggregateFolder: aggregateRows }),
-    [items, mode],
-  );
+  const nodes = useMemo<TreeNode<RowData>[]>(() => {
+    if (mode === 'flat') return buildFlatList(items);
+    const options = { aggregateFolder: aggregateRows };
+    const entries = buildTree(items, options);
+    return entries.length > 0 ? withRoot(entries, rootName, options) : entries;
+  }, [items, mode, rootName]);
 
   const isLoading = diffMode
     ? changedLoading

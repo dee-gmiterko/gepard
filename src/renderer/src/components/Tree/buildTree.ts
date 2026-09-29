@@ -66,6 +66,17 @@ export function buildTree<T>(items: Item<T>[], options: BuildTreeOptions<T> = {}
   return [...root.children.values()].map(toNode).sort(compareNodes);
 }
 
+export function withRoot<T>(
+  nodes: TreeNode<T>[],
+  name: string,
+  options: BuildTreeOptions<T> = {},
+): TreeNode<T>[] {
+  const data = options.aggregateFolder?.(
+    nodes.map((n) => n.data).filter((d): d is T => d !== undefined),
+  );
+  return [{ path: '', name, isFolder: true, children: nodes, data }];
+}
+
 export function buildFlatList<T>(items: Item<T>[]): TreeNode<T>[] {
   return [...items]
     .sort((a, b) => collator.compare(a.path, b.path))

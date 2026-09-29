@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { defineMessages, FormattedMessage } from 'react-intl';
-import { useCurrentHead } from '../../../queries/projects';
+import { useCurrentHead, useOpenProject } from '../../../queries/projects';
 import { useTree } from '../../../queries/files';
-import { buildTree } from '../../../components/Tree';
+import { buildTree, withRoot } from '../../../components/Tree';
 import { Message } from '../../../components/Message';
 import { ReviewTree } from '../fileRows/ReviewTree';
 import { aggregateRows, useRowData } from '../fileRows/rowData';
@@ -26,15 +26,16 @@ export function FileTree(): React.JSX.Element {
   const head = useCurrentHead();
   const { data: paths, isLoading } = useTree();
   const { rowFor } = useRowData();
+  const rootName = useOpenProject().data?.project.repo ?? '';
 
-  const nodes = useMemo(
-    () =>
-      buildTree(
-        (paths ?? []).map((path) => ({ path, data: rowFor(path) })),
-        { aggregateFolder: aggregateRows },
-      ),
-    [paths, rowFor],
-  );
+  const nodes = useMemo(() => {
+    const options = { aggregateFolder: aggregateRows };
+    const entries = buildTree(
+      (paths ?? []).map((path) => ({ path, data: rowFor(path) })),
+      options,
+    );
+    return entries.length > 0 ? withRoot(entries, rootName, options) : entries;
+  }, [paths, rowFor, rootName]);
 
   if (!head)
     return (
