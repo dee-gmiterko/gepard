@@ -299,13 +299,15 @@ export class GitService {
         await this.checkoutDetached(repoRoot, target.sha);
         result = { base: await this.parentOrEmptyTree(repoRoot, target.sha), head: target.sha };
       } else {
-        await this.gitRun(repoRoot, ['fetch', 'origin']).catch((e) => {
-          const message = e instanceof Error ? e.message : String(e);
-          log.warn('checkout', `projectId=${projectId} fetch origin failed: ${message}`);
-        });
+        // Check out the default branch from whatever origin/HEAD is known locally so
+        // already-present content shows immediately; refresh origin in the background.
         await this.checkoutDetached(repoRoot, DEFAULT_BRANCH_REF);
         const head = await this.currentHeadSha(repoRoot);
         result = { base: head, head };
+        this.fetchOrigin(projectId).catch((e) => {
+          const message = e instanceof Error ? e.message : String(e);
+          log.warn('checkout', `projectId=${projectId} background fetch origin failed: ${message}`);
+        });
       }
 
       const [changes, files] = await Promise.all([

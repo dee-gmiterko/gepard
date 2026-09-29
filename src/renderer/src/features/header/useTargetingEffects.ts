@@ -16,7 +16,7 @@ export function useTargetingEffects(): TargetingEffectsStatus {
   const { pr, commit } = state.targeting;
 
   const { mutateAsync: checkoutTarget, isPending: checkoutPending } = useCheckoutTarget();
-  const { mutate: syncRun, reset: syncReset, isPending: syncPending } = useSync();
+  const { mutate: syncRun, reset: syncReset } = useSync();
 
   useEffect(() => {
     if (!projectId) return;
@@ -32,6 +32,8 @@ export function useTargetingEffects(): TargetingEffectsStatus {
       .then((result) => {
         if (cancelled || !active) return;
         dispatch({ type: 'target/checkoutResult', checkout: result });
+        // Refreshing from origin runs after content is already showing, so it
+        // must not feed into the blocking "Checking out…" status below.
         if (pr !== null) syncRun('pull');
       })
       .catch(() => {});
@@ -41,5 +43,5 @@ export function useTargetingEffects(): TargetingEffectsStatus {
     };
   }, [projectId, pr, commit, dispatch, checkoutTarget, syncRun, syncReset]);
 
-  return { pending: checkoutPending || syncPending };
+  return { pending: checkoutPending };
 }
