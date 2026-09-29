@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import styled from 'styled-components';
-import { AtSign, Hash } from 'react-feather';
+import { AtSign, Hash, Type } from 'react-feather';
 import { defineMessages, FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl';
 import { useCurrentHead } from '../../../queries/projects';
 import { useTargetedFiles } from '../../../queries/files';
@@ -32,6 +32,10 @@ const messages = defineMessages({
   regex: {
     id: 'sidePanel.search.regex',
     defaultMessage: 'Regex',
+  },
+  caseSensitive: {
+    id: 'sidePanel.search.caseSensitive',
+    defaultMessage: 'Case sensitive',
   },
   symbol: {
     id: 'sidePanel.search.symbol',
@@ -133,6 +137,7 @@ export function SearchPanel(): React.JSX.Element {
 
   const [text, setText] = useState('');
   const [regex, setRegex] = useState(false);
+  const [caseSensitive, setCaseSensitive] = useState(false);
   const [symbolFlag, setSymbolFlag] = useState(false);
   const [scope, setScope] = useState<SearchScope>('all');
   const [mode, setMode] = useState<ViewMode>('tree');
@@ -162,14 +167,20 @@ export function SearchPanel(): React.JSX.Element {
         at: selectedAt,
       };
     }
-    if (regex) return { kind: 'regex', scope, targetedPaths: paths, text: debouncedText };
-    return { kind: 'pattern', scope, targetedPaths: paths, text: debouncedText };
-  }, [symbolFlag, selectedAt, regex, scope, targetedPaths, debouncedText]);
+    const base = { scope, targetedPaths: paths, text: debouncedText, caseSensitive };
+    return regex ? { kind: 'regex', ...base } : { kind: 'pattern', ...base };
+  }, [symbolFlag, selectedAt, regex, caseSensitive, scope, targetedPaths, debouncedText]);
 
   const searchIdentity = useMemo(
     () =>
       params
-        ? JSON.stringify([params.kind, params.text, params.scope, 'at' in params && params.at])
+        ? JSON.stringify([
+            params.kind,
+            params.text,
+            params.scope,
+            'at' in params && params.at,
+            'caseSensitive' in params && params.caseSensitive,
+          ])
         : '',
     [params],
   );
@@ -226,6 +237,14 @@ export function SearchPanel(): React.JSX.Element {
             active={regex && !symbolFlag}
             disabled={symbolFlag}
             onClick={() => setRegex((r) => !r)}
+          />
+          <IconButton
+            icon={Type}
+            label={intl.formatMessage(messages.caseSensitive)}
+            size={14}
+            active={caseSensitive && !symbolFlag}
+            disabled={symbolFlag}
+            onClick={() => setCaseSensitive((c) => !c)}
           />
           <IconButton
             icon={AtSign}

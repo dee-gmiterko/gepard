@@ -73,6 +73,7 @@ describe('search.run', () => {
     await writeRepoFile('many.txt', `${'needle\n'.repeat(700)}`);
     await writeRepoFile('exact.ts', 'const x = 1;\n');
     await writeRepoFile('exact2.ts', '  const x = 1;\nconst x = 10;\n');
+    await writeRepoFile('case.txt', 'Needle\nneedle\nNEEDLE\n');
   });
 
   afterAll(async () => {
@@ -118,6 +119,18 @@ describe('search.run', () => {
         targetedPaths: ['words.txt'],
       });
       expect(whole.files[0].matches[0].spans).toEqual([[12, 18]]);
+    });
+
+    it('ignores case unless case-sensitive search is asked for', async () => {
+      const scope = { scope: 'targeted', targetedPaths: ['case.txt'] };
+      const lines = (r: GroupedResult): number[] => r.files[0]?.matches.map((m) => m.line) ?? [];
+
+      expect(lines(await run({ ...scope, text: 'needle' }))).toEqual([1, 2, 3]);
+      expect(lines(await run({ ...scope, text: 'needle', caseSensitive: true }))).toEqual([2]);
+      expect(lines(await run({ ...scope, kind: 'regex', text: 'ne+dle' }))).toEqual([1, 2, 3]);
+      expect(
+        lines(await run({ ...scope, kind: 'regex', text: 'ne+dle', caseSensitive: true })),
+      ).toEqual([2]);
     });
 
     it('runs a regex', async () => {
@@ -231,20 +244,21 @@ describe('search.run', () => {
       };
     });
 
+    const word = { text: 'needle', word: true, caseSensitive: true };
+
     it('answers from the index instead of ripgrep and pages the array', async () => {
-      const first = await run({ text: 'needle', word: true, limit: 2 });
+      const first = await run({ ...word, limit: 2 });
       expect(paths(first)).toEqual(['a.ts', 'b.ts']);
       expect(first).toMatchObject({ hasMore: true, nextOffset: 2, matchesInPage: 3 });
 
-      const second = await run({ text: 'needle', word: true, limit: 2, offset: 2 });
+      const second = await run({ ...word, limit: 2, offset: 2 });
       expect(paths(second)).toEqual(['c.ts']);
       expect(second).toMatchObject({ hasMore: false, nextOffset: null });
     });
 
     it('applies the targeted scope before paging', async () => {
       const result = await run({
-        text: 'needle',
-        word: true,
+        ...word,
         scope: 'targeted',
         targetedPaths: ['b.ts', 'c.ts'],
         limit: 1,
@@ -255,12 +269,24 @@ describe('search.run', () => {
 
     it('falls back to ripgrep for text that is not a plain identifier', async () => {
       const result = await run({
+        ...word,
         text: 'needle again',
-        word: true,
         scope: 'targeted',
         targetedPaths: ['src/a.ts'],
       });
       expect(paths(result)).toEqual(['src/a.ts']);
+    });
+
+    it('falls back to ripgrep for a case-insensitive whole-word search', async () => {
+      const result = await run({
+        text: 'NEEDLE',
+        word: true,
+        scope: 'targeted',
+        targetedPaths: ['src/a.ts'],
+      });
+      expect((mocks.lineIndex as { queryWord: unknown }).queryWord).not.toHaveBeenCalled();
+      expect(paths(result)).toEqual(['src/a.ts']);
+      expect(result.matchesInPage).toBe(2);
     });
   });
 

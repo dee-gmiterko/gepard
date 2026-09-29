@@ -15,6 +15,7 @@ import { identifierAt } from '../../helpers/string';
 import { indexer } from '../../lsp';
 import type { LanguageSession, WorkspaceSymbol } from '../../lsp/session';
 import { projectRepoDir } from '../../paths';
+import { navigationSymbols } from '@gepard/common/model/symbols';
 import { makeTargetMatcher } from '@gepard/common/model/targetMatcher';
 import type { ChannelParsedInput } from '@gepard/common/ipc/contract';
 import type { GroupedResult } from '@gepard/common/ipc/schemas/search';
@@ -107,8 +108,11 @@ export const searchHandlers: Pick<
       const paths = targeted ? input.targetedPaths : undefined;
 
       if (input.kind === 'pattern' || input.kind === 'regex') {
+        // The word index only knows exact spellings, so it can answer case-sensitive lookups alone.
         const lineIndex =
-          input.kind === 'pattern' && input.word ? indexer.lineIndex(input.projectId) : null;
+          input.kind === 'pattern' && input.word && input.caseSensitive
+            ? indexer.lineIndex(input.projectId)
+            : null;
         if (input.kind === 'pattern' && lineIndex && /^[A-Za-z0-9_]+$/.test(input.text)) {
           const hits = await lineIndex.queryWord(input.text);
           return toResult(input, applyPage(scoped(hits), opts));
@@ -118,6 +122,7 @@ export const searchHandlers: Pick<
           pattern: input.text,
           fixedString: input.kind === 'pattern',
           word: input.kind === 'pattern' ? input.word : undefined,
+          caseSensitive: input.caseSensitive,
           paths,
           signal,
           ...opts,
@@ -206,7 +211,9 @@ export const searchHandlers: Pick<
     withLatestWins(`symbols.document:${input.projectId}:${input.path}`, async ({ token }) => {
       requireCurrentSha(input.projectId, input.sha);
       const session = findSession(input.projectId, input.path);
-      const symbols = session ? await session.documentSymbols(input.path, token) : [];
+      const symbols = session
+        ? navigationSymbols(await session.documentSymbols(input.path, token))
+        : [];
       return { path: input.path, symbols };
     }),
 };

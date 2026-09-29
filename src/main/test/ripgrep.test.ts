@@ -32,6 +32,7 @@ describe('ripgrepSearch (real spawn)', () => {
     dir = await makeTmpDir('ripgrep');
     await writeFile(join(dir.path, 'fixed.txt'), 'Hello World\nfoo bar\n');
     await writeFile(join(dir.path, 'word.txt'), 'cat category concatenate cat\n');
+    await writeFile(join(dir.path, 'case.txt'), 'Bar bar BAR\n');
     await mkdir(join(dir.path, 'sub'));
     await writeFile(join(dir.path, 'sub', 'regex.txt'), 'foo\nfoa\nbaz\n');
   });
@@ -67,6 +68,25 @@ describe('ripgrepSearch (real spawn)', () => {
         },
       ]);
     });
+  });
+
+  it('ignores case unless caseSensitive is set, including when it is left unset', async () => {
+    const search = (caseSensitive?: boolean): Promise<Array<[number, number]>> =>
+      ripgrepSearch({
+        cwd: dir.path,
+        pattern: 'bar',
+        fixedString: true,
+        caseSensitive,
+        paths: ['case.txt'],
+      }).then((results) => results[0].matches[0].spans);
+
+    expect(await search(false)).toEqual([
+      [0, 3],
+      [4, 7],
+      [8, 11],
+    ]);
+    expect(await search(true)).toEqual([[4, 7]]);
+    expect(await search()).toEqual(await search(false));
   });
 
   it('supports a regex pattern', async () => {

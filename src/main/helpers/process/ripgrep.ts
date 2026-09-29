@@ -26,6 +26,7 @@ export interface RipgrepSearchOptions {
   pattern: string;
   fixedString: boolean;
   word?: boolean;
+  caseSensitive?: boolean;
   paths?: string[];
   signal?: AbortSignal;
   offset?: number;
@@ -131,6 +132,7 @@ export async function ripgrepSearchPage(opts: RipgrepSearchOptions): Promise<Rip
   const args = ['--json', '--hidden', '--no-ignore', '--sort', 'path', '--glob', '!.git'];
   if (opts.fixedString) args.push('-F');
   if (opts.word) args.push('-w');
+  args.push(opts.caseSensitive ? '-s' : '-i');
   if (perFile !== undefined) args.push('--max-count', String(perFile + 1));
   args.push('--', opts.pattern, '.');
 

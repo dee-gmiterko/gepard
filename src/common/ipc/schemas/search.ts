@@ -71,8 +71,14 @@ export const SearchQuery = z.discriminatedUnion('kind', [
     kind: z.literal('pattern'),
     text: z.string().min(1),
     word: z.boolean().default(false),
+    caseSensitive: z.boolean().default(false),
   }),
-  z.object({ ...SearchBase, kind: z.literal('regex'), text: z.string().min(1) }),
+  z.object({
+    ...SearchBase,
+    kind: z.literal('regex'),
+    text: z.string().min(1),
+    caseSensitive: z.boolean().default(false),
+  }),
   z.object({
     ...SearchBase,
     kind: z.literal('exactLine'),
