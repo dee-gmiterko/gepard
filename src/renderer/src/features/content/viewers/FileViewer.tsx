@@ -2,7 +2,7 @@ import { FormattedMessage } from 'react-intl';
 import { useAppState } from '../../../state/AppContext';
 import { useCurrentHead } from '../../../queries/projects';
 import { useChangedFiles } from '../../../queries/files';
-import { useIsCheckedOutChangedFile } from '../commentScope';
+import { useIsCheckedOutChangedFile } from '../useIsCheckedOutChangedFile';
 import { CodeViewer } from './code/CodeViewer';
 import { DiffViewer } from './diff/DiffViewer';
 import { Message } from '../../../components/Message';

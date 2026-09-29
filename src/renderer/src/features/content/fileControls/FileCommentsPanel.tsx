@@ -5,7 +5,7 @@ import { defineMessages, useIntl } from 'react-intl';
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
 import { useSetLayout } from '../../../queries/projects';
 import { useResizeHandle } from '../../../hooks/useResizeHandle';
-import { useIsCheckedOutChangedFile } from '../commentScope';
+import { useIsCheckedOutChangedFile } from '../useIsCheckedOutChangedFile';
 import { IconButton } from '../../../components/IconButton';
 import { ResizeHandle } from '../../../components/ResizeHandle';
 import { Inline } from '../../../components/Layout';

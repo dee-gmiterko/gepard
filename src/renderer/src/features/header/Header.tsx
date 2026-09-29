@@ -10,7 +10,7 @@ import { Ellipsis } from '../../components/Ellipsis';
 import { Inline } from '../../components/Layout';
 import { useIndexStatus, useSetLayout } from '../../queries/projects';
 import { useAppDispatch, useAppState } from '../../state/AppContext';
-import { useIsCheckedOutChangedFile } from '../content/commentScope';
+import { useIsCheckedOutChangedFile } from '../content/useIsCheckedOutChangedFile';
 
 const messages = defineMessages({
   projects: {

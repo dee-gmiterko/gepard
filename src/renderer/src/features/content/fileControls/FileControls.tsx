@@ -12,7 +12,7 @@ import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
 import { useSetLayout } from '../../../queries/projects';
 import { usePendingCount, useSetViewed, useSync, useViewed } from '../../../queries/comments';
-import { useIsCheckedOutChangedFile } from '../commentScope';
+import { useIsCheckedOutChangedFile } from '../useIsCheckedOutChangedFile';
 import { Checkbox } from '../../../components/Checkbox';
 import { Button } from '../../../components/Button';
 import { IconButton } from '../../../components/IconButton';
