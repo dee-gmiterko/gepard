@@ -88,11 +88,20 @@ Extensions are independent packages, each with its own `package.json` and
 its own dependencies, living under the repo root:
 
 - `extensions/lsp/<name>` - a language server extension.
+- `extensions/grammars/<name>` - a syntax highlighting extension.
 - `extensions/themes/<name>` - a colour theme extension.
+- `extensions/locales/<name>` - a UI translation extension.
 
-Both directories are yarn workspaces (see `package.json`'s `workspaces`
-field), and each extension's manifest declares its kind via a `gepard.type`
-field (`"lsp"` or `"theme"`).
+All of these directories are yarn workspaces (see `package.json`'s
+`workspaces` field), and each extension's manifest declares its kind via a
+`gepard.type` field (`"lsp"`, `"grammar"`, `"theme"` or `"locale"`).
+
+A grammar extension's entry module is imported by the renderer, so it must be
+a single self-contained ES module. Its default export lists the languages it
+provides (name plus file extensions) and a `support(api, language)` function
+that builds a CodeMirror language from the CodeMirror and Lezer modules the
+app passes in as `api`; the package must not bundle CodeMirror itself. See
+`extensions/grammars/godot` for the shape and its esbuild build.
 
 The bundled TypeScript/JavaScript LSP extension (`extensions/lsp/typescript`)
 is enabled by default. It always runs its own pinned, native TypeScript

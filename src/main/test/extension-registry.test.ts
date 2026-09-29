@@ -2,7 +2,12 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { loadExtensionPackages } from '../extensions/scanner';
-import { ExtensionRegistry, isLanguageExtension, isThemeTemplate } from '../extensions/registry';
+import {
+  ExtensionRegistry,
+  isGrammarExtension,
+  isLanguageExtension,
+  isThemeTemplate,
+} from '../extensions/registry';
 import * as settingsStore from '../store/settings';
 import { __setUserDataDir } from './support/electron';
 import { makeTmpDir, type TmpDir } from './support/tmp';
@@ -43,6 +48,13 @@ const DEMO_LANG_BODY = `module.exports = {
     filesChanged: () => {},
     dispose: async () => {},
   })
+}`;
+
+const DEMO_GRAMMAR_BODY = `module.exports = {
+  id: 'demo-grammar',
+  displayName: 'Demo Grammar',
+  languages: [{ name: 'Demo', extensions: ['demo'], filenames: ['Demofile'] }],
+  support: (api) => api.StreamLanguage.define({ token: (s) => { s.skipToEnd(); return 'keyword'; } })
 }`;
 
 const THEME_COLOR_KEYS = [
@@ -162,6 +174,26 @@ describe('loadExtensionPackages', () => {
     expect(loaded).toEqual([]);
     expect(failed).toHaveLength(1);
     expect(failed[0].error).toContain('gepard.type');
+  });
+
+  it('loads a grammar package, and rejects one whose languages have no extensions', async () => {
+    dir = await makeTmpDir('ext-scan-grammar');
+    await writePackage(dir.path, 'demo-grammar', DEMO_GRAMMAR_BODY, {
+      gepard: { type: 'grammar' },
+    });
+    await writePackage(
+      dir.path,
+      'no-extensions',
+      `module.exports = { id: 'x', displayName: 'X', languages: [{ name: 'X', extensions: [] }], support: () => null }`,
+      { gepard: { type: 'grammar' } },
+    );
+
+    const { loaded, failed } = await loadExtensionPackages(dir.path, 'grammar', isGrammarExtension);
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0].extension.id).toBe('demo-grammar');
+    expect(loaded[0].extension.languages[0].extensions).toEqual(['demo']);
+    expect(failed).toHaveLength(1);
+    expect(failed[0].error).toBe('module does not export a valid "grammar" extension');
   });
 
   it('loads a theme package with the same scanner, keyed off "theme" instead of "lsp"', async () => {
@@ -298,6 +330,15 @@ async function writeBuiltins(root: string): Promise<void> {
   await writePackage(join(root, 'locales'), 'builtin-en', BUILTIN_LOCALE_BODY, {
     gepard: { type: 'locale' },
   });
+  await writePackage(
+    join(root, 'grammars'),
+    'builtin-grammar',
+    DEMO_GRAMMAR_BODY.replace('demo-grammar', 'builtin-grammar').replace(
+      'Demo Grammar',
+      'Built-in Grammar',
+    ),
+    { gepard: { type: 'grammar' } },
+  );
 }
 
 describe('ExtensionRegistry', () => {
@@ -352,11 +393,27 @@ describe('ExtensionRegistry', () => {
           source: 'builtin',
           enabled: true,
         },
+        {
+          id: 'builtin-grammar',
+          displayName: 'Built-in Grammar',
+          kind: 'grammar',
+          source: 'builtin',
+          enabled: true,
+        },
       ]),
     );
 
     const languageExtensions = await registry.enabledLanguageExtensions();
     expect(languageExtensions.map((e) => e.id)).toEqual(['builtin-lang']);
+
+    const grammars = await registry.enabledGrammars();
+    expect(grammars).toHaveLength(1);
+    expect(grammars[0]).toMatchObject({
+      id: 'builtin-grammar',
+      displayName: 'Built-in Grammar',
+      languages: [{ name: 'Demo', extensions: ['demo'], filenames: ['Demofile'] }],
+    });
+    expect(grammars[0].source).toContain("id: 'builtin-grammar'");
 
     const themeTemplates = await registry.enabledThemeTemplates();
     expect(themeTemplates.map((t) => t.id).sort()).toEqual(['builtin-dark', 'builtin-light']);
@@ -472,6 +529,26 @@ describe('ExtensionRegistry', () => {
         ]),
       );
 
+      const grammarPkgDir = await writePackage(source.path, 'demo-grammar', DEMO_GRAMMAR_BODY, {
+        gepard: { type: 'grammar' },
+      });
+      const afterGrammar = await registry.install(grammarPkgDir);
+      expect(afterGrammar).toEqual(
+        expect.arrayContaining([
+          {
+            id: 'demo-grammar',
+            displayName: 'Demo Grammar',
+            kind: 'grammar',
+            source: 'external',
+            enabled: true,
+          },
+        ]),
+      );
+      expect((await registry.enabledGrammars()).map((g) => g.id).sort()).toEqual([
+        'builtin-grammar',
+        'demo-grammar',
+      ]);
+
       await expect(registry.install(lspPkgDir)).rejects.toThrow(/already exists/);
     } finally {
       await source.cleanup();
@@ -497,6 +574,7 @@ describe('ExtensionRegistry', () => {
     expect((await registry.list()).map((e) => e.id).sort()).toEqual([
       'builtin-dark',
       'builtin-en',
+      'builtin-grammar',
       'builtin-lang',
       'builtin-light',
     ]);
@@ -517,6 +595,7 @@ describe('ExtensionRegistry', () => {
     expect(ids).toEqual([
       'builtin-dark',
       'builtin-en',
+      'builtin-grammar',
       'builtin-lang',
       'builtin-light',
       'late-lang',

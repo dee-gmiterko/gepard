@@ -23,6 +23,7 @@ import {
   LineSymbolsResult,
 } from './schemas/lsp';
 import { ExtensionInfo } from './schemas/extensions';
+import { GrammarModule } from './schemas/grammar';
 import { ThemeTemplateData } from './schemas/theme';
 import { LocaleData } from './schemas/locale';
 import type { ChannelNameList, EventNameList } from './names';
@@ -173,6 +174,8 @@ export const channels = {
   ),
   'extensions.install': ch(z.object({ dialogTitle: z.string().min(1) }), z.array(ExtensionInfo)),
   'extensions.dir': ch(z.void(), z.string()),
+
+  'grammars.list': ch(z.void(), z.array(GrammarModule)),
 
   'theme.getTemplateId': ch(z.void(), z.string().nullable()),
   'theme.setTemplateId': ch(z.object({ templateId: z.string().nullable() }), z.string().nullable()),

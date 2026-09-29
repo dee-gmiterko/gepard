@@ -10,14 +10,14 @@
 - Localization: all UI text is localizable, English default; a script refreshes every locale from the source strings
 - Scripts (media/locale refresh, ...) are Typescript, run directly with `tsx`, no build step; package itself is ESM
 ### Extensions
-- Independent packages, outside the main app bundle's own deps: `extensions/lsp/<name>` (language servers), `extensions/themes/<name>` (colour themes), `extensions/locales/<name>` (UI translations) - each its own manifest (`gepard.type`) and own dependencies.
+- Independent packages, outside the main app bundle's own deps: `extensions/lsp/<name>` (language servers), `extensions/grammars/<name>` (syntax highlighting: file types mapped to a CodeMirror language, built against the app's own CodeMirror through a passed-in api), `extensions/themes/<name>` (colour themes), `extensions/locales/<name>` (UI translations) - each its own manifest (`gepard.type`) and own dependencies.
 - Typescript/JavaScript LSP extension is built in and enabled by default, shipping its own native TypeScript LSP inside its package (no workspace-toolchain detection - this is a review tool, not an editor).
 - Themes (light/dark, built in) and locales (English, built in) are also shipped this way, not hardcoded in the app; the renderer bakes only a fallback theme template, used before the IPC-fetched theme list has loaded (message default texts live in the code, so no locale catalog is needed at bootstrap).
 #### Extension requirements
-- Kinds: language server, theme, locale.
+- Kinds: language server, grammar, theme, locale.
 - Built-in and user-installed extensions are handled identically.
 - Each extension is self-contained: it ships everything it needs to run, with no changes to app code or build configuration.
-- Language-specific behavior lives entirely in the language server extension; the app's language handling is language-agnostic.
+- Language-specific behavior lives entirely in the language server and grammar extensions; the app's language handling is language-agnostic. Syntax highlighting falls back to CodeMirror's bundled language list for file types no grammar extension claims.
 - Install, enable and disable take effect at runtime, no restart.
 - A failing extension does not affect the app or other extensions.
 ### Projects (launchpad)
@@ -30,7 +30,7 @@
 	- Theme - single select: Follow system, Light, Dark, plus any installed theme extensions.
 	- Language - single select: Follow system (OS/browser-detected), plus each installed locale extension by display name; persisted selection wins over OS detection, applied live without restart.
 	- Controls - list of the current global keyboard shortcuts (command name + effective key), sourced from the same binding table `useGlobalKeys` runs, so the list can't drift from actual behavior. Each shortcut can be rebound: click `Rebind`, press the new key (`Escape` cancels), the override is persisted and takes effect immediately, no restart; a `Reset` button clears a customized binding back to its default. If a rebind lands on a key another binding also effectively uses, both rows show a visible conflict note (not a hard block - the earlier-listed binding wins at runtime).
-	- Extensions - list of installed extensions (built-in and external), each showing kind (language server/theme/locale), source (built-in/external) badge and an enable/disable checkbox; `Add extension` opens a file picker to install an extension package from disk; shows the install directory path and per-extension load errors.
+	- Extensions - list of installed extensions (built-in and external), each showing kind (language server/grammar/theme/locale), source (built-in/external) badge and an enable/disable checkbox; `Add extension` opens a file picker to install an extension package from disk; shows the install directory path and per-extension load errors.
 ### Main window
 - Header panel - targeting:
 	- series of fuzzy search select boxes entering: PR, commit, path

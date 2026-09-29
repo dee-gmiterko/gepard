@@ -58,6 +58,10 @@ const messages = defineMessages({
     id: 'settings.extensions.kindLsp',
     defaultMessage: 'Language server',
   },
+  kindGrammar: {
+    id: 'settings.extensions.kindGrammar',
+    defaultMessage: 'Grammar',
+  },
   kindTheme: {
     id: 'settings.extensions.kindTheme',
     defaultMessage: 'Theme',
@@ -78,6 +82,7 @@ const messages = defineMessages({
 
 const kindMessages = {
   lsp: messages.kindLsp,
+  grammar: messages.kindGrammar,
   theme: messages.kindTheme,
   locale: messages.kindLocale,
 } as const;

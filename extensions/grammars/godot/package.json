@@ -1,0 +1,31 @@
+{
+  "name": "gepard-grammar-godot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Bundled Godot grammar extension for Gepard (GDScript, scene and resource files, shaders).",
+  "main": "dist/index.js",
+  "gepard": {
+    "type": "grammar"
+  },
+  "scripts": {
+    "build": "esbuild index.ts --bundle --format=esm --target=es2023 --outfile=dist/index.js --log-level=warning",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@codemirror/language": "6.12.4",
+    "@gepard/eslint-config": "workspace:*",
+    "@lezer/highlight": "1.2.4",
+    "@lezer/lr": "1.4.10",
+    "esbuild": "0.28.2",
+    "eslint": "9.39.5",
+    "prettier": "3.9.9",
+    "typescript": "5.9.3",
+    "vite": "7.3.6",
+    "vitest": "5.0.2"
+  }
+}

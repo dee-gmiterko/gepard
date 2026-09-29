@@ -1,6 +1,8 @@
-import { cp, mkdir } from 'node:fs/promises';
+import { cp, mkdir, readFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import type { ExtensionInfo, ExtensionKind } from '@gepard/common/ipc/schemas/extensions';
+import { GrammarLanguage, type GrammarModule } from '@gepard/common/ipc/schemas/grammar';
+import type { GrammarExtension } from '@gepard/common/extensions/grammar';
 import { ThemeTemplateData } from '@gepard/common/ipc/schemas/theme';
 import { LocaleData } from '@gepard/common/ipc/schemas/locale';
 import { AppError } from '../ipc/registry';
@@ -33,6 +35,19 @@ export function isLanguageExtension(value: unknown): value is LanguageExtension 
   );
 }
 
+export function isGrammarExtension(value: unknown): value is GrammarExtension {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.id === 'string' &&
+    v.id.length > 0 &&
+    typeof v.displayName === 'string' &&
+    v.displayName.length > 0 &&
+    GrammarLanguage.array().min(1).safeParse(v.languages).success &&
+    isFn(v.support)
+  );
+}
+
 export function isThemeTemplate(value: unknown): value is ThemeTemplateData {
   return ThemeTemplateData.safeParse(value).success;
 }
@@ -53,6 +68,14 @@ const LSP_SPEC: KindSpec<LanguageExtension> = {
   kind: 'lsp',
   dirName: 'lsp',
   isValid: isLanguageExtension,
+  getId: (item) => item.id,
+  getDisplayName: (item) => item.displayName,
+};
+
+const GRAMMAR_SPEC: KindSpec<GrammarExtension> = {
+  kind: 'grammar',
+  dirName: 'grammars',
+  isValid: isGrammarExtension,
   getId: (item) => item.id,
   getDisplayName: (item) => item.displayName,
 };
@@ -213,17 +236,22 @@ class KindRegistry<T> {
     }
   }
 
-  async enabledExtensions(): Promise<T[]> {
+  async enabledPackages(): Promise<LoadedExtensionPackage<T>[]> {
     const enabledMap = await settingsStore.getEnabledMap();
     await this.rescan(enabledMap);
-    return this.known()
-      .filter(({ extension }) => enabledMap[this.spec.getId(extension)] ?? true)
-      .map(({ extension }) => extension);
+    return [...this.builtin, ...this.external].filter(
+      ({ extension }) => enabledMap[this.spec.getId(extension)] ?? true,
+    );
+  }
+
+  async enabledExtensions(): Promise<T[]> {
+    return (await this.enabledPackages()).map(({ extension }) => extension);
   }
 }
 
 export class ExtensionRegistry {
   private readonly lsp: KindRegistry<LanguageExtension>;
+  private readonly grammar: KindRegistry<GrammarExtension>;
   private readonly theme: KindRegistry<ThemeTemplateData>;
   private readonly locale: KindRegistry<LocaleData>;
 
@@ -237,17 +265,19 @@ export class ExtensionRegistry {
         override(overrideBuiltinRootDir, spec.dirName),
       );
     this.lsp = registryFor(LSP_SPEC);
+    this.grammar = registryFor(GRAMMAR_SPEC);
     this.theme = registryFor(THEME_SPEC);
     this.locale = registryFor(LOCALE_SPEC);
   }
 
   async list(): Promise<ExtensionInfo[]> {
-    const [lsp, theme, locale] = await Promise.all([
+    const [lsp, grammar, theme, locale] = await Promise.all([
       this.lsp.list(),
+      this.grammar.list(),
       this.theme.list(),
       this.locale.list(),
     ]);
-    return [...lsp, ...theme, ...locale];
+    return [...lsp, ...grammar, ...theme, ...locale];
   }
 
   async setEnabled(id: string, enabled: boolean): Promise<ExtensionInfo[]> {
@@ -269,6 +299,8 @@ export class ExtensionRegistry {
     const type = manifest.gepard?.type;
     if (type === LSP_SPEC.kind) {
       await this.lsp.install(srcDir);
+    } else if (type === GRAMMAR_SPEC.kind) {
+      await this.grammar.install(srcDir);
     } else if (type === THEME_SPEC.kind) {
       await this.theme.install(srcDir);
     } else if (type === LOCALE_SPEC.kind) {
@@ -276,7 +308,7 @@ export class ExtensionRegistry {
     } else {
       throw new AppError(
         'EXTENSION_INVALID_PACKAGE',
-        `"${name}"'s package.json must set "gepard": { "type": "lsp" | "theme" | "locale" } (got ${JSON.stringify(type ?? null)})`,
+        `"${name}"'s package.json must set "gepard": { "type": "lsp" | "grammar" | "theme" | "locale" } (got ${JSON.stringify(type ?? null)})`,
       );
     }
     return this.list();
@@ -284,6 +316,22 @@ export class ExtensionRegistry {
 
   async enabledLanguageExtensions(): Promise<LanguageExtension[]> {
     return this.lsp.enabledExtensions();
+  }
+
+  async enabledGrammars(): Promise<GrammarModule[]> {
+    const packages = await this.grammar.enabledPackages();
+    return Promise.all(
+      packages.map(async ({ extension, dir }) => {
+        const manifest = await readManifest(dir);
+        const source = await readFile(path.join(dir, manifest.main ?? 'index.js'), 'utf8');
+        return {
+          id: extension.id,
+          displayName: extension.displayName,
+          languages: extension.languages,
+          source,
+        };
+      }),
+    );
   }
 
   async enabledThemeTemplates(): Promise<ThemeTemplateData[]> {

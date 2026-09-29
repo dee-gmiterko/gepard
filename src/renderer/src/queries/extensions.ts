@@ -12,7 +12,10 @@ export function useSetExtensionEnabled() {
     mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
       invoke('extensions.setEnabled', { id, enabled }),
     onSuccess: (extensions) => qc.setQueryData(qk.extensions(), extensions),
-    onSettled: () => qc.invalidateQueries({ queryKey: qk.extensions() }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: qk.extensions() });
+      qc.invalidateQueries({ queryKey: qk.grammars() });
+    },
   });
 }
 
@@ -27,6 +30,9 @@ export function useInstallExtension() {
   return useMutation({
     mutationFn: (input: { dialogTitle: string }) => invoke('extensions.install', input),
     onSuccess: (extensions) => qc.setQueryData(qk.extensions(), extensions),
-    onSettled: () => qc.invalidateQueries({ queryKey: qk.extensions() }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: qk.extensions() });
+      qc.invalidateQueries({ queryKey: qk.grammars() });
+    },
   });
 }

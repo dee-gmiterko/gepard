@@ -42,7 +42,7 @@ export function projectReviewDir(id: string): string {
   return join(projectDir(id), 'review');
 }
 
-export type ExtensionKindDir = 'lsp' | 'themes' | 'locales';
+export type ExtensionKindDir = 'lsp' | 'grammars' | 'themes' | 'locales';
 
 export function extensionsRootDir(): string {
   return join(userDataDir(), 'extensions');

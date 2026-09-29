@@ -4,11 +4,12 @@ import { defineMessages, useIntl } from 'react-intl';
 import { Compartment, EditorState, type Extension, type Text } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { LanguageDescription } from '@codemirror/language';
-import { languages } from '@codemirror/language-data';
 import { useCommands } from '../../keyboard/useCommands';
+import { useGrammars } from '../../queries/grammars';
 import { readOnlyExtensions } from './setup';
 import { editorTheme } from './theme';
 import { keymapBridge } from './keymapBridge';
+import { allLanguageDescriptions } from './languages';
 import { reportError } from '../../errors/report';
 
 const messages = defineMessages({
@@ -41,6 +42,9 @@ export function useReadOnlyEditor(
   useLayoutEffect(() => {
     intlRef.current = intl;
   });
+
+  const { data: grammars } = useGrammars();
+  const languages = useMemo(() => allLanguageDescriptions(grammars ?? []), [grammars]);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [view, setView] = useState<EditorView | null>(null);
@@ -114,7 +118,7 @@ export function useReadOnlyEditor(
     return () => {
       cancelled = true;
     };
-  }, [path, doc, extensions, theme, view, compartments]);
+  }, [path, doc, extensions, theme, view, compartments, languages]);
 
   return {
     containerRef,
