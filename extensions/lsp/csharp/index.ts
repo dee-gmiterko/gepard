@@ -258,6 +258,7 @@ interface LaunchPlan {
   command: string;
   args: string[];
   cwd: string;
+  root: string;
 }
 
 class RoslynSession implements LanguageSession {
@@ -353,11 +354,11 @@ class RoslynSession implements LanguageSession {
   }
 
   private initializeParams(): unknown {
-    const rootUri = pathToFileURL(this.plan.cwd).toString();
+    const rootUri = pathToFileURL(this.plan.root).toString();
     return {
       processId: process.pid,
       rootUri,
-      workspaceFolders: [{ uri: rootUri, name: path.basename(this.plan.cwd) }],
+      workspaceFolders: [{ uri: rootUri, name: path.basename(this.plan.root) }],
       capabilities: {
         general: { positionEncodings: ['utf-16'] },
         workspace: {
@@ -458,7 +459,7 @@ class RoslynSession implements LanguageSession {
 
   private toRepoLocation(uri: string): { path: string; external: boolean } {
     const abs = fileURLToPath(uri);
-    const rel = path.relative(this.plan.cwd, abs);
+    const rel = path.relative(this.plan.root, abs);
     const isInside =
       rel.length > 0 && rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
     if (isInside) return { path: toPosix(rel), external: false };
@@ -467,7 +468,7 @@ class RoslynSession implements LanguageSession {
   }
 
   private absPath(repoRelativePath: string): string {
-    return path.join(this.plan.cwd, repoRelativePath);
+    return path.join(this.plan.root, repoRelativePath);
   }
 
   private sendRequest<R>(method: string, params: unknown): Promise<R> {
@@ -718,7 +719,8 @@ export default {
       {
         command: 'dotnet',
         args: [entry, '--logLevel', 'Warning', '--extensionLogDirectory', logDir, '--stdio'],
-        cwd: project.root,
+        cwd: logDir,
+        root: project.root,
       },
       sink,
     );
