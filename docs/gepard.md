@@ -40,7 +40,7 @@
 	- Toggle for the file comments/right panel: shown whenever a PR is targeted and the active file is a changed file.
 - Side panel - navigation: vertical tabs:
 	- file browser - full tree.
-	- targeted file browser - limited to targeted files changed (or path targeted). Tree or flat list.
+	- targeted file browser - limited to targeted files changed (or path targeted). Tree or flat list. When a PR is targeted, a toggle hides files already marked viewed (folders left empty disappear, the repository root stays); persisted per project. If the active file gets hidden, review moves on to the next unviewed file.
 	- search - also called selection - an input fuzzy prefill on detected symbols, exact match or regex (flags for regex and symbol); shows scrollable list of matched files locations with line previews. Tree or flat list. Button to either inclue all files or only targeted ones.
 	- settings icon - opens the settings overlay.
 	- Resizable by dragging its right edge; width persisted per project, default 300px.

@@ -37,6 +37,7 @@ export const PersistedLayout = z.object({
   sidePanelWidth: z.number().min(220).max(640).default(300),
   fileCommentsPanelWidth: z.number().min(220).max(640).default(300),
   fileCommentsPanelOpen: z.boolean().default(false),
+  hideViewedFiles: z.boolean().default(false),
   fileControlsPosition: z.object({ x: z.number(), y: z.number() }).nullable().default(null),
 });
 export type PersistedLayout = z.infer<typeof PersistedLayout>;

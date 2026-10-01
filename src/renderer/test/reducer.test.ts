@@ -133,6 +133,26 @@ describe('preview file', () => {
   });
 });
 
+describe('layout', () => {
+  it('toggles hiding viewed files via layout/setHideViewedFiles', () => {
+    const hidden = appReducer(state(), { type: 'layout/setHideViewedFiles', hide: true });
+    expect(hidden.layout.hideViewedFiles).toBe(true);
+    expect(hidden.layout).toEqual({ ...initialAppState.layout, hideViewedFiles: true });
+    const shown = appReducer(hidden, { type: 'layout/setHideViewedFiles', hide: false });
+    expect(shown.layout.hideViewedFiles).toBe(false);
+  });
+
+  it('takes the persisted hide-viewed preference from the opened project', () => {
+    const next = appReducer(state({ projectId: 'proj-a' }), {
+      type: 'project/open',
+      projectId: 'proj-b',
+      targeting: { pr: null, commit: null, path: null },
+      layout: { ...initialAppState.layout, hideViewedFiles: true },
+    });
+    expect(next.layout.hideViewedFiles).toBe(true);
+  });
+});
+
 describe('toast slice', () => {
   const toast = (id: string): AppState['toasts'][number] => ({
     id,

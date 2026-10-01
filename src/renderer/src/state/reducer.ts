@@ -20,6 +20,7 @@ export interface Layout {
   sidePanelWidth: number;
   fileCommentsPanelWidth: number;
   fileCommentsPanelOpen: boolean;
+  hideViewedFiles: boolean;
   fileControlsPosition: { x: number; y: number } | null;
 }
 
@@ -27,6 +28,7 @@ export const defaultLayout: Layout = {
   sidePanelWidth: 300,
   fileCommentsPanelWidth: 300,
   fileCommentsPanelOpen: false,
+  hideViewedFiles: false,
   fileControlsPosition: null,
 };
 
@@ -75,6 +77,7 @@ export type AppAction =
   | { type: 'layout/setSidePanelWidth'; width: number }
   | { type: 'layout/setFileCommentsPanelWidth'; width: number }
   | { type: 'layout/setFileCommentsPanelOpen'; open: boolean }
+  | { type: 'layout/setHideViewedFiles'; hide: boolean }
   | { type: 'layout/setFileControlsPosition'; position: { x: number; y: number } | null }
   | { type: 'file/open'; path: string; line?: number | null; side?: 'LEFT' | 'RIGHT' }
   | { type: 'file/focus'; path: string }
@@ -143,6 +146,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, layout: { ...state.layout, fileCommentsPanelWidth: action.width } };
     case 'layout/setFileCommentsPanelOpen':
       return { ...state, layout: { ...state.layout, fileCommentsPanelOpen: action.open } };
+    case 'layout/setHideViewedFiles':
+      return { ...state, layout: { ...state.layout, hideViewedFiles: action.hide } };
     case 'layout/setFileControlsPosition':
       return { ...state, layout: { ...state.layout, fileControlsPosition: action.position } };
     case 'file/open': {

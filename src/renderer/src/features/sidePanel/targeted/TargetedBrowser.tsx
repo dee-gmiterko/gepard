@@ -1,15 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { defineMessages, FormattedMessage } from 'react-intl';
-import { useAppState } from '../../../state/AppContext';
+import { useAppDispatch, useAppState } from '../../../state/AppContext';
 import { isDiffView } from '../../../state/selectors';
-import { useOpenProject } from '../../../queries/projects';
+import { useOpenProject, useSetLayout } from '../../../queries/projects';
 import { useTargetedFiles, useTree } from '../../../queries/files';
+import { useCommands } from '../../../keyboard/useCommands';
 import { buildTree, buildFlatList, withRoot, type TreeNode } from '../../../components/Tree';
 import { Message } from '../../../components/Message';
 import { Toolbar } from '../../../components/Toolbar';
+import { HideViewedToggle } from '../../../components/HideViewedToggle';
 import { ViewModeToggle, type ViewMode } from '../../../components/ViewModeToggle';
 import { ReviewTree } from '../fileRows/ReviewTree';
 import { aggregateRows, useRowData, type RowData } from '../fileRows/rowData';
+import { hideViewedRows, isViewedRow } from '../fileRows/viewedRows';
 
 const messages = defineMessages({
   noTarget: {
@@ -40,11 +43,19 @@ const messages = defineMessages({
     id: 'sidePanel.targetedBrowser.emptyChangedForPath',
     defaultMessage: 'No changed files for this path.',
   },
+  allViewed: {
+    id: 'sidePanel.targetedBrowser.allViewed',
+    defaultMessage: 'All files viewed.',
+  },
 });
 
 export function TargetedBrowser(): React.JSX.Element {
   const state = useAppState();
+  const dispatch = useAppDispatch();
+  const setLayout = useSetLayout();
+  const commands = useCommands();
   const path = state.targeting.path;
+  const hideViewed = state.layout.hideViewedFiles;
   const [mode, setMode] = useState<ViewMode>('tree');
 
   const hasCheckoutTarget = isDiffView(state);
@@ -58,12 +69,25 @@ export function TargetedBrowser(): React.JSX.Element {
     [targetedFiles, rowFor],
   );
 
+  const visibleItems = useMemo(() => hideViewedRows(items, hideViewed), [items, hideViewed]);
+
   const nodes = useMemo<TreeNode<RowData>[]>(() => {
-    if (mode === 'flat') return buildFlatList(items);
+    if (mode === 'flat') return buildFlatList(visibleItems);
     const options = { aggregateFolder: aggregateRows };
-    const entries = buildTree(items, options);
+    const entries = buildTree(visibleItems, options);
     return entries.length > 0 ? withRoot(entries, rootName, options) : entries;
-  }, [items, mode, rootName]);
+  }, [visibleItems, mode, rootName]);
+
+  const activeHidden =
+    hideViewed && items.some((item) => item.path === state.activeFile && isViewedRow(item.data));
+  useEffect(() => {
+    if (activeHidden) commands.nextFile();
+  }, [activeHidden, commands]);
+
+  function setHideViewed(hide: boolean): void {
+    dispatch({ type: 'layout/setHideViewedFiles', hide });
+    setLayout.mutate({ ...state.layout, hideViewedFiles: hide });
+  }
 
   const isLoading = diffMode
     ? changedLoading
@@ -107,9 +131,18 @@ export function TargetedBrowser(): React.JSX.Element {
   return (
     <div>
       <Toolbar>
+        {state.targeting.pr !== null && (
+          <HideViewedToggle value={hideViewed} onChange={setHideViewed} />
+        )}
         <ViewModeToggle value={mode} onChange={setMode} />
       </Toolbar>
-      <ReviewTree nodes={nodes} />
+      {visibleItems.length === 0 ? (
+        <Message>
+          <FormattedMessage {...messages.allViewed} />
+        </Message>
+      ) : (
+        <ReviewTree nodes={nodes} />
+      )}
     </div>
   );
 }
