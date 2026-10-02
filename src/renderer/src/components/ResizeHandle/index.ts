@@ -1,1 +1,1 @@
-export { ResizeHandle } from './ResizeHandle';
+export * from './ResizeHandle';

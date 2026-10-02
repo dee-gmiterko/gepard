@@ -19,13 +19,14 @@ import {
   parseBranchNames,
 } from '../helpers/git/gitParsing';
 import { AppError, emit } from '../ipc/registry';
-import { indexer as defaultIndexer, type FileChange } from '../lsp';
+import { indexer as defaultIndexer } from '../lsp';
 import { nohooksDir, projectCloneTmpDir, projectRepoDir } from '../paths';
 import { isCloned } from '../store/projects';
 import { log } from '../log';
 import {
   type ChangedFile,
   type Commit,
+  type FileChange,
   type FileContent,
   type FileDiff,
   type ImageData,

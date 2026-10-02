@@ -1,2 +1,2 @@
-export { Message } from './Message';
-export { centerLayout } from './centerLayout';
+export * from './Message';
+export * from './centerLayout';

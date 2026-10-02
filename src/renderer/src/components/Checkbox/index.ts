@@ -1,2 +1,2 @@
-export { Checkbox } from './Checkbox';
-export { disabledInteractive } from './disabledInteractive';
+export * from './Checkbox';
+export * from './disabledInteractive';

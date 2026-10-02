@@ -1,1 +1,1 @@
-export { Combobox, NO_HIGHLIGHT } from './Combobox';
+export * from './Combobox';

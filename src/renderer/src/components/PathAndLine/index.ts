@@ -1,1 +1,1 @@
-export { PathAndLine } from './PathAndLine';
+export * from './PathAndLine';

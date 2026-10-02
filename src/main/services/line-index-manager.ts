@@ -7,8 +7,6 @@ import type {
   LineIndexResponse,
 } from './line-index-protocol';
 
-export type { LineIndexFileChange };
-
 // electron-vite's main build keeps the "es" format's default .js extension
 // (package.json "type": "module" makes Node treat it as ESM); only preload
 // output is forced to .mjs, since Electron picks preload's module system by

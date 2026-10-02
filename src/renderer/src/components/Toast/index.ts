@@ -1,1 +1,1 @@
-export { ToastViewport } from './Toast';
+export * from './Toast';

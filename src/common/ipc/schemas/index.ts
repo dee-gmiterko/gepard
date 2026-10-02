@@ -3,7 +3,7 @@ export * from './extensions';
 export * from './grammar';
 export * from './locale';
 export * from './lsp';
-export * from './project';
 export * from './pr';
+export * from './project';
 export * from './search';
 export * from './theme';

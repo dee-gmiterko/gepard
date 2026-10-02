@@ -1,2 +1,2 @@
-export { Tree, Chevron, ChevronSlot, FileRow, FolderRow, RootRow } from './Tree';
-export { TreeLabel } from './TreeLabel';
+export * from './Tree';
+export * from './TreeLabel';

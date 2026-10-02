@@ -1,1 +1,1 @@
-export { HideViewedToggle } from './HideViewedToggle';
+export * from './HideViewedToggle';

@@ -1,2 +1,2 @@
-export { Button } from './Button';
-export { disabledControl } from './disabledControl';
+export * from './Button';
+export * from './disabledControl';

@@ -1,1 +1,1 @@
-export { LineTag } from './LineTag';
+export * from './LineTag';

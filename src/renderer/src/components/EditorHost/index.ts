@@ -1,1 +1,1 @@
-export { EditorHost } from './EditorHost';
+export * from './EditorHost';

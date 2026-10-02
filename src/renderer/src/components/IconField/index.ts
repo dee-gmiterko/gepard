@@ -1,1 +1,1 @@
-export { IconField } from './IconField';
+export * from './IconField';
