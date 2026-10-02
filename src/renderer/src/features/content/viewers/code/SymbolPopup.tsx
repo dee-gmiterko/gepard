@@ -11,6 +11,7 @@ import { MatchLine } from '../../../../components/MatchLine';
 import { Message } from '../../../../components/Message';
 import { PathAndLine } from '../../../../components/PathAndLine';
 import { PathLabel } from '../../../../components/PathLabel';
+import { useFileContent } from '../../../../queries/files';
 import { useSearch, type SearchParams } from '../../../../queries/search';
 
 const messages = defineMessages({
@@ -82,6 +83,13 @@ const Row = styled.div`
   }
 `;
 
+const DefinitionEntry = styled.div`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+`;
+
 const FilePath = styled(PathLabel)`
   padding: ${({ theme }) => theme.space[1]} ${({ theme }) => theme.space[1]} 0;
   font-size: ${({ theme }) => theme.font.size.xs};
@@ -108,6 +116,22 @@ function Link({
       {children}
     </Row>
   );
+}
+
+function DefinitionPreview({
+  sha,
+  path,
+  line,
+}: {
+  sha: string;
+  path: string;
+  line: number;
+}): React.JSX.Element | null {
+  const content = useFileContent(sha, path);
+  if (content.data?.kind !== 'text') return null;
+  const preview = content.data.text.split(/\r?\n/)[line - 1];
+  if (preview === undefined) return null;
+  return <MatchLine line={line} preview={preview} spans={[]} />;
 }
 
 function SymbolPopup({
@@ -149,7 +173,14 @@ function SymbolPopup({
         </Caption>
         {internal.map((d, i) => (
           <Link key={i} onActivate={() => onOpen(d.location.path, d.location.range.start.line)}>
-            <PathAndLine path={d.location.path} line={d.location.range.start.line} />
+            <DefinitionEntry>
+              <PathAndLine path={d.location.path} line={d.location.range.start.line} />
+              <DefinitionPreview
+                sha={sha}
+                path={d.location.path}
+                line={d.location.range.start.line}
+              />
+            </DefinitionEntry>
           </Link>
         ))}
         {internal.length === 0 && (
