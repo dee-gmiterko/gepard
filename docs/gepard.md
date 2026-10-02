@@ -110,13 +110,6 @@
 	- `Ctrl+Shift+F` - Show search
 	- `Ctrl+F` - Find in the active file
 	- `Ctrl+P` - Go to file or symbol
-- Fixed keys:
-	- `Escape` - Close the settings overlay; close the quick search popup; cancel a rebind; close the combo box list and clear its query
-	- `Enter` / `Shift+Enter` - Next / previous match in the in-file quick search
-	- `ArrowDown` / `Tab` and `ArrowUp` / `Shift+Tab` - Move through navigation quick search matches; `Enter` opens the highlighted match
-	- `ArrowDown` / `ArrowUp` - Move through combo box options (`ArrowDown` opens the list); `Enter` selects the highlighted option
-	- `Enter` / `Space` - Activate a focused tree folder row (toggle) or symbol row; on a file row `Enter` opens it and `Space` selects it
-	- `Arrow keys` (`Shift` for larger steps) / `Home` - Move the focused file controls panel / reset its position
 
 ### Styling
 - heavy use of styled components - all dedicated locally defined in React components (any duplication is sign of missing component)
