@@ -1,12 +1,90 @@
 {
-  "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": [".prettierrc.yaml", ".prettierignore", ".editorconfig"],
+  "$schema": "https://turborepo.dev/schema.json",
   "tasks": {
-    "build": { "outputs": ["dist/**"] },
-    "typecheck": {},
-    "lint": {},
-    "format": { "cache": false },
-    "format:check": {},
-    "test": {}
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/*.md",
+        "!LICENSE",
+        "!THIRD_PARTY_LICENSES",
+        "!UPSTREAM_LICENSE",
+        "!eslint.config.mjs",
+        "!.prettierignore",
+        "!test/**"
+      ],
+      "outputs": ["dist/**"]
+    },
+    "gepard#build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!eslint.config.mjs",
+        "!.prettierignore",
+        "!electron-builder.yml",
+        "!build/**"
+      ],
+      "outputs": ["out/**"]
+    },
+    "//#typecheck:scripts": {
+      "inputs": ["scripts/**", "vitest.config.ts", "package.json"]
+    },
+    "//#format:scripts": {
+      "cache": false
+    },
+    "//#format:check:scripts": {
+      "inputs": ["scripts/**", "$TURBO_ROOT$/.prettierrc.yaml", "$TURBO_ROOT$/.editorconfig"]
+    },
+    "//#lint:scripts": {
+      "inputs": ["scripts/**", "$TURBO_ROOT$/tools/eslint-config/**", "package.json"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/*.md",
+        "!LICENSE",
+        "!THIRD_PARTY_LICENSES",
+        "!UPSTREAM_LICENSE",
+        "!eslint.config.mjs",
+        "!.prettierignore",
+        "!test/fixtures/**"
+      ]
+    },
+    "lint": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/*.md",
+        "!LICENSE",
+        "!THIRD_PARTY_LICENSES",
+        "!UPSTREAM_LICENSE",
+        "!.prettierignore",
+        "!test/fixtures/**"
+      ]
+    },
+    "format": {
+      "cache": false
+    },
+    "format:check": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!test/fixtures/**",
+        "$TURBO_ROOT$/.prettierrc.yaml",
+        "$TURBO_ROOT$/.editorconfig"
+      ]
+    },
+    "test": {
+      "dependsOn": ["build", "^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/*.md",
+        "!LICENSE",
+        "!THIRD_PARTY_LICENSES",
+        "!UPSTREAM_LICENSE",
+        "!eslint.config.mjs",
+        "!.prettierignore"
+      ]
+    }
   }
 }

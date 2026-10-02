@@ -1,6 +1,6 @@
 {
   "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
-  "include": ["src", "test"],
+  "include": ["src", "test", "vitest.config.ts"],
   "compilerOptions": {
     "jsx": "react-jsx"
   }

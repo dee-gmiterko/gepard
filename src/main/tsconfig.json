@@ -1,6 +1,16 @@
 {
   "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
-  "include": ["*.ts", "extensions", "helpers", "ipc", "lsp", "services", "store", "test"],
+  "include": [
+    "*.ts",
+    "extensions",
+    "helpers",
+    "ipc",
+    "lsp",
+    "services",
+    "store",
+    "test",
+    "vitest.config.ts"
+  ],
   "compilerOptions": {
     "types": ["electron-vite/node"]
   }

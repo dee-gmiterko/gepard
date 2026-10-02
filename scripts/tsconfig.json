@@ -1,0 +1,7 @@
+{
+  "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
+  "include": ["**/*.ts", "../vitest.config.ts"],
+  "compilerOptions": {
+    "types": ["node"]
+  }
+}

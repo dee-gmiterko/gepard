@@ -90,8 +90,8 @@ describe('refreshCatalogs', () => {
       (file) => catalogsByFile.get(file) ?? {},
       (file) => file.replace('/locales/', '').replace('.json', ''),
     );
-    const cs = result.find((entry) => entry.locale === 'cs')!;
-    expect(cs.staleIds).toEqual(['greeting']);
-    expect(cs.catalog).toEqual({ greeting: 'Ahoj' });
+    const cs = result.find((entry) => entry.locale === 'cs');
+    expect(cs?.staleIds).toEqual(['greeting']);
+    expect(cs?.catalog).toEqual({ greeting: 'Ahoj' });
   });
 });

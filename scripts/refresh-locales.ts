@@ -18,9 +18,6 @@ import yargs from 'yargs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(__dirname, '..');
 const RENDERER_SRC_GLOB = path.join(ROOT_DIR, 'src/renderer/src/**/*.{ts,tsx}');
-// Locale catalogs live as `messages.json` inside each locale extension package
-// (`extensions/locales/<code>/`), loaded like any other built-in extension
-// (see `extensions/themes/*`), rather than as standalone renderer assets.
 const LOCALES_DIR = path.join(ROOT_DIR, 'extensions/locales');
 const MESSAGES_FILE_NAME = 'messages.json';
 const STALE_DIR = path.join(LOCALES_DIR, '.stale');
@@ -113,7 +110,7 @@ function extractMessages(): ExtractedMessages {
       ],
       { stdio: ['ignore', 'inherit', 'inherit'] },
     );
-    return JSON.parse(readFileSync(outFile, 'utf8'));
+    return JSON.parse(readFileSync(outFile, 'utf8')) as ExtractedMessages;
   } finally {
     rmSync(tmpDir, { recursive: true, force: true });
   }
@@ -132,7 +129,7 @@ function readCatalogFile(file: string): LocaleCatalog {
     throw error;
   }
   try {
-    return JSON.parse(raw);
+    return JSON.parse(raw) as LocaleCatalog;
   } catch (error) {
     throw new Error(
       `${file} is not valid JSON, refusing to overwrite it: ${(error as Error).message}`,
@@ -143,7 +140,7 @@ function readCatalogFile(file: string): LocaleCatalog {
 function readStaleFile(locale: string): string[] | null {
   const staleFile = path.join(STALE_DIR, `${locale}.json`);
   try {
-    return JSON.parse(readFileSync(staleFile, 'utf8'));
+    return JSON.parse(readFileSync(staleFile, 'utf8')) as string[];
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
     throw error;
