@@ -129,6 +129,17 @@ describe('GitService (integration)', () => {
     expect(result).toEqual({ base: EMPTY_TREE_SHA, head: fixture.rootSha });
   });
 
+  it('checkoutTarget: default after a commit checks out the head of the default branch', async () => {
+    await gitService.checkoutTarget(projectId, { kind: 'commit', sha: fixture.rootSha });
+    const result = await gitService.checkoutTarget(projectId, { kind: 'default' });
+    const repoRoot = projectRepoDir(projectId);
+    const checkedOut = (await git(repoRoot, ['rev-parse', 'HEAD'])).trim();
+    const originHead = (await git(repoRoot, ['rev-parse', 'refs/remotes/origin/HEAD'])).trim();
+    expect(checkedOut).toBe(originHead);
+    expect(checkedOut).toBe(fixture.baseSha);
+    expect(result).toEqual({ base: fixture.baseSha, head: fixture.baseSha });
+  });
+
   it('changedFiles reports the modify, rename, delete, and added-binary between base and head', async () => {
     const changes = await gitService.changedFiles(
       projectId,
