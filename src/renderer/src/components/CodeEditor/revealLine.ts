@@ -9,3 +9,12 @@ export function revealDocLine(view: EditorView, docLineNumber: number): void {
     effects: EditorView.scrollIntoView(pos, { y: 'center' }),
   });
 }
+
+export function revealDocRange(view: EditorView, from: number, to: number): void {
+  const end = view.state.doc.length;
+  const start = Math.min(Math.max(from, 0), end);
+  view.dispatch({
+    selection: EditorSelection.range(start, Math.min(Math.max(to, start), end)),
+    effects: EditorView.scrollIntoView(start, { y: 'center' }),
+  });
+}

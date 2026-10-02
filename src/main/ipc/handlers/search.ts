@@ -13,15 +13,19 @@ import {
 } from '../../helpers/search/paging';
 import { identifierAt } from '../../helpers/string';
 import { indexer } from '../../lsp';
-import type { LanguageSession, WorkspaceSymbol } from '../../lsp/session';
+import {
+  type LanguageSession,
+  type WorkspaceSymbol,
+  navigationSymbols,
+  makeTargetMatcher,
+  type ChannelParsedInput,
+  type GroupedResult,
+} from '@gepard/common';
 import { projectRepoDir } from '../../paths';
-import { navigationSymbols } from '@gepard/common/model/symbols';
-import { makeTargetMatcher } from '@gepard/common/model/targetMatcher';
-import type { ChannelParsedInput } from '@gepard/common/ipc/contract';
-import type { GroupedResult } from '@gepard/common/ipc/schemas/search';
 
 const UNPAGED_MAX_MATCHES = 500;
 const DEFAULT_MAX_MATCHES_PER_FILE = 50;
+const KIND_FILTER_POOL_FACTOR = 10;
 
 function staleShaError(requested: string, current: string): AppError {
   return new AppError(
@@ -196,15 +200,19 @@ export const searchHandlers: Pick<
       const sessions = indexer.sessions(input.projectId);
       if (sessions.length === 0) return [];
       const limit = input.limit ?? 50;
+      const kinds = input.kinds ? new Set(input.kinds) : null;
+      // Sessions cap their own results before the kind filter runs, so ask them for a wider pool.
+      const sessionLimit = kinds ? Math.max(limit * KIND_FILTER_POOL_FACTOR, limit) : limit;
       const settled = await Promise.allSettled(
-        sessions.map((session) => session.workspaceSymbols(input.query, limit, token)),
+        sessions.map((session) => session.workspaceSymbols(input.query, sessionLimit, token)),
       );
       const fulfilled = settled.filter(
         (r): r is PromiseFulfilledResult<WorkspaceSymbol[]> => r.status === 'fulfilled',
       );
       if (fulfilled.length === 0 && settled.length > 0)
         throw (settled[0] as PromiseRejectedResult).reason;
-      return fulfilled.flatMap((r) => r.value).slice(0, limit);
+      const merged = fulfilled.flatMap((r) => r.value);
+      return (kinds ? merged.filter((s) => kinds.has(s.kind)) : merged).slice(0, limit);
     }),
 
   'symbols.document': (input) =>

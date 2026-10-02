@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useAppDispatch, useAppState } from '../state/AppContext';
-import type { SidePanelTab } from '../state/reducer';
+import type { QuickSearchMode, SidePanelTab } from '../state/reducer';
 import { useSetViewed, useViewed } from '../queries/comments';
 import { useChangedFiles, useTargetedFiles } from '../queries/files';
 import { nextTargetedFile } from '../helpers/targetedFiles';
@@ -12,6 +12,7 @@ export interface Commands {
   acceptNext: () => boolean;
   revertPrev: () => boolean;
   showSidePanelTab: (tab: SidePanelTab) => boolean;
+  openQuickSearch: (mode: QuickSearchMode) => boolean;
 }
 
 export function useCommands(): Commands {
@@ -70,6 +71,10 @@ export function useCommands(): Commands {
       },
       showSidePanelTab: (tab) => {
         dispatch({ type: 'sidePanel/setTab', tab, focus: true });
+        return true;
+      },
+      openQuickSearch: (mode) => {
+        dispatch({ type: 'quickSearch/open', mode });
         return true;
       },
     };

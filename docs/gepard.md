@@ -32,6 +32,7 @@
 	- Controls - list of the current global keyboard shortcuts (command name + effective key), sourced from the same binding table `useGlobalKeys` runs, so the list can't drift from actual behavior. Each shortcut can be rebound: click `Rebind`, press the new key (`Escape` cancels), the override is persisted and takes effect immediately, no restart; a `Reset` button clears a customized binding back to its default. If a rebind lands on a key another binding also effectively uses, both rows show a visible conflict note (not a hard block - the earlier-listed binding wins at runtime).
 	- Extensions - list of installed extensions (built-in and external), each showing kind (language server/grammar/theme/locale), source (built-in/external) badge and an enable/disable checkbox; `Add extension` opens a file picker to install an extension package from disk; shows the install directory path and per-extension load errors.
 ### Main window
+- Window: a new window opens maximized; title is `Gepard`, or `Gepard - <project name>` while a project is open.
 - Header panel - targeting:
 	- series of fuzzy search select boxes entering: PR, commit, path
 		- path accepts a glob, a folder prefix, an exact file, or a substring anywhere in the path; the select suggests folders
@@ -56,6 +57,9 @@
 		- Opened/closed via the toggle button in the header (moved there from the file controls floating panel).
 		- Bottom section: a symbols tree for the active file, LSP-backed via a `symbols.document` IPC call (`LanguageSession.documentSymbols`, `textDocument/documentSymbol`) - shows the document's symbol hierarchy (name + kind), nested when the LSP replies hierarchically; clicking a symbol jumps to its line in the active file (same `file/open`/reveal-line mechanism as comment threads and search results).
 	- Comments tab: chronological view of all threads and replies; a composer below the list adds a new general (PR-level, no file/line anchor) comment.
+	- Quick search popup: a small input over the content, two modes by shortcut (default `Ctrl+F` / `Ctrl+P`), closed by `Escape`.
+		- In-file mode (`Ctrl+F`): searches the active file and jumps the cursor to the best match live as the user types.
+		- Navigation mode (`Ctrl+P`): searches file names and symbol definitions (classes, interfaces and similar types; not variables), shows the top 8 matches in an arrow-key/`Tab` navigable list - file path, optionally followed by the matched symbol, matched part highlighted - and opens the containing file scrolled to the match.
 ### Components
 - Comment editor
 	- Comment box
@@ -71,6 +75,8 @@
 - Search results
 	- Show standard file row + all matches under it, collapsable
 - File viewers: code, code diff, image, image diff, missing
+- Right panel: file comments sidebar for the active changed file over a symbols tree of the active file (see Main window); closeable, resizable
+- Quick search popup: in-file find (`Ctrl+F`) and file/symbol navigation list (`Ctrl+P`) modes (see Main window)
 - Icon buttons
 - ...
 ### Behaviors
@@ -89,6 +95,7 @@
 	- `End` - accept: mark the current file viewed and go to the next unviewed one
 	- `Home` - revert: unmark the last accepted file and go back to it
 	- `Ctrl+Shift+E` / `Ctrl+Shift+G` / `Ctrl+Shift+F` (`Cmd` on macOS) - show the file browser / targeted files / search side panel tab; search focuses its input\
+	- `Ctrl+F` / `Ctrl+P` (`Cmd` on macOS) - quick search popup: find in the active file / go to file or symbol definition
 ### Styling
 - heavy use of styled components - all dedicated locally defined in React components (any duplication is sign of missing component)
 - default fonts

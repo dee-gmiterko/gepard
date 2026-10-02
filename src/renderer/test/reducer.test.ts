@@ -202,3 +202,26 @@ describe('settings overlay', () => {
     expect(appReducer(withSettings, { type: 'project/close' }).settingsOpen).toBe(true);
   });
 });
+
+describe('quick search popup', () => {
+  it('opens in the requested mode and closes', () => {
+    const file = appReducer(state(), { type: 'quickSearch/open', mode: 'file' });
+    expect(file.quickSearch).toBe('file');
+    expect(appReducer(file, { type: 'quickSearch/open', mode: 'navigate' }).quickSearch).toBe(
+      'navigate',
+    );
+    expect(appReducer(file, { type: 'quickSearch/close' }).quickSearch).toBeNull();
+  });
+
+  it('is a no-op (same reference) when already in that mode or already closed', () => {
+    const file = appReducer(state(), { type: 'quickSearch/open', mode: 'file' });
+    expect(appReducer(file, { type: 'quickSearch/open', mode: 'file' })).toBe(file);
+    const closed = state();
+    expect(appReducer(closed, { type: 'quickSearch/close' })).toBe(closed);
+  });
+
+  it('is closed again when a project opens or closes', () => {
+    const file = appReducer(state({ projectId: 'p' }), { type: 'quickSearch/open', mode: 'file' });
+    expect(appReducer(file, { type: 'project/close' }).quickSearch).toBeNull();
+  });
+});

@@ -2,6 +2,7 @@ import type { ReportTone } from '../errors/report';
 
 export type SidePanelTab = 'files' | 'targeted' | 'search';
 export type MainTab = 'files' | 'comments';
+export type QuickSearchMode = 'file' | 'navigate';
 
 export interface Toast {
   id: string;
@@ -47,6 +48,7 @@ export interface AppState {
   toasts: Toast[];
   revealLine: { line: number; side: 'LEFT' | 'RIGHT' } | null;
   settingsOpen: boolean;
+  quickSearch: QuickSearchMode | null;
 }
 
 export const initialAppState: AppState = {
@@ -64,6 +66,7 @@ export const initialAppState: AppState = {
   toasts: [],
   revealLine: null,
   settingsOpen: false,
+  quickSearch: null,
 };
 
 export type AppAction =
@@ -88,7 +91,9 @@ export type AppAction =
   | { type: 'mainTab/set'; tab: MainTab }
   | { type: 'toast/push'; toast: Toast }
   | { type: 'toast/dismiss'; id: string }
-  | { type: 'settings/setOpen'; open: boolean };
+  | { type: 'settings/setOpen'; open: boolean }
+  | { type: 'quickSearch/open'; mode: QuickSearchMode }
+  | { type: 'quickSearch/close' };
 
 function withTarget(state: AppState, targeting: Targeting, set: boolean): AppState {
   const mainTab = targeting.pr === null && state.mainTab === 'comments' ? 'files' : state.mainTab;
@@ -196,6 +201,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, toasts: state.toasts.filter((t) => t.id !== action.id) };
     case 'settings/setOpen':
       return { ...state, settingsOpen: action.open };
+    case 'quickSearch/open':
+      if (state.quickSearch === action.mode) return state;
+      return { ...state, quickSearch: action.mode };
+    case 'quickSearch/close':
+      if (state.quickSearch === null) return state;
+      return { ...state, quickSearch: null };
     default:
       return state;
   }

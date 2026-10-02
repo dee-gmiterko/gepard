@@ -15,7 +15,7 @@ import {
   TargetRef,
 } from './schemas/pr';
 import { Comment, CommentDraft, LocalViewedState, ReviewThread } from './schemas/comment';
-import { GroupedResult, Pos, SearchQuery, WorkspaceSymbol } from './schemas/search';
+import { GroupedResult, Pos, SearchQuery, SymbolKind, WorkspaceSymbol } from './schemas/search';
 import {
   DefinitionResult,
   DocumentSymbolsResult,
@@ -27,7 +27,6 @@ import { GrammarModule } from './schemas/grammar';
 import { ThemeTemplateData } from './schemas/theme';
 import { LocaleData } from './schemas/locale';
 import type { ChannelNameList, EventNameList } from './names';
-export { channelNames, eventNames } from './names';
 
 const ch = <I extends z.ZodType, O extends z.ZodType>(
   input: I,
@@ -124,7 +123,13 @@ export const channels = {
     DefinitionResult,
   ),
   'symbols.workspace': ch(
-    z.object({ ...ProjectRef, sha: Sha, query: z.string(), limit: z.int().positive().optional() }),
+    z.object({
+      ...ProjectRef,
+      sha: Sha,
+      query: z.string(),
+      limit: z.int().positive().optional(),
+      kinds: z.array(SymbolKind).optional(),
+    }),
     z.array(WorkspaceSymbol),
   ),
   'symbols.document': ch(
@@ -216,7 +221,7 @@ type ExtraChannel = Exclude<keyof typeof channels, ChannelNameList>;
 type ExtraEvent = Exclude<keyof typeof events, EventNameList>;
 const _namesComplete: [ExtraChannel, ExtraEvent] extends [never, never]
   ? true
-  : ['add to names.ts:', ExtraChannel | ExtraEvent] = true;
+  : ['add to names.ts:', ExtraChannel, ExtraEvent] = true;
 void _namesComplete;
 
 export type Channels = typeof channels;

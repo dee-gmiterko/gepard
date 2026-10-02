@@ -5,8 +5,9 @@ import { qk } from './keys';
 import { useAppState } from '../state/AppContext';
 import { useCurrentHead } from './projects';
 import { digestPaths } from '../helpers/pathsDigest';
-import type { SearchQuery } from '@gepard/common/ipc/schemas/search';
-import type { DefinitionResult } from '@gepard/common/ipc/schemas/lsp';
+import type { SearchQuery, WorkspaceSymbol, DefinitionResult } from '@gepard/common';
+
+type SymbolKind = WorkspaceSymbol['kind'];
 
 const SEARCH_PAGE_SIZE = 50;
 const SEARCH_GC_MS = 30_000;
@@ -31,7 +32,7 @@ function useParamsKey(params: SearchParams | null): unknown {
 
 export function useSearch(sha: string, params: SearchParams | null) {
   const projectId = useAppState().projectId ?? '';
-  const query = params && projectId && sha ? ({ ...params, projectId, sha } as SearchQuery) : null;
+  const query = params && projectId && sha ? { ...params, projectId, sha } : null;
   const paramsKey = useParamsKey(params);
   return ignoreCancelled(
     useQuery({
@@ -46,7 +47,7 @@ export function useSearch(sha: string, params: SearchParams | null) {
 
 export function useSearchPages(sha: string, params: SearchParams | null) {
   const projectId = useAppState().projectId ?? '';
-  const query = params && projectId && sha ? ({ ...params, projectId, sha } as SearchQuery) : null;
+  const query = params && projectId && sha ? { ...params, projectId, sha } : null;
   const paramsKey = useParamsKey(params);
   return ignoreCancelled(
     useInfiniteQuery({
@@ -66,13 +67,13 @@ export function useSearchPages(sha: string, params: SearchParams | null) {
   );
 }
 
-export function useWorkspaceSymbols(query: string, limit?: number) {
+export function useWorkspaceSymbols(query: string, limit?: number, kinds?: SymbolKind[]) {
   const projectId = useAppState().projectId ?? '';
   const sha = useCurrentHead() ?? '';
   return ignoreCancelled(
     useQuery({
-      queryKey: [...qk.commit(projectId, sha), 'workspaceSymbols', query, limit] as const,
-      queryFn: () => invoke('symbols.workspace', { projectId, sha, query, limit }),
+      queryKey: [...qk.commit(projectId, sha), 'workspaceSymbols', query, limit, kinds] as const,
+      queryFn: () => invoke('symbols.workspace', { projectId, sha, query, limit, kinds }),
       enabled: Boolean(projectId) && Boolean(sha) && query.length > 0,
     }),
   );

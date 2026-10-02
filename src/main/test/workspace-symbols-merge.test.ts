@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { LanguageSession, WorkspaceSymbol } from '../lsp/session';
+import type { LanguageSession, WorkspaceSymbol } from '@gepard/common';
 
 const mocks = vi.hoisted(() => ({ sessions: [] as unknown[] }));
 
@@ -14,10 +14,10 @@ vi.mock('../lsp', () => ({
 
 const { searchHandlers } = await import('../ipc/handlers/search');
 
-function symbol(name: string): WorkspaceSymbol {
+function symbol(name: string, kind: WorkspaceSymbol['kind'] = 'function'): WorkspaceSymbol {
   return {
     name,
-    kind: 'function',
+    kind,
     location: {
       path: `${name}.ts`,
       range: { start: { line: 1, col: 1 }, end: { line: 1, col: 2 } },
@@ -29,12 +29,15 @@ function sessionReturning(result: Promise<WorkspaceSymbol[]>): LanguageSession {
   return { workspaceSymbols: vi.fn(() => result) } as unknown as LanguageSession;
 }
 
-async function query(limit?: number): Promise<WorkspaceSymbol[]> {
+async function query(
+  limit?: number,
+  kinds?: WorkspaceSymbol['kind'][],
+): Promise<WorkspaceSymbol[]> {
   const handler = searchHandlers['symbols.workspace'] as unknown as (
     input: unknown,
     ctx: unknown,
   ) => Promise<WorkspaceSymbol[]>;
-  return handler({ projectId: 'p', sha: 'sha', query: 'q', limit }, {});
+  return handler({ projectId: 'p', sha: 'sha', query: 'q', limit, kinds }, {});
 }
 
 describe('symbols.workspace across sessions', () => {
@@ -80,5 +83,22 @@ describe('symbols.workspace across sessions', () => {
 
   it('returns no results when the project has no session', async () => {
     expect(await query()).toEqual([]);
+  });
+
+  it('keeps only the requested kinds, asking sessions for a wider pool than the limit', async () => {
+    const workspaceSymbols = vi.fn<LanguageSession['workspaceSymbols']>(() =>
+      Promise.resolve([
+        symbol('run'),
+        symbol('Foo', 'class'),
+        symbol('count', 'variable'),
+        symbol('Shape', 'interface'),
+        symbol('Bar', 'class'),
+      ]),
+    );
+    mocks.sessions = [{ workspaceSymbols }];
+
+    const out = await query(2, ['class', 'interface']);
+    expect(out.map((s) => s.name)).toEqual(['Foo', 'Shape']);
+    expect(workspaceSymbols.mock.calls[0][1]).toBeGreaterThan(2);
   });
 });

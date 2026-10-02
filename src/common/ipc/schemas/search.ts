@@ -1,11 +1,12 @@
 import { z } from 'zod';
 import { RepoPath } from './pr';
 
-export { RepoPath };
-
 export const Pos = z.object({ line: z.int().positive(), col: z.int().positive() });
+export type Pos = z.infer<typeof Pos>;
 export const Range = z.object({ start: Pos, end: Pos });
+export type Range = z.infer<typeof Range>;
 export const Location = z.object({ path: RepoPath, range: Range });
+export type Location = z.infer<typeof Location>;
 export const SymbolKind = z.enum([
   'namespace',
   'class',
@@ -22,12 +23,14 @@ export const SymbolKind = z.enum([
   'constant',
   'unknown',
 ]);
+export type SymbolKind = z.infer<typeof SymbolKind>;
 
 export const Match = z.object({
   line: z.int().positive(),
   preview: z.string(),
   spans: z.array(z.tuple([z.int().nonnegative(), z.int().nonnegative()])),
 });
+export type Match = z.infer<typeof Match>;
 export const FileMatches = z.object({
   path: RepoPath,
   moreMatches: z.boolean(),

@@ -1,11 +1,13 @@
 import styled from 'styled-components';
 import { useAppDispatch, useAppState } from './state/AppContext';
 import { useGlobalKeys } from './keyboard/useGlobalKeys';
+import { useWindowTitle } from './hooks/useWindowTitle';
 import { Launchpad } from './features/launchpad/Launchpad';
 import { Header } from './features/header/Header';
 import { SidePanel } from './features/sidePanel/SidePanel';
 import { Content } from './features/content/Content';
 import { SettingsOverlay } from './features/settings/SettingsOverlay';
+import { QuickSearch } from './features/quickSearch/QuickSearch';
 
 const Shell = styled.div`
   display: grid;
@@ -21,6 +23,7 @@ const Body = styled.div`
 
 function App(): React.JSX.Element {
   useGlobalKeys();
+  useWindowTitle();
   const state = useAppState();
   const dispatch = useAppDispatch();
 
@@ -42,6 +45,7 @@ function App(): React.JSX.Element {
         <SidePanel />
         <Content />
       </Body>
+      <QuickSearch />
       {state.settingsOpen && <SettingsOverlay onClose={closeSettings} />}
     </Shell>
   );

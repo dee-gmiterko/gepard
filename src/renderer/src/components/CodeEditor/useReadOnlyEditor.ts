@@ -9,6 +9,7 @@ import { useGrammars } from '../../queries/grammars';
 import { readOnlyExtensions } from './setup';
 import { editorTheme } from './theme';
 import { keymapBridge } from './keymapBridge';
+import { activeEditor } from './activeEditor';
 import { allLanguageDescriptions } from './languages';
 import { reportError } from '../../errors/report';
 
@@ -80,6 +81,7 @@ export function useReadOnlyEditor(
     setView(newView);
 
     return () => {
+      activeEditor.clear(newView);
       newView.destroy();
       setView(null);
     };
@@ -95,6 +97,7 @@ export function useReadOnlyEditor(
         compartments.theme.reconfigure(editorTheme(theme)),
       ],
     });
+    activeEditor.set(view);
 
     let cancelled = false;
     const desc = LanguageDescription.matchFilename(languages, path);

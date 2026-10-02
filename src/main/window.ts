@@ -22,6 +22,7 @@ export function createMainWindow(): BrowserWindow {
   }
 
   const window = new BrowserWindow({
+    title: 'Gepard',
     width: 1280,
     height: 800,
     show: false,
@@ -35,23 +36,26 @@ export function createMainWindow(): BrowserWindow {
     },
   });
 
-  window.on('ready-to-show', () => window.show());
+  window.once('ready-to-show', () => {
+    window.maximize();
+    window.show();
+  });
 
   window.webContents.setWindowOpenHandler((details) => {
-    if (isAllowedExternalUrl(details.url)) shell.openExternal(details.url);
+    if (isAllowedExternalUrl(details.url)) void shell.openExternal(details.url);
     return { action: 'deny' };
   });
 
   window.webContents.on('will-navigate', (event, url) => {
     if (isOwnAppUrl(url)) return;
     event.preventDefault();
-    if (isAllowedExternalUrl(url)) shell.openExternal(url);
+    if (isAllowedExternalUrl(url)) void shell.openExternal(url);
   });
 
   if (devServerUrl) {
-    window.loadURL(devServerUrl);
+    void window.loadURL(devServerUrl);
   } else {
-    window.loadFile(indexHtmlPath);
+    void window.loadFile(indexHtmlPath);
   }
 
   return window;

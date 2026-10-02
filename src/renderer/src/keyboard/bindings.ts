@@ -42,6 +42,14 @@ const messages = defineMessages({
     id: 'keyboard.showSearch',
     defaultMessage: 'Show search',
   },
+  quickSearchFile: {
+    id: 'keyboard.quickSearchFile',
+    defaultMessage: 'Find in the active file',
+  },
+  quickSearchNavigate: {
+    id: 'keyboard.quickSearchNavigate',
+    defaultMessage: 'Go to file or symbol',
+  },
 });
 
 export const keyBindings: readonly KeyBinding[] = [
@@ -92,5 +100,17 @@ export const keyBindings: readonly KeyBinding[] = [
     key: `${MOD}+Shift+F`,
     label: messages.showSearch,
     run: (commands) => commands.showSidePanelTab('search'),
+  },
+  {
+    id: 'quickSearchFile',
+    key: `${MOD}+F`,
+    label: messages.quickSearchFile,
+    run: (commands) => commands.openQuickSearch('file'),
+  },
+  {
+    id: 'quickSearchNavigate',
+    key: `${MOD}+P`,
+    label: messages.quickSearchNavigate,
+    run: (commands) => commands.openQuickSearch('navigate'),
   },
 ];
