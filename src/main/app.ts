@@ -39,8 +39,6 @@ export function bootstrap(): void {
 
       app.on('browser-window-created', (_, window) => {
         optimizer.watchWindowShortcuts(window);
-        // Module scripts run before the page's load event, which triggers
-        // `did-finish-load`.
         window.webContents.once('did-finish-load', () => markRendererReady());
       });
 
