@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LanguageSession, WorkspaceSymbol } from '@gepard/common';
+import { fakeLanguageSession } from './support/session';
 
-const mocks = vi.hoisted(() => ({ sessions: [] as unknown[] }));
+const mocks = vi.hoisted(() => {
+  const sessions: LanguageSession[] = [];
+  return { sessions };
+});
 
 vi.mock('../lsp', () => ({
   indexer: {
@@ -12,7 +16,7 @@ vi.mock('../lsp', () => ({
   },
 }));
 
-const { searchHandlers } = await import('../ipc/handlers/search');
+const { workspaceSymbols } = await import('../ipc/handlers/search');
 
 function symbol(name: string, kind: WorkspaceSymbol['kind'] = 'function'): WorkspaceSymbol {
   return {
@@ -26,18 +30,11 @@ function symbol(name: string, kind: WorkspaceSymbol['kind'] = 'function'): Works
 }
 
 function sessionReturning(result: Promise<WorkspaceSymbol[]>): LanguageSession {
-  return { workspaceSymbols: vi.fn(() => result) } as unknown as LanguageSession;
+  return fakeLanguageSession({ workspaceSymbols: vi.fn(() => result) });
 }
 
-async function query(
-  limit?: number,
-  kinds?: WorkspaceSymbol['kind'][],
-): Promise<WorkspaceSymbol[]> {
-  const handler = searchHandlers['symbols.workspace'] as unknown as (
-    input: unknown,
-    ctx: unknown,
-  ) => Promise<WorkspaceSymbol[]>;
-  return handler({ projectId: 'p', sha: 'sha', query: 'q', limit, kinds }, {});
+function query(limit?: number, kinds?: WorkspaceSymbol['kind'][]): Promise<WorkspaceSymbol[]> {
+  return workspaceSymbols({ projectId: 'p', sha: 'sha', query: 'q', limit, kinds });
 }
 
 describe('symbols.workspace across sessions', () => {
@@ -95,7 +92,7 @@ describe('symbols.workspace across sessions', () => {
         symbol('Bar', 'class'),
       ]),
     );
-    mocks.sessions = [{ workspaceSymbols }];
+    mocks.sessions = [fakeLanguageSession({ workspaceSymbols })];
 
     const out = await query(2, ['class', 'interface']);
     expect(out.map((s) => s.name)).toEqual(['Foo', 'Shape']);

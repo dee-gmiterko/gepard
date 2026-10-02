@@ -290,33 +290,34 @@ function Navigate({ onClose }: { onClose: () => void }): React.JSX.Element {
         </Status>
       ) : (
         <Options role="listbox" aria-label={intl.formatMessage(messages.navigateResults)}>
-          {matches.map((match, i) => (
-            <Option
-              key={match.key}
-              role="option"
-              aria-selected={i === active}
-              $active={i === active}
-              onMouseEnter={() => setHighlight(i)}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => open(match)}
-            >
-              {match.kind === 'file' ? (
-                <FilePath title={match.path}>
-                  <HighlightedText text={match.path} ranges={match.ranges} />
-                </FilePath>
-              ) : (
-                <>
-                  <FilePath title={match.path}>{match.path}</FilePath>
-                  <SymbolName>
-                    <HighlightedText text={match.symbol.name} ranges={match.ranges} />
-                  </SymbolName>
-                  {kindMessages[match.symbol.kind] && (
-                    <Caption>{intl.formatMessage(kindMessages[match.symbol.kind]!)}</Caption>
-                  )}
-                </>
-              )}
-            </Option>
-          ))}
+          {matches.map((match, i) => {
+            const kindMessage = match.kind === 'file' ? undefined : kindMessages[match.symbol.kind];
+            return (
+              <Option
+                key={match.key}
+                role="option"
+                aria-selected={i === active}
+                $active={i === active}
+                onMouseEnter={() => setHighlight(i)}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => open(match)}
+              >
+                {match.kind === 'file' ? (
+                  <FilePath title={match.path}>
+                    <HighlightedText text={match.path} ranges={match.ranges} />
+                  </FilePath>
+                ) : (
+                  <>
+                    <FilePath title={match.path}>{match.path}</FilePath>
+                    <SymbolName>
+                      <HighlightedText text={match.symbol.name} ranges={match.ranges} />
+                    </SymbolName>
+                    {kindMessage && <Caption>{intl.formatMessage(kindMessage)}</Caption>}
+                  </>
+                )}
+              </Option>
+            );
+          })}
         </Options>
       )}
       {text.trim().length > 0 && symbols.isFetching && (

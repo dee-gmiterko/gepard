@@ -11,9 +11,7 @@ import { SectionHeading } from '../../components/SectionHeading';
 import { Caption } from '../../components/Caption';
 import { Inline, Stack } from '../../components/Layout';
 import { keyBindings, type KeyBinding } from '../../keyboard/bindings';
-import { effectiveKey } from '../../keyboard/effectiveKey';
-import { keyLabel } from '../../keyboard/keyLabel';
-import { keyChord, MODIFIER_KEYS } from '../../keyboard/keyChord';
+import { effectiveKey, keyChord, keyLabel, MODIFIER_KEYS } from '../../helpers/key';
 import { useKeybindingOverrides, useSetKeybindingOverride } from '../../queries/keybindings';
 
 const messages = defineMessages({

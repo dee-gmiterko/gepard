@@ -8,10 +8,15 @@ import {
 import { languages as builtinLanguages } from '@codemirror/language-data';
 import { styleTags, tags } from '@lezer/highlight';
 import { LRParser } from '@lezer/lr';
-import type { GrammarModule } from '@gepard/common/ipc/schemas/grammar';
-import type { GrammarExtension } from '@gepard/common/extensions/grammar';
+import {
+  isGrammarExtension,
+  type GrammarModule,
+  type GrammarApi,
+  type GrammarExtension,
+} from '@gepard/common';
+import { escapeRegExp } from '../../helpers/string';
 
-export const grammarApi = {
+export const grammarApi: GrammarApi = {
   StreamLanguage,
   LRLanguage,
   LanguageSupport,
@@ -19,7 +24,6 @@ export const grammarApi = {
   tags,
   LRParser,
 };
-export type GrammarApi = typeof grammarApi;
 
 export type GrammarModuleLoader = (source: string) => Promise<GrammarExtension>;
 
@@ -32,20 +36,16 @@ export function loadGrammarModule(source: string): Promise<GrammarExtension> {
     loaded = import(/* @vite-ignore */ url)
       .then((mod: { default?: unknown }) => {
         const candidate = mod.default;
-        if (!candidate || typeof candidate !== 'object' || !('support' in candidate)) {
-          throw new Error('grammar module has no default export with support()');
+        if (!isGrammarExtension(candidate)) {
+          throw new Error('grammar module has no valid default export');
         }
-        return candidate as GrammarExtension;
+        return candidate;
       })
       .finally(() => URL.revokeObjectURL(url));
     moduleCache.set(source, loaded);
     loaded.catch(() => moduleCache.delete(source));
   }
   return loaded;
-}
-
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 export function grammarLanguageDescriptions(

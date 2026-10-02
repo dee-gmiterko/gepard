@@ -5,11 +5,13 @@ import { Combobox } from '../../components/Combobox';
 import { IconButton } from '../../components/IconButton';
 import { IconField } from '../../components/IconField';
 import { Inline } from '../../components/Layout';
-import { usePrList, unionByKey } from '../../queries/prs';
+import { usePrList } from '../../queries/prs';
+import { unionByKey } from '../../helpers/array';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useAppState } from '../../state/AppContext';
 import { useTargetActions } from './useTargetActions';
 import { NewPrModal } from '../pr/NewPrModal';
+import { prFilterText } from '../../helpers/github';
 import type { PrListItem } from '@gepard/common';
 
 const messages = defineMessages({
@@ -30,16 +32,6 @@ const messages = defineMessages({
     defaultMessage: '#{number}',
   },
 });
-
-function prFilterText(pr: PrListItem): string {
-  return [
-    `#${pr.number}`,
-    pr.title,
-    pr.author.login,
-    pr.headRefName,
-    ...pr.labels.map((l) => l.name),
-  ].join(' ');
-}
 
 export function PrTarget(): React.JSX.Element {
   const intl = useIntl();

@@ -1,11 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { LanguageExtension, LanguageSession } from '../lsp/session';
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
+import type { LanguageExtension, LanguageSession } from '@gepard/common';
 import { __setUserDataDir } from './support/electron';
+import { fakeLanguageSession } from './support/session';
 import { makeTmpDir, type TmpDir } from './support/tmp';
 
-const mocks = vi.hoisted(() => ({
-  extensions: [] as unknown[],
-}));
+const mocks = vi.hoisted(() => {
+  const extensions: LanguageExtension[] = [];
+  return { extensions };
+});
 
 vi.mock('../log', () => ({ log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock('../notify', () => ({
@@ -13,39 +15,50 @@ vi.mock('../notify', () => ({
   notifyMainFailure: vi.fn(),
 }));
 vi.mock('../services/line-index-manager', () => ({
-  startLineIndex: async () => null,
+  startLineIndex: () => Promise.resolve(null),
 }));
 vi.mock('../extensions/registry', () => ({
-  extensionRegistry: { enabledLanguageExtensions: async () => mocks.extensions },
+  extensionRegistry: { enabledLanguageExtensions: () => Promise.resolve(mocks.extensions) },
 }));
 
 const { indexer } = await import('../lsp/indexer');
 
-function fakeSession(name: string): LanguageSession {
-  return {
-    name,
-    lineSymbols: vi.fn(async () => []),
-    filesChanged: vi.fn(),
-    dispose: vi.fn(async () => undefined),
-  } as unknown as LanguageSession;
+interface FakeSession {
+  session: LanguageSession;
+  lineSymbols: Mock<LanguageSession['lineSymbols']>;
+  filesChanged: Mock<LanguageSession['filesChanged']>;
 }
 
-function fakeExtension(id: string, suffix: string): LanguageExtension {
+function fakeSession(): FakeSession {
+  const lineSymbols = vi.fn<LanguageSession['lineSymbols']>(() => Promise.resolve([]));
+  const filesChanged = vi.fn<LanguageSession['filesChanged']>();
+  return {
+    session: fakeLanguageSession({ lineSymbols, filesChanged }),
+    lineSymbols,
+    filesChanged,
+  };
+}
+
+interface FakeExtension extends Omit<LanguageExtension, 'open'> {
+  open: LanguageExtension['open'];
+}
+
+function fakeExtension(id: string, suffix: string): FakeExtension {
   return {
     id,
     displayName: id.toUpperCase(),
-    matches: (f) => f.endsWith(suffix),
+    matches: (f: string) => f.endsWith(suffix),
     languageId: () => id,
-    open: vi.fn(async () => {
-      if (id.startsWith('broken')) throw new Error(`${id} exploded`);
-      const session = fakeSession(id);
-      sessions.set(id, session);
-      return session;
+    open: vi.fn(() => {
+      if (id.startsWith('broken')) return Promise.reject(new Error(`${id} exploded`));
+      const fake = fakeSession();
+      sessions.set(id, fake);
+      return Promise.resolve(fake.session);
     }),
   };
 }
 
-const sessions = new Map<string, LanguageSession>();
+const sessions = new Map<string, FakeSession>();
 
 describe('indexer with several language extensions', () => {
   let userData: TmpDir;
@@ -67,8 +80,8 @@ describe('indexer with several language extensions', () => {
     await indexer.open('p', '/repo', ['x.a', 'y.b', 'z.txt'], 'head');
 
     expect(indexer.status('p')).toEqual({ state: 'idle' });
-    expect(indexer.session('p', 'dir/x.a')).toBe(sessions.get('alpha'));
-    expect(indexer.session('p', 'dir/y.b')).toBe(sessions.get('beta'));
+    expect(indexer.session('p', 'dir/x.a')).toBe(sessions.get('alpha')?.session);
+    expect(indexer.session('p', 'dir/y.b')).toBe(sessions.get('beta')?.session);
     expect(indexer.session('p', 'z.txt')).toBeNull();
     expect(indexer.sessions('p')).toHaveLength(2);
   });
@@ -92,7 +105,7 @@ describe('indexer with several language extensions', () => {
 
     expect(indexer.status('p')).toEqual({ state: 'idle' });
     expect(indexer.session('p', 'x.a')).toBeNull();
-    expect(indexer.session('p', 'y.b')).toBe(sessions.get('beta'));
+    expect(indexer.session('p', 'y.b')).toBe(sessions.get('beta')?.session);
   });
 
   it('reports an error naming every extension when all of them fail to start', async () => {

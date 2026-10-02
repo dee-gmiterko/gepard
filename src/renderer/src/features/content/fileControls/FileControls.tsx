@@ -166,10 +166,10 @@ function useDragOffset(
 
   useEffect(() => () => cleanupRef.current?.(), []);
 
+  const { x: initialX, y: initialY } = initial;
   useEffect(() => {
-    if (!draggingRef.current) setOffset(initial);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initial.x, initial.y]);
+    if (!draggingRef.current) setOffset({ x: initialX, y: initialY });
+  }, [initialX, initialY]);
 
   function onPointerDown(e: PointerEvent<HTMLElement>): void {
     const el = e.currentTarget;

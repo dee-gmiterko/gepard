@@ -2,18 +2,10 @@ import { useMemo } from 'react';
 import { useLineSymbols, useSearch, type SearchParams } from '../../queries/search';
 import { useFileContent, useTargetedFiles } from '../../queries/files';
 import type { SearchScope } from '../../components/ScopeToggle';
-import type { ReferenceChoices } from '../../helpers/reference';
+import { referencesFromResult, type ReferenceChoices } from '../../helpers/reference';
 import type { LineSymbol } from './SymbolDefinitionSection';
 import type { RefAnchor } from '../../helpers/anchor';
 import type { CommentReference, GroupedResult } from '@gepard/common';
-
-function referencesFromResult(
-  data: GroupedResult | undefined,
-  kind: 'exact' | 'pattern',
-): CommentReference[] {
-  if (!data) return [];
-  return data.files.flatMap((f) => f.matches.map((m) => ({ path: f.path, line: m.line, kind })));
-}
 
 export type ExactDisabledReason = 'blankLine' | 'noOtherMatch';
 

@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { useCommands } from './useCommands';
-import { describeTarget, isInteractiveControlTarget, isTextEntryTarget } from './keyTargets';
+import { describeTarget } from './keyTargets';
+import { isInteractiveControlTarget, isTextEntryTarget } from '../helpers/eventTarget';
 import { keyBindings } from './bindings';
 import { useKeybindingOverrides } from '../queries/keybindings';
-import { effectiveKey } from './effectiveKey';
-import { keyChord } from './keyChord';
+import { effectiveKey, keyChord } from '../helpers/key';
 
 export function useGlobalKeys(): void {
   const commands = useCommands();

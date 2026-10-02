@@ -9,14 +9,14 @@ import {
   buildDiffDoc,
   diffGutters,
   diffLineDecorations,
-  findDiffDocLine,
 } from '../../../../components/CodeEditor/diffDecorations';
+import { diffViewCommentEntries } from '../../../../helpers/comment';
+import { findDiffDocLine } from '../../../../helpers/diff';
 import { revealDocLine } from '../../../../components/CodeEditor/revealLine';
 import {
   CommentPortals,
   commentAffordanceGutter,
   commentBlockDecorations,
-  diffViewCommentEntries,
 } from '../../../../components/CodeEditor/commentWidgets';
 import { EditorHost } from '../../../../components/EditorHost';
 import { Message } from '../../../../components/Message';

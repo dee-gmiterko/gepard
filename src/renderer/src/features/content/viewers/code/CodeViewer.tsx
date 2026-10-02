@@ -11,10 +11,10 @@ import { revealDocLine } from '../../../../components/CodeEditor/revealLine';
 import { SymbolPortals, symbolTooltip } from '../../../../components/CodeEditor/symbolTooltip';
 import {
   CommentPortals,
-  codeViewCommentEntries,
   commentAffordanceGutter,
   commentBlockDecorations,
 } from '../../../../components/CodeEditor/commentWidgets';
+import { codeViewCommentEntries } from '../../../../helpers/comment';
 import { EditorHost } from '../../../../components/EditorHost';
 import { Message } from '../../../../components/Message';
 import { CommentPortalHost } from '../CommentPortalHost';

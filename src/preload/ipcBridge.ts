@@ -1,21 +1,27 @@
 // electron-vite externalizes `dependencies` by default, so only `electron` is
 // safe to import here.
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
-import type { IpcBridge } from '@gepard/common/ipc/bridge';
-import { channelNames, eventNames } from '@gepard/common/ipc/names';
+import {
+  type ChannelName,
+  type EventName,
+  type EventPayload,
+  type IpcBridge,
+  channelNames,
+  eventNames,
+} from '@gepard/common';
 
 const channelSet = new Set<string>(channelNames);
 const eventSet = new Set<string>(eventNames);
 
 const ipc: IpcBridge = {
-  invoke(channel: string, input: unknown): Promise<unknown> {
+  invoke(channel: ChannelName, input: unknown) {
     if (!channelSet.has(channel))
       return Promise.reject(new Error(`Unknown IPC channel: ${channel}`));
     return ipcRenderer.invoke(channel, input);
   },
-  on(event: string, cb: (payload: unknown) => void): () => void {
+  on<E extends EventName>(event: E, cb: (payload: EventPayload<E>) => void): () => void {
     if (!eventSet.has(event)) throw new Error(`Unknown IPC event: ${event}`);
-    const listener = (_e: IpcRendererEvent, payload: unknown): void => cb(payload);
+    const listener = (_e: IpcRendererEvent, payload: EventPayload<E>): void => cb(payload);
     ipcRenderer.on(event, listener);
     return () => ipcRenderer.removeListener(event, listener);
   },

@@ -7,13 +7,13 @@ import {
   mergeThreads,
   mergeViewed,
 } from '../helpers/github/reviewMapping';
-import type {
-  Comment,
-  LocalViewedState,
-  RemoteViewedFile,
-  ReviewThread,
-} from '@gepard/common/ipc/schemas/comment';
-import { generalCommentAnchor } from '@gepard/common/ipc/schemas/comment';
+import {
+  type Comment,
+  type LocalViewedState,
+  type RemoteViewedFile,
+  type ReviewThread,
+  generalCommentAnchor,
+} from '@gepard/common';
 
 function makeComment(overrides: Partial<Comment> & { id: string }): Comment {
   return {
@@ -123,8 +123,8 @@ describe('mergeThreads', () => {
     const result = mergeThreads([draftThread, syncedThread], [remoteThread]);
 
     expect(result.find((t) => t.id === 'local:new-thread')).toBe(draftThread);
-    const merged = result.find((t) => t.id === 'PRRT_1')!;
-    expect(merged.comments.map((c) => c.id).sort()).toEqual(['PRRC_1', 'local:new-reply']);
+    const merged = result.find((t) => t.id === 'PRRT_1');
+    expect(merged?.comments.map((c) => c.id).sort()).toEqual(['PRRC_1', 'local:new-reply']);
   });
 
   it('lets a newer remote edit win, inserts new remote comments, and drops ones missing from remote', () => {
@@ -200,8 +200,8 @@ describe('mergeThreads', () => {
     const result = mergeThreads([deletedRemotely, pendingDelete], [remoteStillHasPendingDelete]);
 
     expect(result.find((t) => t.id === 'PRRT_gone')).toBeUndefined();
-    const kept = result.find((t) => t.id === 'PRRT_pending')!;
-    expect(kept.local).toEqual({ status: 'deleted', updatedAt: '2024-01-01T00:00:00Z' });
+    const kept = result.find((t) => t.id === 'PRRT_pending');
+    expect(kept?.local).toEqual({ status: 'deleted', updatedAt: '2024-01-01T00:00:00Z' });
   });
 });
 
@@ -334,16 +334,17 @@ describe('mergeViewed', () => {
 
   it('inserts an unseen remote row, turning DISMISSED into viewed: false', () => {
     const result = mergeViewed([], [remoteFile('a.ts', 'DISMISSED')], 'PR_1', null);
-    expect(result).toEqual([
-      {
-        prId: 'PR_1',
-        path: 'a.ts',
-        viewed: false,
-        remote: 'DISMISSED',
-        localUpdatedAt: null,
-        remoteFetchedAt: expect.any(String),
-      },
-    ]);
+    expect(result).toHaveLength(1);
+    const [row] = result;
+    expect(typeof row.remoteFetchedAt).toBe('string');
+    expect(row).toEqual({
+      prId: 'PR_1',
+      path: 'a.ts',
+      viewed: false,
+      remote: 'DISMISSED',
+      localUpdatedAt: null,
+      remoteFetchedAt: row.remoteFetchedAt,
+    });
   });
 
   it('lets the remote decide when the local row was never touched', () => {

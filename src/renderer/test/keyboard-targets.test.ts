@@ -3,7 +3,7 @@ import {
   isInteractiveControlTarget,
   isTextEntryTarget,
   type TargetDescriptor,
-} from '../src/keyboard/keyTargets';
+} from '../src/helpers/eventTarget';
 
 function target(overrides: Partial<TargetDescriptor> & { tagName: string }): TargetDescriptor {
   return { role: null, ...overrides };

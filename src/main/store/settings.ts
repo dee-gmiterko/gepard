@@ -4,15 +4,9 @@ import { readJsonFile, writeJsonFile } from '../helpers/fs/jsonFile';
 
 const SettingsFile = z.object({
   theme: z.object({ templateId: z.string().nullable() }),
-  // `.default(...)` (rather than a required field) keeps `settings.json` files
-  // written before locale selection existed loading fine - `readJsonFile`
-  // treats a schema mismatch on an existing file as corruption, it does not
-  // fall back to defaults itself.
+  // Defaulted because `readJsonFile` treats a schema mismatch as corruption, so older files must still parse.
   locale: z.object({ localeId: z.string().nullable() }).default({ localeId: null }),
   extensions: z.record(z.string(), z.boolean()),
-  // `.default({})` (rather than a required field) keeps `settings.json` files
-  // written before keybinding overrides existed loading fine, for the same
-  // reason `locale` above defaults instead of requiring the field.
   keybindings: z.record(z.string(), z.string()).default({}),
 });
 type SettingsFile = z.infer<typeof SettingsFile>;

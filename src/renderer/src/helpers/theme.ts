@@ -1,10 +1,6 @@
-import type { ThemeTemplate } from './tokens';
+import type { ThemeTemplate } from '../theme/tokens';
 
-// Themes are fetched over IPC (`themes.list`), so none is guaranteed to be
-// loaded yet (first paint, still fetching) or even available at all. This is
-// the one theme baked directly into the app itself, used only as a last resort
-// so the UI never renders unstyled or blank.
-const FALLBACK_TEMPLATE: ThemeTemplate = {
+export const FALLBACK_TEMPLATE: ThemeTemplate = {
   id: '__fallback__',
   name: 'Fallback',
   mode: 'light',

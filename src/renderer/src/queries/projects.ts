@@ -1,8 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { skipToken, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { reportQueryError } from '../errors/report';
 import { invoke, useIpcEvent } from '../ipc/client';
 import { qk } from './keys';
 import { useAppState } from '../state/AppContext';
-import type { ChannelInput } from '@gepard/common/ipc/contract';
+import type { ChannelInput } from '@gepard/common';
 
 export function useViewer() {
   return useQuery({ queryKey: qk.viewer(), queryFn: () => invoke('app.viewer') });
@@ -28,8 +29,7 @@ export function useOpenProject() {
   const projectId = useAppState().projectId;
   return useQuery({
     queryKey: qk.open(projectId ?? ''),
-    queryFn: () => invoke('projects.open', { projectId: projectId! }),
-    enabled: Boolean(projectId),
+    queryFn: projectId ? () => invoke('projects.open', { projectId }) : skipToken,
     staleTime: Infinity,
   });
 }
@@ -68,11 +68,12 @@ export function useFetchProject() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (projectId: string) => invoke('projects.fetch', { projectId }),
-    onSuccess: (_data, projectId) => {
-      qc.invalidateQueries({ queryKey: qk.prsAll(projectId) });
-      qc.invalidateQueries({ queryKey: qk.branches(projectId) });
-      qc.invalidateQueries({ queryKey: qk.commitsAll(projectId) });
-    },
+    onSuccess: (_data, projectId) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: qk.prsAll(projectId) }),
+        qc.invalidateQueries({ queryKey: qk.branches(projectId) }),
+        qc.invalidateQueries({ queryKey: qk.commitsAll(projectId) }),
+      ]),
   });
 }
 
@@ -86,7 +87,7 @@ export function useIndexStatus() {
       qc.invalidateQueries({
         queryKey: qk.project(projectId),
         predicate: (q) => q.state.status === 'error',
-      });
+      }).catch((error: unknown) => reportQueryError('index.status', error));
     }
   });
   return useQuery({

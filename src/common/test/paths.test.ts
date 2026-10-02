@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  isGlob,
-  isTargeted,
-  isWithin,
-  matchesTarget,
-  staticPrefixOf,
-} from '@gepard/common/model/paths';
+import { isGlob, isTargeted, isWithin, matchesTarget, staticPrefixOf } from '@gepard/common';
 
 describe('isWithin', () => {
   it('is true for the target path itself', () => {

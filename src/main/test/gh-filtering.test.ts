@@ -8,7 +8,7 @@ import {
   parsePrsFilesPageInfo,
   parsePrsFilesResponse,
 } from '../helpers/github/ghParsing';
-import type { PrListItem } from '@gepard/common/ipc/schemas/pr';
+import type { PrListItem } from '@gepard/common';
 
 const NOT_PAGED = { hasNextPage: false, endCursor: null };
 

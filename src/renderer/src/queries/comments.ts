@@ -3,7 +3,7 @@ import { invoke } from '../ipc/client';
 import { qk } from './keys';
 import { useAppDispatch, useAppState } from '../state/AppContext';
 import { useTargetedPr } from './prs';
-import type { CommentDraft, LocalViewedState } from '@gepard/common/ipc/schemas/comment';
+import type { CommentDraft, LocalViewedState } from '@gepard/common';
 
 export function useComments() {
   const state = useAppState();
@@ -38,10 +38,11 @@ export function useUpsertComment() {
   return useMutation({
     mutationFn: (draft: CommentDraftBody) =>
       invoke('comments.upsert', { ...draft, projectId, pr, prId }),
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: qk.comments(projectId, pr) });
-      qc.invalidateQueries({ queryKey: qk.pendingCount(projectId, pr) });
-    },
+    onSettled: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: qk.comments(projectId, pr) }),
+        qc.invalidateQueries({ queryKey: qk.pendingCount(projectId, pr) }),
+      ]),
   });
 }
 
@@ -52,10 +53,11 @@ export function useDeleteComment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (commentId: string) => invoke('comments.delete', { projectId, pr, commentId }),
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: qk.comments(projectId, pr) });
-      qc.invalidateQueries({ queryKey: qk.pendingCount(projectId, pr) });
-    },
+    onSettled: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: qk.comments(projectId, pr) }),
+        qc.invalidateQueries({ queryKey: qk.pendingCount(projectId, pr) }),
+      ]),
   });
 }
 
@@ -101,10 +103,11 @@ export function useSetViewed() {
     onSuccess: (data) => {
       qc.setQueryData(key, data);
     },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: key });
-      qc.invalidateQueries({ queryKey: qk.pendingCount(projectId, pr) });
-    },
+    onSettled: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: key }),
+        qc.invalidateQueries({ queryKey: qk.pendingCount(projectId, pr) }),
+      ]),
   });
 }
 

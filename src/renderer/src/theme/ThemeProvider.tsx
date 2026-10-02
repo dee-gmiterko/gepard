@@ -3,7 +3,7 @@ import { ThemeProvider as StyledThemeProvider, createGlobalStyle } from 'styled-
 import { useIpcEvent } from '../ipc/client';
 import { useThemeTemplateId, useThemes } from '../queries/theme';
 import { buildTheme } from './tokens';
-import { resolveTemplate } from './resolveTemplate';
+import { resolveTemplate } from '../helpers/theme';
 
 const DARK_QUERY = '(prefers-color-scheme: dark)';
 

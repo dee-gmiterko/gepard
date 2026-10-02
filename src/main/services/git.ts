@@ -23,14 +23,16 @@ import { indexer as defaultIndexer, type FileChange } from '../lsp';
 import { nohooksDir, projectCloneTmpDir, projectRepoDir } from '../paths';
 import { isCloned } from '../store/projects';
 import { log } from '../log';
-import type {
-  ChangedFile,
-  Commit,
-  FileContent,
-  FileDiff,
-  ImageData,
-} from '@gepard/common/ipc/schemas/pr';
-import { isGlob, matchesTarget, staticPrefixOf } from '@gepard/common/model/paths';
+import {
+  type ChangedFile,
+  type Commit,
+  type FileContent,
+  type FileDiff,
+  type ImageData,
+  isGlob,
+  matchesTarget,
+  staticPrefixOf,
+} from '@gepard/common';
 
 const EMPTY_TREE_SHA = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 
@@ -64,13 +66,6 @@ interface Indexer {
   onCheckout(projectId: string, changes: FileChange[], newSha: string, fileCount: number): void;
 }
 
-/**
- * Wraps the local `git` CLI for a project's checked-out clone: cloning,
- * checkout, diffing, log, tree and blob reads. Holds per-project in-memory
- * state (checkout serialization queues, a name-status cache) alongside the
- * process-spawning calls, so it is a stateful service rather than a plain
- * helper module.
- */
 export class GitService {
   private readonly checkoutQueues = new Map<string, Promise<unknown>>();
   private statusCache: { key: string; entries: Promise<NameStatusEntry[]> } | null = null;
@@ -326,7 +321,8 @@ export class GitService {
   ): Promise<Commit[]> {
     const repoRoot = projectRepoDir(projectId);
     const limit = opts.limit ?? DEFAULT_LOG_LIMIT;
-    const glob = opts.path !== undefined && isGlob(opts.path);
+    const globPath = opts.path !== undefined && isGlob(opts.path) ? opts.path : undefined;
+    const glob = globPath !== undefined;
     const rev = (await this.hasRef(repoRoot, DEFAULT_BRANCH_REF)) ? DEFAULT_BRANCH_REF : 'HEAD';
     const pathspec = opts.path ? (glob ? staticPrefixOf(opts.path) : opts.path) : '';
 
@@ -345,7 +341,7 @@ export class GitService {
       return parseGitLog(stdout);
     };
 
-    if (!glob) return runLog(limit);
+    if (globPath === undefined) return runLog(limit);
 
     let fetchCount = Math.min(Math.max(limit * GLOB_OVERFETCH_FACTOR, limit), GLOB_OVERFETCH_MAX);
     for (;;) {
@@ -355,7 +351,7 @@ export class GitService {
         commits.map((c) => c.oid),
       );
       const matched = commits.filter((c) =>
-        (filesByOid.get(c.oid) ?? []).some((f) => matchesTarget(f, opts.path!)),
+        (filesByOid.get(c.oid) ?? []).some((f) => matchesTarget(f, globPath)),
       );
       const historyExhausted = commits.length < fetchCount;
       if (matched.length >= limit || historyExhausted || fetchCount >= GLOB_OVERFETCH_MAX) {

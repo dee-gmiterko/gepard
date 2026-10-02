@@ -12,7 +12,6 @@ import {
   ViewedState,
 } from './pr';
 
-// Matches GitHub's GraphQL PullRequestChangedFile shape.
 export const RemoteViewedFile = z.object({
   path: z.string(),
   additions: z.number(),
@@ -76,21 +75,6 @@ export const Anchor = z.object({
   originalCommitOid: Sha.nullable(),
 });
 export type Anchor = z.infer<typeof Anchor>;
-
-export function generalCommentAnchor(): Anchor {
-  return {
-    path: '',
-    subjectType: 'PR',
-    side: 'RIGHT',
-    line: null,
-    startLine: null,
-    startSide: null,
-    originalLine: null,
-    originalStartLine: null,
-    commitOid: null,
-    originalCommitOid: null,
-  };
-}
 
 export const ReviewThread = z.object({
   id: NodeId,
@@ -161,8 +145,6 @@ export const GqlReviewThreadRaw = z.object({
 });
 export type GqlReviewThreadRaw = z.infer<typeof GqlReviewThreadRaw>;
 
-// GitHub's IssueComment: a general PR conversation comment, not tied to a
-// file/line and not part of a review.
 export const GqlIssueCommentRaw = z.object({
   id: NodeId,
   author: z.object({ login: z.string().min(1) }).nullable(),

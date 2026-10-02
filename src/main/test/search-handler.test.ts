@@ -1,15 +1,17 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SearchQuery, type GroupedResult } from '@gepard/common/ipc/schemas/search';
+import { GroupedResult, SearchQuery } from '@gepard/common';
 import { __setUserDataDir } from './support/electron';
 import { makeTmpDir, type TmpDir } from './support/tmp';
 
-const mocks = vi.hoisted(() => ({
-  currentSha: null as string | null,
-  lineIndex: null as unknown,
-  session: null as unknown,
-}));
+const mocks = vi.hoisted(
+  (): { currentSha: string | null; lineIndex: unknown; session: unknown } => ({
+    currentSha: null,
+    lineIndex: null,
+    session: null,
+  }),
+);
 
 vi.mock('../lsp', () => ({
   indexer: {
@@ -20,7 +22,7 @@ vi.mock('../lsp', () => ({
   },
 }));
 
-const { searchHandlers } = await import('../ipc/handlers/search');
+const { runSearch } = await import('../ipc/handlers/search');
 
 const SHA = 'a'.repeat(40);
 const PROJECT = 'owner__repo';
@@ -42,11 +44,7 @@ function run(raw: Record<string, unknown>): Promise<GroupedResult> {
     text: 'needle',
     ...raw,
   });
-  const handler = searchHandlers['search.run'] as unknown as (
-    input: unknown,
-    ctx: unknown,
-  ) => Promise<GroupedResult>;
-  return handler(input, {});
+  return runSearch(input);
 }
 
 const paths = (r: GroupedResult): string[] => r.files.map((f) => f.path);
@@ -237,10 +235,13 @@ describe('search.run', () => {
       { path: 'c.ts', matches: [hit(3)] },
     ];
 
+    const queryWord = vi.fn(() => Promise.resolve(indexed));
+
     beforeEach(() => {
+      queryWord.mockClear();
       mocks.lineIndex = {
-        queryWord: vi.fn(async () => indexed),
-        queryExactLine: vi.fn(async () => indexed),
+        queryWord,
+        queryExactLine: vi.fn(() => Promise.resolve(indexed)),
       };
     });
 
@@ -284,7 +285,7 @@ describe('search.run', () => {
         scope: 'targeted',
         targetedPaths: ['src/a.ts'],
       });
-      expect((mocks.lineIndex as { queryWord: unknown }).queryWord).not.toHaveBeenCalled();
+      expect(queryWord).not.toHaveBeenCalled();
       expect(paths(result)).toEqual(['src/a.ts']);
       expect(result.matchesInPage).toBe(2);
     });
@@ -292,9 +293,9 @@ describe('search.run', () => {
 
   describe('exact-line search', () => {
     it('reads the line index when there is one', async () => {
-      const queryExactLine = vi.fn(async () => [
-        { path: 'z.ts', matches: [hit(1, 'const x = 1;')] },
-      ]);
+      const queryExactLine = vi.fn(() =>
+        Promise.resolve([{ path: 'z.ts', matches: [hit(1, 'const x = 1;')] }]),
+      );
       mocks.lineIndex = { queryExactLine, queryWord: vi.fn() };
       const origin = { path: 'exact.ts', line: 1 };
       const result = await run({ kind: 'exactLine', text: '  const x = 1;  ', origin });
@@ -322,14 +323,14 @@ describe('search.run', () => {
     const at = { path: 'x.ts', pos: { line: 1, col: 1 } };
 
     it('pages the references the language server returns', async () => {
-      mocks.session = { references: vi.fn(async () => referenced) };
+      mocks.session = { references: vi.fn(() => Promise.resolve(referenced)) };
       const result = await run({ kind: 'references', text: 'sym', at, limit: 2 });
       expect(paths(result)).toEqual(['x.ts', 'y.ts']);
       expect(result).toMatchObject({ hasMore: true, nextOffset: 2 });
     });
 
     it('applies the targeted scope', async () => {
-      mocks.session = { references: vi.fn(async () => referenced) };
+      mocks.session = { references: vi.fn(() => Promise.resolve(referenced)) };
       const result = await run({
         kind: 'references',
         text: 'sym',

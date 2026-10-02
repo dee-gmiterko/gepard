@@ -5,7 +5,7 @@ import { useAppDispatch } from '../../../state/AppContext';
 import { useCurrentHead } from '../../../queries/projects';
 import { useDocumentSymbols } from '../../../queries/search';
 import { Tree, TreeLabel } from '../../../components/Tree';
-import type { TreeNode } from '../../../helpers/tree';
+import { symbolTreeNodes, type SymbolRowData } from '../../../helpers/tree';
 import { Caption } from '../../../components/Caption';
 import { Message } from '../../../components/Message';
 import type { DocumentSymbol } from '@gepard/common';
@@ -61,11 +61,6 @@ const kindMessages: Record<SymbolKind, MessageDescriptor> = {
   unknown: messages.kindUnknown,
 };
 
-interface SymbolRowData {
-  kind: SymbolKind;
-  line: number;
-}
-
 const Section = styled.div`
   display: flex;
   flex-direction: column;
@@ -88,26 +83,13 @@ const TreeBody = styled.div`
   overflow: auto;
 `;
 
-function toNodes(symbols: DocumentSymbol[], parentPath: string): TreeNode<SymbolRowData>[] {
-  return symbols.map((s, i) => {
-    const path = `${parentPath}/${i}:${s.name}`;
-    return {
-      path,
-      name: s.name,
-      isFolder: false,
-      data: { kind: s.kind, line: s.selectionRange.start.line },
-      children: toNodes(s.children, path),
-    };
-  });
-}
-
 export function SymbolsTree({ path }: { path: string }): React.JSX.Element {
   const intl = useIntl();
   const dispatch = useAppDispatch();
   const sha = useCurrentHead() ?? '';
   const { data, isLoading, isFetching } = useDocumentSymbols(sha, path);
 
-  const nodes = useMemo(() => toNodes(data?.symbols ?? [], path), [data, path]);
+  const nodes = useMemo(() => symbolTreeNodes(data?.symbols ?? [], path), [data, path]);
   const empty = !isLoading && nodes.length === 0;
 
   return (

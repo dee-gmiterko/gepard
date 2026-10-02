@@ -1,4 +1,4 @@
-import { comparePaths } from '@gepard/common/model/pathOrder';
+import { comparePaths } from '@gepard/common';
 
 const WORD_RE =
   /[\p{Alphabetic}\p{Mark}\p{Decimal_Number}\p{Connector_Punctuation}\p{Join_Control}]+/gu;

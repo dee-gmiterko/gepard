@@ -1,13 +1,15 @@
 import { z } from 'zod';
-import { run, runJson, ExecError } from '../helpers/process/exec';
+import { run, runJson } from '../helpers/process/exec';
+import { chunk } from '../helpers/array';
 import { mapWithConcurrency, withBatches } from '../helpers/async';
 import { AppError } from '../ipc/registry';
 import { getProject as defaultGetProject } from '../store/projects';
 import {
   buildPrListArgs,
   buildPrsFilesQuery,
-  chunk,
+  checkGqlErrors,
   filterPrsByPath,
+  isLineNotInDiffError,
   matchesPrSearch,
   parsePrCreateUrl,
   parsePrsFilesPageInfo,
@@ -25,8 +27,6 @@ import {
   PrSummary,
   Commit,
   Login,
-} from '@gepard/common/ipc/schemas/pr';
-import {
   GqlError,
   GqlIssueCommentRaw,
   GqlPageInfo,
@@ -34,8 +34,9 @@ import {
   GqlReviewThreadRaw,
   GqlReviewThreadsPage,
   RemoteViewedFile,
-} from '@gepard/common/ipc/schemas/comment';
-import type { Viewer, ViewerRepo } from '@gepard/common/ipc/schemas/project';
+  type Viewer,
+  type ViewerRepo,
+} from '@gepard/common';
 
 const GH_ENV: NodeJS.ProcessEnv = {
   ...process.env,
@@ -383,10 +384,6 @@ export interface NewThreadResult {
   isFile: boolean;
 }
 
-function isLineNotInDiffError(e: unknown): boolean {
-  return e instanceof ExecError && /must be part of the diff/i.test(e.stderr);
-}
-
 type AddThreadResponseType = z.infer<typeof AddThreadResponse>;
 type ThreadPayload = NonNullable<
   AddThreadResponseType['data']['addPullRequestReviewThread']
@@ -530,12 +527,6 @@ mutation($reviewId:ID!, $body:String) {
 
 const PR_VIEW_CONCURRENCY = 5;
 
-function checkGqlErrors(errors: GqlError[] | undefined): void {
-  if (errors && errors.length > 0) {
-    throw new AppError('GRAPHQL_ERROR', errors.map((e) => e.message).join('; '), errors);
-  }
-}
-
 const ReplyComment = NewThreadComment.extend({ replyTo: z.object({ id: NodeId }).nullable() });
 
 const AddReplyResponse = z.object({
@@ -554,12 +545,6 @@ interface ProjectStore {
   getProject: typeof defaultGetProject;
 }
 
-/**
- * Wraps the `gh` CLI (both its REST/JSON subcommands and `gh api graphql`)
- * for one GitHub host. The only real dependency is resolving a project id to
- * an owner/repo, which is injected so the GraphQL/CLI plumbing can be tested
- * without a project store.
- */
 export class GhService {
   private readonly getProject: typeof defaultGetProject;
 
@@ -655,12 +640,16 @@ export class GhService {
     const out: string[] = [];
     let cursor: string | null = after;
     for (;;) {
-      const page = await this.graphql(PrFilesPageResponse, PR_FILES_PAGE_QUERY, {
-        owner,
-        name: repo,
-        number,
-        endCursor: cursor,
-      });
+      const page: z.output<typeof PrFilesPageResponse> = await this.graphql(
+        PrFilesPageResponse,
+        PR_FILES_PAGE_QUERY,
+        {
+          owner,
+          name: repo,
+          number,
+          endCursor: cursor,
+        },
+      );
       const files = page.data.repository.pullRequest?.files;
       if (!files) break;
       out.push(...files.nodes.map((f) => f.path));
@@ -749,9 +738,13 @@ export class GhService {
     const repos: ViewerRepo[] = [];
     let cursor: string | null = null;
     for (;;) {
-      const page = await this.graphql(ViewerReposResponse, VIEWER_REPOS_QUERY, {
-        endCursor: cursor,
-      });
+      const page: z.output<typeof ViewerReposResponse> = await this.graphql(
+        ViewerReposResponse,
+        VIEWER_REPOS_QUERY,
+        {
+          endCursor: cursor,
+        },
+      );
       const { nodes, pageInfo } = page.data.viewer.repositories;
       repos.push(...nodes.map((n) => ({ owner: n.owner.login, repo: n.name, url: n.url })));
       if (!pageInfo.hasNextPage || repos.length >= MAX_VIEWER_REPOS) break;
@@ -806,12 +799,16 @@ export class GhService {
     let baseRefOid = '';
     let cursor: string | null = null;
     for (;;) {
-      const page = await this.graphql(GqlReviewThreadsPage, REVIEW_THREADS_QUERY, {
-        owner,
-        name: repo,
-        number,
-        endCursor: cursor,
-      });
+      const page: z.output<typeof GqlReviewThreadsPage> = await this.graphql(
+        GqlReviewThreadsPage,
+        REVIEW_THREADS_QUERY,
+        {
+          owner,
+          name: repo,
+          number,
+          endCursor: cursor,
+        },
+      );
       const pr = page.data.repository.pullRequest;
       prId = pr.id;
       headRefOid = pr.headRefOid;
@@ -838,12 +835,16 @@ export class GhService {
     let headRefOid = '';
     let cursor: string | null = null;
     for (;;) {
-      const page = await this.graphql(FilesViewedPage, FILES_VIEWED_QUERY, {
-        owner,
-        name: repo,
-        number,
-        endCursor: cursor,
-      });
+      const page: z.output<typeof FilesViewedPage> = await this.graphql(
+        FilesViewedPage,
+        FILES_VIEWED_QUERY,
+        {
+          owner,
+          name: repo,
+          number,
+          endCursor: cursor,
+        },
+      );
       const pr = page.data.repository.pullRequest;
       prId = pr.id;
       headRefOid = pr.headRefOid;
@@ -992,12 +993,16 @@ export class GhService {
     let prId = '';
     let cursor: string | null = null;
     for (;;) {
-      const page = await this.graphql(GeneralCommentsPage, GENERAL_COMMENTS_QUERY, {
-        owner,
-        name: repo,
-        number,
-        endCursor: cursor,
-      });
+      const page: z.output<typeof GeneralCommentsPage> = await this.graphql(
+        GeneralCommentsPage,
+        GENERAL_COMMENTS_QUERY,
+        {
+          owner,
+          name: repo,
+          number,
+          endCursor: cursor,
+        },
+      );
       const pr = page.data.repository.pullRequest;
       prId = pr.id;
       comments.push(...pr.comments.nodes);

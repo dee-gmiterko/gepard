@@ -1,6 +1,7 @@
 import { defineMessages } from 'react-intl';
 import { IpcError } from '../ipc/client';
 import { intl } from '../i18n/intl';
+import { errorMessage } from '@gepard/common';
 
 const codeMessages = defineMessages({
   BAD_INPUT: { id: 'errors.code.badInput', defaultMessage: "That input isn't valid." },
@@ -79,8 +80,8 @@ const codeMessages = defineMessages({
   },
 });
 
-export function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+function isKnownCode(code: string): code is keyof typeof codeMessages {
+  return Object.hasOwn(codeMessages, code);
 }
 
 export interface LocalizedError {
@@ -90,8 +91,9 @@ export interface LocalizedError {
 
 export function localizedErrorMessage(error: unknown): LocalizedError {
   if (error instanceof IpcError) {
-    const known = codeMessages[error.code as keyof typeof codeMessages];
-    if (known) return { message: intl.formatMessage(known), detail: error.message };
+    if (isKnownCode(error.code)) {
+      return { message: intl.formatMessage(codeMessages[error.code]), detail: error.message };
+    }
   }
   return { message: errorMessage(error) };
 }

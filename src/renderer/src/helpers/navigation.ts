@@ -1,4 +1,5 @@
 import { fuzzyMatch, fuzzyRanges } from './fuzzy';
+import { basename } from './paths';
 import type { TextRange } from '../components/HighlightedText';
 import type { WorkspaceSymbol } from '@gepard/common';
 
@@ -28,10 +29,6 @@ const SYMBOL_BONUS = 20;
 const SYMBOL_EXACT_BONUS = 30;
 const SYMBOL_PREFIX_BONUS = 10;
 
-function basenameOf(path: string): string {
-  return path.slice(path.lastIndexOf('/') + 1);
-}
-
 function scoreFile(
   query: string,
   lowerQuery: string,
@@ -41,9 +38,9 @@ function scoreFile(
   const match = fuzzyMatch(query, path);
   if (!match) return null;
   let score = match.score;
-  const basename = basenameOf(path).toLowerCase();
-  if (basename.includes(lowerQuery)) score += BASENAME_BONUS;
-  if (basename.startsWith(lowerQuery)) score += BASENAME_PREFIX_BONUS;
+  const name = basename(path).toLowerCase();
+  if (name.includes(lowerQuery)) score += BASENAME_BONUS;
+  if (name.startsWith(lowerQuery)) score += BASENAME_PREFIX_BONUS;
   if (targeted) score += TARGETED_BONUS;
   return score - path.length / 100;
 }

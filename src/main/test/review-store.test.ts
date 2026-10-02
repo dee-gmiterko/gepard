@@ -192,7 +192,8 @@ describe('store/review', () => {
     await review.deleteLocalComment('proj-c', 22, reply.id);
     await review.deleteLocalComment('proj-c', 22, root.id);
     store = await review.loadReview('proj-c', 22);
-    expect(store.threads[0].local).toEqual({ status: 'deleted', updatedAt: expect.any(String) });
+    expect(store.threads[0].local?.status).toBe('deleted');
+    expect(typeof store.threads[0].local?.updatedAt).toBe('string');
   });
 
   it('deleteLocalComment drops unsynced drafts outright and marks synced ones pending deletion', async () => {
@@ -250,7 +251,8 @@ describe('store/review', () => {
 
     await review.deleteLocalComment('proj-d', 31, syncedRoot.id);
     store = await review.loadReview('proj-d', 31);
-    expect(store.threads[0].local).toEqual({ status: 'deleted', updatedAt: expect.any(String) });
+    expect(store.threads[0].local?.status).toBe('deleted');
+    expect(typeof store.threads[0].local?.updatedAt).toBe('string');
     expect(await review.listThreads('proj-d', 31)).toEqual([]);
   });
 
@@ -333,9 +335,7 @@ describe('store/review', () => {
     expect(rows.every((r) => r.viewed)).toBe(true);
 
     const updated = await review.setLocalViewed('proj-e', 40, 'PR_E', ['a.ts'], false);
-    const aRow = updated.find((r) => r.path === 'a.ts')!;
-    const bRow = updated.find((r) => r.path === 'b.ts')!;
-    expect(aRow.viewed).toBe(false);
-    expect(bRow.viewed).toBe(true);
+    expect(updated.find((r) => r.path === 'a.ts')?.viewed).toBe(false);
+    expect(updated.find((r) => r.path === 'b.ts')?.viewed).toBe(true);
   });
 });

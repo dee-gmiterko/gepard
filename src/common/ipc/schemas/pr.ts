@@ -29,7 +29,6 @@ export const SubjectType = z.enum(['LINE', 'FILE', 'PR']);
 
 export const RepoPath = z.string().regex(/^(?!\/)(?!.*\\)(?!.*(^|\/)\.\.(\/|$)).+/);
 
-// Shape of `gh pr list --json` output.
 export const PrListItem = z.object({
   number: z.int().positive(),
   // GitHub mutations require the GraphQL node id, not the PR number.
@@ -50,7 +49,6 @@ export const PrListItem = z.object({
 });
 export type PrListItem = z.infer<typeof PrListItem>;
 
-// Shape of `gh pr view --json` output.
 export const PrSummary = PrListItem.extend({
   baseRefOid: Sha,
 });

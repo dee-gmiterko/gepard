@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import type { IpcBridge } from '@gepard/common/ipc/bridge';
+import type { IpcBridge } from '@gepard/common';
 
 declare global {
   interface Window {

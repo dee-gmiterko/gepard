@@ -4,10 +4,9 @@ import type {
   ChannelOutput,
   EventName,
   EventPayload,
-  Envelope,
   InvokeArgs,
   IpcErrorShape,
-} from '@gepard/common/ipc/contract';
+} from '@gepard/common';
 
 export class IpcError extends Error {
   code: string;
@@ -34,7 +33,7 @@ export async function invoke<C extends ChannelName>(
   channel: C,
   ...args: InvokeArgs<C>
 ): Promise<ChannelOutput<C>> {
-  const res = (await window.ipc.invoke(channel, args[0])) as Envelope<ChannelOutput<C>>;
+  const res = await window.ipc.invoke(channel, args[0]);
   if (!res.ok) throw new IpcError(res.error, channel);
   return res.value;
 }
@@ -43,7 +42,7 @@ export function subscribe<E extends EventName>(
   event: E,
   cb: (payload: EventPayload<E>) => void,
 ): () => void {
-  return window.ipc.on(event, (raw) => cb(raw as EventPayload<E>));
+  return window.ipc.on(event, cb);
 }
 
 export function useIpcEvent<E extends EventName>(

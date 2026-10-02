@@ -1,16 +1,16 @@
 import { AppError } from '../../ipc/registry';
 import { ExecError } from '../process/exec';
-import { nowIso, type ReviewStoreFile } from '../../store/review';
-import type {
-  Comment,
-  GqlIssueCommentRaw,
-  GqlReviewCommentRaw,
-  GqlReviewThreadRaw,
-  LocalViewedState,
-  RemoteViewedFile,
-  ReviewThread,
-} from '@gepard/common/ipc/schemas/comment';
-import { generalCommentAnchor } from '@gepard/common/ipc/schemas/comment';
+import type { ReviewStoreFile } from '../../store/review';
+import {
+  type Comment,
+  type GqlIssueCommentRaw,
+  type GqlReviewCommentRaw,
+  type GqlReviewThreadRaw,
+  type LocalViewedState,
+  type RemoteViewedFile,
+  type ReviewThread,
+  generalCommentAnchor,
+} from '@gepard/common';
 
 export function mapComment(raw: GqlReviewCommentRaw, threadId: string): Comment {
   return {
@@ -130,7 +130,7 @@ export function mergeViewed(
   lastSuccessfulSyncAt: string | null,
 ): LocalViewedState[] {
   const byPath = new Map(local.map((v) => [v.path, v]));
-  const now = nowIso();
+  const now = new Date().toISOString();
   for (const file of remote) {
     // GitHub's viewerViewedState also has a DISMISSED state.
     const remoteViewed = file.viewerViewedState === 'VIEWED';
@@ -212,7 +212,6 @@ function assertLeftAnchorAgainstBase(thread: ReviewThread, headRefOid: string): 
   }
 }
 
-// A GitHub review is pinned to a single commit.
 export function groupPendingByCommit(threads: ReviewThread[], headRefOid: string): PendingGroup[] {
   const groups = new Map<string, PendingGroup>();
   const groupFor = (commitOid: string | null): PendingGroup => {

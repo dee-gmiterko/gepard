@@ -2,12 +2,9 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { loadExtensionPackages } from '../extensions/scanner';
-import {
-  ExtensionRegistry,
-  isGrammarExtension,
-  isLanguageExtension,
-  isThemeTemplate,
-} from '../extensions/registry';
+import { ExtensionRegistry } from '../extensions/registry';
+import { isGrammarExtension, isLanguageExtension } from '@gepard/common';
+import { isThemeTemplate } from '../helpers/extension';
 import * as settingsStore from '../store/settings';
 import { __setUserDataDir } from './support/electron';
 import { makeTmpDir, type TmpDir } from './support/tmp';
@@ -488,11 +485,8 @@ describe('ExtensionRegistry', () => {
     const builtinEntry = list.find((e) => e.id === 'builtin-lang');
     expect(builtinEntry).toMatchObject({ kind: 'lsp', source: 'builtin', enabled: true });
     const brokenEntry = list.find((e) => e.source === 'external');
-    expect(brokenEntry).toMatchObject({
-      kind: 'lsp',
-      enabled: false,
-      error: expect.stringContaining('nope'),
-    });
+    expect(brokenEntry).toMatchObject({ kind: 'lsp', enabled: false });
+    expect(brokenEntry?.error).toContain('nope');
   });
 
   it('installs a package folder into the extensions/<kind> directory matching its manifest', async () => {

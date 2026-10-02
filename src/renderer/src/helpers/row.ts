@@ -1,3 +1,5 @@
+import type { TreeNode } from './tree';
+
 export interface RowData {
   additions: number;
   deletions: number;
@@ -25,4 +27,9 @@ export function isViewedRow(data: RowData): boolean {
 
 export function hideViewedRows<T extends { data: RowData }>(items: T[], hide: boolean): T[] {
   return hide ? items.filter((item) => !isViewedRow(item.data)) : items;
+}
+
+export function changedLeaves(node: TreeNode<RowData>): string[] {
+  if (!node.isFolder) return (node.data?.totalCount ?? 0) > 0 ? [node.path] : [];
+  return node.children.flatMap(changedLeaves);
 }

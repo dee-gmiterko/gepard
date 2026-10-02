@@ -1,8 +1,7 @@
 import { z } from 'zod';
 import { AppError } from '../../ipc/registry';
-import { GqlPageInfo } from '@gepard/common/ipc/schemas/comment';
-import type { PrListItem } from '@gepard/common/ipc/schemas/pr';
-import { matchesTarget } from '@gepard/common/model/paths';
+import { GqlPageInfo, type GqlError, type PrListItem, matchesTarget } from '@gepard/common';
+import { ExecError } from '../process/exec';
 
 const PR_LIST_FIELDS =
   'number,id,title,author,headRefName,baseRefName,headRefOid,createdAt,changedFiles,labels,url';
@@ -116,8 +115,12 @@ export function matchesPrSearch(pr: PrListItem, search: string): boolean {
 // GitHub's query cost limit once a repo has thousands of open PRs.
 export const PRS_FILES_CHUNK_SIZE = 50;
 
-export function chunk<T>(items: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
-  return chunks;
+export function isLineNotInDiffError(e: unknown): boolean {
+  return e instanceof ExecError && /must be part of the diff/i.test(e.stderr);
+}
+
+export function checkGqlErrors(errors: GqlError[] | undefined): void {
+  if (errors && errors.length > 0) {
+    throw new AppError('GRAPHQL_ERROR', errors.map((e) => e.message).join('; '), errors);
+  }
 }

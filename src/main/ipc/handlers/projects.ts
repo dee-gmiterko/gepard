@@ -71,7 +71,7 @@ export function createProjectsHandlers(
     'clone.start': async ({ projectId }) => {
       const project = await store.getProject(projectId);
       if (!project) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${projectId}`);
-      void git.cloneProject(projectId, project.url).catch(() => undefined);
+      git.cloneProject(projectId, project.url).catch(() => undefined);
     },
   };
 }

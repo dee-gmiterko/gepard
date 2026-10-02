@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findDiffDocLine } from '../src/components/CodeEditor/diffDecorations';
+import { findDiffDocLine } from '../src/helpers/diff';
 
 const infos = [
   { oldLine: 1, newLine: 1 },

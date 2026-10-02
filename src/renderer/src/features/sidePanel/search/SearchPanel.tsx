@@ -17,6 +17,7 @@ import { Inline } from '../../../components/Layout';
 import { Message } from '../../../components/Message';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import { localizedErrorMessage } from '../../../errors/errorMessage';
+import { reportQueryError } from '../../../errors/report';
 import { SearchResults } from './SearchResults';
 import { countMatches } from '../../../helpers/search';
 import type { WorkspaceSymbol } from '@gepard/common';
@@ -194,7 +195,9 @@ export function SearchPanel(): React.JSX.Element {
   const hasMore = pages?.[pages.length - 1]?.hasMore ?? false;
 
   function loadMore(): void {
-    if (search.hasNextPage && !search.isFetchingNextPage) void search.fetchNextPage();
+    if (search.hasNextPage && !search.isFetchingNextPage) {
+      search.fetchNextPage().catch((error: unknown) => reportQueryError('search.loadMore', error));
+    }
   }
 
   return (

@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { skipToken, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { invoke, isCancelledError } from '../ipc/client';
 import { qk } from './keys';
 import { useAppState } from '../state/AppContext';
@@ -37,8 +37,7 @@ export function useSearch(sha: string, params: SearchParams | null) {
   return ignoreCancelled(
     useQuery({
       queryKey: qk.search(projectId, sha, params?.text ?? '', paramsKey),
-      queryFn: () => invoke('search.run', query as SearchQuery),
-      enabled: Boolean(query),
+      queryFn: query ? () => invoke('search.run', query) : skipToken,
       staleTime: Infinity,
       gcTime: SEARCH_GC_MS,
     }),
@@ -52,15 +51,12 @@ export function useSearchPages(sha: string, params: SearchParams | null) {
   return ignoreCancelled(
     useInfiniteQuery({
       queryKey: qk.searchPages(projectId, sha, params?.text ?? '', paramsKey),
-      queryFn: ({ pageParam }) =>
-        invoke('search.run', {
-          ...(query as SearchQuery),
-          offset: pageParam,
-          limit: SEARCH_PAGE_SIZE,
-        }),
+      queryFn: query
+        ? ({ pageParam }) =>
+            invoke('search.run', { ...query, offset: pageParam, limit: SEARCH_PAGE_SIZE })
+        : skipToken,
       initialPageParam: 0,
       getNextPageParam: (last) => last.nextOffset ?? undefined,
-      enabled: Boolean(query),
       staleTime: Infinity,
       gcTime: SEARCH_GC_MS,
     }),
@@ -92,19 +88,21 @@ export function useLineSymbols(sha: string, path: string, line: number) {
 
 type Pos = { line: number; col: number };
 
-function definitionQuery(projectId: string, sha: string, path: string, pos: Pos | null) {
-  return {
-    queryKey: [...qk.file(projectId, sha, path), 'definition', pos] as const,
-    queryFn: () => invoke('symbols.definition', { projectId, sha, path, pos: pos! }),
-  };
+function definitionKey(projectId: string, sha: string, path: string, pos: Pos | null) {
+  return [...qk.file(projectId, sha, path), 'definition', pos] as const;
+}
+
+function fetchDefinition(projectId: string, sha: string, path: string, pos: Pos) {
+  return invoke('symbols.definition', { projectId, sha, path, pos });
 }
 
 export function useDefinition(sha: string, path: string, pos: Pos | null) {
   const projectId = useAppState().projectId ?? '';
   return ignoreCancelled(
     useQuery({
-      ...definitionQuery(projectId, sha, path, pos),
-      enabled: Boolean(projectId) && Boolean(sha) && Boolean(path) && Boolean(pos),
+      queryKey: definitionKey(projectId, sha, path, pos),
+      queryFn: pos ? () => fetchDefinition(projectId, sha, path, pos) : skipToken,
+      enabled: Boolean(projectId) && Boolean(sha) && Boolean(path),
     }),
   );
 }
@@ -115,7 +113,11 @@ export function useDefinitionLookup(sha: string, path: string) {
   return useCallback(
     (pos: Pos): Promise<DefinitionResult> => {
       if (!projectId || !sha || !path) return Promise.resolve({ symbol: '', definitions: [] });
-      return qc.fetchQuery({ ...definitionQuery(projectId, sha, path, pos), staleTime: Infinity });
+      return qc.fetchQuery({
+        queryKey: definitionKey(projectId, sha, path, pos),
+        queryFn: () => fetchDefinition(projectId, sha, path, pos),
+        staleTime: Infinity,
+      });
     },
     [qc, projectId, sha, path],
   );

@@ -9,7 +9,7 @@ import {
   generalCommentAnchor,
   LocalViewedState,
   ReviewThread,
-} from '@gepard/common/ipc/schemas/comment';
+} from '@gepard/common';
 
 const ReviewStoreFile = z.object({
   threads: z.array(ReviewThread),
@@ -21,10 +21,6 @@ export type ReviewStoreFile = z.infer<typeof ReviewStoreFile>;
 
 function emptyStore(): ReviewStoreFile {
   return { threads: [], viewed: [], pendingReviewId: null, lastSuccessfulSyncAt: null };
-}
-
-export function nowIso(): string {
-  return new Date().toISOString();
 }
 
 function cloneStore(store: ReviewStoreFile): ReviewStoreFile {
@@ -108,7 +104,7 @@ async function upsertLocalCommentLocked(
   draft: CommentDraftInput,
 ): Promise<Comment> {
   const store = await loadReview(projectId, pr);
-  const now = nowIso();
+  const now = new Date().toISOString();
 
   if (draft.id !== null) {
     const found = findComment(store, draft.id);
@@ -215,7 +211,7 @@ async function deleteLocalCommentLocked(
   commentId: string,
 ): Promise<void> {
   const store = await loadReview(projectId, pr);
-  const now = nowIso();
+  const now = new Date().toISOString();
   const found = findComment(store, commentId);
   if (!found) throw new AppError('NOT_FOUND', `comment ${commentId} not found`);
   const { thread, comment } = found;
@@ -279,7 +275,7 @@ async function setLocalViewedLocked(
   viewed: boolean,
 ): Promise<LocalViewedState[]> {
   const store = await loadReview(projectId, pr);
-  const now = nowIso();
+  const now = new Date().toISOString();
   for (const path of paths) {
     const row = store.viewed.find((v) => v.path === path);
     if (row) {

@@ -1,6 +1,9 @@
 import { defineMessages, type MessageDescriptor } from 'react-intl';
 import type { Commands } from './useCommands';
-import { MOD } from './keyChord';
+import type { Modifier } from '../helpers/key';
+
+const MOD: Modifier =
+  typeof navigator !== 'undefined' && /Mac/.test(navigator.platform) ? 'Meta' : 'Ctrl';
 
 export interface KeyBinding {
   id: string;

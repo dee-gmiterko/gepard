@@ -3,7 +3,7 @@ import { log } from '../log';
 import { GhService, ghService as defaultGhService } from './gh';
 import { GitService, gitService as defaultGitService } from './git';
 import * as review from '../store/review';
-import { nowIso, withReviewLock, type ReviewStoreFile } from '../store/review';
+import { withReviewLock, type ReviewStoreFile } from '../store/review';
 import {
   collectPendingGeneralReplies,
   composeBody,
@@ -34,12 +34,6 @@ export interface SyncContext {
   repo: string;
 }
 
-/**
- * Orchestrates pushing local pending review changes to GitHub and pulling
- * the remote state back down, on top of GhService (GraphQL/CLI) and
- * GitService (local checkout). The pure merge/mapping logic it uses lives in
- * helpers/github/reviewMapping.ts; this class is only the stateful push/pull flow.
- */
 export class SyncService {
   constructor(
     private readonly gh: GhService = defaultGhService,
@@ -51,7 +45,7 @@ export class SyncService {
     prId: string,
     prPaths: ReadonlySet<string>,
   ): Promise<number> {
-    const now = nowIso();
+    const now = new Date().toISOString();
     const dirty = store.viewed.filter(isViewedDirty);
     if (dirty.length === 0) return 0;
     const stalePaths = new Set(dirty.filter((v) => !prPaths.has(v.path)).map((v) => v.path));
@@ -399,7 +393,7 @@ export class SyncService {
       store.lastSuccessfulSyncAt,
     );
 
-    const syncedAt = nowIso();
+    const syncedAt = new Date().toISOString();
     const finalStore: ReviewStoreFile = {
       threads: mergedThreads,
       viewed: mergedViewed,

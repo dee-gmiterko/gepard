@@ -49,19 +49,26 @@ async function build(files: string[]): Promise<void> {
 }
 
 async function applyChanges(changes: LineIndexFileChange[]): Promise<void> {
-  await Promise.all(
-    changes.map((c) => (c.type === 'deleted' ? index.removeFile(c.path) : indexOneFile(c.path))),
-  );
+  const reindex: string[] = [];
+  for (const c of changes) {
+    if (c.type === 'deleted') index.removeFile(c.path);
+    else reindex.push(c.path);
+  }
+  await Promise.all(reindex.map(indexOneFile));
+}
+
+function failWorker(): never {
+  process.exit(1);
 }
 
 port.on('message', (msg: LineIndexRequest) => {
   switch (msg.type) {
     case 'build':
       repoRoot = msg.repoRoot;
-      void build(msg.files);
+      build(msg.files).catch(failWorker);
       return;
     case 'update':
-      void applyChanges(msg.changes);
+      applyChanges(msg.changes).catch(failWorker);
       return;
     case 'queryExactLine':
       post({ type: 'result', id: msg.id, files: index.queryExactLine(msg.text, msg.exclude) });

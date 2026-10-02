@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { comparePaths } from '@gepard/common/model/pathOrder';
+import { comparePaths } from '@gepard/common';
 
 describe('comparePaths', () => {
   it('orders by path component, so a folder sorts by its name, not by the next character', () => {

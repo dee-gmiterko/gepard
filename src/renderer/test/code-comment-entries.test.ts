@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { codeViewCommentEntries } from '../src/components/CodeEditor/commentWidgets';
+import { codeViewCommentEntries } from '../src/helpers/comment';
 import type { Comment, ReviewThread } from '@gepard/common';
 
 const HEAD = '1111111111111111111111111111111111111111';

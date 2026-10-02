@@ -65,20 +65,25 @@ export function SettingsOverlay({ onClose }: SettingsOverlayProps): React.JSX.El
   const intl = useIntl();
   const dialogRef = useRef<HTMLDialogElement>(null);
 
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
 
+    const handleClose = (): void => onCloseRef.current();
     dialog.showModal();
 
     // Fires on Escape (before `close`) and on programmatic close via close().
-    dialog.addEventListener('close', onClose);
+    dialog.addEventListener('close', handleClose);
 
     return () => {
-      dialog.removeEventListener('close', onClose);
+      dialog.removeEventListener('close', handleClose);
       dialog.close();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

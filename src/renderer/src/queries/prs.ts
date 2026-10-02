@@ -1,21 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { skipToken, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { invoke } from '../ipc/client';
 import { qk } from './keys';
 import { useAppState } from '../state/AppContext';
-import type { ChannelInput } from '@gepard/common/ipc/contract';
-import type { PrSummary, TargetRef } from '@gepard/common/ipc/schemas/pr';
-
-export function unionByKey<T>(a: readonly T[], b: readonly T[], getKey: (item: T) => string): T[] {
-  const seen = new Set<string>();
-  const result: T[] = [];
-  for (const item of [...a, ...b]) {
-    const key = getKey(item);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    result.push(item);
-  }
-  return result;
-}
+import type { ChannelInput, PrSummary, TargetRef } from '@gepard/common';
 
 export function usePrList(search?: string) {
   const state = useAppState();
@@ -36,8 +23,8 @@ export function usePrCommits() {
   const path = state.targeting.path ?? undefined;
   return useQuery({
     queryKey: qk.prCommits(projectId, pr ?? NaN, path),
-    queryFn: () => invoke('pr.commits', { projectId, pr: pr as number, path }),
-    enabled: Boolean(projectId) && pr !== null,
+    queryFn: pr === null ? skipToken : () => invoke('pr.commits', { projectId, pr, path }),
+    enabled: Boolean(projectId),
   });
 }
 
@@ -87,8 +74,8 @@ export function useTargetedPr(): PrSummary | null {
   const pr = state.targeting.pr;
   const { data } = useQuery({
     queryKey: qk.prSummary(projectId, pr ?? NaN),
-    queryFn: () => invoke('pr.view', { projectId, pr: pr as number }),
-    enabled: Boolean(projectId) && pr !== null,
+    queryFn: pr === null ? skipToken : () => invoke('pr.view', { projectId, pr }),
+    enabled: Boolean(projectId),
   });
   return data ?? null;
 }

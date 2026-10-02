@@ -1,6 +1,6 @@
 import { app } from 'electron';
 import { join } from 'node:path';
-import { ProjectId } from '@gepard/common/ipc/schemas/project';
+import { ProjectId } from '@gepard/common';
 import { AppError } from './ipc/registry';
 
 export function userDataDir(): string {

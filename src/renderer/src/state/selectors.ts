@@ -1,5 +1,5 @@
 import type { AppState, Targeting } from './reducer';
-import type { TargetRef } from '@gepard/common/ipc/schemas/pr';
+import type { TargetRef } from '@gepard/common';
 
 export function activeTargetRef({
   pr,

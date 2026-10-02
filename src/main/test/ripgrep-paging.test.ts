@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { comparePaths } from '@gepard/common/model/pathOrder';
+import { comparePaths } from '@gepard/common';
 import { ripgrepSearch, ripgrepSearchPage, type RipgrepPage } from '../helpers/process/ripgrep';
 import { MAX_PREVIEW_CHARS } from '../helpers/search/preview';
 import { makeTmpDir, type TmpDir } from './support/tmp';

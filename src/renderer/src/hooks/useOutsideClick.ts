@@ -8,7 +8,8 @@ export function useOutsideClick(ref: RefObject<HTMLElement | null>, onOutside: (
 
   useEffect(() => {
     function onDocMouseDown(e: MouseEvent): void {
-      if (ref.current && !ref.current.contains(e.target as Node)) onOutsideRef.current();
+      if (ref.current && e.target instanceof Node && !ref.current.contains(e.target))
+        onOutsideRef.current();
     }
     document.addEventListener('mousedown', onDocMouseDown);
     return () => document.removeEventListener('mousedown', onDocMouseDown);

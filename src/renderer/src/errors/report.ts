@@ -48,7 +48,7 @@ function errorDetail(error: unknown): string | undefined {
       try {
         parts.push(`details=${JSON.stringify(error.details)}`);
       } catch {
-        parts.push(`details=${String(error.details)}`);
+        parts.push('details=[unserializable]');
       }
     }
     return parts.join(' ');

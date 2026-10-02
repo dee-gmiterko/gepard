@@ -1,7 +1,7 @@
 import { syntaxTree } from '@codemirror/language';
 import type { EditorState, Extension } from '@codemirror/state';
 import { hoverTooltip, type Tooltip } from '@codemirror/view';
-import type { DefinitionResult } from '@gepard/common/ipc/schemas/lsp';
+import type { DefinitionResult } from '@gepard/common';
 
 export interface HoveredSymbol {
   name: string;

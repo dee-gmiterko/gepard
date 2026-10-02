@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { StringDecoder } from 'node:string_decoder';
 import { z } from 'zod';
+import { errorMessage } from '@gepard/common';
 import { AppError } from '../../ipc/registry';
 
 const DEFAULT_MAX_BYTES = 256 * 1024 * 1024;
@@ -198,7 +199,7 @@ export function runLines(
     let pending = '';
     let stderr = '';
     let stopped = false;
-    let failure: unknown = null;
+    let failure: Error | null = null;
 
     function deliver(line: string): void {
       if (stopped || failure !== null) return;
@@ -209,7 +210,7 @@ export function runLines(
           child.kill('SIGTERM');
         }
       } catch (e) {
-        failure = e;
+        failure = e instanceof Error ? e : new Error(String(e));
         child.kill('SIGTERM');
       }
     }
@@ -232,12 +233,11 @@ export function runLines(
     });
     child.on('error', (err: NodeJS.ErrnoException) => reject(spawnFailure(err, cmd, args, stderr)));
     child.on('close', (exitCode, signal) => {
-      if (failure !== null) return reject(failure);
-      if (!stopped) {
+      if (!stopped && failure === null) {
         feed(decoder.end());
         if (pending) deliver(pending);
-        if (failure !== null) return reject(failure);
       }
+      if (failure !== null) return reject(failure);
       if (stopped || exitCode === 0) return resolve({ stopped, stderr });
       reject(exitFailure(cmd, args, exitCode, signal, stderr));
     });
@@ -268,7 +268,7 @@ export async function runJson<T extends z.ZodType>(
   try {
     json = JSON.parse(stdout);
   } catch (e) {
-    throw new AppError('BAD_JSON', `${cmd} did not return valid JSON: ${(e as Error).message}`);
+    throw new AppError('BAD_JSON', `${cmd} did not return valid JSON: ${errorMessage(e)}`);
   }
   const parsed = schema.safeParse(json);
   if (!parsed.success) {

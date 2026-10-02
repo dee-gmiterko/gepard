@@ -1,3 +1,5 @@
+import type { DocumentSymbol } from '@gepard/common';
+
 export interface TreeNode<T> {
   path: string;
   name: string;
@@ -99,4 +101,25 @@ export function flattenLeafPaths<T>(nodes: TreeNode<T>[]): string[] {
   }
   walk(nodes);
   return out;
+}
+
+export interface SymbolRowData {
+  kind: DocumentSymbol['kind'];
+  line: number;
+}
+
+export function symbolTreeNodes(
+  symbols: DocumentSymbol[],
+  parentPath: string,
+): TreeNode<SymbolRowData>[] {
+  return symbols.map((s, i) => {
+    const path = `${parentPath}/${i}:${s.name}`;
+    return {
+      path,
+      name: s.name,
+      isFolder: false,
+      data: { kind: s.kind, line: s.selectionRange.start.line },
+      children: symbolTreeNodes(s.children, path),
+    };
+  });
 }

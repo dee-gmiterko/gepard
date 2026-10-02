@@ -1,7 +1,9 @@
+import { z } from 'zod';
 import { rgPath as rgPathRaw } from '@vscode/ripgrep';
-import { makeTargetMatcher } from '@gepard/common/model/targetMatcher';
+import { makeTargetMatcher } from '@gepard/common';
 import { runLines, ExecError } from './exec';
 import { clipPreview } from '../search/preview';
+import { byteOffsetToUtf16, utf16ByteBoundaries } from '../string';
 
 function resolveRgPath(): string {
   return rgPathRaw.includes('app.asar')
@@ -41,68 +43,35 @@ export interface RipgrepPage {
   truncated: boolean;
 }
 
-interface RgBeginMessage {
-  type: 'begin';
-  data: { path: { text?: string } };
-}
-
-interface RgMatchMessage {
-  type: 'match';
-  data: {
-    path: { text?: string; bytes?: string };
-    lines: { text?: string; bytes?: string };
-    line_number: number;
-    submatches: Array<{ start: number; end: number }>;
-  };
-}
-
-interface RgEndMessage {
-  type: 'end';
-}
-
-type RgMessage = RgBeginMessage | RgMatchMessage | RgEndMessage;
+const rgMessageSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('begin'),
+    data: z.object({ path: z.object({ text: z.string().optional() }) }),
+  }),
+  z.object({
+    type: z.literal('match'),
+    data: z.object({
+      path: z.object({ text: z.string().optional(), bytes: z.string().optional() }),
+      lines: z.object({ text: z.string().optional(), bytes: z.string().optional() }),
+      line_number: z.number(),
+      submatches: z.array(z.object({ start: z.number(), end: z.number() })),
+    }),
+  }),
+  z.object({ type: z.literal('end') }),
+]);
+type RgMessage = z.infer<typeof rgMessageSchema>;
+type RgMatchMessage = Extract<RgMessage, { type: 'match' }>;
 
 function parseMessage(line: string): RgMessage | null {
   if (!line || line.startsWith('{"type":"summary"')) return null;
-  let msg: unknown;
+  let json: unknown;
   try {
-    msg = JSON.parse(line);
+    json = JSON.parse(line);
   } catch {
     return null;
   }
-  const type = typeof msg === 'object' && msg !== null ? (msg as { type?: unknown }).type : null;
-  return type === 'begin' || type === 'match' || type === 'end' ? (msg as RgMessage) : null;
-}
-
-export function utf16ByteBoundaries(text: string): number[] {
-  const boundaries = new Array<number>(text.length + 1);
-  boundaries[0] = 0;
-  let i = 0;
-  let bytes = 0;
-  while (i < text.length) {
-    const codePoint = text.codePointAt(i) as number;
-    bytes += Buffer.byteLength(String.fromCodePoint(codePoint), 'utf8');
-    if (codePoint > 0xffff) {
-      boundaries[i + 1] = bytes;
-      boundaries[i + 2] = bytes;
-      i += 2;
-    } else {
-      boundaries[i + 1] = bytes;
-      i += 1;
-    }
-  }
-  return boundaries;
-}
-
-export function byteOffsetToUtf16(boundaries: number[], byteOffset: number): number {
-  let lo = 0;
-  let hi = boundaries.length - 1;
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (boundaries[mid] < byteOffset) lo = mid + 1;
-    else hi = mid;
-  }
-  return lo;
+  const parsed = rgMessageSchema.safeParse(json);
+  return parsed.success ? parsed.data : null;
 }
 
 function toMatch(msg: RgMatchMessage): RipgrepMatch | null {

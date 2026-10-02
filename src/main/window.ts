@@ -4,6 +4,20 @@ import { pathToFileURL } from 'node:url';
 import { is } from '@electron-toolkit/utils';
 import icon from './resources/icon.png?asset';
 import { isAllowedExternalUrl } from './helpers/url';
+import { notifyMainFailure } from './notify';
+import { formatCaughtError } from './helpers/error';
+
+function openExternal(url: string): void {
+  shell
+    .openExternal(url)
+    .catch((err: unknown) =>
+      notifyMainFailure('window', `openExternal failed: ${formatCaughtError(err)}`),
+    );
+}
+
+function reportLoadFailure(err: unknown): void {
+  notifyMainFailure('window', `load failed: ${formatCaughtError(err)}`);
+}
 
 export function createMainWindow(): BrowserWindow {
   const devServerUrl = is.dev ? process.env['ELECTRON_RENDERER_URL'] : undefined;
@@ -42,20 +56,20 @@ export function createMainWindow(): BrowserWindow {
   });
 
   window.webContents.setWindowOpenHandler((details) => {
-    if (isAllowedExternalUrl(details.url)) void shell.openExternal(details.url);
+    if (isAllowedExternalUrl(details.url)) openExternal(details.url);
     return { action: 'deny' };
   });
 
   window.webContents.on('will-navigate', (event, url) => {
     if (isOwnAppUrl(url)) return;
     event.preventDefault();
-    if (isAllowedExternalUrl(url)) void shell.openExternal(url);
+    if (isAllowedExternalUrl(url)) openExternal(url);
   });
 
   if (devServerUrl) {
-    void window.loadURL(devServerUrl);
+    window.loadURL(devServerUrl).catch(reportLoadFailure);
   } else {
-    void window.loadFile(indexHtmlPath);
+    window.loadFile(indexHtmlPath).catch(reportLoadFailure);
   }
 
   return window;

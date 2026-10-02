@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isTargeted } from '@gepard/common/model/paths';
-import { makeTargetMatcher } from '@gepard/common/model/targetMatcher';
+import { isTargeted, makeTargetMatcher } from '@gepard/common';
 
 const targetLists: string[][] = [
   [],

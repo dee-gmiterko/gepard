@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { withLatestWins, type CancellableRun } from '../ipc/cancellation';
-import { searchRunKey } from '../ipc/handlers/search';
+import { SearchQuery } from '@gepard/common';
+import { searchRunKey } from '../helpers/search/query';
 
 function deferredWork<T>(): {
   fn: (run: CancellableRun) => Promise<T>;
@@ -16,7 +17,10 @@ function deferredWork<T>(): {
         resolveFn = resolve;
       });
     },
-    run: () => captured!,
+    run: () => {
+      if (!captured) throw new Error('work has not started');
+      return captured;
+    },
     resolve: (value) => resolveFn(value),
   };
 }
@@ -73,35 +77,41 @@ describe('withLatestWins', () => {
 });
 
 describe('searchRunKey', () => {
-  const base = { projectId: 'p', scope: 'all' as const };
+  const SHA = 'a'.repeat(40);
+  const base: { projectId: string; sha: string; scope: 'all' } = {
+    projectId: 'p',
+    sha: SHA,
+    scope: 'all',
+  };
+  const key = (query: SearchQuery): string => searchRunKey(SearchQuery.parse(query));
 
   it('gives the side-panel pattern search one slot (latest-wins per keystroke)', () => {
-    expect(searchRunKey({ ...base, kind: 'pattern', text: 'ab', word: false })).toBe(
-      searchRunKey({ ...base, kind: 'pattern', text: 'abc', word: false }),
+    expect(key({ ...base, kind: 'pattern', text: 'ab', word: false })).toBe(
+      key({ ...base, kind: 'pattern', text: 'abc', word: false }),
     );
   });
 
   it('keeps "Same pattern in" for different symbols (two open editors) apart', () => {
-    expect(searchRunKey({ ...base, kind: 'pattern', text: 'foo', word: true })).not.toBe(
-      searchRunKey({ ...base, kind: 'pattern', text: 'bar', word: true }),
+    expect(key({ ...base, kind: 'pattern', text: 'foo', word: true })).not.toBe(
+      key({ ...base, kind: 'pattern', text: 'bar', word: true }),
     );
   });
 
   it('keeps the side panel apart from "Same pattern in" on the same text', () => {
-    expect(searchRunKey({ ...base, kind: 'pattern', text: 'foo', word: false })).not.toBe(
-      searchRunKey({ ...base, kind: 'pattern', text: 'foo', word: true }),
+    expect(key({ ...base, kind: 'pattern', text: 'foo', word: false })).not.toBe(
+      key({ ...base, kind: 'pattern', text: 'foo', word: true }),
     );
   });
 
   it('keys "Also in" by its anchor', () => {
     const at = (line: number): string =>
-      searchRunKey({ ...base, kind: 'exactLine', text: 'x', origin: { path: 'a.ts', line } });
+      key({ ...base, kind: 'exactLine', text: 'x', origin: { path: 'a.ts', line } });
     expect(at(1)).not.toBe(at(2));
   });
 
   it('keys references by symbol position', () => {
     const at = (col: number): string =>
-      searchRunKey({
+      key({
         ...base,
         kind: 'references',
         text: 'x',
@@ -111,8 +121,8 @@ describe('searchRunKey', () => {
   });
 
   it('keeps different projects apart', () => {
-    expect(searchRunKey({ ...base, kind: 'regex', text: 'a' })).not.toBe(
-      searchRunKey({ ...base, projectId: 'q', kind: 'regex', text: 'a' }),
+    expect(key({ ...base, kind: 'regex', text: 'a' })).not.toBe(
+      key({ ...base, projectId: 'q', kind: 'regex', text: 'a' }),
     );
   });
 });

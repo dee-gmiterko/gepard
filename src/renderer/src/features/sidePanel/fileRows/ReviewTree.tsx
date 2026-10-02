@@ -3,12 +3,7 @@ import { useCommands } from '../../../keyboard/useCommands';
 import { Tree, TreeLabel } from '../../../components/Tree';
 import type { TreeNode } from '../../../helpers/tree';
 import { FileRowMarks } from './FileRowMarks';
-import type { RowData } from '../../../helpers/row';
-
-function changedLeaves(node: TreeNode<RowData>): string[] {
-  if (!node.isFolder) return (node.data?.totalCount ?? 0) > 0 ? [node.path] : [];
-  return node.children.flatMap(changedLeaves);
-}
+import { changedLeaves, type RowData } from '../../../helpers/row';
 
 export function ReviewTree({ nodes }: { nodes: TreeNode<RowData>[] }): React.JSX.Element {
   const state = useAppState();

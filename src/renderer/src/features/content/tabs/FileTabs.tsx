@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
 import { openTabs } from '../../../state/selectors';
+import { basename } from '../../../helpers/paths';
 import { IconButton, focusVisible } from '../../../components/IconButton';
 import { Ellipsis } from '../../../components/Ellipsis';
 
@@ -68,11 +69,6 @@ const Tab = styled.button<{ $active: boolean; $preview: boolean }>`
 const Label = styled(Ellipsis)`
   max-width: 200px;
 `;
-
-function basename(path: string): string {
-  const i = path.lastIndexOf('/');
-  return i === -1 ? path : path.slice(i + 1);
-}
 
 export function FileTabs(): React.JSX.Element {
   const intl = useIntl();

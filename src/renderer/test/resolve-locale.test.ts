@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveLocale } from '../src/i18n/resolveLocale';
+import { resolveLocale } from '../src/helpers/locale';
 
 describe('resolveLocale', () => {
   it('picks an exact match', () => {

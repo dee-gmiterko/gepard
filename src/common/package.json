@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./*": "./*.ts"
+    ".": "./index.ts"
   },
+  "sideEffects": false,
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
@@ -18,8 +19,11 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@codemirror/language": "6.12.4",
     "@electron-toolkit/tsconfig": "2.0.0",
     "@gepard/eslint-config": "workspace:*",
+    "@lezer/highlight": "1.2.4",
+    "@lezer/lr": "1.4.10",
     "@types/node": "24.19.0",
     "@types/picomatch": "^4.0.3",
     "eslint": "9.39.5",

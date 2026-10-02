@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { Location, Range, RepoPath, SymbolKind } from './search';
+import { RepoPath } from './pr';
+import { Location, Range, SymbolKind } from './search';
 
 export const LineSymbol = z.object({
   name: z.string(),
@@ -10,6 +11,7 @@ export const LineSymbol = z.object({
     .default([]),
   range: Range,
 });
+export type LineSymbol = z.infer<typeof LineSymbol>;
 export const LineSymbolsResult = z.object({
   path: RepoPath,
   line: z.int().positive(),
@@ -43,6 +45,7 @@ export const DefinitionTarget = z.object({
   location: Location,
   external: z.boolean().default(false),
 });
+export type DefinitionTarget = z.infer<typeof DefinitionTarget>;
 export const DefinitionResult = z.object({
   symbol: z.string(),
   definitions: z.array(DefinitionTarget),

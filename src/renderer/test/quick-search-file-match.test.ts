@@ -38,7 +38,8 @@ describe('findBestMatch', () => {
   it('falls back to the best fuzzy line match when no substring occurs', () => {
     const match = findBestMatch(text, 'sbttl', 0);
     expect(match).not.toBeNull();
-    expect(text.slice(match!.from, match!.to)).toBe('subtotal');
+    if (!match) throw new Error('expected a fuzzy match');
+    expect(text.slice(match.from, match.to)).toBe('subtotal');
   });
 
   it('returns nothing when not even a fuzzy match exists', () => {
@@ -57,7 +58,8 @@ describe('nextMatch', () => {
   it('steps forward through the occurrences and wraps to the first one', () => {
     const second = nextMatch(text, 'total', first, 1);
     expect(second?.from).toBe(at('total', 2));
-    expect(nextMatch(text, 'total', second!, 1)?.from).toBe(at('Total'));
+    if (!second) throw new Error('expected a second match');
+    expect(nextMatch(text, 'total', second, 1)?.from).toBe(at('Total'));
   });
 
   it('steps backward and wraps to the last one', () => {

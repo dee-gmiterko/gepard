@@ -8,7 +8,7 @@ function file(path: string, matchCount = 1): PageSourceFile {
     matches: Array.from({ length: matchCount }, (_, i) => ({
       line: i + 1,
       preview: `hit ${i + 1}`,
-      spans: [[0, 3]] as Array<[number, number]>,
+      spans: [[0, 3] satisfies [number, number]],
     })),
   };
 }
@@ -112,7 +112,8 @@ describe('clipPreview', () => {
 
   it('never leaves half of a surrogate pair at either edge', () => {
     const line = '😀'.repeat(400);
-    for (const spans of [[[0, 2]], [[300, 302]]] as Array<Array<[number, number]>>) {
+    const cases: Array<Array<[number, number]>> = [[[0, 2]], [[300, 302]]];
+    for (const spans of cases) {
       const { preview } = clipPreview(line, spans);
       expect(preview).toBe(preview.toWellFormed());
     }

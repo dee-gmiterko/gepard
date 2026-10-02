@@ -11,6 +11,7 @@ import { Inline } from '../../components/Layout';
 import { List, ListRow, RowTitle } from '../../components/List';
 import { Message } from '../../components/Message';
 import { SectionHeading } from '../../components/SectionHeading';
+import { reportQueryError } from '../../errors/report';
 import { invoke, useIpcEvent } from '../../ipc/client';
 import { qk } from '../../queries/keys';
 import {
@@ -218,7 +219,9 @@ const ProgressLabel = styled.div`
   color: ${({ theme }) => theme.colors.fgMuted};
 `;
 
-function isActiveClone(progress: CloneProgress | undefined): boolean {
+function isActiveClone(
+  progress: CloneProgress | undefined,
+): progress is CloneProgress & { phase: ActivePhase } {
   return progress !== undefined && progress.phase !== 'done' && progress.phase !== 'error';
 }
 
@@ -259,7 +262,9 @@ export function Launchpad(): React.JSX.Element {
   useIpcEvent('clone.progress', (payload) => {
     setProgressById((prev) => ({ ...prev, [payload.projectId]: payload }));
     if (payload.phase === 'done' || payload.phase === 'error') {
-      void qc.invalidateQueries({ queryKey: qk.projects() });
+      qc.invalidateQueries({ queryKey: qk.projects() }).catch((error: unknown) =>
+        reportQueryError('clone.progress', error),
+      );
     }
   });
 
@@ -295,14 +300,16 @@ export function Launchpad(): React.JSX.Element {
   }
 
   async function handleOpen(projectId: string): Promise<void> {
-    void qc.invalidateQueries({ queryKey: qk.project(projectId) });
     qc.removeQueries({ queryKey: qk.open(projectId) });
     try {
-      const opened = await qc.fetchQuery({
-        queryKey: qk.open(projectId),
-        queryFn: () => invoke('projects.open', { projectId }),
-        staleTime: Infinity,
-      });
+      const [, opened] = await Promise.all([
+        qc.invalidateQueries({ queryKey: qk.project(projectId) }),
+        qc.fetchQuery({
+          queryKey: qk.open(projectId),
+          queryFn: () => invoke('projects.open', { projectId }),
+          staleTime: Infinity,
+        }),
+      ]);
       dispatch({
         type: 'project/open',
         projectId,
@@ -394,7 +401,8 @@ export function Launchpad(): React.JSX.Element {
         )}
         {projects?.map((project) => {
           const progress = progressById[project.id];
-          const cloning = isActiveClone(progress);
+          const activeProgress = isActiveClone(progress) ? progress : undefined;
+          const cloning = activeProgress !== undefined;
           return (
             <ListRow
               key={project.id}
@@ -414,11 +422,10 @@ export function Launchpad(): React.JSX.Element {
                     <ProgressFill style={{ width: `${progress?.percent ?? 0}%` }} />
                   </ProgressBar>
                 )}
-                {cloning &&
-                  progress &&
+                {activeProgress &&
                   (() => {
-                    const phase = progress.phase as ActivePhase;
-                    const detail = progress.message;
+                    const phase = activeProgress.phase;
+                    const detail = activeProgress.message;
                     return detail ? (
                       <ProgressLabel>
                         <FormattedMessage {...phaseDetailLabel(phase)} values={{ detail }} />

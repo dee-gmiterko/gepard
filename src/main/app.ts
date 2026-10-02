@@ -25,34 +25,39 @@ export function bootstrap(): void {
     app.commandLine.appendSwitch('gtk-version', '3');
   }
 
-  app.whenReady().then(() => {
-    log.info(
-      'app',
-      `startup version=${app.getVersion()} electron=${process.versions.electron} ` +
-        `chrome=${process.versions.chrome} node=${process.versions.node} ` +
-        `platform=${process.platform} arch=${process.arch}`,
-    );
-    electronApp.setAppUserModelId('io.github.dee-gmiterko.gepard');
+  app
+    .whenReady()
+    .then(() => {
+      log.info(
+        'app',
+        `startup version=${app.getVersion()} electron=${process.versions.electron} ` +
+          `chrome=${process.versions.chrome} node=${process.versions.node} ` +
+          `platform=${process.platform} arch=${process.arch}`,
+      );
+      electronApp.setAppUserModelId('io.github.dee-gmiterko.gepard');
 
-    app.on('browser-window-created', (_, window) => {
-      optimizer.watchWindowShortcuts(window);
-      // Module scripts run before the page's load event, which triggers
-      // `did-finish-load`.
-      window.webContents.once('did-finish-load', () => markRendererReady());
+      app.on('browser-window-created', (_, window) => {
+        optimizer.watchWindowShortcuts(window);
+        // Module scripts run before the page's load event, which triggers
+        // `did-finish-load`.
+        window.webContents.once('did-finish-load', () => markRendererReady());
+      });
+
+      registerHandlers(handlers);
+
+      nativeTheme.on('updated', () => {
+        emit('theme.changed', { dark: nativeTheme.shouldUseDarkColors });
+      });
+
+      createMainWindow();
+
+      app.on('activate', () => {
+        if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
+      });
+    })
+    .catch((err: unknown) => {
+      notifyMainFailure('app', `startup failed: ${formatCaughtError(err)}`);
     });
-
-    registerHandlers(handlers);
-
-    nativeTheme.on('updated', () => {
-      emit('theme.changed', { dark: nativeTheme.shouldUseDarkColors });
-    });
-
-    createMainWindow();
-
-    app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
-    });
-  });
 
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();

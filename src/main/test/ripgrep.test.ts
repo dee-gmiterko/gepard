@@ -1,7 +1,8 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { byteOffsetToUtf16, ripgrepSearch, utf16ByteBoundaries } from '../helpers/process/ripgrep';
+import { ripgrepSearch } from '../helpers/process/ripgrep';
+import { byteOffsetToUtf16, utf16ByteBoundaries } from '../helpers/string';
 import { makeTmpDir, type TmpDir } from './support/tmp';
 
 describe('utf16ByteBoundaries / byteOffsetToUtf16', () => {

@@ -219,16 +219,14 @@ export const events = {
 
 type ExtraChannel = Exclude<keyof typeof channels, ChannelNameList>;
 type ExtraEvent = Exclude<keyof typeof events, EventNameList>;
-const _namesComplete: [ExtraChannel, ExtraEvent] extends [never, never]
-  ? true
-  : ['add to names.ts:', ExtraChannel, ExtraEvent] = true;
-void _namesComplete;
+type MustBeTrue<T extends true> = T;
+export type NamesComplete = MustBeTrue<
+  [ExtraChannel, ExtraEvent] extends [never, never] ? true : false
+>;
 
 export type Channels = typeof channels;
 export type ChannelName = keyof Channels;
-// zod's `z.input` leaves fields with `.default()` optional.
 export type ChannelInput<C extends ChannelName> = z.input<Channels[C]['input']>;
-// zod's `z.output` has `.default()` values applied.
 export type ChannelParsedInput<C extends ChannelName> = z.output<Channels[C]['input']>;
 export type ChannelOutput<C extends ChannelName> = z.output<Channels[C]['output']>;
 
