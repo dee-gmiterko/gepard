@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { closeHoverTooltips, lineNumbers } from '@codemirror/view';
-import { FormattedMessage } from 'react-intl';
+import { defineMessages, FormattedMessage } from 'react-intl';
 import { useAppDispatch, useAppState } from '../../../../state/AppContext';
 import { useCurrentHead } from '../../../../queries/projects';
 import { useFileContent } from '../../../../queries/files';
@@ -20,8 +20,18 @@ import { Message } from '../../../../components/Message';
 import { CommentPortalHost } from '../CommentPortalHost';
 import { ImageViewer } from '../image/ImageViewer';
 import { MissingViewer } from '../missing/MissingViewer';
-import { viewerMessages } from '../messages';
 import { SymbolPopupHost } from './SymbolPopup';
+
+const messages = defineMessages({
+  loading: {
+    id: 'content.viewer.loading',
+    defaultMessage: 'Loading…',
+  },
+  binaryNotShown: {
+    id: 'content.viewer.binaryNotShown',
+    defaultMessage: 'Binary file not shown',
+  },
+});
 
 export function CodeViewer({ path }: { path: string }): React.JSX.Element {
   const sha = useCurrentHead() ?? '';
@@ -30,7 +40,7 @@ export function CodeViewer({ path }: { path: string }): React.JSX.Element {
   if (!data)
     return (
       <Message layout="center">
-        <FormattedMessage {...viewerMessages.loading} />
+        <FormattedMessage {...messages.loading} />
       </Message>
     );
   switch (data.kind) {
@@ -41,7 +51,7 @@ export function CodeViewer({ path }: { path: string }): React.JSX.Element {
     case 'binary':
       return (
         <Message layout="center">
-          <FormattedMessage {...viewerMessages.binaryNotShown} />
+          <FormattedMessage {...messages.binaryNotShown} />
         </Message>
       );
     case 'text':

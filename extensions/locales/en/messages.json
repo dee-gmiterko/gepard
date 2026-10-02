@@ -17,7 +17,6 @@
   "commentEditor.referencesPanel.alsoIn": "Also in",
   "commentEditor.referencesPanel.alsoInDisabledHint": "This line has no text to match elsewhere.",
   "commentEditor.referencesPanel.alsoInNoOtherMatchHint": "No other line matches this one.",
-  "commentEditor.referencesPanel.noAnchor": "References are not available for this comment (no anchor line).",
   "commentEditor.referencesPanel.noMatches": "No matches — nothing will be included.",
   "commentEditor.referencesPanel.samePatternDisabledHint": "No symbols on this line to match a pattern on.",
   "commentEditor.referencesPanel.samePatternIn": "Same pattern in",

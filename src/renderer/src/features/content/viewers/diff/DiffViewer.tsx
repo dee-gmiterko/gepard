@@ -23,9 +23,16 @@ import { Message } from '../../../../components/Message';
 import { CommentPortalHost } from '../CommentPortalHost';
 import { ImageDiffViewer } from '../imageDiff/ImageDiffViewer';
 import { MissingViewer } from '../missing/MissingViewer';
-import { viewerMessages } from '../messages';
 
 const messages = defineMessages({
+  loading: {
+    id: 'content.viewer.loading',
+    defaultMessage: 'Loading…',
+  },
+  binaryNotShown: {
+    id: 'content.viewer.binaryNotShown',
+    defaultMessage: 'Binary file not shown',
+  },
   renamedWithoutChanges: {
     id: 'content.diffViewer.renamedWithoutChanges',
     defaultMessage: 'File renamed without changes.',
@@ -42,7 +49,7 @@ export function DiffViewer({ path }: { path: string }): React.JSX.Element {
   if (!data)
     return (
       <Message layout="center">
-        <FormattedMessage {...viewerMessages.loading} />
+        <FormattedMessage {...messages.loading} />
       </Message>
     );
   switch (data.kind) {
@@ -51,7 +58,7 @@ export function DiffViewer({ path }: { path: string }): React.JSX.Element {
     case 'binary':
       return (
         <Message layout="center">
-          <FormattedMessage {...viewerMessages.binaryNotShown} />
+          <FormattedMessage {...messages.binaryNotShown} />
         </Message>
       );
     case 'image':
