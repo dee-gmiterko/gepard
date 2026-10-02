@@ -5,8 +5,10 @@ import { IconButton } from '../IconButton';
 import { SectionHeading } from '../SectionHeading';
 import { Surface } from '../Surface';
 
-const Dialog = styled(Surface).attrs({ $elevation: 'floating' as const })`
-  width: 420px;
+const Dialog = styled(Surface).attrs({ $elevation: 'floating' as const })<{
+  $width: string;
+}>`
+  width: ${({ $width }) => $width};
   max-width: calc(100vw - ${({ theme }) => theme.space[6]});
   padding: 0;
   color: ${({ theme }) => theme.colors.fg};
@@ -29,6 +31,7 @@ export interface ModalProps {
   closeLabel: string;
   onClose: () => void;
   onSubmit?: (e: FormEvent) => void;
+  width?: string;
   children: ReactNode;
 }
 
@@ -37,6 +40,7 @@ export function Modal({
   closeLabel,
   onClose,
   onSubmit,
+  width = '420px',
   children,
 }: ModalProps): React.JSX.Element {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -51,6 +55,7 @@ export function Modal({
     <Dialog
       as="dialog"
       ref={dialogRef}
+      $width={width}
       onClose={onClose}
       // Clicks on ::backdrop are dispatched to the dialog element itself.
       onMouseDown={(e) => {

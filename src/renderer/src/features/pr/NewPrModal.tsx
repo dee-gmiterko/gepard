@@ -62,6 +62,7 @@ const BranchRow = styled.div`
 const Field = styled.label`
   display: flex;
   flex: 1;
+  min-width: 0;
   flex-direction: column;
   gap: ${({ theme }) => theme.space[1]};
   font-size: ${({ theme }) => theme.font.size.xs};
@@ -146,6 +147,7 @@ export function NewPrModal({ onClose, onCreated }: NewPrModalProps): React.JSX.E
       closeLabel={intl.formatMessage(messages.close)}
       onClose={onClose}
       onSubmit={handleSubmit}
+      width="640px"
     >
       <Stack>
         <BranchRow>
