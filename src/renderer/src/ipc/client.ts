@@ -1,25 +1,12 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import type {
-  ChannelName,
-  ChannelOutput,
-  EventName,
-  EventPayload,
-  InvokeArgs,
-  IpcErrorShape,
+import {
+  type ChannelName,
+  type ChannelOutput,
+  type EventName,
+  type EventPayload,
+  type InvokeArgs,
+  IpcError,
 } from '@gepard/common';
-
-export class IpcError extends Error {
-  code: string;
-  details?: unknown;
-  channel?: string;
-  constructor(shape: IpcErrorShape, channel?: string) {
-    super(shape.message);
-    this.name = 'IpcError';
-    this.code = shape.code;
-    this.details = shape.details;
-    this.channel = channel;
-  }
-}
 
 export function isCancelledError(error: unknown): boolean {
   return error instanceof IpcError && error.code === 'CANCELLED';

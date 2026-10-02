@@ -5,8 +5,8 @@ import {
   type ExtensionInfo,
   type ExtensionKind,
   type ExtensionSource,
+  AppError,
 } from '@gepard/common';
-import { AppError } from '../ipc/registry';
 import { builtinExtensionsDir, userExtensionsDir, type ExtensionKindDir } from '../paths';
 import * as extensionsStore from '../store/extensions';
 import * as settingsStore from '../store/settings';

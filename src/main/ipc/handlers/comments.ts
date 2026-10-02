@@ -1,5 +1,5 @@
+import { AppError } from '@gepard/common';
 import type { HandlerMap } from '../registry';
-import { AppError } from '../registry';
 import type { GitService } from '../../services/git';
 import * as review from '../../store/review';
 

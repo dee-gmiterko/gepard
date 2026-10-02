@@ -18,7 +18,7 @@ import {
   type NameStatusEntry,
   parseBranchNames,
 } from '../helpers/git/gitParsing';
-import { AppError, emit } from '../ipc/registry';
+import { emit } from '../ipc/registry';
 import { indexer as defaultIndexer } from '../lsp';
 import { nohooksDir, projectCloneTmpDir, projectRepoDir } from '../paths';
 import { isCloned } from '../store/projects';
@@ -33,6 +33,7 @@ import {
   isGlob,
   matchesTarget,
   staticPrefixOf,
+  AppError,
 } from '@gepard/common';
 
 const EMPTY_TREE_SHA = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';

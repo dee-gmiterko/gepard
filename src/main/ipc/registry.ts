@@ -1,6 +1,7 @@
 import { BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { z } from 'zod';
 import {
+  AppError,
   ChannelNameList,
   channels,
   type ChannelName,
@@ -23,17 +24,6 @@ export type HandlerMap = {
     ctx: HandlerCtx,
   ) => Promise<ChannelOutput<C>> | ChannelOutput<C>;
 };
-
-export class AppError extends Error {
-  constructor(
-    public code: string,
-    message: string,
-    public details?: unknown,
-  ) {
-    super(message);
-    this.name = 'AppError';
-  }
-}
 
 function toIpcError(e: unknown): IpcErrorShape {
   if (e instanceof AppError) return { code: e.code, message: e.message, details: e.details };

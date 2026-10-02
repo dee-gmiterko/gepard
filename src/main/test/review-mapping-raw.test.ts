@@ -1,3 +1,4 @@
+import { ExecError } from '@gepard/common';
 import { describe, expect, it } from 'vitest';
 import {
   isRemoteNotFoundError,
@@ -7,7 +8,6 @@ import {
   mapThread,
 } from '../helpers/github/reviewMapping';
 import { checkGqlErrors, isLineNotInDiffError } from '../helpers/github/ghParsing';
-import { ExecError } from '../helpers/process/ExecError';
 import type {
   GqlIssueCommentRaw,
   GqlReviewCommentRaw,

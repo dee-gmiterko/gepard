@@ -1,5 +1,5 @@
+import { AppError } from '@gepard/common';
 import type { SyncMode } from '@gepard/common';
-import { AppError } from '../ipc/registry';
 import { log } from '../log';
 import { GhService, ghService as defaultGhService } from './gh';
 import { GitService, gitService as defaultGitService } from './git';

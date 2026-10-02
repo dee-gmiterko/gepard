@@ -1,6 +1,6 @@
+import { ExecError } from '@gepard/common';
 import { describe, expect, it } from 'vitest';
 import { runLines } from '../helpers/process/exec';
-import { ExecError } from '../helpers/process/ExecError';
 
 const node = process.execPath;
 

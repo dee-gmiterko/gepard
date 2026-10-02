@@ -2,8 +2,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { basename, dirname, join } from 'node:path';
 import { z } from 'zod';
-import { errorMessage, isErrnoException } from '@gepard/common';
-import { AppError } from '../ipc/registry';
+import { errorMessage, isErrnoException, AppError } from '@gepard/common';
 
 export async function readJsonFile<T extends z.ZodType, F = z.output<T>>(
   path: string,

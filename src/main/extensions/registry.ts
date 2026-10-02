@@ -13,8 +13,8 @@ import {
   type ThemeExtension,
   type LocaleExtension,
   type LanguageExtension,
+  AppError,
 } from '@gepard/common';
-import { AppError } from '../ipc/registry';
 import { type ExtensionKindDir } from '../paths';
 import * as settingsStore from '../store/settings';
 import { KindRegistry, type KindSpec } from '../helpers/kindRegistry';

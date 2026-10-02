@@ -1,7 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { HandlerMap } from '../registry';
-import { AppError } from '../registry';
 import { withLatestWins } from '../cancellation';
 import { ripgrepSearch, ripgrepSearchPage } from '../../helpers/process/ripgrep';
 import { applyPage, EMPTY_PAGE, type PageSourceFile } from '../../helpers/search/paging';
@@ -15,6 +14,7 @@ import {
   type WorkspaceSymbol,
   navigationSymbols,
   makeTargetMatcher,
+  AppError,
 } from '@gepard/common';
 import { projectRepoDir } from '../../paths';
 

@@ -2,7 +2,6 @@ import { z } from 'zod';
 import { run, runJson } from '../helpers/process/exec';
 import { chunk } from '../helpers/array';
 import { mapWithConcurrency, withBatches } from '../helpers/async';
-import { AppError } from '../ipc/registry';
 import { getProject as defaultGetProject } from '../store/projects';
 import {
   buildPrListArgs,
@@ -36,6 +35,7 @@ import {
   RemoteViewedFile,
   type Viewer,
   type ViewerRepo,
+  AppError,
 } from '@gepard/common';
 
 const GH_ENV: NodeJS.ProcessEnv = {

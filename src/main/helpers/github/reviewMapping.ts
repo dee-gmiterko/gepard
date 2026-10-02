@@ -1,5 +1,3 @@
-import { AppError } from '../../ipc/registry';
-import { ExecError } from '../process/ExecError';
 import type { ReviewStoreFile } from '../../store/review';
 import {
   type Comment,
@@ -10,6 +8,8 @@ import {
   type RemoteViewedFile,
   type ReviewThread,
   generalCommentAnchor,
+  AppError,
+  ExecError,
 } from '@gepard/common';
 
 export function mapComment(raw: GqlReviewCommentRaw, threadId: string): Comment {

@@ -1,5 +1,6 @@
+import { AppError } from '@gepard/common';
 import type { HandlerMap } from '../registry';
-import { AppError, emit } from '../registry';
+import { emit } from '../registry';
 import * as store from '../../store/projects';
 import type { GhService } from '../../services/gh';
 import type { GitService } from '../../services/git';

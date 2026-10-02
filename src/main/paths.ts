@@ -1,8 +1,7 @@
 import { app } from 'electron';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { ProjectId } from '@gepard/common';
-import { AppError } from './ipc/registry';
+import { ProjectId, AppError } from '@gepard/common';
 
 export function userDataDir(): string {
   return app.getPath('userData');

@@ -1,6 +1,5 @@
 import type { z } from 'zod';
-import { AppError } from '../../ipc/registry';
-import { ClonePhase, type ChangedFile, type Commit, type DiffRow } from '@gepard/common';
+import { ClonePhase, type ChangedFile, type Commit, type DiffRow, AppError } from '@gepard/common';
 
 type ChangeType = ChangedFile['changeType'];
 

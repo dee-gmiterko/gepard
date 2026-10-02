@@ -1,7 +1,6 @@
 import { defineMessages } from 'react-intl';
-import { IpcError } from '../ipc/client';
 import { intl } from '../i18n/intl';
-import { errorMessage } from '@gepard/common';
+import { errorMessage, IpcError } from '@gepard/common';
 
 const codeMessages = defineMessages({
   BAD_INPUT: { id: 'errors.code.badInput', defaultMessage: "That input isn't valid." },

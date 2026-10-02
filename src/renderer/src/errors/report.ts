@@ -1,5 +1,6 @@
+import { IpcError } from '@gepard/common';
 import { z } from 'zod';
-import { invoke, IpcError, isCancelledError, isStaleShaError } from '../ipc/client';
+import { invoke, isCancelledError, isStaleShaError } from '../ipc/client';
 import { localizedErrorMessage } from './errorMessage';
 
 export const ReportTone = z.enum(['danger', 'warning']);

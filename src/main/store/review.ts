@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { AppError } from '../ipc/registry';
 import { readJsonFile, writeJsonFile } from '../helpers/jsonFile';
 import { reviewJsonPath } from '../paths';
 import {
@@ -9,6 +8,7 @@ import {
   generalCommentAnchor,
   LocalViewedState,
   ReviewThread,
+  AppError,
 } from '@gepard/common';
 
 const ReviewStoreFile = z.object({
