@@ -8,7 +8,6 @@
     "type": "locale"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
