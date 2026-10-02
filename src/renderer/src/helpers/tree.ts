@@ -108,18 +108,33 @@ export interface SymbolRowData {
   line: number;
 }
 
+// Only declarations that structure a file are listed; variables, constants, properties, parameters and members are too numerous to help navigation.
+const OVERVIEW_SYMBOL_KINDS = new Set<DocumentSymbol['kind']>([
+  'namespace',
+  'class',
+  'interface',
+  'enum',
+  'type',
+  'function',
+  'method',
+]);
+
 export function symbolTreeNodes(
   symbols: DocumentSymbol[],
   parentPath: string,
 ): TreeNode<SymbolRowData>[] {
-  return symbols.map((s, i) => {
+  return symbols.flatMap((s, i) => {
     const path = `${parentPath}/${i}:${s.name}`;
-    return {
-      path,
-      name: s.name,
-      isFolder: false,
-      data: { kind: s.kind, line: s.selectionRange.start.line },
-      children: symbolTreeNodes(s.children, path),
-    };
+    const children = symbolTreeNodes(s.children, path);
+    if (!OVERVIEW_SYMBOL_KINDS.has(s.kind)) return children;
+    return [
+      {
+        path,
+        name: s.name,
+        isFolder: false,
+        data: { kind: s.kind, line: s.selectionRange.start.line },
+        children,
+      },
+    ];
   });
 }
