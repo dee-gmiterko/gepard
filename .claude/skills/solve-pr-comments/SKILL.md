@@ -19,10 +19,10 @@ gh pr view --json number
 Query inline review threads directly via GraphQL — top-level PR comments and reviews miss them:
 
 ```
-gh api graphql -f query='query { repository(owner: "<owner>", name: "<repo>") { pullRequest(number: <N>) { reviewThreads(first: 100) { nodes { id isResolved isOutdated path line comments(first: 20) { nodes { author { login } body createdAt url } } } } } } }'
+gh api graphql --paginate -f query='query($endCursor: String) { repository(owner: "<owner>", name: "<repo>") { pullRequest(number: <N>) { reviewThreads(first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor } nodes { id isResolved isOutdated path line comments(first: 20) { nodes { author { login } body createdAt url } } } } } } }' | jq -s '[.[].data.repository.pullRequest.reviewThreads.nodes[]] | map(select(.isResolved==false))'
 ```
 
-Filter to `isResolved: false`. Read every comment body before delegating. Correct obvious typos when relaying a comment's text but preserve its intent — do not reinterpret an ambiguous comment into whatever is easiest to implement.
+`--paginate` is required: GraphQL caps a page at 100 threads, and unresolved threads can sit past the first page. The jq filter keeps `isResolved: false`. Read every comment body before delegating. Correct obvious typos when relaying a comment's text but preserve its intent — do not reinterpret an ambiguous comment into whatever is easiest to implement.
 
 Every unresolved thread is a task at the same bar, regardless of phrasing or length. A comment naming a feature, behavior, or UI element that does not yet exist ("add X," "settings should gain Y," "new feature: ...") is a task to build that thing, not a task to document its absence. It does not need to say "please implement" to count.
 
