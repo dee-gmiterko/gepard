@@ -12,7 +12,12 @@ describe('extension predicates', () => {
   const fn = (): void => {};
 
   it('accepts a complete language extension and rejects an incomplete one', () => {
-    const ext = { id: 'a', displayName: 'A', matches: fn, languageId: fn, open: fn };
+    const ext = {
+      id: 'a',
+      displayName: 'A',
+      languages: [{ name: 'a', extensions: ['a'] }],
+      open: fn,
+    };
     expect(isLanguageExtension(ext)).toBe(true);
     expect(isLanguageExtension({ ...ext, open: undefined })).toBe(false);
     expect(isLanguageExtension({ ...ext, id: '' })).toBe(false);

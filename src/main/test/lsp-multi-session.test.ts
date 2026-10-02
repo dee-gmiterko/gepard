@@ -47,8 +47,7 @@ function fakeExtension(id: string, suffix: string): FakeExtension {
   return {
     id,
     displayName: id.toUpperCase(),
-    matches: (f: string) => f.endsWith(suffix),
-    languageId: () => id,
+    languages: [{ name: id, extensions: [suffix.replace(/^\./, '')] }],
     open: vi.fn(() => {
       if (id.startsWith('broken')) return Promise.reject(new Error(`${id} exploded`));
       const fake = fakeSession();

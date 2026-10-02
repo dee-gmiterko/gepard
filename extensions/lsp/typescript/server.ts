@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import {
   type ExtensionEvents,
   type ExtensionHost,
+  type GrammarLanguage,
   type LanguageSession,
   materializePayload,
   packageRoot,
@@ -16,6 +17,7 @@ export async function open(
   project: { root: string },
   host: ExtensionHost,
   sink: ExtensionEvents,
+  languages: GrammarLanguage[],
 ): Promise<LanguageSession> {
   const dir = await materializePayload(
     {
@@ -36,6 +38,7 @@ export async function open(
       args: ['--lsp', '--stdio'],
       cwd: project.root,
       root: project.root,
+      languages,
     },
     sink,
   );

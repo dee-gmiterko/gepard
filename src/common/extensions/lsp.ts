@@ -1,4 +1,5 @@
 import type { Match, Pos, WorkspaceSymbol } from '../ipc/schemas/search';
+import type { GrammarLanguage } from '../ipc/schemas/grammar';
 import type { DefinitionTarget, DocumentSymbol, IndexStatus, LineSymbol } from '../ipc/schemas/lsp';
 
 export interface CancellationToken {
@@ -42,8 +43,7 @@ export interface LanguageSession {
 export interface LanguageExtension {
   id: string;
   displayName: string;
-  matches(filePath: string): boolean;
-  languageId(filePath: string): string;
+  languages: GrammarLanguage[];
   warmupFile?(files: string[]): string | undefined;
   open(
     project: { root: string },

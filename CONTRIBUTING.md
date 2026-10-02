@@ -87,7 +87,7 @@ reported as failed rather than loaded.
 ### LSP
 
 Provides code intelligence for one language family. The extension claims
-files by path and names their language id; for each opened project it starts
+files by declaring the languages it serves (name and file extensions); for each opened project it starts
 a session that answers symbol, definition, reference and workspace-symbol
 queries and is told about file changes. Sessions report indexing status and
 logs back through the host's sink and own their server process. Interface:

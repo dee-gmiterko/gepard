@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import {
   errorMessage,
+  languageIdOf,
   type IndexStatus,
   type ExtensionEvents,
   type FileChange,
@@ -58,6 +59,10 @@ function makeSink(projectId: string, extensionId: string, state: ProjectState): 
   };
 }
 
+function isClaimedBy(extension: LanguageExtension, filePath: string): boolean {
+  return languageIdOf(extension.languages, filePath) !== undefined;
+}
+
 async function disposeSessions(projectId: string, entries: LanguageEntry[]): Promise<void> {
   await Promise.all(
     entries.map(({ session }) =>
@@ -81,7 +86,7 @@ async function startLanguageSession(
   const session = await extension.open({ root: repoRoot }, { dataDir }, sink);
   // Language servers load a project on the first request for one of its
   // files, and workspace/symbol returns nothing until then.
-  const probe = extension.warmupFile?.(files) ?? files.find((f) => extension.matches(f));
+  const probe = extension.warmupFile?.(files) ?? files.find((f) => isClaimedBy(extension, f));
   if (probe) {
     await session.lineSymbols(probe, 1).catch((e: Error) => {
       sink.log('warn', `project warm-up failed: ${e.message}`);
@@ -155,7 +160,7 @@ export const indexer: {
     const extensions = await extensionRegistry.enabledLanguageExtensions();
     if (!isCurrent(projectId, state)) return;
 
-    const matching = extensions.filter((ext) => files.some((f) => ext.matches(f)));
+    const matching = extensions.filter((ext) => files.some((f) => isClaimedBy(ext, f)));
     if (matching.length === 0) {
       state.pendingSessionChanges = [];
       state.sessionUnavailable = true;
@@ -233,7 +238,7 @@ export const indexer: {
 
   session(projectId: string, filePath: string): LanguageSession | null {
     return (
-      projects.get(projectId)?.sessions.find((entry) => entry.extension.matches(filePath))
+      projects.get(projectId)?.sessions.find((entry) => isClaimedBy(entry.extension, filePath))
         ?.session ?? null
     );
   },

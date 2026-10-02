@@ -27,7 +27,6 @@ import {
   type Pos,
   type WorkspaceSymbol,
 } from '@gepard/common';
-import { languageId } from './helpers/language';
 import {
   flatSymbolsToTree,
   isDocumentSymbolArray,
@@ -271,7 +270,7 @@ export class JdtlsSession implements LanguageSession {
         const text = await fs.readFile(filePath, 'utf8');
         const uri = url.pathToFileURL(filePath).toString();
         await this.conn.sendNotification('textDocument/didOpen', {
-          textDocument: { uri, languageId: languageId(), version: 1, text },
+          textDocument: { uri, languageId: 'java', version: 1, text },
         });
         try {
           return await fn(text);

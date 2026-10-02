@@ -1,6 +1,5 @@
 import { readdir } from 'node:fs/promises';
 import * as path from 'node:path';
-import { GD_EXTENSIONS } from './helpers/language';
 
 export const PROJECT_FILE = 'project.godot';
 const SKIPPED_DIRS = new Set(['.git', '.godot', 'node_modules']);
@@ -38,7 +37,7 @@ export async function listScripts(dir: string): Promise<string[]> {
     const file = path.join(dir, e.name);
     if (e.isDirectory()) {
       if (!SKIPPED_DIRS.has(e.name)) out.push(...(await listScripts(file)));
-    } else if (GD_EXTENSIONS.test(e.name)) out.push(file);
+    } else if (e.name.endsWith('.gd')) out.push(file);
   }
   return out;
 }

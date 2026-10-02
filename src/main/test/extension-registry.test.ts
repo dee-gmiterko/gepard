@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { loadExtensionPackages } from '../extensions/scanner';
 import { ExtensionRegistry } from '../extensions/registry';
-import { isGrammarExtension, isLanguageExtension } from '@gepard/common';
+import { isGrammarExtension, isLanguageExtension, languageIdOf } from '@gepard/common';
 import { isThemeTemplate } from '../helpers/extension';
 import * as settingsStore from '../store/settings';
 import { __setUserDataDir } from './support/electron';
@@ -34,8 +34,7 @@ async function writePackage(
 const DEMO_LANG_BODY = `module.exports = {
   id: 'demo-lang',
   displayName: 'Demo Lang',
-  matches: (f) => f.endsWith('.demo'),
-  languageId: () => 'demo',
+  languages: [{ name: 'demo', extensions: ['demo'] }],
   open: async () => ({
     lineSymbols: async () => [],
     definition: async () => [],
@@ -132,7 +131,7 @@ describe('loadExtensionPackages', () => {
 
     expect(loaded).toHaveLength(1);
     expect(loaded[0].extension.id).toBe('demo-lang');
-    expect(loaded[0].extension.matches('a.demo')).toBe(true);
+    expect(languageIdOf(loaded[0].extension.languages, 'a.demo')).toBe('demo');
     expect(loaded[0].dir).toBe(join(dir.path, 'good'));
 
     expect(failed).toHaveLength(3);
@@ -144,7 +143,7 @@ describe('loadExtensionPackages', () => {
     expect(byDir.get(join(dir.path, 'not-a-package'))).toContain('package.json');
   });
 
-  it('reports an lsp package that does not export languageId', async () => {
+  it('reports an lsp package that does not export languages', async () => {
     dir = await makeTmpDir('ext-scan-no-language-id');
     await writePackage(
       dir.path,
@@ -152,7 +151,6 @@ describe('loadExtensionPackages', () => {
       `module.exports = {
   id: 'no-language-id',
   displayName: 'No Language Id',
-  matches: () => false,
   open: async () => ({})
 }`,
     );
@@ -579,8 +577,7 @@ describe('ExtensionRegistry', () => {
       `module.exports = {
       id: 'late-lang',
       displayName: 'Late Lang',
-      matches: () => false,
-      languageId: () => 'late',
+      languages: [{ name: 'late', extensions: ['late'] }],
       open: async () => ({})
     }`,
     );

@@ -1,12 +1,9 @@
 import type { LanguageExtension } from '@gepard/common';
-import { languageId, matches, warmupFile } from './helpers/language';
 import { open } from './server';
 
 export default {
   id: 'python',
   displayName: 'Python',
-  matches,
-  languageId,
-  warmupFile,
+  languages: [{ name: 'python', extensions: ['py', 'pyi'] }],
   open,
 } satisfies LanguageExtension;

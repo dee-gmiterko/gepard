@@ -18,8 +18,7 @@ export type ExtensionModule = z.infer<typeof extensionModuleSchema>;
 export const languageExtensionSchema = z.looseObject({
   id: z.string().min(1),
   displayName: z.string(),
-  matches: functionSchema,
-  languageId: functionSchema,
+  languages: z.array(GrammarLanguage).min(1),
   open: functionSchema,
 });
 

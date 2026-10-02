@@ -30,7 +30,6 @@ import {
 } from '@gepard/common';
 import { freePort } from './helpers/net';
 import { identifiersOn } from './helpers/identifier';
-import { GD_EXTENSIONS, languageId } from './helpers/language';
 import { toDocumentSymbol, toLocations, toRange } from './helpers/lsp';
 import { listScripts } from './project';
 import { findSymbolAt, symbolKind, unwrapFileSymbol } from './helpers/symbol';
@@ -299,7 +298,7 @@ export class GodotSession implements LanguageSession {
         const text = await fs.readFile(filePath, 'utf8');
         const uri = pathToFileURL(filePath).toString();
         await this.conn.sendNotification('textDocument/didOpen', {
-          textDocument: { uri, languageId: languageId(), version: 1, text },
+          textDocument: { uri, languageId: 'gdscript', version: 1, text },
         });
         try {
           return await fn(text);
@@ -470,7 +469,7 @@ export class GodotSession implements LanguageSession {
   }
 
   filesChanged(changes: FileChange[]): void {
-    const relevant = changes.filter((c) => GD_EXTENSIONS.test(c.path));
+    const relevant = changes.filter((c) => c.path.endsWith('.gd'));
     if (relevant.length === 0) return;
     this.scriptFiles = null;
     for (const change of relevant) {

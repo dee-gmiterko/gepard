@@ -11,12 +11,14 @@ import {
 import {
   CrashGate,
   comparePaths,
+  languageIdOf,
   toPosix,
   type DefinitionTarget,
   type DocumentSymbol,
   type ExtensionEvents,
   type FileChange,
   type FileReferences,
+  type GrammarLanguage,
   type LanguageSession,
   type LineSymbol,
   type LspDefinitionResult,
@@ -27,7 +29,6 @@ import {
   type Pos,
   type WorkspaceSymbol,
 } from '@gepard/common';
-import { languageId } from './helpers/language';
 import {
   flatSymbolsToTree,
   isDocumentSymbolArray,
@@ -51,6 +52,7 @@ export interface ServerSpec {
   cwd: string;
   root: string;
   env?: NodeJS.ProcessEnv;
+  languages: GrammarLanguage[];
 }
 
 interface RepoLocation {
@@ -271,7 +273,12 @@ export class TypeScriptSession implements LanguageSession {
         const text = await fs.readFile(filePath, 'utf8');
         const uri = url.pathToFileURL(filePath).toString();
         await this.conn.sendNotification('textDocument/didOpen', {
-          textDocument: { uri, languageId: languageId(filePath), version: 1, text },
+          textDocument: {
+            uri,
+            languageId: languageIdOf(this.spec.languages, filePath) ?? '',
+            version: 1,
+            text,
+          },
         });
         try {
           return await fn(text);
