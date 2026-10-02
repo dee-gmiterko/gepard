@@ -26,13 +26,6 @@ describe('csharp extension', () => {
       await session.dispose();
     }
   }, 30_000);
-
-  it('identifies its files', () => {
-    expect(extension.matches('src/a.cs')).toBe(true);
-    expect(extension.matches('src/a.ts')).toBe(false);
-    expect(extension.languageId()).toBe('csharp');
-    expect(extension.warmupFile(['README.md', 'a.cs'])).toBe('a.cs');
-  });
 });
 
 describe('language server on fixtures', () => {

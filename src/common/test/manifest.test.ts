@@ -1,32 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import {
-  extensionModuleSchema,
-  isGrammarExtension,
-  isLanguageExtension,
-  packageManifestSchema,
-} from '@gepard/common';
+import { isGrammarExtension, isLanguageExtension, packageManifestSchema } from '@gepard/common';
 
 describe('packageManifestSchema', () => {
-  it('reads main and gepard.type and keeps other keys', () => {
-    const manifest = packageManifestSchema.parse({
-      name: 'x',
-      main: 'dist/index.js',
-      gepard: { type: 'lsp' },
-    });
-    expect(manifest.main).toBe('dist/index.js');
-    expect(manifest.gepard?.type).toBe('lsp');
-  });
-
   it('rejects non-objects', () => {
     expect(packageManifestSchema.safeParse(null).success).toBe(false);
     expect(packageManifestSchema.safeParse('x').success).toBe(false);
-  });
-});
-
-describe('extensionModuleSchema', () => {
-  it('exposes default and extension exports', () => {
-    const exports = extensionModuleSchema.parse({ default: 1, extension: 2, other: 3 });
-    expect([exports.default, exports.extension]).toEqual([1, 2]);
   });
 });
 

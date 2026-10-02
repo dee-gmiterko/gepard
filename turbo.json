@@ -75,7 +75,7 @@
       ]
     },
     "test": {
-      "dependsOn": ["build", "^build"],
+      "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
         "!**/*.md",

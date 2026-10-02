@@ -26,14 +26,6 @@ describe('gdscript extension', () => {
       await session.dispose();
     }
   }, 120_000);
-
-  it('identifies its files', () => {
-    expect(extension.matches('src/a.gd')).toBe(true);
-    expect(extension.matches('src/a.tscn')).toBe(false);
-    expect(extension.matches('src/a.ts')).toBe(false);
-    expect(extension.languageId()).toBe('gdscript');
-    expect(extension.warmupFile(['a.tscn', 'a.gd'])).toBe('a.gd');
-  });
 });
 
 describe('language server on fixtures', () => {

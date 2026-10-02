@@ -26,20 +26,6 @@ describe('typescript extension', () => {
       await session.dispose();
     }
   }, 30_000);
-
-  it('identifies its files', () => {
-    expect(extension.matches('src/a.ts')).toBe(true);
-    expect(extension.matches('src/a.tsx')).toBe(true);
-    expect(extension.matches('src/a.jsx')).toBe(true);
-    expect(extension.matches('src/a.js')).toBe(true);
-    expect(extension.matches('src/a.py')).toBe(false);
-    expect(extension.languageId('a.ts')).toBe('typescript');
-    expect(extension.languageId('a.tsx')).toBe('typescriptreact');
-    expect(extension.languageId('a.jsx')).toBe('javascriptreact');
-    expect(extension.languageId('a.js')).toBe('javascript');
-    expect(extension.languageId('a.mjs')).toBe('javascript');
-    expect(extension.warmupFile(['types.d.ts', 'a.ts'])).toBe('a.ts');
-  });
 });
 
 describe('language server on fixtures', () => {

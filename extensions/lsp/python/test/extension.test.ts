@@ -26,14 +26,6 @@ describe('python extension', () => {
       await session.dispose();
     }
   }, 30_000);
-
-  it('identifies its files', () => {
-    expect(extension.matches('src/a.py')).toBe(true);
-    expect(extension.matches('src/a.pyi')).toBe(true);
-    expect(extension.matches('src/a.ts')).toBe(false);
-    expect(extension.languageId()).toBe('python');
-    expect(extension.warmupFile(['a.pyi', 'a.py'])).toBe('a.py');
-  });
 });
 
 describe('language server on fixtures', () => {

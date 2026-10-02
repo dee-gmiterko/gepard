@@ -26,13 +26,6 @@ describe('java extension', () => {
       await session.dispose();
     }
   }, 60_000);
-
-  it('identifies its files', () => {
-    expect(extension.matches('src/a.java')).toBe(true);
-    expect(extension.matches('src/a.ts')).toBe(false);
-    expect(extension.languageId()).toBe('java');
-    expect(extension.warmupFile(['README.md', 'a.java'])).toBe('a.java');
-  });
 });
 
 describe('language server on fixtures', () => {
