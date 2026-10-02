@@ -1,20 +1,22 @@
 import { readdir, readFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import {
+  errorMessage,
+  extensionModuleSchema,
+  isErrnoException,
+  packageManifestSchema,
+  type PackageManifest,
+} from '@gepard/common';
 import * as extensionsStore from '../store/extensions';
 
 const LOADABLE_ENTRY_FILE = /\.(mjs|cjs|js)$/;
 
-export interface PackageManifest {
-  main?: string;
-  gepard?: { type?: string };
-}
-
 export async function readManifest(pkgDir: string): Promise<PackageManifest> {
   const raw = await readFile(path.join(pkgDir, 'package.json'), 'utf8');
-  const parsed: unknown = JSON.parse(raw);
-  if (!parsed || typeof parsed !== 'object') throw new Error('package.json is not an object');
-  return parsed as PackageManifest;
+  const parsed = packageManifestSchema.safeParse(JSON.parse(raw));
+  if (!parsed.success) throw new Error('package.json is not an object');
+  return parsed.data;
 }
 
 export interface LoadedExtensionPackage<T> {
@@ -68,8 +70,8 @@ export async function loadExtensionPackages<T>(
       .map((e) => e.name)
       .sort();
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return { loaded, failed, disabled, cache };
-    failed.push({ dir, error: (e as Error).message });
+    if (isErrnoException(e) && e.code === 'ENOENT') return { loaded, failed, disabled, cache };
+    failed.push({ dir, error: errorMessage(e) });
     return { loaded, failed, disabled, cache };
   }
 
@@ -108,8 +110,9 @@ export async function loadExtensionPackages<T>(
         throw new Error(`package.json "main" (${entryName}) is not a .js/.mjs/.cjs file`);
       }
       const entryPath = path.join(pkgDir, entryName);
-      const mod = (await import(pathToFileURL(entryPath).href)) as Record<string, unknown>;
-      const candidate = mod.default ?? mod.extension ?? mod;
+      const mod: unknown = await import(pathToFileURL(entryPath).href);
+      const exports = extensionModuleSchema.parse(mod);
+      const candidate = exports.default ?? exports.extension ?? mod;
       if (!isValid(candidate)) {
         const entry: ScanEntry<T> = { error: `module does not export a valid "${kind}" extension` };
         cache.set(pkgDir, entry);
@@ -120,7 +123,7 @@ export async function loadExtensionPackages<T>(
       cache.set(pkgDir, entry);
       loaded.push({ extension: candidate, dir: pkgDir });
     } catch (e) {
-      const entry: ScanEntry<T> = { error: (e as Error).message };
+      const entry: ScanEntry<T> = { error: errorMessage(e) };
       cache.set(pkgDir, entry);
       failed.push({ dir: pkgDir, error: entry.error });
     }

@@ -1,12 +1,18 @@
 import { mkdir } from 'node:fs/promises';
-import type { IndexStatus } from '@gepard/common/ipc/schemas/lsp';
+import {
+  errorMessage,
+  type IndexStatus,
+  type ExtensionEvents,
+  type FileChange,
+  type LanguageExtension,
+  type LanguageSession,
+} from '@gepard/common';
 import { emit } from '../ipc/registry';
 import { log } from '../log';
 import { isNotifiableLevel, notifyMainFailure } from '../notify';
 import { extensionDataDir } from '../paths';
 import { startLineIndex, type LineIndexHandle } from '../services/line-index-manager';
 import { extensionRegistry } from '../extensions/registry';
-import type { ExtensionEvents, FileChange, LanguageExtension, LanguageSession } from './session';
 
 interface LanguageEntry {
   extension: LanguageExtension;
@@ -170,7 +176,7 @@ export const indexer: {
         started.push(result.value);
         return;
       }
-      const message = (result.reason as Error).message;
+      const message = errorMessage(result.reason);
       failures.push(`${matching[i].displayName}: ${message}`);
       log.error(
         'lsp',

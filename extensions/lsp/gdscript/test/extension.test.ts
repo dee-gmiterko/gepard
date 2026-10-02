@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import extension from '../dist/index.js';
-import type { LanguageSession } from '../types.js';
+import extension from '../index';
+import type { LanguageSession } from '@gepard/common';
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 const sink = { status: () => {}, log: () => {} };
@@ -31,7 +31,7 @@ describe('gdscript extension', () => {
     expect(extension.matches('src/a.gd')).toBe(true);
     expect(extension.matches('src/a.tscn')).toBe(false);
     expect(extension.matches('src/a.ts')).toBe(false);
-    expect(extension.languageId('a.gd')).toBe('gdscript');
+    expect(extension.languageId()).toBe('gdscript');
     expect(extension.warmupFile(['a.tscn', 'a.gd'])).toBe('a.gd');
   });
 });

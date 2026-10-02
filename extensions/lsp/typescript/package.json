@@ -9,9 +9,9 @@
     "type": "lsp"
   },
   "scripts": {
-    "build": "tsc",
-    "vendor": "tsx vendor.ts",
-    "postinstall": "tsx vendor.ts",
+    "build": "esbuild index.ts --bundle --platform=node --format=esm --target=es2023 --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\" --outfile=dist/index.js --log-level=warning",
+    "vendor": "tsx scripts/vendor.ts",
+    "postinstall": "tsx scripts/vendor.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "lint": "eslint .",
@@ -19,9 +19,11 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
-    "vscode-jsonrpc": "9.0.3"
+    "vscode-jsonrpc": "9.0.3",
+    "zod": "4.6.5"
   },
   "devDependencies": {
+    "@gepard/common": "workspace:*",
     "@gepard/eslint-config": "workspace:*",
     "@types/node": "24.19.0",
     "@typescript/typescript-darwin-arm64": "7.0.2",
@@ -30,6 +32,7 @@
     "@typescript/typescript-linux-x64": "7.0.2",
     "@typescript/typescript-win32-arm64": "7.0.2",
     "@typescript/typescript-win32-x64": "7.0.2",
+    "esbuild": "0.28.2",
     "eslint": "9.39.5",
     "prettier": "3.9.9",
     "tsx": "4.23.15",

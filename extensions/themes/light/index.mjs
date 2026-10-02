@@ -1,4 +1,5 @@
-export default {
+/** @type {import('@gepard/common').ThemeExtension} */
+const theme = {
   id: 'light',
   name: 'Light',
   mode: 'light',
@@ -43,3 +44,5 @@ export default {
     invalid: '#82071e',
   },
 };
+
+export default theme;

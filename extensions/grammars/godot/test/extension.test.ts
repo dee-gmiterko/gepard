@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { LanguageSupport, LRLanguage, StreamLanguage } from '@codemirror/language';
 import { styleTags, tags } from '@lezer/highlight';
 import { LRParser } from '@lezer/lr';
-import extension from '../dist/index.js';
+import extension from '../index';
 
 const api = { StreamLanguage, LRLanguage, LanguageSupport, styleTags, tags, LRParser };
 
-describe('godot grammar extension (built)', () => {
+describe('godot grammar extension', () => {
   it('declares its languages and file types', () => {
     expect(extension.id).toBe('godot');
     expect(extension.languages.map((l) => l.name)).toEqual(['GDScript', 'GDResource', 'GDShader']);

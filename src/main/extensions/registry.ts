@@ -1,60 +1,33 @@
 import { cp, mkdir, readFile } from 'node:fs/promises';
 import * as path from 'node:path';
-import type { ExtensionInfo, ExtensionKind } from '@gepard/common/ipc/schemas/extensions';
-import { GrammarLanguage, type GrammarModule } from '@gepard/common/ipc/schemas/grammar';
-import type { GrammarExtension } from '@gepard/common/extensions/grammar';
-import { ThemeTemplateData } from '@gepard/common/ipc/schemas/theme';
-import { LocaleData } from '@gepard/common/ipc/schemas/locale';
+import {
+  errorMessage,
+  isErrnoException,
+  isGrammarExtension,
+  isLanguageExtension,
+  type PackageManifest,
+  type ExtensionInfo,
+  type ExtensionKind,
+  type GrammarModule,
+  type GrammarExtension,
+  type ThemeTemplateData,
+  type LocaleData,
+  type LanguageExtension,
+} from '@gepard/common';
 import { AppError } from '../ipc/registry';
 import { builtinExtensionsDir, userExtensionsDir, type ExtensionKindDir } from '../paths';
 import * as extensionsStore from '../store/extensions';
 import * as settingsStore from '../store/settings';
-import type { LanguageExtension } from '../lsp/session';
 import {
   loadExtensionPackages,
   readManifest,
   type DisabledExtensionPackage,
   type FailedExtensionPackage,
   type LoadedExtensionPackage,
-  type PackageManifest,
   type ScanCache,
   type Sourced,
 } from './scanner';
-import { isFn } from '../helpers/type-guards';
-
-export function isLanguageExtension(value: unknown): value is LanguageExtension {
-  if (!value || typeof value !== 'object') return false;
-  const v = value as Record<string, unknown>;
-  return (
-    typeof v.id === 'string' &&
-    v.id.length > 0 &&
-    typeof v.displayName === 'string' &&
-    isFn(v.matches) &&
-    isFn(v.languageId) &&
-    isFn(v.open)
-  );
-}
-
-export function isGrammarExtension(value: unknown): value is GrammarExtension {
-  if (!value || typeof value !== 'object') return false;
-  const v = value as Record<string, unknown>;
-  return (
-    typeof v.id === 'string' &&
-    v.id.length > 0 &&
-    typeof v.displayName === 'string' &&
-    v.displayName.length > 0 &&
-    GrammarLanguage.array().min(1).safeParse(v.languages).success &&
-    isFn(v.support)
-  );
-}
-
-export function isThemeTemplate(value: unknown): value is ThemeTemplateData {
-  return ThemeTemplateData.safeParse(value).success;
-}
-
-export function isLocaleData(value: unknown): value is LocaleData {
-  return LocaleData.safeParse(value).success;
-}
+import { isLocaleData, isThemeTemplate } from '../helpers/extension';
 
 interface KindSpec<T> {
   kind: ExtensionKind;
@@ -226,7 +199,7 @@ class KindRegistry<T> {
         force: false,
       });
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code === 'ERR_FS_CP_EEXIST') {
+      if (isErrnoException(e) && e.code === 'ERR_FS_CP_EEXIST') {
         throw new AppError(
           'EXTENSION_ALREADY_EXISTS',
           `An extension named "${name}" already exists.`,
@@ -293,7 +266,7 @@ export class ExtensionRegistry {
     } catch (e) {
       throw new AppError(
         'EXTENSION_INVALID_PACKAGE',
-        `"${name}" has no valid package.json (${(e as Error).message})`,
+        `"${name}" has no valid package.json (${errorMessage(e)})`,
       );
     }
     const type = manifest.gepard?.type;

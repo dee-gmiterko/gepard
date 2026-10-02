@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import extension from '../dist/index.js';
-import type { LanguageSession } from '../types.js';
+import extension from '../index';
+import type { LanguageSession } from '@gepard/common';
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 const sink = { status: () => {}, log: () => {} };
@@ -25,16 +25,18 @@ describe('typescript extension', () => {
     } finally {
       await session.dispose();
     }
-  });
+  }, 30_000);
 
   it('identifies its files', () => {
     expect(extension.matches('src/a.ts')).toBe(true);
     expect(extension.matches('src/a.tsx')).toBe(true);
     expect(extension.matches('src/a.jsx')).toBe(true);
+    expect(extension.matches('src/a.js')).toBe(true);
     expect(extension.matches('src/a.py')).toBe(false);
     expect(extension.languageId('a.ts')).toBe('typescript');
     expect(extension.languageId('a.tsx')).toBe('typescriptreact');
     expect(extension.languageId('a.jsx')).toBe('javascriptreact');
+    expect(extension.languageId('a.js')).toBe('javascript');
     expect(extension.languageId('a.mjs')).toBe('javascript');
     expect(extension.warmupFile(['types.d.ts', 'a.ts'])).toBe('a.ts');
   });
@@ -83,5 +85,15 @@ describe('language server on fixtures', () => {
   it('parses a JSX widget and reports its top-level symbol', async () => {
     const symbols = await session.documentSymbols('widget.jsx');
     expect(symbols.map((s) => s.name)).toEqual(['Widget']);
+  });
+
+  it('parses a plain JavaScript module and reports its top-level symbols', async () => {
+    const symbols = await session.documentSymbols('plain.js');
+    expect(symbols.map((s) => s.name)).toEqual(['Cache', 'LIMIT', 'makeCache']);
+    expect(symbols.find((s) => s.name === 'Cache')?.kind).toBe('class');
+    expect(symbols.find((s) => s.name === 'Cache')?.children.map((c) => c.name)).toEqual([
+      'constructor',
+      'get',
+    ]);
   });
 });

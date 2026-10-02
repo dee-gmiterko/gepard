@@ -1,2 +1,2 @@
-export type { FileChange } from './session';
+export type { FileChange } from '@gepard/common';
 export { indexer } from './indexer';

@@ -1,8 +1,5 @@
 import type { StreamParser, StringStream } from '@codemirror/language';
 
-// Ported from godot-tools' GDScript.tmLanguage.json (MIT, The Godot Engine
-// community); see THIRD_PARTY_LICENSES.
-
 const CONTROL_KEYWORDS = new Set([
   'if',
   'elif',
@@ -109,8 +106,11 @@ const NUMBER =
   /^(?:0x[0-9a-fA-F_]+|0b[01_]+|\d[\d_]*(?:\.[\d_]*)?(?:[eE][+-]?\d+)?|\.\d[\d_]*(?:[eE][+-]?\d+)?)/;
 const OPERATOR = /^(?:->|:=|\*\*=?|<<=?|>>=?|[-+*/%&|^!<>=]=?|~|\.\.)/;
 
-function readString(stream: StringStream, state: GDScriptState): string {
-  const { quote, triple } = state.string!;
+function readString(
+  stream: StringStream,
+  state: GDScriptState,
+  { quote, triple }: { quote: string; triple: boolean },
+): string {
   while (!stream.eol()) {
     const ch = stream.next();
     if (ch === '\\') {
@@ -195,7 +195,7 @@ export const gdscript: StreamParser<GDScriptState> = {
   },
 
   token(stream: StringStream, state: GDScriptState): string | null {
-    if (state.string) return readString(stream, state);
+    if (state.string) return readString(stream, state, state.string);
     if (stream.eatSpace()) return null;
     if (stream.sol()) state.expect = null;
 
@@ -209,10 +209,11 @@ export const gdscript: StreamParser<GDScriptState> = {
       return null;
     }
 
-    const opening = stream.match(/^[r&^]?("""|'''|"|')/) as RegExpMatchArray | null;
-    if (opening) {
-      state.string = { quote: opening[1][0], triple: opening[1].length === 3 };
-      return readString(stream, state);
+    const opening = stream.match(/^[r&^]?("""|'''|"|')/);
+    if (opening && opening !== true) {
+      const string = { quote: opening[1][0], triple: opening[1].length === 3 };
+      state.string = string;
+      return readString(stream, state, string);
     }
 
     if (stream.match(/^\$\s*(?:"[^"]*"|'[^']*')/)) return 'string.special';
@@ -221,8 +222,8 @@ export const gdscript: StreamParser<GDScriptState> = {
     if (stream.match(/^@[A-Za-z_]\w*/)) return 'attributeName';
     if (stream.match(NUMBER)) return 'number';
 
-    const word = stream.match(/^[A-Za-z_]\w*/) as RegExpMatchArray | null;
-    if (word) return identifier(word[0], stream, state);
+    const word = stream.match(/^[A-Za-z_]\w*/);
+    if (word && word !== true) return identifier(word[0], stream, state);
 
     if (stream.match(OPERATOR)) return 'operator';
     stream.next();

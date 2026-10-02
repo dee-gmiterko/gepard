@@ -1,8 +1,5 @@
 import type { StreamParser, StringStream } from '@codemirror/language';
 
-// Ported from godot-tools' GDShader.tmLanguage.json (MIT, The Godot Engine
-// community); see THIRD_PARTY_LICENSES.
-
 const CONTROL_KEYWORDS = new Set([
   'if',
   'else',
@@ -171,8 +168,8 @@ export const gdshader: StreamParser<GDShaderState> = {
 
     if (stream.match(NUMBER)) return 'number';
 
-    const word = stream.match(/^[A-Za-z_]\w*/) as RegExpMatchArray | null;
-    if (word) return identifier(word[0], stream, state);
+    const word = stream.match(/^[A-Za-z_]\w*/);
+    if (word && word !== true) return identifier(word[0], stream, state);
 
     if (stream.match(OPERATOR)) return 'operator';
     stream.next();

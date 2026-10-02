@@ -1,8 +1,5 @@
 import type { StreamParser, StringStream } from '@codemirror/language';
 
-// Ported from godot-tools' GDResource.tmLanguage.json (MIT, The Godot Engine
-// community); see THIRD_PARTY_LICENSES.
-
 export interface GDResourceState {
   string: boolean;
   header: boolean;
