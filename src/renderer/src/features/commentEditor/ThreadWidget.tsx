@@ -2,7 +2,7 @@ import { useState } from 'react';
 import styled from 'styled-components';
 import { Edit2, Trash2, X } from 'react-feather';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
-import type { Comment, DraftAnchor, ReviewThread } from '@gepard/common/ipc/schemas/comment';
+import type { Comment, DraftAnchor, ReviewThread } from '@gepard/common';
 import { useAppState } from '../../state/AppContext';
 import { IconButton } from '../../components/IconButton';
 import { Button } from '../../components/Button';
@@ -17,7 +17,7 @@ import { Markdown } from '../../components/Markdown';
 import { useDeleteComment } from '../../queries/comments';
 import { useViewer } from '../../queries/projects';
 import { authorDisplayName } from '../../helpers/actor';
-import { refAnchorFromDraft, refAnchorFromThread } from './anchorLine';
+import { refAnchorFromDraft, refAnchorFromThread } from '../../helpers/anchor';
 import { CommentEditor } from './CommentEditor';
 
 const messages = defineMessages({
@@ -69,6 +69,15 @@ const CommentRow = styled.div`
   &:last-child {
     border-bottom: none;
   }
+`;
+
+const ConfirmBox = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: ${({ theme }) => theme.space[2]};
+  text-align: center;
 `;
 
 const RowActions = styled.div`
@@ -134,50 +143,53 @@ export function ThreadWidget({
     const canEdit = comment.viewerDidAuthor;
     const canDelete = comment.viewerCanDelete || isLocalDraft;
     const confirming = confirmDeleteId === comment.id;
+    if (confirming) {
+      return (
+        <CommentRow key={comment.id}>
+          <ConfirmBox>
+            <Caption>
+              <FormattedMessage {...messages.confirmDeleteQuestion} />
+            </Caption>
+            <Inline>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  del.mutate(comment.id);
+                  setConfirmDeleteId(null);
+                }}
+                disabled={del.isPending}
+              >
+                <FormattedMessage {...messages.deleteComment} />
+              </Button>
+              <Button onClick={() => setConfirmDeleteId(null)}>
+                <FormattedMessage {...messages.cancelDelete} />
+              </Button>
+            </Inline>
+          </ConfirmBox>
+        </CommentRow>
+      );
+    }
     return (
       <CommentRow key={comment.id}>
         <Inline>
           <Byline author={authorDisplayName(comment.author, viewer)} time={comment.createdAt} />
           {comment.outdated && <OutdatedBadge />}
           <RowActions>
-            {confirming ? (
-              <>
-                <Caption>
-                  <FormattedMessage {...messages.confirmDeleteQuestion} />
-                </Caption>
-                <Button
-                  variant="danger"
-                  onClick={() => {
-                    del.mutate(comment.id);
-                    setConfirmDeleteId(null);
-                  }}
-                  disabled={del.isPending}
-                >
-                  <FormattedMessage {...messages.deleteComment} />
-                </Button>
-                <Button onClick={() => setConfirmDeleteId(null)}>
-                  <FormattedMessage {...messages.cancelDelete} />
-                </Button>
-              </>
-            ) : (
-              <>
-                {canEdit && (
-                  <IconButton
-                    icon={Edit2}
-                    label={intl.formatMessage(messages.editComment)}
-                    size={14}
-                    onClick={() => setEditingId(comment.id)}
-                  />
-                )}
-                {canDelete && (
-                  <IconButton
-                    icon={Trash2}
-                    label={intl.formatMessage(messages.deleteComment)}
-                    size={14}
-                    onClick={() => setConfirmDeleteId(comment.id)}
-                  />
-                )}
-              </>
+            {canEdit && (
+              <IconButton
+                icon={Edit2}
+                label={intl.formatMessage(messages.editComment)}
+                size={14}
+                onClick={() => setEditingId(comment.id)}
+              />
+            )}
+            {canDelete && (
+              <IconButton
+                icon={Trash2}
+                label={intl.formatMessage(messages.deleteComment)}
+                size={14}
+                onClick={() => setConfirmDeleteId(comment.id)}
+              />
             )}
           </RowActions>
         </Inline>
