@@ -1,49 +1,44 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="face" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#f6cd8b" />
-      <stop offset="1" stop-color="#dd9a41" />
+    <clipPath id="tile">
+      <rect width="512" height="512" rx="115" ry="115" />
+    </clipPath>
+    <linearGradient id="base" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1020" />
+      <stop offset="0.55" stop-color="#151235" />
+      <stop offset="1" stop-color="#1b0f2a" />
+    </linearGradient>
+    <linearGradient id="sweepUp" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#0e7490" stop-opacity="0.55" />
+      <stop offset="0.5" stop-color="#0e7490" stop-opacity="0" />
+    </linearGradient>
+    <linearGradient id="sweepDown" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a21caf" stop-opacity="0.5" />
+      <stop offset="0.6" stop-color="#a21caf" stop-opacity="0" />
+    </linearGradient>
+    <radialGradient id="glowLow" cx="0.2" cy="0.95" r="0.7">
+      <stop offset="0" stop-color="#22d3ee" stop-opacity="0.35" />
+      <stop offset="1" stop-color="#22d3ee" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="glowHigh" cx="0.85" cy="0.1" r="0.65">
+      <stop offset="0" stop-color="#f472b6" stop-opacity="0.35" />
+      <stop offset="1" stop-color="#f472b6" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="vignette" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000000" stop-opacity="0.25" />
+      <stop offset="0.5" stop-color="#000000" stop-opacity="0" />
+      <stop offset="1" stop-color="#000000" stop-opacity="0.35" />
     </linearGradient>
   </defs>
 
-  <rect width="512" height="512" rx="115" ry="115" fill="#12151c" />
-
-  <path
-    d="M174,118 L212,168 L256,150 L300,168 L338,118 L368,190
-       C400,230 400,300 340,345
-       C320,362 290,375 256,380
-       C222,375 192,362 172,345
-       C112,300 112,230 144,190 Z"
-    fill="url(#face)"
-  />
-
-  <g fill="#181b22">
-    <circle cx="256" cy="178" r="7" />
-    <circle cx="192" cy="248" r="8" />
-    <circle cx="320" cy="248" r="8" />
-    <circle cx="222" cy="300" r="6" />
-    <circle cx="290" cy="300" r="6" />
+  <g clip-path="url(#tile)">
+    <rect width="512" height="512" fill="url(#base)" />
+    <rect width="512" height="512" fill="url(#sweepUp)" />
+    <rect width="512" height="512" fill="url(#sweepDown)" />
+    <rect width="512" height="512" fill="url(#glowLow)" />
+    <rect width="512" height="512" fill="url(#glowHigh)" />
+    <rect width="512" height="512" fill="url(#vignette)" />
   </g>
 
-  <path
-    d="M212,236 C207,264 200,292 210,332"
-    fill="none"
-    stroke="#181b22"
-    stroke-width="12"
-    stroke-linecap="round"
-  />
-  <path
-    d="M300,236 C305,264 312,292 302,332"
-    fill="none"
-    stroke="#181b22"
-    stroke-width="12"
-    stroke-linecap="round"
-  />
-
-  <g fill="#181b22">
-    <ellipse cx="210" cy="232" rx="15" ry="11" />
-    <ellipse cx="302" cy="232" rx="15" ry="11" />
-  </g>
-
-  <path d="M244,298 L268,298 L256,314 Z" fill="#181b22" />
+  <path d="M94.8 240.99L94.8 255.18Q86.37 255.18 77.85 261.47Q69.33 267.75 69.33 281.95L69.33 281.95Q69.33 293.22 75.91 299.46Q82.49 305.7 94.8 305.7L94.8 305.7L184.81 305.7L184.81 320.32L94.8 320.32Q73.29 320.32 62.14 310.64Q51 300.96 51 281.95L51 281.95Q51 261.64 62.75 251.31Q74.49 240.99 94.8 240.99L94.8 240.99 M239.27 270.27L239.27 255.47Q254.95 255.47 264.47 263.31Q273.98 271.16 273.98 286.49L273.98 286.49Q273.98 303.05 264.03 311.69Q254.07 320.32 237.86 320.32L237.86 320.32Q219.35 320.32 207.1 306.4Q194.86 292.48 194.86 272.74L194.86 272.74Q194.86 259.17 196.18 248.33Q197.5 237.5 201.64 226.48Q205.78 215.47 212.65 208.15Q219.53 200.84 231.34 196.26Q243.14 191.68 259.18 191.68L259.18 191.68Q270.64 191.68 281.3 194.85Q291.96 198.02 301.83 204.89Q311.7 211.77 317.6 224.45Q323.5 237.14 323.5 254.06L323.5 254.06L323.5 320.32L308.7 320.32L308.7 254.06Q308.7 243.14 305.44 234.59Q302.18 226.04 297.07 220.84Q291.96 215.64 285.17 212.29Q278.39 208.95 272.04 207.71Q265.7 206.48 259.18 206.48L259.18 206.48Q248.43 206.48 240.32 208.68Q232.22 210.88 226.84 215.29Q221.47 219.7 217.94 225.16Q214.42 230.62 212.65 238.73Q210.89 246.84 210.28 254.5Q209.66 262.17 209.66 272.74L209.66 272.74Q209.66 286.49 217.68 295.92Q225.7 305.34 237.86 305.34L237.86 305.34Q259.18 305.34 259.18 286.49L259.18 286.49Q259.18 279.26 253.72 274.77Q248.25 270.27 239.27 270.27L239.27 270.27 M332.35 263.4L332.35 191.68L396.68 228.86L461 191.68L461 263.4Q461 286.84 442.14 303.58Q423.29 320.32 396.68 320.32Q370.06 320.32 351.21 303.58Q332.35 286.84 332.35 263.4L332.35 263.4M446.2 217.41L396.68 245.95L347.15 217.41L347.15 263.4Q347.15 280.67 361.69 292.92Q376.23 305.17 396.68 305.17Q417.12 305.17 431.66 292.92Q446.2 280.67 446.2 263.4L446.2 263.4L446.2 217.41" fill="#ffffff" />
 </svg>
