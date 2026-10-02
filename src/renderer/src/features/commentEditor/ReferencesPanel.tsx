@@ -47,10 +47,6 @@ const messages = defineMessages({
     id: 'commentEditor.referencesPanel.truncated',
     defaultMessage: 'Too many matches: only the first ones are shown and included.',
   },
-  noAnchor: {
-    id: 'commentEditor.referencesPanel.noAnchor',
-    defaultMessage: 'References are not available for this comment (no anchor line).',
-  },
 });
 
 const exactDisabledHints: Record<ExactDisabledReason, MessageDescriptor> = {
@@ -168,7 +164,7 @@ export function ReferencesPanel({
   patternData,
   patternFetching,
   effectivePatternSymbol,
-}: ReferencesPanelProps): React.JSX.Element {
+}: ReferencesPanelProps): React.JSX.Element | null {
   function toggleSymbolRef(symbolRef: CommentReference): void {
     onChoicesChange((prev) => ({ ...prev, symbols: toggleRefIn(prev.symbols, symbolRef) }));
   }
@@ -195,11 +191,7 @@ export function ReferencesPanel({
   }
 
   if (!refAnchor) {
-    return (
-      <Message layout="inline">
-        <FormattedMessage {...messages.noAnchor} />
-      </Message>
-    );
+    return null;
   }
 
   return (
