@@ -3,7 +3,7 @@ import type { Viewer } from '@gepard/common';
 import { authorDisplayName } from '../src/helpers/actor';
 import { unionByKey } from '../src/helpers/array';
 import { imageSrc } from '../src/helpers/image';
-import { basename, foldersOf } from '../src/helpers/paths';
+import { basename, foldersOf, isValidRepoPath } from '../src/helpers/paths';
 import { escapeRegExp } from '../src/helpers/string';
 
 const viewer = (name: string | null): Viewer => ({
@@ -71,5 +71,19 @@ describe('escapeRegExp', () => {
     const text = 'a.b*c(d)[e]';
     expect(new RegExp(escapeRegExp(text)).test(text)).toBe(true);
     expect(new RegExp(escapeRegExp('a.b')).test('axb')).toBe(false);
+  });
+});
+
+describe('isValidRepoPath', () => {
+  it('accepts relative repository paths', () => {
+    expect(isValidRepoPath('package.json')).toBe(true);
+    expect(isValidRepoPath('src/main')).toBe(true);
+  });
+
+  it('rejects absolute, backslash and parent-traversal paths', () => {
+    expect(isValidRepoPath('/package.json')).toBe(false);
+    expect(isValidRepoPath('src\\main')).toBe(false);
+    expect(isValidRepoPath('../x')).toBe(false);
+    expect(isValidRepoPath('a/../x')).toBe(false);
   });
 });

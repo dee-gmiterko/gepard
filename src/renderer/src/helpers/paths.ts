@@ -1,3 +1,9 @@
+import { RepoPath } from '@gepard/common';
+
+export function isValidRepoPath(path: string): boolean {
+  return RepoPath.safeParse(path).success;
+}
+
 export function foldersOf(paths: readonly string[]): string[] {
   const set = new Set<string>();
   for (const path of paths) {

@@ -8,7 +8,7 @@ import { useChangedFiles, useTree } from '../../queries/files';
 import { useAppState } from '../../state/AppContext';
 import { useTargetActions } from './useTargetActions';
 import { activeTargetRef, folderSourcePaths } from '../../state/selectors';
-import { foldersOf } from '../../helpers/paths';
+import { foldersOf, isValidRepoPath } from '../../helpers/paths';
 
 const messages = defineMessages({
   placeholder: {
@@ -85,7 +85,9 @@ export function PathTarget(): React.JSX.Element {
   const isFetching = scoped ? changed.isFetching : tree.isFetching;
 
   function commit(raw: string): void {
-    setPath(raw.trim() || null);
+    const path = raw.trim() || null;
+    if (path !== null && !isValidRepoPath(path)) return;
+    setPath(path);
   }
 
   return (
