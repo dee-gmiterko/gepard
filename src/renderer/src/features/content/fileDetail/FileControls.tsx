@@ -7,14 +7,21 @@ import {
   type RefObject,
 } from 'react';
 import styled, { css, keyframes } from 'styled-components';
-import { ArrowLeft, ArrowRight, CornerUpLeft, CornerUpRight, Move, RefreshCw } from 'react-feather';
+import {
+  ArrowLeft,
+  ArrowRight,
+  CornerUpLeft,
+  CornerUpRight,
+  Move,
+  RefreshCw,
+  Sidebar,
+} from 'react-feather';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
 import { useSetLayout } from '../../../queries/projects';
 import { usePendingCount, useSetViewed, useSync, useViewed } from '../../../queries/comments';
-import { useCommands } from '../../../keyboard/useCommands';
+import { useCommands, useFileNavigation } from '../../../keyboard/useCommands';
 import { useIsCheckedOutChangedFile } from '../useIsCheckedOutChangedFile';
-import { Checkbox } from '../../../components/Checkbox';
 import { Button } from '../../../components/Button';
 import { IconButton } from '../../../components/IconButton';
 import { Inline, Stack } from '../../../components/Layout';
@@ -28,6 +35,14 @@ const messages = defineMessages({
   move: {
     id: 'content.fileControls.move',
     defaultMessage: 'Move',
+  },
+  dock: {
+    id: 'content.fileControls.dock',
+    defaultMessage: 'Dock to file details',
+  },
+  undock: {
+    id: 'content.fileControls.undock',
+    defaultMessage: 'Detach from file details',
   },
   sync: {
     id: 'content.fileControls.sync',
@@ -51,7 +66,7 @@ const messages = defineMessages({
   },
   syncWithCount: {
     id: 'content.fileControls.syncWithCount',
-    defaultMessage: 'Sync +{count}',
+    defaultMessage: 'Sync <b>+{count}</b>',
   },
 });
 
@@ -67,6 +82,11 @@ const Floating = styled(Surface).attrs({ $elevation: 'floating' as const })`
   font-size: ${({ theme }) => theme.font.size.sm};
 `;
 
+const Docked = styled.div`
+  padding: ${({ theme }) => theme.space[2]};
+  font-size: ${({ theme }) => theme.font.size.sm};
+`;
+
 const Row = styled(Inline)`
   padding: 0 ${({ theme }) => theme.space[1]};
 `;
@@ -78,6 +98,11 @@ const NavRow = styled.div`
 const NavButton = styled(IconButton)<{ $tone?: 'danger' | 'success' }>`
   flex: 1 1 0;
   width: auto;
+
+  svg {
+    stroke-width: 3;
+  }
+
   ${({ $tone, theme }) =>
     $tone &&
     css`
@@ -85,8 +110,65 @@ const NavButton = styled(IconButton)<{ $tone?: 'danger' | 'success' }>`
     `}
 `;
 
-const Grip = styled(IconButton)`
+const ring = keyframes`
+  from {
+    transform: scale(0.4);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+`;
+
+const ViewedLabel = styled.label`
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[2]};
+  align-self: stretch;
+  padding: ${({ theme }) => theme.space[2]};
+  font-size: ${({ theme }) => theme.font.size.md};
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.fg};
+  cursor: pointer;
+  border-radius: ${({ theme }) => theme.radius.sm};
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.bgHover};
+  }
+`;
+
+const CheckboxWrap = styled.span`
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const Ring = styled.span`
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: ${({ theme }) => theme.colors.success};
+  pointer-events: none;
+  animation: ${ring} 0.6s ease-out forwards;
+`;
+
+const ViewedInput = styled.input`
+  position: relative;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: ${({ theme }) => theme.colors.success};
+`;
+
+const DockToggle = styled(IconButton)`
   margin-left: auto;
+`;
+
+const Grip = styled(IconButton)`
   cursor: grab;
   touch-action: none;
 
@@ -236,7 +318,7 @@ function useDragOffset(
   return { offset, onPointerDown, onKeyDown };
 }
 
-export function FileControls(): React.JSX.Element | null {
+export function FileControls({ docked = false }: { docked?: boolean }): React.JSX.Element | null {
   const intl = useIntl();
   const state = useAppState();
   const dispatch = useAppDispatch();
@@ -256,35 +338,65 @@ export function FileControls(): React.JSX.Element | null {
   const { data: pendingCount } = usePendingCount();
   const isChangedFile = useIsCheckedOutChangedFile(path);
   const commands = useCommands();
+  const { canGoPrev, canGoNext } = useFileNavigation();
+  const [pulse, setPulse] = useState(0);
 
   if (pr === null) return null;
 
   const isViewed = path !== null && (viewed?.find((v) => v.path === path)?.viewed ?? false);
 
+  function toggleDocked(): void {
+    dispatch({ type: 'layout/setFileControlsDocked', docked: !docked });
+    setLayout.mutate({ ...state.layout, fileControlsDocked: !docked });
+  }
+
+  const Wrapper = docked ? Docked : Floating;
+
   return (
-    <Floating ref={panelRef} style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}>
+    <Wrapper
+      ref={panelRef}
+      style={docked ? undefined : { transform: `translate(${offset.x}px, ${offset.y}px)` }}
+    >
       <Stack>
         <Row>
           {path !== null && isChangedFile && (
-            <Checkbox
-              checked={isViewed}
-              onChange={(checked) => setViewed({ paths: [path], viewed: checked })}
-              label={intl.formatMessage(messages.viewed)}
+            <ViewedLabel>
+              <CheckboxWrap>
+                {pulse > 0 && <Ring key={pulse} />}
+                <ViewedInput
+                  type="checkbox"
+                  checked={isViewed}
+                  onChange={(e) => {
+                    setViewed({ paths: [path], viewed: e.target.checked });
+                    if (e.target.checked) setPulse((n) => n + 1);
+                  }}
+                />
+              </CheckboxWrap>
+              {intl.formatMessage(messages.viewed)}
+            </ViewedLabel>
+          )}
+          <DockToggle
+            icon={Sidebar}
+            size={14}
+            label={intl.formatMessage(docked ? messages.undock : messages.dock)}
+            onClick={toggleDocked}
+          />
+          {!docked && (
+            <Grip
+              icon={Move}
+              size={14}
+              label={intl.formatMessage(messages.move)}
+              onPointerDown={onPointerDown}
+              onKeyDown={onKeyDown}
             />
           )}
-          <Grip
-            icon={Move}
-            size={14}
-            label={intl.formatMessage(messages.move)}
-            onPointerDown={onPointerDown}
-            onKeyDown={onKeyDown}
-          />
         </Row>
 
         <NavRow>
           <NavButton
             icon={ArrowLeft}
             label={intl.formatMessage(messages.previousFile)}
+            disabled={!canGoPrev}
             onClick={() => commands.prevFile()}
           />
           <NavButton
@@ -298,11 +410,13 @@ export function FileControls(): React.JSX.Element | null {
             $tone="success"
             icon={CornerUpRight}
             label={intl.formatMessage(messages.approveNext)}
+            disabled={path === null}
             onClick={() => commands.acceptNext()}
           />
           <NavButton
             icon={ArrowRight}
             label={intl.formatMessage(messages.nextFile)}
+            disabled={!canGoNext}
             onClick={() => commands.nextFile()}
           />
         </NavRow>
@@ -310,12 +424,15 @@ export function FileControls(): React.JSX.Element | null {
         <Button block disabled={syncing} onClick={() => runSync('full')}>
           <Spinning size={14} $spinning={syncing} />
           {pendingCount ? (
-            <FormattedMessage {...messages.syncWithCount} values={{ count: pendingCount }} />
+            <FormattedMessage
+              {...messages.syncWithCount}
+              values={{ count: pendingCount, b: (chunks) => <strong>{chunks}</strong> }}
+            />
           ) : (
             <FormattedMessage {...messages.sync} />
           )}
         </Button>
       </Stack>
-    </Floating>
+    </Wrapper>
   );
 }

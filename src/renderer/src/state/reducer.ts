@@ -22,6 +22,7 @@ export interface Layout {
   fileCommentsPanelWidth: number;
   fileCommentsPanelOpen: boolean;
   hideViewedFiles: boolean;
+  fileControlsDocked: boolean;
   fileControlsPosition: { x: number; y: number } | null;
 }
 
@@ -30,6 +31,7 @@ export const defaultLayout: Layout = {
   fileCommentsPanelWidth: 300,
   fileCommentsPanelOpen: false,
   hideViewedFiles: false,
+  fileControlsDocked: false,
   fileControlsPosition: null,
 };
 
@@ -81,11 +83,13 @@ export type AppAction =
   | { type: 'layout/setFileCommentsPanelWidth'; width: number }
   | { type: 'layout/setFileCommentsPanelOpen'; open: boolean }
   | { type: 'layout/setHideViewedFiles'; hide: boolean }
+  | { type: 'layout/setFileControlsDocked'; docked: boolean }
   | { type: 'layout/setFileControlsPosition'; position: { x: number; y: number } | null }
   | { type: 'file/open'; path: string; line?: number | null; side?: 'LEFT' | 'RIGHT' }
   | { type: 'file/focus'; path: string }
   | { type: 'file/pin'; path: string }
   | { type: 'file/unpin'; path: string }
+  | { type: 'file/close'; path: string }
   | { type: 'file/accept'; path: string }
   | { type: 'file/revert' }
   | { type: 'mainTab/set'; tab: MainTab }
@@ -153,6 +157,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, layout: { ...state.layout, fileCommentsPanelOpen: action.open } };
     case 'layout/setHideViewedFiles':
       return { ...state, layout: { ...state.layout, hideViewedFiles: action.hide } };
+    case 'layout/setFileControlsDocked':
+      return { ...state, layout: { ...state.layout, fileControlsDocked: action.docked } };
     case 'layout/setFileControlsPosition':
       return { ...state, layout: { ...state.layout, fileControlsPosition: action.position } };
     case 'file/open': {
@@ -185,6 +191,15 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           ? (state.previewFile ?? pinnedFiles.at(-1) ?? null)
           : state.activeFile;
       return { ...state, pinnedFiles, activeFile, revealLine: null };
+    }
+    case 'file/close': {
+      const pinnedFiles = state.pinnedFiles.filter((p) => p !== action.path);
+      const previewFile = state.previewFile === action.path ? null : state.previewFile;
+      const activeFile =
+        state.activeFile === action.path
+          ? (previewFile ?? pinnedFiles.at(-1) ?? null)
+          : state.activeFile;
+      return { ...state, pinnedFiles, previewFile, activeFile, revealLine: null };
     }
     case 'file/accept':
       return {

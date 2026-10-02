@@ -6,6 +6,7 @@ import { isDiffView } from '../state/selectors';
 import { useCurrentHead } from './projects';
 import { qk } from './keys';
 import { matchesTarget } from '@gepard/common';
+import { buildTree, flattenLeafPaths } from '../helpers/tree';
 
 const immutable = { staleTime: Infinity, gcTime: 10 * 60 * 1000 } as const;
 
@@ -66,6 +67,6 @@ export function useTargetedFiles(): string[] {
   return useMemo(() => {
     const paths = diffMode ? (changed ?? []).map((f) => f.path) : path ? (tree.data ?? []) : [];
     const scoped = path ? paths.filter((p) => matchesTarget(p, path)) : paths;
-    return [...scoped].sort((a, b) => a.localeCompare(b));
+    return flattenLeafPaths(buildTree(scoped.map((p) => ({ path: p, data: null }))));
   }, [diffMode, changed, path, tree.data]);
 }

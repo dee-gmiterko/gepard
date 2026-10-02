@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
-import { X } from 'react-feather';
+import { Copy, X } from 'react-feather';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
 import { useSetLayout } from '../../../queries/projects';
 import { useResizeHandle } from '../../../hooks/useResizeHandle';
 import { useIsCheckedOutChangedFile } from '../useIsCheckedOutChangedFile';
+import { ellipsis } from '../../../components/Ellipsis';
 import { IconButton } from '../../../components/IconButton';
 import { ResizeHandle } from '../../../components/ResizeHandle';
 import { Inline } from '../../../components/Layout';
 import { Message } from '../../../components/Message';
 import { FileComments } from '../../commentEditor/FileComments';
 import { SymbolsTree } from './SymbolsTree';
+import { FileControls } from './FileControls';
 
 const MIN_WIDTH = 220;
 const MAX_WIDTH = 640;
@@ -20,6 +22,10 @@ const messages = defineMessages({
   title: {
     id: 'content.fileCommentsPanel.title',
     defaultMessage: 'File details',
+  },
+  copy: {
+    id: 'content.fileCommentsPanel.copyPath',
+    defaultMessage: 'Copy',
   },
   close: {
     id: 'content.fileCommentsPanel.close',
@@ -62,13 +68,43 @@ const Title = styled.span`
   min-width: 0;
 `;
 
+const PathRow = styled(Inline)`
+  padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[3]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  font-family: ${({ theme }) => theme.font.mono};
+  font-size: ${({ theme }) => theme.font.size.xs};
+  color: ${({ theme }) => theme.colors.fgMuted};
+`;
+
+const PathText = styled.span`
+  display: flex;
+  flex: 1;
+  min-width: 0;
+`;
+
+const PathHead = styled.span`
+  min-width: 0;
+  ${ellipsis}
+`;
+
+const PathTail = styled.span`
+  flex-shrink: 0;
+  white-space: nowrap;
+`;
+
+const TAIL_LENGTH = 24;
+
+const Top = styled.div`
+  min-width: 0;
+`;
+
 const Body = styled.div`
   min-height: 0;
   overflow: auto;
   padding: ${({ theme }) => theme.space[2]};
 `;
 
-export function FileCommentsPanel(): React.JSX.Element | null {
+export function FileDetailPanel(): React.JSX.Element | null {
   const intl = useIntl();
   const state = useAppState();
   const dispatch = useAppDispatch();
@@ -108,10 +144,32 @@ export function FileCommentsPanel(): React.JSX.Element | null {
   return (
     <Panel $width={width}>
       <Handle onPointerDown={onPointerDown} />
-      <Header>
-        <Title>{intl.formatMessage(messages.title)}</Title>
-        <IconButton icon={X} size={14} label={intl.formatMessage(messages.close)} onClick={close} />
-      </Header>
+      <Top>
+        <Header>
+          <Title>{intl.formatMessage(messages.title)}</Title>
+          <IconButton
+            icon={X}
+            size={14}
+            label={intl.formatMessage(messages.close)}
+            onClick={close}
+          />
+        </Header>
+        {path !== null && (
+          <PathRow>
+            <PathText title={path}>
+              <PathHead>{path.slice(0, Math.max(0, path.length - TAIL_LENGTH))}</PathHead>
+              <PathTail>{path.slice(-TAIL_LENGTH)}</PathTail>
+            </PathText>
+            <IconButton
+              icon={Copy}
+              size={14}
+              label={intl.formatMessage(messages.copy)}
+              onClick={() => void navigator.clipboard.writeText(path)}
+            />
+          </PathRow>
+        )}
+        {state.layout.fileControlsDocked && <FileControls docked />}
+      </Top>
       {path !== null ? (
         <>
           <Body>

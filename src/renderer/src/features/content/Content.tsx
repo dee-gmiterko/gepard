@@ -3,8 +3,8 @@ import { useAppState } from '../../state/AppContext';
 import { FileTabs } from './tabs/FileTabs';
 import { FileViewer } from './viewers/FileViewer';
 import { MissingViewer } from './viewers/missing/MissingViewer';
-import { FileControls } from './fileControls/FileControls';
-import { FileCommentsPanel } from './fileControls/FileCommentsPanel';
+import { FileControls } from './fileDetail/FileControls';
+import { FileDetailPanel } from './fileDetail/FileDetailPanel';
 import { CommentsTab } from './comments/CommentsTab';
 
 const Main = styled.main`
@@ -47,9 +47,11 @@ export function Content(): React.JSX.Element {
             ) : (
               <MissingViewer path={null} />
             )}
-            <FileControls />
+            {!(state.layout.fileControlsDocked && state.layout.fileCommentsPanelOpen) && (
+              <FileControls />
+            )}
           </ViewerArea>
-          <FileCommentsPanel />
+          <FileDetailPanel />
         </FilesRow>
       )}
     </Main>

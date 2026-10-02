@@ -15,6 +15,19 @@ export interface Commands {
   openQuickSearch: (mode: QuickSearchMode) => boolean;
 }
 
+export function useFileNavigation(): { canGoPrev: boolean; canGoNext: boolean } {
+  const activePath = useAppState().activeFile;
+  const { data: viewed } = useViewed();
+  const targetedFiles = useTargetedFiles();
+  return useMemo(() => {
+    const viewedPaths = new Set(viewed?.filter((v) => v.viewed).map((v) => v.path));
+    return {
+      canGoPrev: nextTargetedFile(targetedFiles, activePath, viewedPaths, -1) !== null,
+      canGoNext: nextTargetedFile(targetedFiles, activePath, viewedPaths, 1) !== null,
+    };
+  }, [viewed, targetedFiles, activePath]);
+}
+
 export function useCommands(): Commands {
   const state = useAppState();
   const dispatch = useAppDispatch();
@@ -55,10 +68,12 @@ export function useCommands(): Commands {
       nextFile: () => move(1),
       prevFile: () => move(-1),
       acceptNext: () => {
-        if (!canMarkViewed(activePath)) return move(1);
-        setViewed({ paths: [activePath], viewed: true });
-        dispatch({ type: 'file/accept', path: activePath });
-        move(1);
+        if (activePath === null) return false;
+        if (canMarkViewed(activePath)) {
+          setViewed({ paths: [activePath], viewed: true });
+          dispatch({ type: 'file/accept', path: activePath });
+        }
+        if (!move(1)) dispatch({ type: 'file/close', path: activePath });
         return true;
       },
       revertPrev: () => {
