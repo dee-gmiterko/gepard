@@ -38,7 +38,7 @@ Each agent's prompt must include, per thread it owns:
 
 Tell every agent explicitly not to run project-wide verification (typecheck, lint, format, build, test, `yarn validate`, or any part of it) on its own. Concurrent agents in one working tree will collide on shared caches, lockfiles, and build artifacts if each verifies independently mid-flight. Verification runs exactly once, after every agent is done, by the coordinator.
 
-Agents do not resolve their own GitHub threads. Thread resolution happens only after the combined verification pass in step 4 — an agent mid-flight cannot know whether its change will still hold once every other agent's work lands on top of it.
+Agents do not commit and do not resolve their own GitHub threads. Both happen only after the combined verification pass in step 4 — an agent mid-flight cannot know whether its change will still hold once every other agent's work lands on top of it.
 
 ## 3. Judge each agent's report against the original thread
 
@@ -54,19 +54,19 @@ Once every subagent's report has been judged against its thread, run `yarn valid
 
 This step either ends in a fully green result or a named blocker — there is no third outcome. Fix every failure it surfaces, regardless of which agent's change caused it. Iterate until both commands are clean. If a failure cannot be resolved without a decision only the user can make (a genuine design ambiguity, a missing credential), stop and report that specific blocker instead of guessing past it or leaving the tree broken.
 
-## 5. Close resolved threads
+## 5. Commit
 
-For every thread whose fix has been verified in step 3 and whose code has passed step 4, close it:
+Run the `/commit-all` skill.
+
+## 6. Close resolved threads
+
+For every thread whose fix has been verified in step 3, whose code has passed step 4, and whose changes are committed in step 5, close it:
 
 ```
 gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: "<id>"}) { thread { isResolved } } }'
 ```
 
 Do not leave a verified thread open. Do not close a thread whose fix has not been verified. If a thread's GitHub state and its actual code state disagree, trust the code: reopen a thread closed prematurely, or fix the code before closing one still open.
-
-## 6. Stay inside the authorized scope
-
-Do not take actions beyond what was requested — e.g. resolving a GitHub thread the user did not ask to have touched. If a tool call is denied or blocked, state plainly what happened and what is unknown; do not construct an explanation for it.
 
 ## Project convention: no narrative comments
 

@@ -1,59 +1,66 @@
 # Gepard - Great Pull Request Review Tool
 
-Gepard is an Electron desktop app for reviewing large GitHub pull requests.
-It drives the `gh` CLI to talk to GitHub and `git` to keep a local working
-copy of each project on disk, and gives you a review flow: target a PR, commit, or file
-path, browse the diff in a read-only CodeMirror viewer, leave threaded
-comments with quick file:line references, and sync everything back to
-GitHub when you're ready.
+Gepard is a desktop app for reviewing large GitHub pull requests. Instead of
+a limited GitHub web diff it works in a real clone of the repository, so a review
+is reading the code as it is, with everything around the changed lines available
+for quick navigation and full context, with LSP support.
 
-See `docs/gepard.md` for the full product spec.
+## What it changes about reviewing
 
-## Highlights
+- The whole repository is there, not only the diff. Text and regex search
+  cover every file, and language servers provide symbol search, definitions,
+  references and a per-file outline, so a change can be followed to the code
+  it affects.
+- Review scope is a target: a pull request, a single commit within it, or a
+  path such as a folder or a glob. Navigation, search and viewed state follow
+  that scope.
+- Files are reviewed one at a time from the keyboard, marked viewed as you
+  go, with files worth keeping open pinned alongside.
+- Comments are drafted locally and can reference the definitions or other
+  occurrences the comment is about. One Sync pushes them to GitHub as a
+  single review, publishes the viewed marks and pulls the remote threads.
+  Switching to a PR also refreshes its remote state; nothing is pushed until
+  you sync.
 
-- **Point at a repo, start reviewing** - add a project from its GitHub URL
-  (prefilled from your signed-in `gh` account); it's cloned to a local
-  working copy so you review real files, not a web diff.
-- **Target anything** - fuzzy-narrow the whole app to a PR, a commit, or a
-  file/folder/glob path; open a New PR flow to create and target one on the
-  spot.
-- **Find your way around fast** - browse the full repo, jump straight to
-  just the files a target touched, or search by exact text, regex, or
-  symbol.
-- **Review many files without losing your place** - keep files pinned open,
-  read inline comments as you go, mark files viewed, and step through every
-  thread and reply across the PR in one chronological view - including
-  comments that aren't tied to any file or line.
-- **New files read as text, not noise** - a freshly added file opens as
-  plain text instead of an all-green diff, so you can actually read it.
-- **Comments that carry proof** - attach the exact matching lines or symbol
-  definitions a comment refers to; they're appended to it automatically
-  when you sync.
-- **Nothing reaches GitHub until you say so** - comments and viewed state
-  are kept locally and only pushed - and remote changes only pulled - when
-  you hit Sync.
-- **Instant symbol and text search** - projects are indexed in the
-  background as soon as you open them; TypeScript symbol search works out
-  of the box, with more languages addable as extensions.
-- **Comfortable wherever you work** - localized UI (English by default) and
-  full light/dark colour themes that follow your system preference.
+## Usage
 
-## Prerequisites
+Download the build for your platform from the
+[Releases](https://github.com/dee-gmiterko/gepard/releases) page: a Windows
+installer, a macOS dmg or a Linux AppImage. Sign in with `gh auth login`,
+start Gepard, add a project from its GitHub URL and pick a pull request to
+review better.
 
-- [GitHub CLI](https://cli.github.com/) (`gh`), installed and authenticated
-  (`gh auth login`). Gepard uses it to talk to GitHub (listing your repos and
-  PRs, creating PRs, syncing comments) and as git's credential helper, so `git`
-  must be able to find it on your `PATH`.
-- [Git](https://git-scm.com/) (`git`) on your `PATH`. Gepard uses it to clone
-  each project and to fetch, check out, diff and read history in that clone.
-- [ripgrep](https://github.com/BurntSushi/ripgrep) (`rg`) powers text and regex
-  search. It ships inside Gepard, so there is nothing to install.
+## Extensions
 
-## Getting Gepard
+Language support, syntax highlighting, themes and UI languages are
+extensions. Text search and review work for any file type. These are
+bundled; more are installed from Settings without a restart.
 
-Download the latest build for your platform from the project's
-[Releases](https://github.com/dee-gmiterko/gepard/releases) page (Windows,
-macOS, or Linux AppImage).
+- Language servers
+  - [TypeScript and JavaScript](extensions/lsp/typescript)
+  - [Python](extensions/lsp/python/README.md)
+  - [Java](extensions/lsp/java/README.md)
+  - [C#](extensions/lsp/csharp/README.md)
+  - [GDScript](extensions/lsp/gdscript/README.md)
+- Grammars
+  - [Godot](extensions/grammars/godot/README.md)
+- Themes
+  - [Light](extensions/themes/light)
+  - [Dark](extensions/themes/dark)
+- Locales
+  - [English](extensions/locales/en)
 
-Want to build it from source, or work on Gepard itself? See
-[CONTRIBUTING.md](CONTRIBUTING.md).
+## Requirements
+
+- The [GitHub CLI](https://cli.github.com/), signed in with `gh auth login`.
+  Gepard talks to GitHub only through it and uses it as git's credential
+  helper.
+- [Git](https://git-scm.com/) on your `PATH`. Each project is a full clone
+  kept in Gepard's own data directory.
+
+## More
+
+- [CONTRIBUTING.md](CONTRIBUTING.md): building, development and writing
+  extensions.
+- [docs/gepard.md](docs/gepard.md): the full product spec.
+- [MIT license](LICENSE).
