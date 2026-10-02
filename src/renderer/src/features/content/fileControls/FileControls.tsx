@@ -7,11 +7,12 @@ import {
   type RefObject,
 } from 'react';
 import styled, { css, keyframes } from 'styled-components';
-import { Move, RefreshCw } from 'react-feather';
+import { ArrowLeft, ArrowRight, CornerUpLeft, CornerUpRight, Move, RefreshCw } from 'react-feather';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
 import { useSetLayout } from '../../../queries/projects';
 import { usePendingCount, useSetViewed, useSync, useViewed } from '../../../queries/comments';
+import { useCommands } from '../../../keyboard/useCommands';
 import { useIsCheckedOutChangedFile } from '../useIsCheckedOutChangedFile';
 import { Checkbox } from '../../../components/Checkbox';
 import { Button } from '../../../components/Button';
@@ -31,6 +32,22 @@ const messages = defineMessages({
   sync: {
     id: 'content.fileControls.sync',
     defaultMessage: 'Sync',
+  },
+  previousFile: {
+    id: 'content.fileControls.previousFile',
+    defaultMessage: 'Previous file',
+  },
+  revertLast: {
+    id: 'content.fileControls.revertLast',
+    defaultMessage: 'Revert last approval',
+  },
+  approveNext: {
+    id: 'content.fileControls.approveNext',
+    defaultMessage: 'Approve and go to next file',
+  },
+  nextFile: {
+    id: 'content.fileControls.nextFile',
+    defaultMessage: 'Next file',
   },
   syncWithCount: {
     id: 'content.fileControls.syncWithCount',
@@ -52,6 +69,20 @@ const Floating = styled(Surface).attrs({ $elevation: 'floating' as const })`
 
 const Row = styled(Inline)`
   padding: 0 ${({ theme }) => theme.space[1]};
+`;
+
+const NavRow = styled.div`
+  display: flex;
+`;
+
+const NavButton = styled(IconButton)<{ $tone?: 'danger' | 'success' }>`
+  flex: 1 1 0;
+  width: auto;
+  ${({ $tone, theme }) =>
+    $tone &&
+    css`
+      color: ${$tone === 'danger' ? theme.colors.danger : theme.colors.success};
+    `}
 `;
 
 const Grip = styled(IconButton)`
@@ -224,6 +255,7 @@ export function FileControls(): React.JSX.Element | null {
   const { mutate: runSync, isPending: syncing } = useSync();
   const { data: pendingCount } = usePendingCount();
   const isChangedFile = useIsCheckedOutChangedFile(path);
+  const commands = useCommands();
 
   if (pr === null) return null;
 
@@ -248,6 +280,32 @@ export function FileControls(): React.JSX.Element | null {
             onKeyDown={onKeyDown}
           />
         </Row>
+
+        <NavRow>
+          <NavButton
+            icon={ArrowLeft}
+            label={intl.formatMessage(messages.previousFile)}
+            onClick={() => commands.prevFile()}
+          />
+          <NavButton
+            $tone="danger"
+            icon={CornerUpLeft}
+            label={intl.formatMessage(messages.revertLast)}
+            disabled={state.acceptedFiles.length === 0}
+            onClick={() => commands.revertPrev()}
+          />
+          <NavButton
+            $tone="success"
+            icon={CornerUpRight}
+            label={intl.formatMessage(messages.approveNext)}
+            onClick={() => commands.acceptNext()}
+          />
+          <NavButton
+            icon={ArrowRight}
+            label={intl.formatMessage(messages.nextFile)}
+            onClick={() => commands.nextFile()}
+          />
+        </NavRow>
 
         <Button block disabled={syncing} onClick={() => runSync('full')}>
           <Spinning size={14} $spinning={syncing} />
