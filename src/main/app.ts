@@ -6,6 +6,7 @@ import { createMainWindow } from './window';
 import { log } from './log';
 import { markRendererReady, notifyMainFailure } from './notify';
 import { formatCaughtError } from './helpers/error';
+import { startPortalThemeSync } from './helpers/portalTheme';
 
 export function bootstrap(): void {
   // Electron derives the userData path from the app name at the first
@@ -44,6 +45,9 @@ export function bootstrap(): void {
       });
 
       registerHandlers(handlers);
+
+      const stopPortalThemeSync = startPortalThemeSync();
+      app.on('will-quit', stopPortalThemeSync);
 
       nativeTheme.on('updated', () => {
         emit('theme.changed', { dark: nativeTheme.shouldUseDarkColors });

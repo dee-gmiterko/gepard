@@ -18,6 +18,7 @@ export const typescript = ({ tsconfigRootDir }) => ({
   },
   rules: {
     '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
+    '@typescript-eslint/no-non-null-assertion': 'error',
   },
 });
 

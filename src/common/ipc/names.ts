@@ -40,6 +40,7 @@ export const channelNames = [
   'extensions.install',
   'extensions.dir',
   'grammars.list',
+  'theme.getSystemPrefersDark',
   'theme.getTemplateId',
   'theme.setTemplateId',
   'themes.list',

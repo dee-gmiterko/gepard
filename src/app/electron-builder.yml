@@ -32,6 +32,8 @@ extraResources:
       - '*/*/dist/**'
       - '*/*/vendor/**'
       - '*/*/package.json'
+      - '*/*/index.mjs'
+      - '*/*/messages.json'
       - '*/*/{LICENSE,README.md,THIRD_PARTY_LICENSES,UPSTREAM_LICENSE}'
 win:
   executableName: Gepard

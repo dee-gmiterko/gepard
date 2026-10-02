@@ -182,6 +182,7 @@ export const channels = {
 
   'grammars.list': ch(z.void(), z.array(GrammarModule)),
 
+  'theme.getSystemPrefersDark': ch(z.void(), z.boolean()),
   'theme.getTemplateId': ch(z.void(), z.string().nullable()),
   'theme.setTemplateId': ch(z.object({ templateId: z.string().nullable() }), z.string().nullable()),
   'themes.list': ch(z.void(), z.array(ThemeTemplateData)),

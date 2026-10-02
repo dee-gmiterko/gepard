@@ -1,17 +1,11 @@
-import { useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ThemeProvider as StyledThemeProvider, createGlobalStyle } from 'styled-components';
-import { useIpcEvent } from '../ipc/client';
+import { invoke, useIpcEvent } from '../ipc/client';
 import { useThemeTemplateId, useThemes } from '../queries/theme';
 import { buildTheme } from './tokens';
 import { resolveTemplate } from '../helpers/theme';
 
 const DARK_QUERY = '(prefers-color-scheme: dark)';
-
-function subscribeToSystemTheme(callback: () => void): () => void {
-  const mql = window.matchMedia(DARK_QUERY);
-  mql.addEventListener('change', callback);
-  return () => mql.removeEventListener('change', callback);
-}
 
 function getSystemThemeSnapshot(): boolean {
   return window.matchMedia(DARK_QUERY).matches;
@@ -48,18 +42,16 @@ const GlobalStyle = createGlobalStyle`
 `;
 
 export function AppThemeProvider({ children }: { children: ReactNode }): React.JSX.Element {
-  const systemDark = useSyncExternalStore(
-    subscribeToSystemTheme,
-    getSystemThemeSnapshot,
-    () => false,
-  );
-  // The `prefers-color-scheme` matchMedia `change` event can arrive late in a
-  // background-throttled Electron window, so the main process's own dark-mode
-  // broadcast can override the system query result.
-  const [mainDark, setMainDark] = useState<boolean | null>(null);
-  const systemPrefersDark = mainDark ?? systemDark;
+  const [systemPrefersDark, setSystemPrefersDark] = useState(getSystemThemeSnapshot);
 
-  useIpcEvent('theme.changed', (payload) => setMainDark(payload.dark));
+  // The main process is authoritative: its portal sync overrides themeSource, which matchMedia may not reflect.
+  useEffect(() => {
+    invoke('theme.getSystemPrefersDark')
+      .then(setSystemPrefersDark)
+      .catch(() => {});
+  }, []);
+
+  useIpcEvent('theme.changed', (payload) => setSystemPrefersDark(payload.dark));
 
   const { data: templateId } = useThemeTemplateId();
   const resolvedTemplateId = templateId ?? null;
