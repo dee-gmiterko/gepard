@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
 import { isDiffView } from '../../../state/selectors';
 import { useOpenProject, useSetLayout } from '../../../queries/projects';
 import { useTargetedFiles, useTree } from '../../../queries/files';
-import { useCommands } from '../../../keyboard/useCommands';
 import { buildTree, buildFlatList, withRoot, type TreeNode } from '../../../helpers/tree';
 import { Message } from '../../../components/Message';
 import { Inline } from '../../../components/Layout';
@@ -12,7 +11,7 @@ import { Toolbar } from '../../../components/Toolbar';
 import { HideViewedToggle } from '../../../components/HideViewedToggle';
 import { ViewModeToggle, type ViewMode } from '../../../components/ViewModeToggle';
 import { ReviewTree } from '../fileRows/ReviewTree';
-import { aggregateRows, hideViewedRows, isViewedRow, type RowData } from '../../../helpers/row';
+import { aggregateRows, hideViewedRows, type RowData } from '../../../helpers/row';
 import { useRowData } from '../fileRows/rowData';
 
 const messages = defineMessages({
@@ -54,7 +53,6 @@ export function TargetedBrowser(): React.JSX.Element {
   const state = useAppState();
   const dispatch = useAppDispatch();
   const setLayout = useSetLayout();
-  const commands = useCommands();
   const path = state.targeting.path;
   const hideViewed = state.layout.hideViewedFiles;
   const [mode, setMode] = useState<ViewMode>('tree');
@@ -78,12 +76,6 @@ export function TargetedBrowser(): React.JSX.Element {
     const entries = buildTree(visibleItems, options);
     return entries.length > 0 ? withRoot(entries, rootName, options) : entries;
   }, [visibleItems, mode, rootName]);
-
-  const activeHidden =
-    hideViewed && items.some((item) => item.path === state.activeFile && isViewedRow(item.data));
-  useEffect(() => {
-    if (activeHidden) commands.nextFile();
-  }, [activeHidden, commands]);
 
   function setHideViewed(hide: boolean): void {
     dispatch({ type: 'layout/setHideViewedFiles', hide });

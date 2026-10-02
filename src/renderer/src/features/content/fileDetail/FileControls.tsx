@@ -19,7 +19,7 @@ import {
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
 import { useSetLayout } from '../../../queries/projects';
-import { usePendingCount, useSetViewed, useSync, useViewed } from '../../../queries/comments';
+import { usePendingCount, useSync, useViewed } from '../../../queries/comments';
 import { useCommands, useFileNavigation } from '../../../keyboard/useCommands';
 import { useIsCheckedOutChangedFile } from '../useIsCheckedOutChangedFile';
 import { Button } from '../../../components/Button';
@@ -333,7 +333,6 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
   });
 
   const { data: viewed } = useViewed();
-  const { mutate: setViewed } = useSetViewed();
   const { mutate: runSync, isPending: syncing } = useSync();
   const { data: pendingCount } = usePendingCount();
   const isChangedFile = useIsCheckedOutChangedFile(path);
@@ -367,7 +366,7 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
                   type="checkbox"
                   checked={isViewed}
                   onChange={(e) => {
-                    setViewed({ paths: [path], viewed: e.target.checked });
+                    commands.setViewedPaths([path], e.target.checked);
                     if (e.target.checked) setPulse((n) => n + 1);
                   }}
                 />

@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { useAppState } from '../../../state/AppContext';
-import { useSetViewed } from '../../../queries/comments';
+import { useCommands } from '../../../keyboard/useCommands';
 import { Checkbox } from '../../../components/Checkbox';
 import { Inline } from '../../../components/Layout';
 import type { RowData } from '../../../helpers/row';
@@ -49,7 +49,7 @@ export function FileRowMarks({
 }): React.JSX.Element | null {
   const intl = useIntl();
   const state = useAppState();
-  const { mutate: setViewed } = useSetViewed();
+  const commands = useCommands();
   const hasCounts = data.additions > 0 || data.deletions > 0;
   const hasViewed = state.targeting.pr !== null && data.totalCount > 0;
   if (!hasCounts && !hasViewed) return null;
@@ -75,7 +75,7 @@ export function FileRowMarks({
           checked={data.viewedCount === data.totalCount}
           indeterminate={data.viewedCount > 0 && data.viewedCount < data.totalCount}
           ariaLabel={intl.formatMessage(messages.viewed)}
-          onChange={(checked) => setViewed({ paths, viewed: checked })}
+          onChange={(checked) => commands.setViewedPaths(paths, checked)}
         />
       )}
     </Marks>

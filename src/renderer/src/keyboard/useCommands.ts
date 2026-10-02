@@ -7,6 +7,7 @@ import { nextTargetedFile } from '../helpers/targetedFiles';
 
 export interface Commands {
   toggleViewed: (path?: string | null) => boolean;
+  setViewedPaths: (paths: string[], viewed: boolean) => void;
   nextFile: () => boolean;
   prevFile: () => boolean;
   acceptNext: () => boolean;
@@ -32,6 +33,7 @@ export function useCommands(): Commands {
   const state = useAppState();
   const dispatch = useAppDispatch();
   const pr = state.targeting.pr;
+  const hideViewed = state.layout.hideViewedFiles;
 
   const { data: viewed } = useViewed();
   const { mutate: setViewed } = useSetViewed();
@@ -52,19 +54,27 @@ export function useCommands(): Commands {
       return pr !== null && path !== null && changedPaths.has(path);
     }
 
-    function move(direction: 1 | -1): boolean {
-      const next = nextTargetedFile(targetedFiles, activePath, viewedPaths, direction);
+    function move(direction: 1 | -1, skip: ReadonlySet<string> = viewedPaths): boolean {
+      const next = nextTargetedFile(targetedFiles, activePath, skip, direction);
       if (next === null) return false;
       dispatch({ type: 'file/open', path: next });
       return true;
     }
 
+    function setViewedPaths(paths: string[], isViewed: boolean): void {
+      setViewed({ paths, viewed: isViewed });
+      if (isViewed && hideViewed && activePath !== null && paths.includes(activePath)) {
+        move(1, new Set([...viewedPaths, ...paths]));
+      }
+    }
+
     return {
       toggleViewed: (path = activePath) => {
         if (!canMarkViewed(path)) return false;
-        setViewed({ paths: [path], viewed: !viewedPaths.has(path) });
+        setViewedPaths([path], !viewedPaths.has(path));
         return true;
       },
+      setViewedPaths,
       nextFile: () => move(1),
       prevFile: () => move(-1),
       acceptNext: () => {
@@ -93,5 +103,15 @@ export function useCommands(): Commands {
         return true;
       },
     };
-  }, [activePath, acceptedFiles, pr, viewed, changedFiles, setViewed, dispatch, targetedFiles]);
+  }, [
+    activePath,
+    acceptedFiles,
+    pr,
+    hideViewed,
+    viewed,
+    changedFiles,
+    setViewed,
+    dispatch,
+    targetedFiles,
+  ]);
 }
