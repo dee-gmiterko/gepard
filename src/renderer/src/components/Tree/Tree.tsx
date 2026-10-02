@@ -4,7 +4,7 @@ import { ChevronDown, ChevronRight } from 'react-feather';
 import { defineMessages, useIntl } from 'react-intl';
 import { IconButton, focusVisible } from '../IconButton';
 import { listReset } from '../List';
-import type { TreeNode } from './buildTree';
+import type { TreeNode } from '../../helpers/tree';
 import { TreeLabel } from './TreeLabel';
 
 const messages = defineMessages({

@@ -1,4 +1,4 @@
-import type { GroupedResult } from '@gepard/common/ipc/schemas/search';
+import type { GroupedResult } from '@gepard/common';
 
 export type FileMatches = GroupedResult['files'][number];
 export type MatchItem = FileMatches['matches'][number];

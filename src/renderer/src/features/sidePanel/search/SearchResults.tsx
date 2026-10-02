@@ -10,7 +10,7 @@ import { VirtualList } from '../../../components/VirtualList';
 import { focusVisible } from '../../../components/IconButton';
 import { FileRowMarks } from '../fileRows/FileRowMarks';
 import { useRowData } from '../fileRows/rowData';
-import { buildSearchRows, type FileMatches, type SearchRow } from './searchRows';
+import { buildSearchRows, type FileMatches, type SearchRow } from '../../../helpers/search';
 
 const messages = defineMessages({
   loadingMore: {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rankNavigation } from '../src/features/quickSearch/navigationMatches';
+import { rankNavigation } from '../src/helpers/navigation';
 import type { WorkspaceSymbol } from '@gepard/common';
 
 function symbol(

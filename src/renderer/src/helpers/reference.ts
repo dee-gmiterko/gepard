@@ -1,5 +1,18 @@
-import type { SearchScope } from '../../components/ScopeToggle';
-import type { CommentReference } from '@gepard/common/ipc/schemas/comment';
+import type { SearchScope } from '../components/ScopeToggle';
+import type { CommentReference } from '@gepard/common';
+
+export function sameRef(a: CommentReference, b: CommentReference): boolean {
+  return a.kind === b.kind && a.path === b.path && a.line === b.line;
+}
+
+export function toggleRefIn(
+  references: CommentReference[],
+  ref: CommentReference,
+): CommentReference[] {
+  return references.some((r) => sameRef(r, ref))
+    ? references.filter((r) => !sameRef(r, ref))
+    : [...references, ref];
+}
 
 export interface ReferenceChoices {
   symbolOpen: boolean;

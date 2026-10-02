@@ -3,7 +3,7 @@ export interface FuzzyMatch {
   indices: number[];
 }
 
-function fuzzyMatch(query: string, text: string): FuzzyMatch | null {
+export function fuzzyMatch(query: string, text: string): FuzzyMatch | null {
   if (query.length === 0) return { score: 0, indices: [] };
   const q = query.toLowerCase();
   const t = text.toLowerCase();

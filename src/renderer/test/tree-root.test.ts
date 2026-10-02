@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTree, withRoot } from '../src/components/Tree/buildTree';
+import { buildTree, withRoot } from '../src/helpers/tree';
 
 const sum = (values: number[]): number => values.reduce((a, b) => a + b, 0);
 

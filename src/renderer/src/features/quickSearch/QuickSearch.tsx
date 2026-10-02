@@ -16,8 +16,8 @@ import { PathLabel } from '../../components/PathLabel';
 import { Caption } from '../../components/Caption';
 import { Message } from '../../components/Message';
 import { listReset } from '../../components/List';
-import { findBestMatch, foldCase, nextMatch, type TextMatch } from './fileMatch';
-import { rankNavigation, type NavigationMatch } from './navigationMatches';
+import { findBestMatch, foldCase, nextMatch, type TextMatch } from '../../helpers/match';
+import { rankNavigation, type NavigationMatch } from '../../helpers/navigation';
 import { definitionKinds, type WorkspaceSymbol } from '@gepard/common';
 
 type SymbolKind = WorkspaceSymbol['kind'];

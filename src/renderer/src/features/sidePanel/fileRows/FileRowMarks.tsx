@@ -4,7 +4,7 @@ import { useAppState } from '../../../state/AppContext';
 import { useSetViewed } from '../../../queries/comments';
 import { Checkbox } from '../../../components/Checkbox';
 import { Inline } from '../../../components/Layout';
-import type { RowData } from './rowData';
+import type { RowData } from '../../../helpers/row';
 
 const messages = defineMessages({
   added: {

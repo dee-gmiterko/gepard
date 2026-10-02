@@ -4,10 +4,11 @@ import { defineMessages, FormattedMessage, useIntl, type MessageDescriptor } fro
 import { useAppDispatch } from '../../../state/AppContext';
 import { useCurrentHead } from '../../../queries/projects';
 import { useDocumentSymbols } from '../../../queries/search';
-import { Tree, TreeLabel, type TreeNode } from '../../../components/Tree';
+import { Tree, TreeLabel } from '../../../components/Tree';
+import type { TreeNode } from '../../../helpers/tree';
 import { Caption } from '../../../components/Caption';
 import { Message } from '../../../components/Message';
-import type { DocumentSymbol } from '@gepard/common/ipc/schemas/lsp';
+import type { DocumentSymbol } from '@gepard/common';
 
 type SymbolKind = DocumentSymbol['kind'];
 

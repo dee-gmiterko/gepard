@@ -6,7 +6,8 @@ import { useCurrentHead } from '../../../queries/projects';
 import { useTargetedFiles } from '../../../queries/files';
 import { useSearchPages, useWorkspaceSymbols, type SearchParams } from '../../../queries/search';
 import { IconButton } from '../../../components/IconButton';
-import { Combobox, fuzzyRanges } from '../../../components/Combobox';
+import { Combobox } from '../../../components/Combobox';
+import { fuzzyRanges } from '../../../helpers/fuzzy';
 import { HighlightedText } from '../../../components/HighlightedText';
 import { Toolbar } from '../../../components/Toolbar';
 import { ScopeToggle, type SearchScope } from '../../../components/ScopeToggle';
@@ -17,8 +18,8 @@ import { Message } from '../../../components/Message';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import { localizedErrorMessage } from '../../../errors/errorMessage';
 import { SearchResults } from './SearchResults';
-import { countMatches } from './searchRows';
-import type { WorkspaceSymbol } from '@gepard/common/ipc/schemas/search';
+import { countMatches } from '../../../helpers/search';
+import type { WorkspaceSymbol } from '@gepard/common';
 
 type SymbolKind = WorkspaceSymbol['kind'];
 

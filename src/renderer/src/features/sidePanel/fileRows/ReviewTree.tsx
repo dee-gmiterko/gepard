@@ -1,8 +1,9 @@
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
 import { useCommands } from '../../../keyboard/useCommands';
-import { Tree, TreeLabel, type TreeNode } from '../../../components/Tree';
+import { Tree, TreeLabel } from '../../../components/Tree';
+import type { TreeNode } from '../../../helpers/tree';
 import { FileRowMarks } from './FileRowMarks';
-import type { RowData } from './rowData';
+import type { RowData } from '../../../helpers/row';
 
 function changedLeaves(node: TreeNode<RowData>): string[] {
   if (!node.isFolder) return (node.data?.totalCount ?? 0) > 0 ? [node.path] : [];

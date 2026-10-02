@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findBestMatch, foldCase, nextMatch } from '../src/features/quickSearch/fileMatch';
+import { findBestMatch, foldCase, nextMatch } from '../src/helpers/match';
 
 const text = 'const Total = 1;\nlet subtotal = total + 2;\nreturn total;\n';
 const at = (needle: string, nth = 0): number => {

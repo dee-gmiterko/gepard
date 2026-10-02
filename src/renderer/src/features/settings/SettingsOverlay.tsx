@@ -72,7 +72,6 @@ export function SettingsOverlay({ onClose }: SettingsOverlayProps): React.JSX.El
     dialog.showModal();
 
     // Fires on Escape (before `close`) and on programmatic close via close().
-    // Keep the parent's open state in sync with both paths.
     dialog.addEventListener('close', onClose);
 
     return () => {

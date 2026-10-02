@@ -7,7 +7,7 @@ import { IconButton } from '../IconButton';
 import { Menu, MenuAnchor, MenuItem, MenuMessage } from '../Menu';
 import { HighlightedText } from '../HighlightedText';
 import { fieldChrome, textFieldBase } from '../TextInput';
-import { fuzzyFilter, fuzzyRanges } from './fuzzy';
+import { fuzzyFilter, fuzzyRanges } from '../../helpers/fuzzy';
 
 const messages = defineMessages({
   loading: {

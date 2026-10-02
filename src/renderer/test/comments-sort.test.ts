@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { sortThreadsChronologically } from '../src/features/content/comments/sortThreads';
-import type { Comment, ReviewThread } from '@gepard/common/ipc/schemas/comment';
+import { sortThreadsChronologically } from '../src/helpers/comment';
+import type { Comment, ReviewThread } from '@gepard/common';
 
 function comment(id: string, createdAt: string): Comment {
   return {

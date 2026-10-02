@@ -3,28 +3,8 @@ import { useAppState } from '../../../state/AppContext';
 import { isDiffView } from '../../../state/selectors';
 import { useChangedFiles } from '../../../queries/files';
 import { useViewed } from '../../../queries/comments';
-import type { ChangedFile } from '@gepard/common/ipc/schemas/pr';
-
-export interface RowData {
-  additions: number;
-  deletions: number;
-  viewedCount: number;
-  totalCount: number;
-}
-
-export const ZERO_ROW: RowData = { additions: 0, deletions: 0, viewedCount: 0, totalCount: 0 };
-
-export function aggregateRows(children: RowData[]): RowData {
-  return children.reduce(
-    (sum, c) => ({
-      additions: sum.additions + c.additions,
-      deletions: sum.deletions + c.deletions,
-      viewedCount: sum.viewedCount + c.viewedCount,
-      totalCount: sum.totalCount + c.totalCount,
-    }),
-    ZERO_ROW,
-  );
-}
+import type { ChangedFile } from '@gepard/common';
+import { ZERO_ROW, type RowData } from '../../../helpers/row';
 
 interface RowDataSource {
   diffMode: boolean;

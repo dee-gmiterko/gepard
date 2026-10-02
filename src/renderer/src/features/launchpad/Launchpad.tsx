@@ -24,7 +24,7 @@ import {
 } from '../../queries/projects';
 import { useAppDispatch } from '../../state/AppContext';
 import { RepoUrlCombobox } from './RepoUrlCombobox';
-import type { EventPayload } from '@gepard/common/ipc/contract';
+import type { EventPayload } from '@gepard/common';
 
 type CloneProgress = EventPayload<'clone.progress'>;
 
@@ -259,7 +259,7 @@ export function Launchpad(): React.JSX.Element {
   useIpcEvent('clone.progress', (payload) => {
     setProgressById((prev) => ({ ...prev, [payload.projectId]: payload }));
     if (payload.phase === 'done' || payload.phase === 'error') {
-      qc.invalidateQueries({ queryKey: qk.projects() });
+      void qc.invalidateQueries({ queryKey: qk.projects() });
     }
   });
 
@@ -295,7 +295,7 @@ export function Launchpad(): React.JSX.Element {
   }
 
   async function handleOpen(projectId: string): Promise<void> {
-    qc.invalidateQueries({ queryKey: qk.project(projectId) });
+    void qc.invalidateQueries({ queryKey: qk.project(projectId) });
     qc.removeQueries({ queryKey: qk.open(projectId) });
     try {
       const opened = await qc.fetchQuery({
@@ -399,7 +399,7 @@ export function Launchpad(): React.JSX.Element {
             <ListRow
               key={project.id}
               $clickable={project.cloned}
-              onClick={project.cloned ? () => handleOpen(project.id) : undefined}
+              onClick={project.cloned ? () => void handleOpen(project.id) : undefined}
             >
               <RowMain>
                 <RowTitle>
@@ -433,7 +433,7 @@ export function Launchpad(): React.JSX.Element {
                   <IconButton
                     icon={Folder}
                     label={intl.formatMessage(messages.open)}
-                    onClick={() => handleOpen(project.id)}
+                    onClick={() => void handleOpen(project.id)}
                   />
                 ) : (
                   <IconButton

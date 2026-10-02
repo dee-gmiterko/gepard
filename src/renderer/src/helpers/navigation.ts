@@ -1,5 +1,5 @@
-import { fuzzyMatch, fuzzyRanges } from '../../components/Combobox';
-import type { TextRange } from '../../components/HighlightedText';
+import { fuzzyMatch, fuzzyRanges } from './fuzzy';
+import type { TextRange } from '../components/HighlightedText';
 import type { WorkspaceSymbol } from '@gepard/common';
 
 export const QUICK_SEARCH_LIMIT = 8;

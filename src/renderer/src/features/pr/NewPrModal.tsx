@@ -9,7 +9,7 @@ import { TextArea, TextInput } from '../../components/TextInput';
 import { ActionRow, Stack } from '../../components/Layout';
 import { useBranches, useCreatePr } from '../../queries/prs';
 import { localizedErrorMessage } from '../../errors/errorMessage';
-import type { PrSummary } from '@gepard/common/ipc/schemas/pr';
+import type { PrSummary } from '@gepard/common';
 
 const messages = defineMessages({
   title: {

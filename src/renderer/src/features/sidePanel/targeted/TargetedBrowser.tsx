@@ -5,14 +5,14 @@ import { isDiffView } from '../../../state/selectors';
 import { useOpenProject, useSetLayout } from '../../../queries/projects';
 import { useTargetedFiles, useTree } from '../../../queries/files';
 import { useCommands } from '../../../keyboard/useCommands';
-import { buildTree, buildFlatList, withRoot, type TreeNode } from '../../../components/Tree';
+import { buildTree, buildFlatList, withRoot, type TreeNode } from '../../../helpers/tree';
 import { Message } from '../../../components/Message';
 import { Toolbar } from '../../../components/Toolbar';
 import { HideViewedToggle } from '../../../components/HideViewedToggle';
 import { ViewModeToggle, type ViewMode } from '../../../components/ViewModeToggle';
 import { ReviewTree } from '../fileRows/ReviewTree';
-import { aggregateRows, useRowData, type RowData } from '../fileRows/rowData';
-import { hideViewedRows, isViewedRow } from '../fileRows/viewedRows';
+import { aggregateRows, hideViewedRows, isViewedRow, type RowData } from '../../../helpers/row';
+import { useRowData } from '../fileRows/rowData';
 
 const messages = defineMessages({
   noTarget: {

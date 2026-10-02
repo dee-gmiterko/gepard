@@ -2,11 +2,10 @@ import { useMemo } from 'react';
 import { useLineSymbols, useSearch, type SearchParams } from '../../queries/search';
 import { useFileContent, useTargetedFiles } from '../../queries/files';
 import type { SearchScope } from '../../components/ScopeToggle';
-import type { ReferenceChoices } from './referenceChoices';
+import type { ReferenceChoices } from '../../helpers/reference';
 import type { LineSymbol } from './SymbolDefinitionSection';
-import type { RefAnchor } from './anchorLine';
-import type { CommentReference } from '@gepard/common/ipc/schemas/comment';
-import type { GroupedResult } from '@gepard/common/ipc/schemas/search';
+import type { RefAnchor } from '../../helpers/anchor';
+import type { CommentReference, GroupedResult } from '@gepard/common';
 
 function referencesFromResult(
   data: GroupedResult | undefined,

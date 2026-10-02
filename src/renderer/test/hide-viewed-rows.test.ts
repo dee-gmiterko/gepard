@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildTree, flattenLeafPaths, withRoot } from '../src/components/Tree/buildTree';
-import { aggregateRows, type RowData } from '../src/features/sidePanel/fileRows/rowData';
-import { hideViewedRows, isViewedRow } from '../src/features/sidePanel/fileRows/viewedRows';
+import { buildTree, flattenLeafPaths, withRoot } from '../src/helpers/tree';
+import { aggregateRows, hideViewedRows, isViewedRow, type RowData } from '../src/helpers/row';
 
 function row(viewed: boolean, totalCount = 1): RowData {
   return { additions: 1, deletions: 0, viewedCount: viewed ? totalCount : 0, totalCount };

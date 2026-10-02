@@ -2,10 +2,11 @@ import { useMemo } from 'react';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import { useCurrentHead, useOpenProject } from '../../../queries/projects';
 import { useTree } from '../../../queries/files';
-import { buildTree, withRoot } from '../../../components/Tree';
+import { buildTree, withRoot } from '../../../helpers/tree';
 import { Message } from '../../../components/Message';
 import { ReviewTree } from '../fileRows/ReviewTree';
-import { aggregateRows, useRowData } from '../fileRows/rowData';
+import { aggregateRows } from '../../../helpers/row';
+import { useRowData } from '../fileRows/rowData';
 
 const messages = defineMessages({
   opening: {

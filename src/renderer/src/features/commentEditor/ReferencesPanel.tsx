@@ -9,11 +9,9 @@ import { Message } from '../../components/Message';
 import { ScopeToggle, type SearchScope } from '../../components/ScopeToggle';
 import { Select } from '../../components/Select';
 import { SymbolDefinitionSection, type LineSymbol } from './SymbolDefinitionSection';
-import { toggleRefIn } from './refs';
-import type { CommentReference } from '@gepard/common/ipc/schemas/comment';
-import type { GroupedResult } from '@gepard/common/ipc/schemas/search';
-import type { RefAnchor } from './anchorLine';
-import type { ReferenceChoices } from './referenceChoices';
+import { toggleRefIn, type ReferenceChoices } from '../../helpers/reference';
+import type { CommentReference, GroupedResult } from '@gepard/common';
+import type { RefAnchor } from '../../helpers/anchor';
 import type { ExactDisabledReason } from './useDerivedReferences';
 
 const messages = defineMessages({

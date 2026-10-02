@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { ImageData } from '@gepard/common/ipc/schemas/pr';
+import type { ImageData } from '@gepard/common';
 import { Image } from '../../../../components/Image';
 import { ViewerFrame } from '../ViewerFrame';
 import { imageSrc } from '../../../../helpers/image';

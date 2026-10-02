@@ -1,4 +1,4 @@
-import { fuzzyMatch } from '../../components/Combobox';
+import { fuzzyMatch } from './fuzzy';
 
 export interface TextMatch {
   from: number;

@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { ReferencesPanel } from './ReferencesPanel';
-import { initialReferenceChoices, type ReferenceChoices } from './referenceChoices';
+import { initialReferenceChoices, type ReferenceChoices } from '../../helpers/reference';
 import { useDerivedReferences } from './useDerivedReferences';
 import { useUpsertComment, type CommentDraftBody } from '../../queries/comments';
 import { Button } from '../../components/Button';
 import { ActionRow, Stack } from '../../components/Layout';
 import { TextArea } from '../../components/TextInput';
-import type { CommentReference, DraftAnchor } from '@gepard/common/ipc/schemas/comment';
-import type { RefAnchor } from './anchorLine';
+import type { CommentReference, DraftAnchor } from '@gepard/common';
+import type { RefAnchor } from '../../helpers/anchor';
 
 const messages = defineMessages({
   placeholder: {

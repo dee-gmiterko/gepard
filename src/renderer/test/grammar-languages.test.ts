@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { LanguageDescription, LanguageSupport, StreamLanguage } from '@codemirror/language';
-import type { GrammarExtension } from '@gepard/common/extensions/grammar';
+import type { GrammarExtension } from '@gepard/common';
 import {
   allLanguageDescriptions,
   grammarLanguageDescriptions,
-  type GrammarApi,
 } from '../src/components/CodeEditor/languages';
 
 const demoModule: GrammarExtension = {
@@ -15,7 +14,7 @@ const demoModule: GrammarExtension = {
     { name: 'DemoResource', extensions: ['dres'] },
   ],
   support(api, language) {
-    const { StreamLanguage: Stream } = api as GrammarApi;
+    const { StreamLanguage: Stream } = api;
     const lang = Stream.define({
       token(stream) {
         stream.skipToEnd();
@@ -27,7 +26,7 @@ const demoModule: GrammarExtension = {
 };
 
 const grammars = [{ id: 'demo', displayName: 'Demo', languages: demoModule.languages, source: '' }];
-const load = async (): Promise<GrammarExtension> => demoModule;
+const load = (): Promise<GrammarExtension> => Promise.resolve(demoModule);
 
 describe('grammar language descriptions', () => {
   it('matches by extension and by exact filename', () => {

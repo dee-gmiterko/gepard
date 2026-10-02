@@ -9,11 +9,9 @@ import { Message } from '../../components/Message';
 import { ScopeToggle, type SearchScope } from '../../components/ScopeToggle';
 import { useDefinition } from '../../queries/search';
 import { useTargetedFiles } from '../../queries/files';
-import { sameRef } from './refs';
-import { isTargeted } from '@gepard/common/model/paths';
-import type { CommentReference } from '@gepard/common/ipc/schemas/comment';
-import type { LineSymbolsResult } from '@gepard/common/ipc/schemas/lsp';
-import type { RefAnchor } from './anchorLine';
+import { sameRef } from '../../helpers/reference';
+import { isTargeted, type CommentReference, type LineSymbolsResult } from '@gepard/common';
+import type { RefAnchor } from '../../helpers/anchor';
 
 export type LineSymbol = LineSymbolsResult['symbols'][number];
 

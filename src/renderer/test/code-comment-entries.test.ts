@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { codeViewCommentEntries } from '../src/components/CodeEditor/commentWidgets';
-import type { Comment, ReviewThread } from '@gepard/common/ipc/schemas/comment';
+import type { Comment, ReviewThread } from '@gepard/common';
 
 const HEAD = '1111111111111111111111111111111111111111';
 const OTHER = '2222222222222222222222222222222222222222';

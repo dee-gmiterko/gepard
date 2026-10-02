@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  buildSearchRows,
-  countMatches,
-  type FileMatches,
-} from '../src/features/sidePanel/search/searchRows';
+import { buildSearchRows, countMatches, type FileMatches } from '../src/helpers/search';
 
 function file(path: string, lines: number[] = [1], moreMatches = false): FileMatches {
   return {

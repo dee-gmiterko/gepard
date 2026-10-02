@@ -1,7 +1,7 @@
 import { defineMessages, useIntl } from 'react-intl';
 import { Combobox } from '../../components/Combobox';
 import { repoFilterText, repoSearchQuery, repoUrl } from '../../helpers/github';
-import type { ViewerRepo } from '@gepard/common/ipc/schemas/project';
+import type { ViewerRepo } from '@gepard/common';
 
 const messages = defineMessages({
   loading: {

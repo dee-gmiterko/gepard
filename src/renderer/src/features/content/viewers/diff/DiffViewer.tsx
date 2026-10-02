@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { DiffRow } from '@gepard/common/ipc/schemas/pr';
+import type { DiffRow } from '@gepard/common';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import { useAppState } from '../../../../state/AppContext';
 import { useFileDiff } from '../../../../queries/files';
