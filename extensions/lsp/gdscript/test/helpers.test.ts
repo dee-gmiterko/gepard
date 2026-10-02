@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import type { DocumentSymbol } from '@gepard/common';
+import type { SourceDocumentSymbol } from '@gepard/common';
 import { identifiersOn } from '../helpers/identifier';
 import { freePort } from '../helpers/net';
 import { findSymbolAt, symbolKind, unwrapFileSymbol } from '../helpers/symbol';
 
 const sym = (
   name: string,
-  kind: DocumentSymbol['kind'],
+  kind: SourceDocumentSymbol['kind'],
   line: number,
-  children: DocumentSymbol[] = [],
-): DocumentSymbol => {
+  children: SourceDocumentSymbol[] = [],
+): SourceDocumentSymbol => {
   const range = { start: { line, col: 1 }, end: { line, col: 10 } };
   return { name, kind, range, selectionRange: range, children };
 };

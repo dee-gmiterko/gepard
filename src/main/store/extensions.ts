@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { extensionsFilesJsonPath } from '../paths';
-import { readJsonFile, writeJsonFile } from '../helpers/fs/jsonFile';
+import { readJsonFile, writeJsonFile } from '../helpers/jsonFile';
 
 const KnownFile = z.object({ id: z.string(), displayName: z.string() });
 export type KnownFile = z.infer<typeof KnownFile>;

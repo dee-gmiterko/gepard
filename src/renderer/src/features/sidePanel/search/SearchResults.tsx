@@ -4,6 +4,7 @@ import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
 import { Caption } from '../../../components/Caption';
 import { Message } from '../../../components/Message';
+import type { ViewMode } from '../../../components/ViewModeToggle';
 import { MatchLine } from '../../../components/MatchLine';
 import { Chevron, ChevronSlot, FileRow, FolderRow, TreeLabel } from '../../../components/Tree';
 import { VirtualList } from '../../../components/VirtualList';
@@ -55,7 +56,7 @@ export function SearchResults({
   onLoadMore,
 }: {
   files: readonly FileMatches[];
-  mode: 'tree' | 'flat';
+  mode: ViewMode;
   initiallyExpanded: boolean;
   hasMore: boolean;
   onLoadMore: () => void;

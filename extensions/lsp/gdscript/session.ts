@@ -14,19 +14,19 @@ import {
   comparePaths,
   errorMessage,
   toPosix,
-  type DefinitionTarget,
-  type DocumentSymbol,
+  type SourceDefinition,
+  type SourceDocumentSymbol,
   type ExtensionEvents,
   type FileChange,
   type FileReferences,
   type LanguageSession,
-  type LineSymbol,
+  type SourceLineSymbol,
   type LspDefinitionResult,
   type LspDocumentSymbol,
   type LspLocation,
-  type Match,
-  type Pos,
-  type WorkspaceSymbol,
+  type SourceMatch,
+  type SourcePos,
+  type SourceWorkspaceSymbol,
 } from '@gepard/common';
 import { freePort } from './helpers/net';
 import { identifiersOn } from './helpers/identifier';
@@ -59,7 +59,7 @@ export class GodotSession implements LanguageSession {
   private restartWindowStart = 0;
   private socket: net.Socket | null = null;
   private port = 0;
-  private symbolCache = new Map<string, Promise<DocumentSymbol[]>>();
+  private symbolCache = new Map<string, Promise<SourceDocumentSymbol[]>>();
   private scriptFiles: Promise<string[]> | null = null;
   private static readonly MAX_RESTARTS_PER_WINDOW = 5;
   private static readonly RESTART_WINDOW_MS = 60_000;
@@ -328,7 +328,7 @@ export class GodotSession implements LanguageSession {
     return toLocations(raw);
   }
 
-  private symbolsOf(abs: string): Promise<DocumentSymbol[]> {
+  private symbolsOf(abs: string): Promise<SourceDocumentSymbol[]> {
     let cached = this.symbolCache.get(abs);
     if (!cached) {
       cached = this.sendRequest<LspDocumentSymbol[] | null>('textDocument/documentSymbol', {
@@ -345,13 +345,13 @@ export class GodotSession implements LanguageSession {
     return this.scriptFiles;
   }
 
-  async lineSymbols(filePath: string, line: number): Promise<LineSymbol[]> {
+  async lineSymbols(filePath: string, line: number): Promise<SourceLineSymbol[]> {
     const abs = this.absPath(filePath);
     return this.withOpenDocument(abs, async (text) => {
       const uri = pathToFileURL(abs).toString();
       const lineIdx0 = line - 1;
       const lineText = text.split('\n')[lineIdx0] ?? '';
-      const out: LineSymbol[] = [];
+      const out: SourceLineSymbol[] = [];
       for (const { name, col0 } of identifiersOn(lineText)) {
         const targets = await this.requestDefinition(uri, lineIdx0, col0);
         if (targets.length === 0) continue;
@@ -372,19 +372,19 @@ export class GodotSession implements LanguageSession {
     });
   }
 
-  async definition(filePath: string, pos: Pos): Promise<DefinitionTarget[]> {
+  async definition(filePath: string, pos: SourcePos): Promise<SourceDefinition[]> {
     const abs = this.absPath(filePath);
     return this.withOpenDocument(abs, async () => {
       const uri = pathToFileURL(abs).toString();
       const list = await this.requestDefinition(uri, pos.line - 1, pos.col - 1);
-      return list.map((item): DefinitionTarget => {
+      return list.map((item): SourceDefinition => {
         const { path: repoPath, external } = this.toRepoLocation(item.uri);
         return { location: { path: repoPath, range: toRange(item.range) }, external };
       });
     });
   }
 
-  async references(filePath: string, pos: Pos): Promise<FileReferences[]> {
+  async references(filePath: string, pos: SourcePos): Promise<FileReferences[]> {
     const abs = this.absPath(filePath);
     return this.withOpenDocument(abs, async () => {
       const uri = pathToFileURL(abs).toString();
@@ -394,7 +394,7 @@ export class GodotSession implements LanguageSession {
         context: { includeDeclaration: true },
       });
 
-      const byFile = new Map<string, Match[]>();
+      const byFile = new Map<string, SourceMatch[]>();
       const textCache = new Map<string, string[]>();
       for (const loc of raw ?? []) {
         const { path: repoPath, external } = this.toRepoLocation(loc.uri);
@@ -426,7 +426,7 @@ export class GodotSession implements LanguageSession {
     });
   }
 
-  async workspaceSymbols(query: string, limit: number): Promise<WorkspaceSymbol[]> {
+  async workspaceSymbols(query: string, limit: number): Promise<SourceWorkspaceSymbol[]> {
     const needle = query.trim().toLowerCase();
     const files = await this.scripts();
     const trees = await Promise.all(
@@ -435,8 +435,8 @@ export class GodotSession implements LanguageSession {
         symbols: unwrapFileSymbol(await this.symbolsOf(abs).catch(() => [])),
       })),
     );
-    const out: WorkspaceSymbol[] = [];
-    const visit = (abs: string, symbols: DocumentSymbol[], containerName?: string): void => {
+    const out: SourceWorkspaceSymbol[] = [];
+    const visit = (abs: string, symbols: SourceDocumentSymbol[], containerName?: string): void => {
       for (const s of symbols) {
         if (out.length >= limit) return;
         if (!needle || s.name.toLowerCase().includes(needle)) {
@@ -460,7 +460,7 @@ export class GodotSession implements LanguageSession {
     return out;
   }
 
-  async documentSymbols(filePath: string): Promise<DocumentSymbol[]> {
+  async documentSymbols(filePath: string): Promise<SourceDocumentSymbol[]> {
     const abs = this.absPath(filePath);
     return this.withOpenDocument(abs, async () => {
       this.symbolCache.delete(abs);

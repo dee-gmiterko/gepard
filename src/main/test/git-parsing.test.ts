@@ -8,7 +8,7 @@ import {
   parseUnifiedDiff,
   selectDiffSection,
 } from '../helpers/git/gitParsing';
-import { looksBinary } from '../helpers/fs/binary';
+import { looksBinary } from '../helpers/binary';
 
 describe('parseCloneProgressLine', () => {
   it('parses a local progress line into phase + percent', () => {

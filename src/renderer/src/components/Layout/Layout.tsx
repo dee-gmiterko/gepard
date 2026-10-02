@@ -1,9 +1,13 @@
+import { z } from 'zod';
 import styled from 'styled-components';
 import type { Theme } from '../../theme/tokens';
 
 export type Gap = keyof Theme['space'];
 
-export const Stack = styled.div<{ $gap?: Gap; $align?: 'stretch' | 'center' | 'flex-start' }>`
+export const StackAlign = z.enum(['stretch', 'center', 'flex-start']);
+export type StackAlign = z.infer<typeof StackAlign>;
+
+export const Stack = styled.div<{ $gap?: Gap; $align?: StackAlign }>`
   display: flex;
   flex-direction: column;
   align-items: ${({ $align = 'stretch' }) => $align};

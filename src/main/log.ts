@@ -3,8 +3,6 @@ import { app } from 'electron';
 import electronLog from 'electron-log/main';
 import { logsDir } from './paths';
 
-export type LogLevel = 'info' | 'warn' | 'error';
-
 electronLog.transports.file.resolvePathFn = () => join(logsDir(), 'main.log');
 electronLog.transports.file.maxSize = 5 * 1024 * 1024;
 electronLog.transports.console.level = app.isPackaged ? false : 'info';

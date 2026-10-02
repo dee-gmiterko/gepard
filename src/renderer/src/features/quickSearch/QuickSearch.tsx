@@ -18,12 +18,12 @@ import { Message } from '../../components/Message';
 import { listReset } from '../../components/List';
 import { findBestMatch, foldCase, nextMatch, type TextMatch } from '../../helpers/match';
 import { rankNavigation, type NavigationMatch } from '../../helpers/navigation';
-import { definitionKinds, type WorkspaceSymbol } from '@gepard/common';
+import { DefinitionSymbolKind, type WorkspaceSymbol } from '@gepard/common';
 
 type SymbolKind = WorkspaceSymbol['kind'];
 
 const SYMBOL_POOL = 40;
-const DEFINITION_KINDS: SymbolKind[] = [...definitionKinds];
+const DEFINITION_KINDS: SymbolKind[] = [...DefinitionSymbolKind.options];
 
 const messages = defineMessages({
   dialog: {

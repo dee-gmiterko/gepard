@@ -1,4 +1,4 @@
-import type { DraftAnchor, ReviewThread } from '@gepard/common';
+import type { DiffSide, DraftAnchor, ReviewThread } from '@gepard/common';
 
 export interface LineCommentEntry {
   docLine: number;
@@ -60,7 +60,7 @@ export function diffViewCommentEntries(
   threads: readonly ReviewThread[],
   path: string,
   infos: readonly { oldLine: number | null; newLine: number | null }[],
-  draft: { docLine: number; side: 'LEFT' | 'RIGHT' } | null,
+  draft: { docLine: number; side: DiffSide } | null,
   head: string,
 ): LineCommentEntry[] {
   const oldToDoc = new Map<number, number>();

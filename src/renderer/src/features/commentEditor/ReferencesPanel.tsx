@@ -6,7 +6,8 @@ import { Stack } from '../../components/Layout';
 import { PathLabel } from '../../components/PathLabel';
 import { MatchLine } from '../../components/MatchLine';
 import { Message } from '../../components/Message';
-import { ScopeToggle, type SearchScope } from '../../components/ScopeToggle';
+import { ScopeToggle } from '../../components/ScopeToggle';
+import type { SearchScope } from '@gepard/common';
 import { Select } from '../../components/Select';
 import { SymbolDefinitionSection, type LineSymbol } from './SymbolDefinitionSection';
 import { toggleRefIn, type ReferenceChoices } from '../../helpers/reference';
@@ -27,21 +28,9 @@ const messages = defineMessages({
     id: 'commentEditor.referencesPanel.alsoIn',
     defaultMessage: 'Also in',
   },
-  alsoInDisabledHint: {
-    id: 'commentEditor.referencesPanel.alsoInDisabledHint',
-    defaultMessage: 'This line has no text to match elsewhere.',
-  },
-  alsoInNoOtherMatchHint: {
-    id: 'commentEditor.referencesPanel.alsoInNoOtherMatchHint',
-    defaultMessage: 'No other line matches this one.',
-  },
   samePatternIn: {
     id: 'commentEditor.referencesPanel.samePatternIn',
     defaultMessage: 'Same pattern in',
-  },
-  samePatternDisabledHint: {
-    id: 'commentEditor.referencesPanel.samePatternDisabledHint',
-    defaultMessage: 'No symbols on this line to match a pattern on.',
   },
   truncated: {
     id: 'commentEditor.referencesPanel.truncated',
@@ -49,17 +38,11 @@ const messages = defineMessages({
   },
 });
 
-const exactDisabledHints: Record<ExactDisabledReason, MessageDescriptor> = {
-  blankLine: messages.alsoInDisabledHint,
-  noOtherMatch: messages.alsoInNoOtherMatchHint,
-};
-
 interface SearchRefsSectionProps {
   title: MessageDescriptor;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   disabled?: boolean;
-  disabledHint?: MessageDescriptor;
   scope: SearchScope;
   onScopeChange: (scope: SearchScope) => void;
   data: GroupedResult | undefined;
@@ -72,7 +55,6 @@ function SearchRefsSection({
   open,
   onOpenChange,
   disabled,
-  disabledHint,
   scope,
   onScopeChange,
   data,
@@ -95,13 +77,6 @@ function SearchRefsSection({
         />
       }
       title={<FormattedMessage {...title} />}
-      trailing={
-        disabled && disabledHint ? (
-          <Message layout="inline">
-            <FormattedMessage {...disabledHint} />
-          </Message>
-        ) : undefined
-      }
     >
       <Stack>
         <ScopeToggle value={scope} onChange={onScopeChange} />
@@ -140,7 +115,7 @@ interface ReferencesPanelProps {
   onChoicesChange: React.Dispatch<React.SetStateAction<ReferenceChoices>>;
   symbols: LineSymbol[];
   symbolsLoading: boolean;
-  symbolsError: Error | null;
+  symbolDisabled: boolean;
   exactDisabled: ExactDisabledReason | null;
   exactData: GroupedResult | undefined;
   exactFetching: boolean;
@@ -156,7 +131,7 @@ export function ReferencesPanel({
   onChoicesChange,
   symbols,
   symbolsLoading,
-  symbolsError,
+  symbolDisabled,
   exactDisabled,
   exactData,
   exactFetching,
@@ -200,7 +175,7 @@ export function ReferencesPanel({
         refAnchor={refAnchor}
         symbols={symbols}
         loading={symbolsLoading}
-        error={symbolsError}
+        disabled={symbolDisabled}
         selected={choices.symbols}
         onToggleRef={toggleSymbolRef}
         open={choices.symbolOpen}
@@ -212,7 +187,6 @@ export function ReferencesPanel({
         open={choices.exactOpen}
         onOpenChange={setExactOpen}
         disabled={exactDisabled !== null}
-        disabledHint={exactDisabled ? exactDisabledHints[exactDisabled] : undefined}
         scope={choices.exactScope}
         onScopeChange={setExactScope}
         data={exactData}
@@ -224,7 +198,6 @@ export function ReferencesPanel({
         open={choices.patternOpen}
         onOpenChange={setPatternOpen}
         disabled={patternDisabled}
-        disabledHint={messages.samePatternDisabledHint}
         scope={choices.patternScope}
         onScopeChange={setPatternScope}
         data={patternData}

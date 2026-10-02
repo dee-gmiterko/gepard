@@ -25,6 +25,9 @@ export const SymbolKind = z.enum([
 ]);
 export type SymbolKind = z.infer<typeof SymbolKind>;
 
+export const SearchScope = z.enum(['all', 'targeted']);
+export type SearchScope = z.infer<typeof SearchScope>;
+
 export const Match = z.object({
   line: z.int().positive(),
   preview: z.string(),
@@ -40,7 +43,7 @@ export const GroupedResult = z.object({
   query: z.object({
     kind: z.enum(['references', 'exactLine', 'pattern', 'regex']),
     text: z.string(),
-    scope: z.enum(['all', 'targeted']),
+    scope: SearchScope,
   }),
   files: z.array(FileMatches),
   offset: z.int().nonnegative(),
@@ -62,7 +65,7 @@ export type WorkspaceSymbol = z.infer<typeof WorkspaceSymbol>;
 const SearchBase = {
   projectId: z.string(),
   sha: z.string().regex(/^[0-9a-f]{40}$/),
-  scope: z.enum(['all', 'targeted']),
+  scope: SearchScope,
   targetedPaths: z.array(RepoPath).default([]),
   limit: z.int().positive().max(200).optional(),
   offset: z.int().nonnegative().default(0),

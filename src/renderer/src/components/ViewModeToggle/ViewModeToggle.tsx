@@ -1,8 +1,10 @@
+import { z } from 'zod';
 import { Layers, List } from 'react-feather';
 import { defineMessages, useIntl } from 'react-intl';
 import { IconButton } from '../IconButton';
 
-export type ViewMode = 'tree' | 'flat';
+export const ViewMode = z.enum(['tree', 'flat']);
+export type ViewMode = z.infer<typeof ViewMode>;
 
 const messages = defineMessages({
   tree: {

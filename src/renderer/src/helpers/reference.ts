@@ -1,5 +1,4 @@
-import type { SearchScope } from '../components/ScopeToggle';
-import type { CommentReference, GroupedResult } from '@gepard/common';
+import type { CommentReference, GroupedResult, ReferenceKind, SearchScope } from '@gepard/common';
 
 export function sameRef(a: CommentReference, b: CommentReference): boolean {
   return a.kind === b.kind && a.path === b.path && a.line === b.line;
@@ -38,7 +37,7 @@ export function initialReferenceChoices(references: CommentReference[]): Referen
 
 export function referencesFromResult(
   data: GroupedResult | undefined,
-  kind: 'exact' | 'pattern',
+  kind: Exclude<ReferenceKind, 'symbol'>,
 ): CommentReference[] {
   if (!data) return [];
   return data.files.flatMap((f) => f.matches.map((m) => ({ path: f.path, line: m.line, kind })));

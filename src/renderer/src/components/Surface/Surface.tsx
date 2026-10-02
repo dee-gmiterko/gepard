@@ -1,6 +1,8 @@
+import { z } from 'zod';
 import styled from 'styled-components';
 
-export type SurfaceElevation = 'flat' | 'popover' | 'floating';
+export const SurfaceElevation = z.enum(['flat', 'popover', 'floating']);
+export type SurfaceElevation = z.infer<typeof SurfaceElevation>;
 
 export const Surface = styled.div<{ $elevation?: SurfaceElevation }>`
   border: 1px solid ${({ theme }) => theme.colors.border};

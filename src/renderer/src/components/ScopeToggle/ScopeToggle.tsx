@@ -1,9 +1,8 @@
 import { useId } from 'react';
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl';
+import type { SearchScope } from '@gepard/common';
 import { activeToggleBackground } from '../IconButton';
-
-export type SearchScope = 'all' | 'targeted';
 
 const messages = defineMessages({
   ariaLabel: {

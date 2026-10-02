@@ -1,7 +1,7 @@
-import { languageIdOf, type GrammarLanguage, type LanguageExtension } from '@gepard/common';
+import { languageIdOf, type ExtensionLanguage, type LanguageExtension } from '@gepard/common';
 import { open } from './server';
 
-const languages: GrammarLanguage[] = [
+const languages: ExtensionLanguage[] = [
   { name: 'typescript', extensions: ['ts', 'mts', 'cts'] },
   { name: 'typescriptreact', extensions: ['tsx'] },
   { name: 'javascript', extensions: ['js', 'mjs', 'cjs'] },

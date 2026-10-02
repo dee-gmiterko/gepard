@@ -6,7 +6,8 @@ import { Checkbox } from '../../components/Checkbox';
 import { Inline, Stack } from '../../components/Layout';
 import { PathAndLine } from '../../components/PathAndLine';
 import { Message } from '../../components/Message';
-import { ScopeToggle, type SearchScope } from '../../components/ScopeToggle';
+import { ScopeToggle } from '../../components/ScopeToggle';
+import type { SearchScope } from '@gepard/common';
 import { useDefinition } from '../../queries/search';
 import { useTargetedFiles } from '../../queries/files';
 import { sameRef } from '../../helpers/reference';
@@ -27,10 +28,6 @@ const messages = defineMessages({
   loading: {
     id: 'commentEditor.symbolDefinition.loading',
     defaultMessage: 'Loading symbols…',
-  },
-  empty: {
-    id: 'commentEditor.symbolDefinition.empty',
-    defaultMessage: 'No symbols on this line.',
   },
   addReference: {
     id: 'commentEditor.symbolDefinition.addReference',
@@ -110,7 +107,7 @@ export function SymbolDefinitionSection({
   refAnchor,
   symbols,
   loading,
-  error,
+  disabled,
   selected,
   onToggleRef,
   open,
@@ -119,7 +116,7 @@ export function SymbolDefinitionSection({
   refAnchor: RefAnchor;
   symbols: LineSymbol[];
   loading: boolean;
-  error: Error | null;
+  disabled: boolean;
   selected: CommentReference[];
   onToggleRef: (ref: CommentReference) => void;
   open: boolean;
@@ -127,29 +124,21 @@ export function SymbolDefinitionSection({
 }): React.JSX.Element {
   const intl = useIntl();
   const [scope, setScope] = useState<SearchScope>('all');
-  const empty = !loading && !error && symbols.length === 0;
 
   return (
     <Accordion
       open={open}
-      disabled={empty}
+      disabled={disabled}
       onToggle={() => onOpenChange(!open)}
       leading={
         <Checkbox
           checked={open}
-          disabled={empty}
+          disabled={disabled}
           ariaLabel={intl.formatMessage(messages.title)}
           onChange={() => onOpenChange(!open)}
         />
       }
       title={<FormattedMessage {...messages.title} />}
-      trailing={
-        empty ? (
-          <Message layout="inline">
-            <FormattedMessage {...messages.empty} />
-          </Message>
-        ) : undefined
-      }
     >
       <Stack $gap={1}>
         <ScopeToggle value={scope} onChange={setScope} />

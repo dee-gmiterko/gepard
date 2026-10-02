@@ -1,6 +1,10 @@
+import { z } from 'zod';
 import styled from 'styled-components';
 
-export const Badge = styled.span<{ $tone?: 'success' | 'warning' | 'muted' }>`
+export const BadgeTone = z.enum(['success', 'warning', 'muted']);
+export type BadgeTone = z.infer<typeof BadgeTone>;
+
+export const Badge = styled.span<{ $tone?: BadgeTone }>`
   flex-shrink: 0;
   padding: 0 ${({ theme }) => theme.space[1]};
   border: 1px solid currentColor;

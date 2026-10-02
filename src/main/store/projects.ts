@@ -2,7 +2,7 @@ import { mkdir, readdir, rm, stat } from 'node:fs/promises';
 import { z } from 'zod';
 import { Project, PersistedLayout, PersistedTargeting } from '@gepard/common';
 import { AppError } from '../ipc/registry';
-import { readJsonFile, writeJsonFile } from '../helpers/fs/jsonFile';
+import { readJsonFile, writeJsonFile } from '../helpers/jsonFile';
 import {
   projectDir,
   projectId as makeProjectId,

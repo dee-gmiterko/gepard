@@ -1,7 +1,9 @@
+import { z } from 'zod';
 import { invoke, IpcError, isCancelledError, isStaleShaError } from '../ipc/client';
 import { localizedErrorMessage } from './errorMessage';
 
-export type ReportTone = 'danger' | 'warning';
+export const ReportTone = z.enum(['danger', 'warning']);
+export type ReportTone = z.infer<typeof ReportTone>;
 
 export interface ReportedError {
   scope: string;

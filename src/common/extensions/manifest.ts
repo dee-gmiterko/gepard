@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { GrammarLanguage } from '../ipc/schemas/grammar';
+import { extensionLanguageSchema } from './language';
 
 const functionSchema = z.custom<(...args: never[]) => unknown>((v) => typeof v === 'function');
 
@@ -18,13 +18,13 @@ export type ExtensionModule = z.infer<typeof extensionModuleSchema>;
 export const languageExtensionSchema = z.looseObject({
   id: z.string().min(1),
   displayName: z.string(),
-  languages: z.array(GrammarLanguage).min(1),
+  languages: z.array(extensionLanguageSchema).min(1),
   open: functionSchema,
 });
 
 export const grammarExtensionSchema = z.looseObject({
   id: z.string().min(1),
   displayName: z.string().min(1),
-  languages: z.array(GrammarLanguage).min(1),
+  languages: z.array(extensionLanguageSchema).min(1),
   support: functionSchema,
 });

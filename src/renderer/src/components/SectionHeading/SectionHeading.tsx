@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import type { ReactNode } from 'react';
 import styled from 'styled-components';
 
@@ -8,7 +9,10 @@ const Row = styled.div`
   gap: ${({ theme }) => theme.space[2]};
 `;
 
-const Heading = styled.h2<{ $size: 'md' | 'lg' }>`
+export const SectionHeadingSize = z.enum(['md', 'lg']);
+export type SectionHeadingSize = z.infer<typeof SectionHeadingSize>;
+
+const Heading = styled.h2<{ $size: SectionHeadingSize }>`
   margin: 0;
   font-weight: 600;
   font-size: ${({ theme, $size }) => theme.font.size[$size]};
@@ -22,7 +26,7 @@ export function SectionHeading({
   actions,
 }: {
   as?: 'h1' | 'h2';
-  size?: 'md' | 'lg';
+  size?: SectionHeadingSize;
   title: ReactNode;
   actions?: ReactNode;
 }): React.JSX.Element {

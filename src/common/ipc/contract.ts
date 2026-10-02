@@ -1,5 +1,12 @@
 import { z } from 'zod';
-import { Viewer, ViewerRepo, Project, ProjectId, PersistedLayout } from './schemas/project';
+import {
+  ClonePhase,
+  Viewer,
+  ViewerRepo,
+  Project,
+  ProjectId,
+  PersistedLayout,
+} from './schemas/project';
 import {
   ChangedFile,
   CheckoutResult,
@@ -12,6 +19,7 @@ import {
   PrSummary,
   RepoPath,
   Sha,
+  SyncMode,
   TargetRef,
 } from './schemas/pr';
 import { Comment, CommentDraft, LocalViewedState, ReviewThread } from './schemas/comment';
@@ -22,6 +30,7 @@ import {
   IndexStatus,
   LineSymbolsResult,
 } from './schemas/lsp';
+import { LogLevel } from './schemas/log';
 import { ExtensionInfo } from './schemas/extensions';
 import { GrammarModule } from './schemas/grammar';
 import { ThemeTemplateData } from './schemas/theme';
@@ -152,7 +161,7 @@ export const channels = {
   ),
 
   'sync.run': ch(
-    z.object({ ...PrRef, mode: z.enum(['full', 'pull']).default('full') }),
+    z.object({ ...PrRef, mode: SyncMode.default('full') }),
     z.object({
       syncedAt: z.iso.datetime({ offset: true }),
       droppedRemoteDeleted: z.int().nonnegative(),
@@ -164,7 +173,7 @@ export const channels = {
 
   'log.write': ch(
     z.object({
-      level: z.enum(['info', 'warn', 'error']),
+      level: LogLevel,
       scope: z.string(),
       message: z.string(),
     }),
@@ -201,15 +210,7 @@ export const channels = {
 export const events = {
   'clone.progress': z.object({
     projectId: z.string(),
-    phase: z.enum([
-      'counting',
-      'compressing',
-      'receiving',
-      'resolving',
-      'checkout',
-      'done',
-      'error',
-    ]),
+    phase: ClonePhase,
     percent: z.number().min(0).max(100).nullable(),
     message: z.string().optional(),
   }),

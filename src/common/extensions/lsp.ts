@@ -1,6 +1,94 @@
-import type { Match, Pos, WorkspaceSymbol } from '../ipc/schemas/search';
-import type { GrammarLanguage } from '../ipc/schemas/grammar';
-import type { DefinitionTarget, DocumentSymbol, IndexStatus, LineSymbol } from '../ipc/schemas/lsp';
+import { z } from 'zod';
+import type { ExtensionLanguage } from './language';
+
+export interface SourcePos {
+  line: number;
+  col: number;
+}
+
+export interface SourceRange {
+  start: SourcePos;
+  end: SourcePos;
+}
+
+export interface SourceLocation {
+  path: string;
+  range: SourceRange;
+}
+
+export const SourceSymbolKind = z.enum([
+  'namespace',
+  'class',
+  'interface',
+  'enum',
+  'enumMember',
+  'type',
+  'typeParameter',
+  'function',
+  'method',
+  'property',
+  'variable',
+  'parameter',
+  'constant',
+  'unknown',
+]);
+export type SourceSymbolKind = z.infer<typeof SourceSymbolKind>;
+
+export const SourceSymbolModifier = z.enum([
+  'declaration',
+  'readonly',
+  'static',
+  'async',
+  'defaultLibrary',
+]);
+export type SourceSymbolModifier = z.infer<typeof SourceSymbolModifier>;
+
+export const ExtensionIndexPhase = z.enum(['files', 'language']);
+export type ExtensionIndexPhase = z.infer<typeof ExtensionIndexPhase>;
+
+export const FileChangeType = z.enum(['created', 'changed', 'deleted']);
+export type FileChangeType = z.infer<typeof FileChangeType>;
+
+export const ExtensionLogLevel = z.enum(['info', 'warn', 'error']);
+export type ExtensionLogLevel = z.infer<typeof ExtensionLogLevel>;
+
+export interface SourceMatch {
+  line: number;
+  preview: string;
+  spans: [number, number][];
+}
+
+export interface SourceLineSymbol {
+  name: string;
+  kind: SourceSymbolKind;
+  modifiers: SourceSymbolModifier[];
+  range: SourceRange;
+}
+
+export interface SourceDocumentSymbol {
+  name: string;
+  kind: SourceSymbolKind;
+  range: SourceRange;
+  selectionRange: SourceRange;
+  children: SourceDocumentSymbol[];
+}
+
+export interface SourceWorkspaceSymbol {
+  name: string;
+  kind: SourceSymbolKind;
+  containerName?: string;
+  location: SourceLocation;
+}
+
+export interface SourceDefinition {
+  location: SourceLocation;
+  external: boolean;
+}
+
+export type ExtensionStatus =
+  | { state: 'idle' }
+  | { state: 'indexing'; phase: ExtensionIndexPhase; done: number; total?: number }
+  | { state: 'error'; message: string };
 
 export interface CancellationToken {
   readonly isCancellationRequested: boolean;
@@ -9,17 +97,17 @@ export interface CancellationToken {
 
 export interface FileReferences {
   path: string;
-  matches: Match[];
+  matches: SourceMatch[];
 }
 
 export interface FileChange {
   path: string;
-  type: 'created' | 'changed' | 'deleted';
+  type: FileChangeType;
 }
 
 export interface ExtensionEvents {
-  status(s: IndexStatus): void;
-  log(level: 'info' | 'warn' | 'error', msg: string): void;
+  status(s: ExtensionStatus): void;
+  log(level: ExtensionLogLevel, msg: string): void;
 }
 
 export interface ExtensionHost {
@@ -27,15 +115,27 @@ export interface ExtensionHost {
 }
 
 export interface LanguageSession {
-  lineSymbols(filePath: string, line: number, token?: CancellationToken): Promise<LineSymbol[]>;
-  definition(filePath: string, pos: Pos, token?: CancellationToken): Promise<DefinitionTarget[]>;
-  references(filePath: string, pos: Pos, token?: CancellationToken): Promise<FileReferences[]>;
+  lineSymbols(
+    filePath: string,
+    line: number,
+    token?: CancellationToken,
+  ): Promise<SourceLineSymbol[]>;
+  definition(
+    filePath: string,
+    pos: SourcePos,
+    token?: CancellationToken,
+  ): Promise<SourceDefinition[]>;
+  references(
+    filePath: string,
+    pos: SourcePos,
+    token?: CancellationToken,
+  ): Promise<FileReferences[]>;
   workspaceSymbols(
     query: string,
     limit: number,
     token?: CancellationToken,
-  ): Promise<WorkspaceSymbol[]>;
-  documentSymbols(filePath: string, token?: CancellationToken): Promise<DocumentSymbol[]>;
+  ): Promise<SourceWorkspaceSymbol[]>;
+  documentSymbols(filePath: string, token?: CancellationToken): Promise<SourceDocumentSymbol[]>;
   filesChanged(changes: FileChange[]): void;
   dispose(): Promise<void>;
 }
@@ -43,7 +143,7 @@ export interface LanguageSession {
 export interface LanguageExtension {
   id: string;
   displayName: string;
-  languages: GrammarLanguage[];
+  languages: ExtensionLanguage[];
   warmupFile?(files: string[]): string | undefined;
   open(
     project: { root: string },

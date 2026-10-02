@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { AppError } from '../../ipc/registry';
 import { GqlPageInfo, type GqlError, type PrListItem, matchesTarget } from '@gepard/common';
-import { ExecError } from '../process/exec';
+import { ExecError } from '../process/ExecError';
 
 const PR_LIST_FIELDS =
   'number,id,title,author,headRefName,baseRefName,headRefOid,createdAt,changedFiles,labels,url';

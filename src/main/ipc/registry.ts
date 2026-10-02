@@ -1,7 +1,7 @@
 import { BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { z } from 'zod';
 import {
-  channelNames,
+  ChannelNameList,
   channels,
   type ChannelName,
   type ChannelParsedInput,
@@ -78,7 +78,7 @@ function registerChannel<C extends ChannelName>(name: C, handlers: HandlerMap): 
 }
 
 export function registerHandlers(handlers: HandlerMap): void {
-  for (const name of channelNames) registerChannel(name, handlers);
+  for (const name of ChannelNameList.options) registerChannel(name, handlers);
 }
 
 export function emit<E extends EventName>(name: E, payload: EventPayload<E>): void {

@@ -1,5 +1,7 @@
+import type { ThemeTemplateData } from '@gepard/common';
+
 export interface Theme {
-  mode: 'light' | 'dark';
+  mode: ThemeTemplateData['mode'];
   font: {
     ui: string;
     mono: string;
@@ -9,43 +11,9 @@ export interface Theme {
   space: { 1: string; 2: string; 3: string; 4: string; 5: string; 6: string };
   radius: { sm: string; md: string };
   z: { floating: number; popover: number };
-  shadow: { popover: string; floating: string };
-  colors: {
-    bg: string;
-    bgSubtle: string;
-    bgElevated: string;
-    bgHover: string;
-    bgSelected: string;
-    fg: string;
-    fgMuted: string;
-    fgSubtle: string;
-    border: string;
-    borderStrong: string;
-    accent: string;
-    accentFg: string;
-    danger: string;
-    success: string;
-    warning: string;
-    diffAddBg: string;
-    diffAddFg: string;
-    diffDelBg: string;
-    diffDelFg: string;
-    diffHunk: string;
-    commentBg: string;
-    overlay: string;
-  };
-  syntax: {
-    keyword: string;
-    string: string;
-    number: string;
-    comment: string;
-    type: string;
-    function: string;
-    property: string;
-    constant: string;
-    tag: string;
-    invalid: string;
-  };
+  shadow: ThemeTemplateData['shadow'];
+  colors: ThemeTemplateData['colors'];
+  syntax: ThemeTemplateData['syntax'];
 }
 
 const font: Theme['font'] = {
@@ -66,16 +34,7 @@ const space: Theme['space'] = {
 const radius: Theme['radius'] = { sm: '3px', md: '6px' };
 const z: Theme['z'] = { floating: 20, popover: 30 };
 
-export interface ThemeTemplate {
-  id: string;
-  name: string;
-  mode: 'light' | 'dark';
-  shadow: Theme['shadow'];
-  colors: Theme['colors'];
-  syntax: Theme['syntax'];
-}
-
-export function buildTheme(template: ThemeTemplate): Theme {
+export function buildTheme(template: ThemeTemplateData): Theme {
   return {
     mode: template.mode,
     font,

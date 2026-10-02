@@ -14,8 +14,11 @@ export const Actor = z.object({
 export type Actor = z.infer<typeof Actor>;
 
 export const DiffSide = z.enum(['LEFT', 'RIGHT']);
+export type DiffSide = z.infer<typeof DiffSide>;
 export const ChangeType = z.enum(['ADDED', 'DELETED', 'RENAMED', 'COPIED', 'MODIFIED', 'CHANGED']);
+export type ChangeType = z.infer<typeof ChangeType>;
 export const ViewedState = z.enum(['UNVIEWED', 'VIEWED', 'DISMISSED']);
+export type ViewedState = z.infer<typeof ViewedState>;
 export const ReviewState = z.enum([
   'PENDING',
   'COMMENTED',
@@ -23,9 +26,14 @@ export const ReviewState = z.enum([
   'CHANGES_REQUESTED',
   'DISMISSED',
 ]);
+export type ReviewState = z.infer<typeof ReviewState>;
 // 'PR' is not a GitHub subject type: it marks a general PR-level comment
 // (an IssueComment), which has no file/line anchor at all.
 export const SubjectType = z.enum(['LINE', 'FILE', 'PR']);
+export type SubjectType = z.infer<typeof SubjectType>;
+
+export const SyncMode = z.enum(['full', 'pull']);
+export type SyncMode = z.infer<typeof SyncMode>;
 
 export const RepoPath = z.string().regex(/^(?!\/)(?!.*\\)(?!.*(^|\/)\.\.(\/|$)).+/);
 
@@ -105,6 +113,7 @@ export type FileContent = z.infer<typeof FileContent>;
 // GitHub anchors review comments on added and context lines to RIGHT/newLine
 // and on deleted lines to LEFT/oldLine.
 export const DiffRowKind = z.enum(['context', 'add', 'delete', 'hunk']);
+export type DiffRowKind = z.infer<typeof DiffRowKind>;
 export const DiffRow = z.object({
   kind: DiffRowKind,
   oldLine: z.int().positive().nullable(),

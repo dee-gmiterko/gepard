@@ -1,5 +1,6 @@
 import { app } from 'electron';
 import { join } from 'node:path';
+import { z } from 'zod';
 import { ProjectId } from '@gepard/common';
 import { AppError } from './ipc/registry';
 
@@ -42,7 +43,8 @@ export function projectReviewDir(id: string): string {
   return join(projectDir(id), 'review');
 }
 
-export type ExtensionKindDir = 'lsp' | 'grammars' | 'themes' | 'locales';
+export const ExtensionKindDir = z.enum(['lsp', 'grammars', 'themes', 'locales']);
+export type ExtensionKindDir = z.infer<typeof ExtensionKindDir>;
 
 export function extensionsRootDir(): string {
   return join(userDataDir(), 'extensions');

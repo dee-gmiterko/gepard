@@ -8,5 +8,10 @@ export const localesHandlers: Pick<
 > = {
   'locale.getLocaleId': () => getLocaleId(),
   'locale.setLocaleId': ({ localeId }) => setLocaleId(localeId),
-  'locales.list': () => extensionRegistry.enabledLocales(),
+  'locales.list': async () =>
+    (await extensionRegistry.enabledLocales()).map(({ id, displayName, messages }) => ({
+      id,
+      displayName,
+      messages,
+    })),
 };

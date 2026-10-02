@@ -9,8 +9,8 @@ import { useDefinitionLookup } from '../../../../queries/search';
 import { useReadOnlyEditor } from '../../../../components/CodeEditor/useReadOnlyEditor';
 import { revealDocLine } from '../../../../components/CodeEditor/revealLine';
 import { SymbolPortals, symbolTooltip } from '../../../../components/CodeEditor/symbolTooltip';
+import { CommentPortals } from '../../../../components/CodeEditor/commentPortals';
 import {
-  CommentPortals,
   commentAffordanceGutter,
   commentBlockDecorations,
 } from '../../../../components/CodeEditor/commentWidgets';

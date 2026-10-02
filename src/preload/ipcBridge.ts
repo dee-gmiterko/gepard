@@ -6,12 +6,12 @@ import {
   type EventName,
   type EventPayload,
   type IpcBridge,
-  channelNames,
-  eventNames,
+  ChannelNameList,
+  EventNameList,
 } from '@gepard/common';
 
-const channelSet = new Set<string>(channelNames);
-const eventSet = new Set<string>(eventNames);
+const channelSet = new Set<string>(ChannelNameList.options);
+const eventSet = new Set<string>(EventNameList.options);
 
 const ipc: IpcBridge = {
   invoke(channel: ChannelName, input: unknown) {

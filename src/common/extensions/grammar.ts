@@ -1,7 +1,7 @@
 import type { Language, LanguageSupport, LRLanguage, StreamLanguage } from '@codemirror/language';
 import type { styleTags, tags } from '@lezer/highlight';
 import type { LRParser } from '@lezer/lr';
-import type { GrammarLanguage } from '../ipc/schemas/grammar';
+import type { ExtensionLanguage } from './language';
 
 export interface GrammarApi {
   StreamLanguage: typeof StreamLanguage;
@@ -15,6 +15,6 @@ export interface GrammarApi {
 export interface GrammarExtension {
   id: string;
   displayName: string;
-  languages: GrammarLanguage[];
+  languages: ExtensionLanguage[];
   support(api: GrammarApi, language: string): Language | LanguageSupport;
 }

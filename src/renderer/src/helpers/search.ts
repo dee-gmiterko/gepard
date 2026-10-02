@@ -1,4 +1,5 @@
 import type { GroupedResult } from '@gepard/common';
+import type { ViewMode } from '../components/ViewModeToggle';
 
 export type FileMatches = GroupedResult['files'][number];
 export type MatchItem = FileMatches['matches'][number];
@@ -10,7 +11,7 @@ export type SearchRow =
 
 export function buildSearchRows(
   files: readonly FileMatches[],
-  mode: 'tree' | 'flat',
+  mode: ViewMode,
   isExpanded: (path: string) => boolean,
 ): SearchRow[] {
   const rows: SearchRow[] = [];

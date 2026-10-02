@@ -1,8 +1,13 @@
+import { z } from 'zod';
+import type { DiffSide } from '@gepard/common';
 import type { ReportTone } from '../errors/report';
 
-export type SidePanelTab = 'files' | 'targeted' | 'search';
-export type MainTab = 'files' | 'comments';
-export type QuickSearchMode = 'file' | 'navigate';
+export const SidePanelTab = z.enum(['files', 'targeted', 'search']);
+export type SidePanelTab = z.infer<typeof SidePanelTab>;
+export const MainTab = z.enum(['files', 'comments']);
+export type MainTab = z.infer<typeof MainTab>;
+export const QuickSearchMode = z.enum(['file', 'navigate']);
+export type QuickSearchMode = z.infer<typeof QuickSearchMode>;
 
 export interface Toast {
   id: string;
@@ -48,7 +53,7 @@ export interface AppState {
   mainTab: MainTab;
   checkout: { base: string; head: string } | null;
   toasts: Toast[];
-  revealLine: { line: number; side: 'LEFT' | 'RIGHT' } | null;
+  revealLine: { line: number; side: DiffSide } | null;
   settingsOpen: boolean;
   quickSearch: QuickSearchMode | null;
 }
@@ -85,7 +90,7 @@ export type AppAction =
   | { type: 'layout/setHideViewedFiles'; hide: boolean }
   | { type: 'layout/setFileControlsDocked'; docked: boolean }
   | { type: 'layout/setFileControlsPosition'; position: { x: number; y: number } | null }
-  | { type: 'file/open'; path: string; line?: number | null; side?: 'LEFT' | 'RIGHT' }
+  | { type: 'file/open'; path: string; line?: number | null; side?: DiffSide }
   | { type: 'file/focus'; path: string }
   | { type: 'file/pin'; path: string }
   | { type: 'file/unpin'; path: string }

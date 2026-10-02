@@ -1,5 +1,11 @@
 import { useCallback, useMemo } from 'react';
-import { skipToken, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  skipToken,
+  useInfiniteQuery,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { invoke, isCancelledError } from '../ipc/client';
 import { qk } from './keys';
 import { useAppState } from '../state/AppContext';
@@ -105,6 +111,21 @@ export function useDefinition(sha: string, path: string, pos: Pos | null) {
       enabled: Boolean(projectId) && Boolean(sha) && Boolean(path),
     }),
   );
+}
+
+export function useDefinitions(sha: string, path: string, positions: Pos[]) {
+  const projectId = useAppState().projectId ?? '';
+  return useQueries({
+    queries: positions.map((pos) => ({
+      queryKey: definitionKey(projectId, sha, path, pos),
+      queryFn: () => fetchDefinition(projectId, sha, path, pos),
+      enabled: Boolean(projectId) && Boolean(sha) && Boolean(path),
+    })),
+    combine: (results) => ({
+      pending: results.some((r) => r.isPending && r.fetchStatus !== 'idle'),
+      definitions: results.flatMap((r) => r.data?.definitions ?? []),
+    }),
+  });
 }
 
 export function useDefinitionLookup(sha: string, path: string) {

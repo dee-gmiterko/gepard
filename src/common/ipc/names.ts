@@ -1,4 +1,6 @@
-export const channelNames = [
+import { z } from 'zod';
+
+export const ChannelNameList = z.enum([
   'app.viewer',
   'app.viewerRepos',
   'projects.list',
@@ -49,9 +51,13 @@ export const channelNames = [
   'locales.list',
   'keybindings.getOverrides',
   'keybindings.setOverride',
-] as const;
+]);
+export type ChannelNameList = z.infer<typeof ChannelNameList>;
 
-export const eventNames = ['clone.progress', 'index.status', 'theme.changed', 'app.error'] as const;
-
-export type ChannelNameList = (typeof channelNames)[number];
-export type EventNameList = (typeof eventNames)[number];
+export const EventNameList = z.enum([
+  'clone.progress',
+  'index.status',
+  'theme.changed',
+  'app.error',
+]);
+export type EventNameList = z.infer<typeof EventNameList>;

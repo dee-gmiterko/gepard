@@ -1,6 +1,6 @@
-import type { ThemeTemplate } from '../theme/tokens';
+import type { ThemeTemplateData } from '@gepard/common';
 
-export const FALLBACK_TEMPLATE: ThemeTemplate = {
+export const FALLBACK_TEMPLATE: ThemeTemplateData = {
   id: '__fallback__',
   name: 'Fallback',
   mode: 'light',
@@ -49,8 +49,8 @@ export const FALLBACK_TEMPLATE: ThemeTemplate = {
 export function resolveTemplate(
   selectedId: string | null,
   systemPrefersDark: boolean,
-  templates: readonly ThemeTemplate[],
-): ThemeTemplate {
+  templates: readonly ThemeTemplateData[],
+): ThemeTemplateData {
   if (selectedId !== null) {
     const selected = templates.find((template) => template.id === selectedId);
     if (selected) return selected;

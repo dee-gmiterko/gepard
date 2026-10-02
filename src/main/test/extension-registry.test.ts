@@ -3,8 +3,12 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { loadExtensionPackages } from '../extensions/scanner';
 import { ExtensionRegistry } from '../extensions/registry';
-import { isGrammarExtension, isLanguageExtension, languageIdOf } from '@gepard/common';
-import { isThemeTemplate } from '../helpers/extension';
+import {
+  isGrammarExtension,
+  isLanguageExtension,
+  isThemeExtension,
+  languageIdOf,
+} from '@gepard/common';
 import * as settingsStore from '../store/settings';
 import { __setUserDataDir } from './support/electron';
 import { makeTmpDir, type TmpDir } from './support/tmp';
@@ -195,7 +199,7 @@ describe('loadExtensionPackages', () => {
     dir = await makeTmpDir('ext-scan-theme');
     await writePackage(dir.path, 'demo-theme', DEMO_THEME_BODY, { gepard: { type: 'theme' } });
 
-    const { loaded, failed } = await loadExtensionPackages(dir.path, 'theme', isThemeTemplate);
+    const { loaded, failed } = await loadExtensionPackages(dir.path, 'theme', isThemeExtension);
     expect(failed).toEqual([]);
     expect(loaded).toHaveLength(1);
     expect(loaded[0].extension.id).toBe('demo-theme');

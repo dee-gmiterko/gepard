@@ -27,7 +27,7 @@ export default defineConfig({
         },
       },
     },
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin({ exclude: ['zod'] })],
   },
   renderer: {
     root: resolve('../renderer'),

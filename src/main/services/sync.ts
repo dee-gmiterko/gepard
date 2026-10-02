@@ -1,3 +1,4 @@
+import type { SyncMode } from '@gepard/common';
 import { AppError } from '../ipc/registry';
 import { log } from '../log';
 import { GhService, ghService as defaultGhService } from './gh';
@@ -325,7 +326,7 @@ export class SyncService {
   private async runSyncLocked(
     projectId: string,
     pr: number,
-    mode: 'full' | 'pull',
+    mode: SyncMode,
     ctx: SyncContext,
   ): Promise<SyncResult> {
     log.info('sync', `projectId=${projectId} pr=${pr} mode=${mode} start`);
@@ -418,7 +419,7 @@ export class SyncService {
   async runSync(
     projectId: string,
     pr: number,
-    mode: 'full' | 'pull',
+    mode: SyncMode,
     ctx: SyncContext,
   ): Promise<SyncResult> {
     return withReviewLock(projectId, pr, () => this.runSyncLocked(projectId, pr, mode, ctx));

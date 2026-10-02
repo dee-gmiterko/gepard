@@ -1,5 +1,6 @@
 // `webContents.send` reaches only windows that already exist and have
 // registered a listener; it does not queue messages.
+import type { LogLevel } from '@gepard/common';
 import { emit } from './ipc/registry';
 import { log } from './log';
 
@@ -27,7 +28,7 @@ export class AppErrorGate {
 
 const appErrorGate = new AppErrorGate();
 
-export function isNotifiableLevel(level: 'info' | 'warn' | 'error'): boolean {
+export function isNotifiableLevel(level: LogLevel): boolean {
   return level === 'error';
 }
 

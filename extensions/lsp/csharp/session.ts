@@ -12,20 +12,20 @@ import {
   CrashGate,
   comparePaths,
   toPosix,
-  type DefinitionTarget,
-  type DocumentSymbol,
+  type SourceDefinition,
+  type SourceDocumentSymbol,
   type ExtensionEvents,
   type FileChange,
   type FileReferences,
   type LanguageSession,
-  type LineSymbol,
+  type SourceLineSymbol,
   type LspDefinitionResult,
   type LspDocumentSymbol,
   type LspLocation,
   type LspSymbolInformation,
-  type Match,
-  type Pos,
-  type WorkspaceSymbol,
+  type SourceMatch,
+  type SourcePos,
+  type SourceWorkspaceSymbol,
 } from '@gepard/common';
 import {
   flatSymbolsToTree,
@@ -300,7 +300,7 @@ export class RoslynSession implements LanguageSession {
     return toLocations(raw);
   }
 
-  async lineSymbols(filePath: string, line: number): Promise<LineSymbol[]> {
+  async lineSymbols(filePath: string, line: number): Promise<SourceLineSymbol[]> {
     const abs = this.absPath(filePath);
     return this.withOpenDocument(abs, async (text) => {
       const uri = url.pathToFileURL(abs).toString();
@@ -321,19 +321,19 @@ export class RoslynSession implements LanguageSession {
     });
   }
 
-  async definition(filePath: string, pos: Pos): Promise<DefinitionTarget[]> {
+  async definition(filePath: string, pos: SourcePos): Promise<SourceDefinition[]> {
     const abs = this.absPath(filePath);
     return this.withOpenDocument(abs, async () => {
       const uri = url.pathToFileURL(abs).toString();
       const list = await this.requestDefinition(uri, pos.line - 1, pos.col - 1);
-      return list.map((item): DefinitionTarget => {
+      return list.map((item): SourceDefinition => {
         const { path: repoPath, external } = this.toRepoLocation(item.uri);
         return { location: { path: repoPath, range: toRange(item.range) }, external };
       });
     });
   }
 
-  async references(filePath: string, pos: Pos): Promise<FileReferences[]> {
+  async references(filePath: string, pos: SourcePos): Promise<FileReferences[]> {
     const abs = this.absPath(filePath);
     return this.withOpenDocument(abs, async () => {
       const uri = url.pathToFileURL(abs).toString();
@@ -343,7 +343,7 @@ export class RoslynSession implements LanguageSession {
         context: { includeDeclaration: true },
       });
 
-      const byFile = new Map<string, Match[]>();
+      const byFile = new Map<string, SourceMatch[]>();
       const textCache = new Map<string, string[]>();
       for (const loc of raw ?? []) {
         const { path: repoPath, external } = this.toRepoLocation(loc.uri);
@@ -375,11 +375,11 @@ export class RoslynSession implements LanguageSession {
     });
   }
 
-  async workspaceSymbols(query: string, limit: number): Promise<WorkspaceSymbol[]> {
+  async workspaceSymbols(query: string, limit: number): Promise<SourceWorkspaceSymbol[]> {
     const raw = await this.sendRequest<LspSymbolInformation[] | null>('workspace/symbol', {
       query,
     });
-    const out: WorkspaceSymbol[] = [];
+    const out: SourceWorkspaceSymbol[] = [];
     for (const s of raw ?? []) {
       const { path: repoPath, external } = this.toRepoLocation(s.location.uri);
       if (external) continue;
@@ -394,7 +394,7 @@ export class RoslynSession implements LanguageSession {
     return out;
   }
 
-  async documentSymbols(filePath: string): Promise<DocumentSymbol[]> {
+  async documentSymbols(filePath: string): Promise<SourceDocumentSymbol[]> {
     const abs = this.absPath(filePath);
     return this.withOpenDocument(abs, async () => {
       const uri = url.pathToFileURL(abs).toString();

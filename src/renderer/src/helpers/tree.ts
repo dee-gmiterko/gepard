@@ -1,4 +1,4 @@
-import type { DocumentSymbol } from '@gepard/common';
+import { SymbolKind, type DocumentSymbol } from '@gepard/common';
 
 export interface TreeNode<T> {
   path: string;
@@ -109,7 +109,7 @@ export interface SymbolRowData {
 }
 
 // Only declarations that structure a file are listed; variables, constants, properties, parameters and members are too numerous to help navigation.
-const OVERVIEW_SYMBOL_KINDS = new Set<DocumentSymbol['kind']>([
+const OverviewSymbolKind = SymbolKind.extract([
   'namespace',
   'class',
   'interface',
@@ -118,6 +118,7 @@ const OVERVIEW_SYMBOL_KINDS = new Set<DocumentSymbol['kind']>([
   'function',
   'method',
 ]);
+const OVERVIEW_SYMBOL_KINDS: ReadonlySet<SymbolKind> = new Set(OverviewSymbolKind.options);
 
 export function symbolTreeNodes(
   symbols: DocumentSymbol[],

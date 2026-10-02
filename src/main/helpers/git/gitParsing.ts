@@ -1,12 +1,13 @@
+import type { z } from 'zod';
 import { AppError } from '../../ipc/registry';
-import type { ChangedFile, Commit, DiffRow } from '@gepard/common';
+import { ClonePhase, type ChangedFile, type Commit, type DiffRow } from '@gepard/common';
 
 type ChangeType = ChangedFile['changeType'];
 
-const CLONE_PHASE_BY_LABEL: Record<
-  string,
-  'counting' | 'compressing' | 'receiving' | 'resolving' | 'checkout'
-> = {
+const GitCloneProgressPhase = ClonePhase.exclude(['done', 'error']);
+type GitCloneProgressPhase = z.infer<typeof GitCloneProgressPhase>;
+
+const CLONE_PHASE_BY_LABEL: Record<string, GitCloneProgressPhase> = {
   'Counting objects': 'counting',
   'Compressing objects': 'compressing',
   'Receiving objects': 'receiving',
@@ -19,7 +20,7 @@ const CLONE_PROGRESS_RE =
   /^(?:remote: )?(Counting objects|Compressing objects|Receiving objects|Resolving deltas|Updating files):\s+(\d+)%/;
 
 export function parseCloneProgressLine(line: string): {
-  phase: 'counting' | 'compressing' | 'receiving' | 'resolving' | 'checkout';
+  phase: GitCloneProgressPhase;
   percent: number;
 } | null {
   const m = CLONE_PROGRESS_RE.exec(line);

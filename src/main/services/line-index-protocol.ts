@@ -1,8 +1,9 @@
+import type { FileChangeType } from '@gepard/common';
 import type { LineIndexFileMatches } from './line-index';
 
 export interface LineIndexFileChange {
   path: string;
-  type: 'created' | 'changed' | 'deleted';
+  type: FileChangeType;
 }
 
 export type LineIndexRequest =

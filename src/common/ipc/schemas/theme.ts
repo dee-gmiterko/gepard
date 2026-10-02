@@ -1,14 +1,11 @@
 import { z } from 'zod';
 
-export const ThemeMode = z.enum(['light', 'dark']);
-export type ThemeMode = z.infer<typeof ThemeMode>;
-
-export const ThemeShadow = z.object({
+const ThemeShadow = z.object({
   popover: z.string().min(1),
   floating: z.string().min(1),
 });
 
-export const ThemeColors = z.object({
+const ThemeColors = z.object({
   bg: z.string().min(1),
   bgSubtle: z.string().min(1),
   bgElevated: z.string().min(1),
@@ -33,7 +30,7 @@ export const ThemeColors = z.object({
   overlay: z.string().min(1),
 });
 
-export const ThemeSyntax = z.object({
+const ThemeSyntax = z.object({
   keyword: z.string().min(1),
   string: z.string().min(1),
   number: z.string().min(1),
@@ -45,6 +42,9 @@ export const ThemeSyntax = z.object({
   tag: z.string().min(1),
   invalid: z.string().min(1),
 });
+
+export const ThemeMode = z.enum(['light', 'dark']);
+export type ThemeMode = z.infer<typeof ThemeMode>;
 
 export const ThemeTemplateData = z.object({
   id: z.string().min(1),

@@ -1,5 +1,5 @@
 import { AppError } from '../../ipc/registry';
-import { ExecError } from '../process/exec';
+import { ExecError } from '../process/ExecError';
 import type { ReviewStoreFile } from '../../store/review';
 import {
   type Comment,

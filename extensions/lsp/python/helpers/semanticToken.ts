@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { LineSymbol, SymbolKind } from '@gepard/common';
+import { SourceSymbolModifier, type SourceLineSymbol, type SourceSymbolKind } from '@gepard/common';
 
 export const STANDARD_TOKEN_TYPES = [
   'namespace',
@@ -44,25 +44,18 @@ export interface SemanticTokensLegend {
   tokenModifiers: string[];
 }
 
-type SymbolModifier = LineSymbol['modifiers'][number];
-
-const KNOWN_MODIFIERS: ReadonlySet<string> = new Set<SymbolModifier>([
-  'declaration',
-  'readonly',
-  'static',
-  'async',
-  'defaultLibrary',
-]);
-
-function isSymbolModifier(modifier: string): modifier is SymbolModifier {
-  return KNOWN_MODIFIERS.has(modifier);
+function isSymbolModifier(modifier: string): modifier is SourceSymbolModifier {
+  return SourceSymbolModifier.safeParse(modifier).success;
 }
 
 export function emptyLegend(): SemanticTokensLegend {
   return { tokenTypes: [], tokenModifiers: [] };
 }
 
-export function mapSemanticTokenType(type: string | undefined, readonly: boolean): SymbolKind {
+export function mapSemanticTokenType(
+  type: string | undefined,
+  readonly: boolean,
+): SourceSymbolKind {
   switch (type) {
     case 'namespace':
       return 'namespace';
@@ -99,9 +92,9 @@ export function decodeLineSymbols(
   legend: SemanticTokensLegend,
   line: number,
   lineText: string,
-): LineSymbol[] {
+): SourceLineSymbol[] {
   const lineIdx0 = line - 1;
-  const out: LineSymbol[] = [];
+  const out: SourceLineSymbol[] = [];
   let curLine = 0;
   let curChar = 0;
   for (let i = 0; i < data.length; i += 5) {

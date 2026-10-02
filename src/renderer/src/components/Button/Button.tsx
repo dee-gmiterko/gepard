@@ -1,8 +1,10 @@
+import { z } from 'zod';
 import type { ButtonHTMLAttributes } from 'react';
 import styled, { css } from 'styled-components';
 import { disabledControl } from './disabledControl';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger';
+export const ButtonVariant = z.enum(['primary', 'secondary', 'danger']);
+export type ButtonVariant = z.infer<typeof ButtonVariant>;
 
 const StyledButton = styled.button<{ $variant: ButtonVariant; $block: boolean }>`
   display: ${({ $block }) => ($block ? 'flex' : 'inline-flex')};

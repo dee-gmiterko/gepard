@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { FALLBACK_TEMPLATE, resolveTemplate } from '../src/helpers/theme';
-import type { ThemeTemplate } from '../src/theme/tokens';
+import type { ThemeTemplateData } from '@gepard/common';
 
-const tpl = (id: string, mode: 'light' | 'dark'): ThemeTemplate => ({
+const tpl = (id: string, mode: 'light' | 'dark'): ThemeTemplateData => ({
   ...FALLBACK_TEMPLATE,
   id,
   mode,

@@ -1,4 +1,4 @@
-import type { SymbolKind } from '../ipc/schemas/search';
+import type { SourceSymbolKind } from '../extensions/lsp';
 
 export interface LspPosition {
   line: number;
@@ -33,4 +33,4 @@ export interface LspSymbolInformation {
 
 export type LspDefinitionResult = LspLocation | LspLocationLink | (LspLocation | LspLocationLink)[];
 
-export type SymbolKindMapper = (kind: number) => SymbolKind;
+export type SymbolKindMapper = (kind: number) => SourceSymbolKind;

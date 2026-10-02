@@ -1,9 +1,12 @@
+import { z } from 'zod';
 import type { ReactNode } from 'react';
 import styled, { css } from 'styled-components';
 import { centerLayout } from './centerLayout';
 
-export type MessageTone = 'muted' | 'subtle' | 'danger';
-export type MessageLayout = 'block' | 'center' | 'inline';
+export const MessageTone = z.enum(['muted', 'subtle', 'danger']);
+export type MessageTone = z.infer<typeof MessageTone>;
+export const MessageLayout = z.enum(['block', 'center', 'inline']);
+export type MessageLayout = z.infer<typeof MessageLayout>;
 
 const Box = styled.div<{ $tone: MessageTone; $layout: MessageLayout }>`
   font-size: ${({ theme }) => theme.font.size.sm};

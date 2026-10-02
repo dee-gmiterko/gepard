@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import {
   useEffect,
   useRef,
@@ -95,7 +96,10 @@ const NavRow = styled.div`
   display: flex;
 `;
 
-const NavButton = styled(IconButton)<{ $tone?: 'danger' | 'success' }>`
+const NavTone = z.enum(['danger', 'success']);
+type NavTone = z.infer<typeof NavTone>;
+
+const NavButton = styled(IconButton)<{ $tone?: NavTone }>`
   flex: 1 1 0;
   width: auto;
 

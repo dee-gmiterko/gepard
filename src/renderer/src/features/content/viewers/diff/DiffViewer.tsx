@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { DiffRow } from '@gepard/common';
+import type { DiffRow, DiffSide } from '@gepard/common';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import { useAppState } from '../../../../state/AppContext';
 import { useFileDiff } from '../../../../queries/files';
@@ -13,8 +13,8 @@ import {
 import { diffViewCommentEntries } from '../../../../helpers/comment';
 import { findDiffDocLine } from '../../../../helpers/diff';
 import { revealDocLine } from '../../../../components/CodeEditor/revealLine';
+import { CommentPortals } from '../../../../components/CodeEditor/commentPortals';
 import {
-  CommentPortals,
   commentAffordanceGutter,
   commentBlockDecorations,
 } from '../../../../components/CodeEditor/commentWidgets';
@@ -90,7 +90,7 @@ function DiffText({ path, rows }: { path: string; rows: DiffRow[] }): React.JSX.
     [doc, infos],
   );
   const { containerRef, view, comments, commentGutter } = useReadOnlyEditor(path, doc, extensions);
-  const [draft, setDraft] = useState<{ docLine: number; side: 'LEFT' | 'RIGHT' } | null>(null);
+  const [draft, setDraft] = useState<{ docLine: number; side: DiffSide } | null>(null);
   const activeDraft = commentsEnabled ? draft : null;
   const portals = useMemo(() => new CommentPortals(), []);
 

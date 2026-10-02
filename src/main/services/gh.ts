@@ -366,9 +366,9 @@ export interface NewThreadInput {
   path: string;
   body: string;
   line: number | null;
-  side: 'LEFT' | 'RIGHT';
+  side: DiffSide;
   startLine?: number | null;
-  startSide?: 'LEFT' | 'RIGHT' | null;
+  startSide?: DiffSide | null;
 }
 
 export interface NewThreadResult {
@@ -378,7 +378,7 @@ export interface NewThreadResult {
     path: string;
     line: number | null;
     startLine: number | null;
-    diffSide: 'LEFT' | 'RIGHT';
+    diffSide: DiffSide;
   };
   rootComment: z.infer<typeof NewThreadComment>;
   isFile: boolean;

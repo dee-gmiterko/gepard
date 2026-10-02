@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ExecError, runLines } from '../helpers/process/exec';
+import { runLines } from '../helpers/process/exec';
+import { ExecError } from '../helpers/process/ExecError';
 
 const node = process.execPath;
 

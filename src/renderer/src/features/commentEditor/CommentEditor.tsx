@@ -108,7 +108,7 @@ export function CommentEditor({
         onChoicesChange={setChoices}
         symbols={derivedReferences.symbols}
         symbolsLoading={derivedReferences.symbolsLoading}
-        symbolsError={derivedReferences.symbolsError}
+        symbolDisabled={derivedReferences.symbolDisabled}
         exactDisabled={derivedReferences.exactDisabled}
         exactData={derivedReferences.exactData}
         exactFetching={derivedReferences.exactFetching}

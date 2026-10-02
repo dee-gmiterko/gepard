@@ -6,6 +6,7 @@ import {
   extensionModuleSchema,
   isErrnoException,
   packageManifestSchema,
+  type ExtensionSource,
   type PackageManifest,
 } from '@gepard/common';
 import * as extensionsStore from '../store/extensions';
@@ -35,7 +36,7 @@ export interface DisabledExtensionPackage {
   displayName: string;
 }
 
-export type Sourced<T> = T & { source: 'builtin' | 'external' };
+export type Sourced<T> = T & { source: ExtensionSource };
 
 export type ScanEntry<T> =
   { extension: T } | { error: string } | { disabled: extensionsStore.KnownFile };

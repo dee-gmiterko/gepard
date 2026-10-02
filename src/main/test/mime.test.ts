@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mimeForPath } from '../helpers/fs/mime';
+import { mimeForPath } from '../helpers/mime';
 
 describe('mimeForPath', () => {
   it('maps known image extensions case-insensitively', () => {

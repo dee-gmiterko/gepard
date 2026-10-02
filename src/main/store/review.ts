@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { AppError } from '../ipc/registry';
-import { readJsonFile, writeJsonFile } from '../helpers/fs/jsonFile';
+import { readJsonFile, writeJsonFile } from '../helpers/jsonFile';
 import { reviewJsonPath } from '../paths';
 import {
   Comment,

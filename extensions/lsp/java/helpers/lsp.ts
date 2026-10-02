@@ -1,22 +1,22 @@
 import type {
-  DocumentSymbol,
+  SourceDocumentSymbol,
   LspDefinitionResult,
   LspDocumentSymbol,
   LspLocation,
   LspPosition,
   LspRange,
   LspSymbolInformation,
-  Pos,
-  Range,
-  SymbolKind,
+  SourcePos,
+  SourceRange,
+  SourceSymbolKind,
   SymbolKindMapper,
 } from '@gepard/common';
 
-export function toLspPosition(pos: Pos): LspPosition {
+export function toLspPosition(pos: SourcePos): LspPosition {
   return { line: pos.line - 1, character: pos.col - 1 };
 }
 
-export function toRange(r: LspRange): Range {
+export function toRange(r: LspRange): SourceRange {
   return {
     start: { line: r.start.line + 1, col: r.start.character + 1 },
     end: { line: r.end.line + 1, col: r.end.character + 1 },
@@ -32,7 +32,7 @@ export function toLocations(raw: LspDefinitionResult | null): LspLocation[] {
   );
 }
 
-export function mapLspSymbolKind(k: number): SymbolKind {
+export function mapLspSymbolKind(k: number): SourceSymbolKind {
   switch (k) {
     case 2:
     case 3:
@@ -74,7 +74,7 @@ export function isDocumentSymbolArray(
 export function toDocumentSymbol(
   s: LspDocumentSymbol,
   kindOf: SymbolKindMapper = mapLspSymbolKind,
-): DocumentSymbol {
+): SourceDocumentSymbol {
   return {
     name: s.name,
     kind: kindOf(s.kind),
@@ -84,21 +84,21 @@ export function toDocumentSymbol(
   };
 }
 
-export function flatSymbolsToTree(raw: LspSymbolInformation[]): DocumentSymbol[] {
-  const nodes = raw.map((s): DocumentSymbol => ({
+export function flatSymbolsToTree(raw: LspSymbolInformation[]): SourceDocumentSymbol[] {
+  const nodes = raw.map((s): SourceDocumentSymbol => ({
     name: s.name,
     kind: mapLspSymbolKind(s.kind),
     range: toRange(s.location.range),
     selectionRange: toRange(s.location.range),
     children: [],
   }));
-  const byName = new Map<string, DocumentSymbol[]>();
+  const byName = new Map<string, SourceDocumentSymbol[]>();
   for (let i = 0; i < raw.length; i++) {
     const list = byName.get(raw[i].name) ?? [];
     list.push(nodes[i]);
     byName.set(raw[i].name, list);
   }
-  const roots: DocumentSymbol[] = [];
+  const roots: SourceDocumentSymbol[] = [];
   for (let i = 0; i < raw.length; i++) {
     const containerName = raw[i].containerName;
     const parentCandidates = containerName ? byName.get(containerName) : undefined;

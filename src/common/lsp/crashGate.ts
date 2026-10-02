@@ -1,8 +1,4 @@
-function abandonedRequestError(): Error {
-  const err = new Error('LSP session crashed; request abandoned');
-  err.name = 'AbortError';
-  return err;
-}
+import { AbortError } from '../errors';
 
 export class CrashGate {
   private logged = false;
@@ -16,7 +12,7 @@ export class CrashGate {
   reset(): void {
     this.logged = false;
     this.pending = new Promise<never>((_, reject) => {
-      this.rejectPending = () => reject(abandonedRequestError());
+      this.rejectPending = () => reject(new AbortError('LSP session crashed; request abandoned'));
     });
     this.pending.catch(() => {});
   }

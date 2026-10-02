@@ -3,21 +3,11 @@ import { StringDecoder } from 'node:string_decoder';
 import { z } from 'zod';
 import { errorMessage } from '@gepard/common';
 import { AppError } from '../../ipc/registry';
+import { ExecError } from './ExecError';
+import { ExecExitError } from './ExecExitError';
+import { ExecSpawnError } from './ExecSpawnError';
 
 const DEFAULT_MAX_BYTES = 256 * 1024 * 1024;
-
-export class ExecError extends AppError {
-  constructor(
-    code: string,
-    message: string,
-    public cmd: string,
-    public args: string[],
-    public exitCode: number | null,
-    public stderr: string,
-  ) {
-    super(code, message, { cmd, args, exitCode, stderr });
-  }
-}
 
 export interface RunOptions {
   cwd?: string;
@@ -39,53 +29,6 @@ export interface RunBufferResult {
   stdout: Buffer;
   stderr: string;
   exitCode: number;
-}
-
-function stderrTail(stderr: string): string {
-  return stderr.trim().split(/\r?\n/).slice(-5).join('\n');
-}
-
-function spawnFailure(
-  err: NodeJS.ErrnoException,
-  cmd: string,
-  args: string[],
-  stderr: string,
-): Error {
-  if (err.name === 'AbortError') return err;
-  if (err.code === 'ENOENT') {
-    return new ExecError('EXEC_NOT_FOUND', `${cmd}: not found`, cmd, args, null, stderr);
-  }
-  return new ExecError('EXEC_FAILED', err.message, cmd, args, null, stderr);
-}
-
-function exitFailure(
-  cmd: string,
-  args: string[],
-  exitCode: number | null,
-  signal: NodeJS.Signals | null,
-  stderr: string,
-): ExecError {
-  if (signal) {
-    return new ExecError(
-      'EXEC_FAILED',
-      `${cmd} was killed by signal ${signal}`,
-      cmd,
-      args,
-      null,
-      stderr,
-    );
-  }
-  const detail = stderrTail(stderr);
-  return new ExecError(
-    'EXEC_FAILED',
-    detail
-      ? `${cmd} exited with code ${exitCode}: ${detail}`
-      : `${cmd} exited with code ${exitCode}`,
-    cmd,
-    args,
-    exitCode,
-    stderr,
-  );
 }
 
 function makeLineSplitter(onLine: (line: string) => void): (chunk: Buffer | string) => void {
@@ -139,7 +82,9 @@ function spawnCollect(
       splitStderr(chunk);
     });
 
-    child.on('error', (err: NodeJS.ErrnoException) => reject(spawnFailure(err, cmd, args, stderr)));
+    child.on('error', (err: NodeJS.ErrnoException) =>
+      reject(err.name === 'AbortError' ? err : new ExecSpawnError(err, cmd, args, stderr)),
+    );
 
     child.on('close', (exitCode, signal) => {
       if (tooLarge) {
@@ -156,7 +101,7 @@ function spawnCollect(
       }
       if (exitCode === 0)
         return resolve({ stdout: Buffer.concat(stdoutChunks), stderr, exitCode: 0 });
-      reject(exitFailure(cmd, args, exitCode, signal, stderr));
+      reject(new ExecExitError(cmd, args, exitCode, signal, stderr));
     });
 
     if (opts.stdin !== undefined) {
@@ -231,7 +176,9 @@ export function runLines(
     child.stderr.on('data', (chunk: Buffer) => {
       stderr += chunk.toString('utf8');
     });
-    child.on('error', (err: NodeJS.ErrnoException) => reject(spawnFailure(err, cmd, args, stderr)));
+    child.on('error', (err: NodeJS.ErrnoException) =>
+      reject(err.name === 'AbortError' ? err : new ExecSpawnError(err, cmd, args, stderr)),
+    );
     child.on('close', (exitCode, signal) => {
       if (!stopped && failure === null) {
         feed(decoder.end());
@@ -239,7 +186,7 @@ export function runLines(
       }
       if (failure !== null) return reject(failure);
       if (stopped || exitCode === 0) return resolve({ stopped, stderr });
-      reject(exitFailure(cmd, args, exitCode, signal, stderr));
+      reject(new ExecExitError(cmd, args, exitCode, signal, stderr));
     });
   });
 }

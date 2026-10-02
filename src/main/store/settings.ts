@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { settingsJsonPath } from '../paths';
-import { readJsonFile, writeJsonFile } from '../helpers/fs/jsonFile';
+import { readJsonFile, writeJsonFile } from '../helpers/jsonFile';
 
 const SettingsFile = z.object({
   theme: z.object({ templateId: z.string().nullable() }),

@@ -1,7 +1,8 @@
+import { z } from 'zod';
 import type { KeyBinding } from '../keyboard/bindings';
 
-const MODIFIERS = ['Ctrl', 'Alt', 'Meta', 'Shift'] as const;
-export type Modifier = (typeof MODIFIERS)[number];
+export const Modifier = z.enum(['Ctrl', 'Alt', 'Meta', 'Shift']);
+export type Modifier = z.infer<typeof Modifier>;
 
 export const MODIFIER_KEYS = new Set(['Control', 'Alt', 'Meta', 'Shift']);
 
@@ -26,7 +27,7 @@ export function keyChord(e: KeyChordSource): string {
 export function splitChord(chord: string): { modifiers: Modifier[]; key: string } {
   const modifiers: Modifier[] = [];
   let key = chord;
-  for (const m of MODIFIERS) {
+  for (const m of Modifier.options) {
     if (key.length > m.length + 1 && key.startsWith(`${m}+`)) {
       modifiers.push(m);
       key = key.slice(m.length + 1);

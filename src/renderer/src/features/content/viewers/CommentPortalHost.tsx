@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import type { CommentPortals } from '../../../components/CodeEditor/commentWidgets';
+import type { CommentPortals } from '../../../components/CodeEditor/commentPortals';
 import { ThreadWidget } from '../../commentEditor/ThreadWidget';
 
 export function CommentPortalHost({

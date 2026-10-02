@@ -10,5 +10,15 @@ export const themeHandlers: Pick<
   'theme.getSystemPrefersDark': () => nativeTheme.shouldUseDarkColors,
   'theme.getTemplateId': () => getTemplateId(),
   'theme.setTemplateId': ({ templateId }) => setTemplateId(templateId),
-  'themes.list': () => extensionRegistry.enabledThemeTemplates(),
+  'themes.list': async () =>
+    (await extensionRegistry.enabledThemeTemplates()).map(
+      ({ id, name, mode, shadow, colors, syntax }) => ({
+        id,
+        name,
+        mode,
+        shadow,
+        colors,
+        syntax,
+      }),
+    ),
 };

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { ExecError, run, runBuffer, runJson } from '../helpers/process/exec';
+import { run, runBuffer, runJson } from '../helpers/process/exec';
+import { ExecError } from '../helpers/process/ExecError';
 
 const node = process.execPath;
 

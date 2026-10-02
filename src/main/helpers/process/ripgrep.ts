@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { rgPath as rgPathRaw } from '@vscode/ripgrep';
 import { makeTargetMatcher } from '@gepard/common';
-import { runLines, ExecError } from './exec';
+import { runLines } from './exec';
+import { ExecError } from './ExecError';
 import { clipPreview } from '../search/preview';
 import { byteOffsetToUtf16, utf16ByteBoundaries } from '../string';
 

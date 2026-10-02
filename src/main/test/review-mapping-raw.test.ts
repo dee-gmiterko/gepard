@@ -7,7 +7,7 @@ import {
   mapThread,
 } from '../helpers/github/reviewMapping';
 import { checkGqlErrors, isLineNotInDiffError } from '../helpers/github/ghParsing';
-import { ExecError } from '../helpers/process/exec';
+import { ExecError } from '../helpers/process/ExecError';
 import type {
   GqlIssueCommentRaw,
   GqlReviewCommentRaw,

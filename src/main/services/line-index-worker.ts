@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parentPort } from 'node:worker_threads';
-import { looksBinary } from '../helpers/fs/binary';
+import { looksBinary } from '../helpers/binary';
 import { LineIndex } from './line-index';
 import type {
   LineIndexFileChange,

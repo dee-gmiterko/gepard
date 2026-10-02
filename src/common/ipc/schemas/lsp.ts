@@ -2,13 +2,20 @@ import { z } from 'zod';
 import { RepoPath } from './pr';
 import { Location, Range, SymbolKind } from './search';
 
+export const SymbolModifier = z.enum([
+  'declaration',
+  'readonly',
+  'static',
+  'async',
+  'defaultLibrary',
+]);
+export type SymbolModifier = z.infer<typeof SymbolModifier>;
+
 export const LineSymbol = z.object({
   name: z.string(),
   kind: SymbolKind,
   // Only standard LSP 3.17 token modifiers are reported.
-  modifiers: z
-    .array(z.enum(['declaration', 'readonly', 'static', 'async', 'defaultLibrary']))
-    .default([]),
+  modifiers: z.array(SymbolModifier).default([]),
   range: Range,
 });
 export type LineSymbol = z.infer<typeof LineSymbol>;
@@ -52,11 +59,14 @@ export const DefinitionResult = z.object({
 });
 export type DefinitionResult = z.infer<typeof DefinitionResult>;
 
+export const IndexPhase = z.enum(['files', 'language']);
+export type IndexPhase = z.infer<typeof IndexPhase>;
+
 export const IndexStatus = z.discriminatedUnion('state', [
   z.object({ state: z.literal('idle') }),
   z.object({
     state: z.literal('indexing'),
-    phase: z.enum(['files', 'language']),
+    phase: IndexPhase,
     done: z.int(),
     total: z.int().optional(),
   }),

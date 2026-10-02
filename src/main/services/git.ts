@@ -1,8 +1,8 @@
 import { mkdir, rename, rm } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { run, runBuffer, type RunResult } from '../helpers/process/exec';
-import { looksBinary } from '../helpers/fs/binary';
-import { mimeForPath } from '../helpers/fs/mime';
+import { looksBinary } from '../helpers/binary';
+import { mimeForPath } from '../helpers/mime';
 import {
   GIT_LOG_FORMAT,
   changeTypeFromLetter,

@@ -8,6 +8,17 @@ export const ProjectId = z
   .regex(/^[A-Za-z0-9._-]+$/, 'invalid project id')
   .refine((id) => id !== '.' && id !== '..', { message: 'invalid project id' });
 
+export const ClonePhase = z.enum([
+  'counting',
+  'compressing',
+  'receiving',
+  'resolving',
+  'checkout',
+  'done',
+  'error',
+]);
+export type ClonePhase = z.infer<typeof ClonePhase>;
+
 export const Project = z.object({
   id: ProjectId,
   url: z.url(),

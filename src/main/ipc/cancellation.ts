@@ -1,6 +1,7 @@
 // Cancelling a vscode-jsonrpc `CancellationToken` sends `$/cancelRequest`,
 // which the server is not required to honor.
 import { CancellationTokenSource, type CancellationToken } from 'vscode-jsonrpc';
+import { AbortError } from '@gepard/common';
 
 export interface CancellableRun {
   signal: AbortSignal;
@@ -13,12 +14,6 @@ interface Entry {
 }
 
 const inFlight = new Map<string, Entry>();
-
-function cancelledError(): Error {
-  const err = new Error('Cancelled: superseded by a newer request');
-  err.name = 'AbortError';
-  return err;
-}
 
 export function withLatestWins<T>(
   key: string,
@@ -39,7 +34,11 @@ export function withLatestWins<T>(
   }
 
   const cancellation = new Promise<never>((_, reject) => {
-    controller.signal.addEventListener('abort', () => reject(cancelledError()), { once: true });
+    controller.signal.addEventListener(
+      'abort',
+      () => reject(new AbortError('Cancelled: superseded by a newer request')),
+      { once: true },
+    );
   });
 
   return Promise.race([fn({ signal: controller.signal, token: cts.token }), cancellation]).then(

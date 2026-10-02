@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { formatCaughtError } from '../helpers/error';
-import { isLocaleData } from '../helpers/extension';
+import { isLocaleExtension } from '@gepard/common';
 import { isFn } from '../helpers/type-guards';
 
 describe('formatCaughtError', () => {
@@ -21,11 +21,11 @@ describe('formatCaughtError', () => {
   });
 });
 
-describe('isLocaleData', () => {
+describe('isLocaleExtension', () => {
   it('rejects values that are not locale data', () => {
-    expect(isLocaleData(null)).toBe(false);
-    expect(isLocaleData({})).toBe(false);
-    expect(isLocaleData('en')).toBe(false);
+    expect(isLocaleExtension(null)).toBe(false);
+    expect(isLocaleExtension({})).toBe(false);
+    expect(isLocaleExtension('en')).toBe(false);
   });
 });
 

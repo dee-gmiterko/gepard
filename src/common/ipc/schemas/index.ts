@@ -2,6 +2,7 @@ export * from './comment';
 export * from './extensions';
 export * from './grammar';
 export * from './locale';
+export * from './log';
 export * from './lsp';
 export * from './pr';
 export * from './project';

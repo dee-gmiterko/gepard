@@ -3,7 +3,7 @@ import { invoke } from '../ipc/client';
 import { qk } from './keys';
 import { useAppDispatch, useAppState } from '../state/AppContext';
 import { useTargetedPr } from './prs';
-import type { CommentDraft, LocalViewedState } from '@gepard/common';
+import type { CommentDraft, LocalViewedState, SyncMode } from '@gepard/common';
 
 export function useComments() {
   const state = useAppState();
@@ -118,7 +118,7 @@ export function useSync() {
   const pr = state.targeting.pr ?? NaN;
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (mode: 'full' | 'pull' = 'full') => invoke('sync.run', { projectId, pr, mode }),
+    mutationFn: (mode: SyncMode = 'full') => invoke('sync.run', { projectId, pr, mode }),
     onSuccess: (result) => {
       dispatch({
         type: 'target/checkoutResult',
