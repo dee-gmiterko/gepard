@@ -7,6 +7,7 @@ import { useTargetedFiles, useTree } from '../../../queries/files';
 import { useCommands } from '../../../keyboard/useCommands';
 import { buildTree, buildFlatList, withRoot, type TreeNode } from '../../../helpers/tree';
 import { Message } from '../../../components/Message';
+import { Inline } from '../../../components/Layout';
 import { Toolbar } from '../../../components/Toolbar';
 import { HideViewedToggle } from '../../../components/HideViewedToggle';
 import { ViewModeToggle, type ViewMode } from '../../../components/ViewModeToggle';
@@ -131,10 +132,12 @@ export function TargetedBrowser(): React.JSX.Element {
   return (
     <div>
       <Toolbar>
-        {state.targeting.pr !== null && (
-          <HideViewedToggle value={hideViewed} onChange={setHideViewed} />
-        )}
-        <ViewModeToggle value={mode} onChange={setMode} />
+        <Inline $gap={1}>
+          {state.targeting.pr !== null && (
+            <HideViewedToggle value={hideViewed} onChange={setHideViewed} />
+          )}
+          <ViewModeToggle value={mode} onChange={setMode} />
+        </Inline>
       </Toolbar>
       {visibleItems.length === 0 ? (
         <Message>
