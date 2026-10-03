@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import type { PrOverviewDetails, PrSummary } from '@gepard/common';
+import { Stack } from '../../../../components/Layout';
 import { useComments } from '../../../../queries/comments';
 import { usePrCommits } from '../../../../queries/prs';
 import {
@@ -41,9 +42,11 @@ export function TimelinePanel({
   );
   return (
     <Panel title={<FormattedMessage {...messages.title} />}>
-      {days.map((day) => (
-        <TimelineDay key={day.day} day={day} />
-      ))}
+      <Stack $gap={4}>
+        {days.map((day) => (
+          <TimelineDay key={day.day} day={day} />
+        ))}
+      </Stack>
     </Panel>
   );
 }

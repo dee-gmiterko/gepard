@@ -3,7 +3,7 @@ import type { PrOverviewDetails } from '@gepard/common';
 import { Message } from '../../../../components/Message';
 import { latestReviewStates } from '../../../../helpers/overview';
 import { Panel } from '../shared/Panel';
-import { Grid } from '../shared/overviewStyles';
+import { Table } from '../shared/overviewStyles';
 import { ReviewerRow } from './ReviewerRow';
 
 const messages = defineMessages({
@@ -31,7 +31,7 @@ export function ReviewersPanel({ details }: { details: PrOverviewDetails }): Rea
           <FormattedMessage {...messages.none} />
         </Message>
       ) : (
-        <Grid $columns="minmax(0, 1fr) auto">
+        <Table>
           {states.map((s) => (
             <ReviewerRow key={s.author} name={s.author}>
               <FormattedMessage {...messages.reviewState} values={{ state: s.state }} />
@@ -42,7 +42,7 @@ export function ReviewersPanel({ details }: { details: PrOverviewDetails }): Rea
               <FormattedMessage {...messages.requested} />
             </ReviewerRow>
           ))}
-        </Grid>
+        </Table>
       )}
     </Panel>
   );

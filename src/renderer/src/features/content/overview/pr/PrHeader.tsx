@@ -4,7 +4,7 @@ import { ArrowLeft } from 'react-feather';
 import type { PrOverviewDetails, PrSummary } from '@gepard/common';
 import { Badge } from '../../../../components/Badge';
 import { Button } from '../../../../components/Button';
-import { Inline } from '../../../../components/Layout';
+import { Inline, Stack } from '../../../../components/Layout';
 import { SyncButton } from '../../sync/SyncButton';
 import { DecisionBadge } from '../shared/DecisionBadge';
 import { PrLabel } from '../shared/PrLabel';
@@ -26,16 +26,17 @@ const messages = defineMessages({
   },
 });
 
-const Column = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.space[2]};
-`;
-
 const Title = styled.h1`
+  flex: 1;
+  min-width: 0;
   margin: 0;
+  font-weight: 600;
   font-size: ${({ theme }) => theme.font.size.lg};
   color: ${({ theme }) => theme.colors.fg};
+`;
+
+const HeaderRow = styled(Inline)`
+  align-self: stretch;
 `;
 
 function stateMessage(details: PrOverviewDetails | undefined): keyof typeof messages {
@@ -58,7 +59,7 @@ export function PrHeader({
 }): React.JSX.Element {
   const actions = useOverviewActions();
   return (
-    <Column>
+    <Stack $gap={2} $align="flex-start">
       <div>
         <LinkButton onClick={actions.showAllPrs}>
           <Inline $gap={1}>
@@ -67,9 +68,9 @@ export function PrHeader({
           </Inline>
         </LinkButton>
       </div>
-      <Inline>
+      <HeaderRow>
         <Title>
-          <PrLabel number={pr.number} title={pr.title} />
+          <PrLabel number={pr.number} title={pr.title} truncate={false} />
         </Title>
         <Badge>
           <FormattedMessage {...messages[stateMessage(details)]} />
@@ -79,15 +80,17 @@ export function PrHeader({
           <FormattedMessage {...messages.review} />
         </Button>
         <SyncButton />
-      </Inline>
-      <Muted>
-        <FormattedMessage
-          {...messages.byline}
-          values={{ author: pr.author.login, head: pr.headRefName, base: pr.baseRefName }}
-        />
+      </HeaderRow>
+      <Inline $gap={2}>
+        <Muted>
+          <FormattedMessage
+            {...messages.byline}
+            values={{ author: pr.author.login, head: pr.headRefName, base: pr.baseRefName }}
+          />
+        </Muted>
         {details && <RelativeTime value={details.updatedAt} />}
-      </Muted>
+      </Inline>
       <QueryState isLoading={isLoading} error={error} />
-    </Column>
+    </Stack>
   );
 }

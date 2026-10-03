@@ -1,10 +1,12 @@
 import { defineMessages, FormattedMessage } from 'react-intl';
 import styled from 'styled-components';
+import { Inline } from '../../../../components/Layout';
+import { ListRow } from '../../../../components/List';
 import type { OverviewActivity } from '@gepard/common';
 import { useOverviewActions } from '../shared/useOverviewActions';
 import { PrLabel } from '../shared/PrLabel';
 import { RelativeTime } from '../shared/RelativeTime';
-import { LinkButton, Truncated } from '../shared/overviewStyles';
+import { LinkButton } from '../shared/overviewStyles';
 
 const messages = defineMessages({
   commit: {
@@ -27,12 +29,18 @@ const messages = defineMessages({
   unknownActor: { id: 'content.overview.unknownActor', defaultMessage: 'Someone' },
 });
 
-const Row = styled.div`
-  display: flex;
-  align-items: baseline;
-  gap: ${({ theme }) => theme.space[1]};
-  min-width: 0;
+const Row = styled(ListRow)`
+  padding-right: ${({ theme }) => theme.space[2]};
+  padding-left: ${({ theme }) => theme.space[2]};
   font-size: ${({ theme }) => theme.font.size.sm};
+`;
+
+const Main = styled(Inline)`
+  flex: 1;
+`;
+
+const Verb = styled.span`
+  flex-shrink: 0;
 `;
 
 function describeActivity(entry: OverviewActivity): React.ReactNode {
@@ -54,13 +62,13 @@ function describeActivity(entry: OverviewActivity): React.ReactNode {
 export function ActivityLine({ entry }: { entry: OverviewActivity }): React.JSX.Element {
   const actions = useOverviewActions();
   return (
-    <Row>
-      <span>{describeActivity(entry)}</span>
-      <LinkButton onClick={() => actions.openPr(entry.pr)}>
-        <Truncated>
+    <Row $padding={2} $gap={2}>
+      <Main $gap={1}>
+        <Verb>{describeActivity(entry)}</Verb>
+        <LinkButton onClick={() => actions.openPr(entry.pr)}>
           <PrLabel number={entry.pr} title={entry.prTitle} />
-        </Truncated>
-      </LinkButton>
+        </LinkButton>
+      </Main>
       <RelativeTime value={entry.at} />
     </Row>
   );

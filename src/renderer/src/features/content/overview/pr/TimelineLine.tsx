@@ -28,11 +28,16 @@ const messages = defineMessages({
   someone: { id: 'content.overview.pr.someone', defaultMessage: 'Someone' },
 });
 
+const Time = styled(Caption)`
+  min-width: 56px;
+  font-variant-numeric: tabular-nums;
+`;
+
 const Row = styled.div`
   display: flex;
-  gap: ${({ theme }) => theme.space[2]};
+  gap: ${({ theme }) => theme.space[3]};
   align-items: baseline;
-  padding-left: ${({ theme }) => theme.space[3]};
+  padding: ${({ theme }) => theme.space[1]} ${({ theme }) => theme.space[2]};
   font-size: ${({ theme }) => theme.font.size.sm};
 `;
 
@@ -70,9 +75,9 @@ export function TimelineLine({ group }: { group: TimelineGroup }): React.JSX.Ele
   }
   return (
     <Row>
-      <Caption>
+      <Time>
         <FormattedDate value={group.at} timeStyle="short" />
-      </Caption>
+      </Time>
       {onClick ? <LinkButton onClick={onClick}>{text}</LinkButton> : <span>{text}</span>}
     </Row>
   );
