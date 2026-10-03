@@ -1,6 +1,12 @@
 import type { HandlerMap } from '../registry';
 import type { GhService } from '../../services/gh';
 import type { GitService } from '../../services/git';
+import {
+  CODEOWNERS_PATHS,
+  ownersOf,
+  parseCodeowners,
+  type CodeownersRule,
+} from '../../helpers/codeowners';
 
 export function createPrsHandlers(
   gh: GhService,
@@ -16,6 +22,7 @@ export function createPrsHandlers(
   | 'commits.list'
   | 'overview.project'
   | 'overview.pr'
+  | 'overview.owners'
 > {
   return {
     'pr.list': async ({ projectId, search, commit, path }) => {
@@ -63,6 +70,20 @@ export function createPrsHandlers(
     'overview.pr': async ({ projectId, pr }) => {
       const { owner, repo } = await gh.repoRefFor(projectId);
       return gh.prOverview(owner, repo, pr);
+    },
+
+    'overview.owners': async ({ projectId, base, head }) => {
+      let rules: CodeownersRule[] | null = null;
+      for (const path of CODEOWNERS_PATHS) {
+        const content = await git.fileContentAt(projectId, head, path).catch(() => null);
+        if (content?.kind === 'text') {
+          rules = parseCodeowners(content.text);
+          break;
+        }
+      }
+      if (!rules) return null;
+      const files = await git.changedFiles(projectId, base, head);
+      return Object.fromEntries(files.map((f) => [f.path, ownersOf(rules, f.path)]));
     },
 
     'commits.list': ({ projectId, search, path, limit }) =>

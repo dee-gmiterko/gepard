@@ -64,3 +64,6 @@ export const PrOverviewDetails = z.object({
   reviewRequests: z.array(z.string()),
 });
 export type PrOverviewDetails = z.infer<typeof PrOverviewDetails>;
+
+export const ChangedFileOwners = z.record(z.string(), z.array(z.string()));
+export type ChangedFileOwners = z.infer<typeof ChangedFileOwners>;

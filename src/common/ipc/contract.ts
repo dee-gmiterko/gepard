@@ -31,7 +31,7 @@ import {
   LineSymbolsResult,
 } from './schemas/lsp';
 import { LogLevel } from './schemas/log';
-import { PrOverviewDetails, ProjectOverview } from './schemas/overview';
+import { ChangedFileOwners, PrOverviewDetails, ProjectOverview } from './schemas/overview';
 import { ExtensionInfo } from './schemas/extensions';
 import { GrammarModule } from './schemas/grammar';
 import { ThemeTemplateData } from './schemas/theme';
@@ -120,6 +120,10 @@ export const channels = {
 
   'overview.project': ch(z.object(ProjectRef), ProjectOverview),
   'overview.pr': ch(z.object(PrRef), PrOverviewDetails),
+  'overview.owners': ch(
+    z.object({ ...ProjectRef, base: Sha, head: Sha }),
+    ChangedFileOwners.nullable(),
+  ),
 
   'files.changed': ch(z.object({ ...ProjectRef, base: Sha, head: Sha }), z.array(ChangedFile)),
   'files.diff': ch(z.object({ ...ProjectRef, base: Sha, head: Sha, path: RepoPath }), FileDiff),

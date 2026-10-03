@@ -1,5 +1,5 @@
-import { useAppDispatch } from '../../../state/AppContext';
-import { useTargetActions } from '../../header/useTargetActions';
+import { useAppDispatch } from '../../../../state/AppContext';
+import { useTargetActions } from '../../../header/useTargetActions';
 
 export interface OverviewActions {
   openPr: (pr: number) => void;

@@ -5,7 +5,6 @@ import type {
   ReviewState,
   ReviewThread,
 } from '@gepard/common';
-import { ownersOf, type CodeownersRule } from './codeowners';
 
 export interface FileGroup {
   key: string;
@@ -51,11 +50,11 @@ export function groupByExtension(files: readonly ChangedFile[]): FileGroup[] {
 
 export function groupByOwner(
   files: readonly ChangedFile[],
-  rules: readonly CodeownersRule[],
+  ownersByPath: Readonly<Record<string, readonly string[]>>,
 ): FileGroup[] {
   return groupBy(files, (f) => {
-    const owners = ownersOf(rules, f.path);
-    return owners.length > 0 ? owners : [UNOWNED];
+    const owners = ownersByPath[f.path] ?? [];
+    return owners.length > 0 ? [...owners] : [UNOWNED];
   });
 }
 

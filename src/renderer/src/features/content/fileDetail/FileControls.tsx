@@ -8,25 +8,17 @@ import {
   type RefObject,
 } from 'react';
 import styled, { css, keyframes } from 'styled-components';
-import {
-  ArrowLeft,
-  ArrowRight,
-  CornerUpLeft,
-  CornerUpRight,
-  Move,
-  RefreshCw,
-  Sidebar,
-} from 'react-feather';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { ArrowLeft, ArrowRight, CornerUpLeft, CornerUpRight, Move, Sidebar } from 'react-feather';
+import { defineMessages, useIntl } from 'react-intl';
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
 import { useSetLayout } from '../../../queries/projects';
-import { usePendingCount, useSync, useViewed } from '../../../queries/comments';
+import { useViewed } from '../../../queries/comments';
 import { useCommands, useFileNavigation } from '../../../keyboard/useCommands';
 import { useIsCheckedOutChangedFile } from '../useIsCheckedOutChangedFile';
-import { Button } from '../../../components/Button';
 import { IconButton } from '../../../components/IconButton';
 import { Inline, Stack } from '../../../components/Layout';
 import { Surface } from '../../../components/Surface';
+import { SyncButton } from '../sync/SyncButton';
 
 const messages = defineMessages({
   viewed: {
@@ -45,10 +37,6 @@ const messages = defineMessages({
     id: 'content.fileControls.undock',
     defaultMessage: 'Detach from file details',
   },
-  sync: {
-    id: 'content.fileControls.sync',
-    defaultMessage: 'Sync',
-  },
   previousFile: {
     id: 'content.fileControls.previousFile',
     defaultMessage: 'Previous file',
@@ -64,10 +52,6 @@ const messages = defineMessages({
   nextFile: {
     id: 'content.fileControls.nextFile',
     defaultMessage: 'Next file',
-  },
-  syncWithCount: {
-    id: 'content.fileControls.syncWithCount',
-    defaultMessage: 'Sync <b>+{count}</b>',
   },
 });
 
@@ -179,23 +163,6 @@ const Grip = styled(IconButton)`
   &:active {
     cursor: grabbing;
   }
-`;
-
-const spin = keyframes`
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-`;
-
-const Spinning = styled(RefreshCw)<{ $spinning: boolean }>`
-  ${({ $spinning }) =>
-    $spinning &&
-    css`
-      animation: ${spin} 0.8s linear infinite;
-    `}
 `;
 
 const GRIP_STEP = 16;
@@ -337,8 +304,6 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
   });
 
   const { data: viewed } = useViewed();
-  const { mutate: runSync, isPending: syncing } = useSync();
-  const { data: pendingCount } = usePendingCount();
   const isChangedFile = useIsCheckedOutChangedFile(path);
   const commands = useCommands();
   const { canGoPrev, canGoNext } = useFileNavigation();
@@ -424,17 +389,7 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
           />
         </NavRow>
 
-        <Button block disabled={syncing} onClick={() => runSync('full')}>
-          <Spinning size={14} $spinning={syncing} />
-          {pendingCount ? (
-            <FormattedMessage
-              {...messages.syncWithCount}
-              values={{ count: pendingCount, b: (chunks) => <strong>{chunks}</strong> }}
-            />
-          ) : (
-            <FormattedMessage {...messages.sync} />
-          )}
-        </Button>
+        <SyncButton block />
       </Stack>
     </Wrapper>
   );
