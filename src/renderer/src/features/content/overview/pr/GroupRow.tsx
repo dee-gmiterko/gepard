@@ -1,7 +1,7 @@
 import type { FileGroup } from '../../../../helpers/overview';
 import { FileCount } from '../shared/FileCount';
 import { Lines } from '../shared/Lines';
-import { LinkButton, Muted, Truncated } from '../shared/overviewStyles';
+import { GROUP_COLUMNS, LinkButton, Muted, RowGrid, Truncated } from '../shared/overviewStyles';
 
 export function GroupRow({
   group,
@@ -14,12 +14,12 @@ export function GroupRow({
 }): React.JSX.Element {
   const text = <Truncated>{label(group.key)}</Truncated>;
   return (
-    <>
+    <RowGrid $columns={GROUP_COLUMNS}>
       {onOpen ? <LinkButton onClick={() => onOpen(group.key)}>{text}</LinkButton> : text}
       <Muted>
         <FileCount files={group.files} />
       </Muted>
       <Lines additions={group.additions} deletions={group.deletions} />
-    </>
+    </RowGrid>
   );
 }

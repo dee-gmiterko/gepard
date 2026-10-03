@@ -1,4 +1,5 @@
 import { defineMessages, FormattedMessage } from 'react-intl';
+import { List } from '../../../../components/List';
 import { Message } from '../../../../components/Message';
 import { useProjectOverview } from '../../../../queries/overview';
 import { Panel } from '../shared/Panel';
@@ -39,9 +40,11 @@ export function ProjectOverview(): React.JSX.Element {
                 <FormattedMessage {...messages.noActivity} />
               </Message>
             ) : (
-              data.activity.map((entry) => (
-                <ActivityLine key={`${entry.kind}-${entry.pr}-${entry.at}`} entry={entry} />
-              ))
+              <List>
+                {data.activity.map((entry) => (
+                  <ActivityLine key={`${entry.kind}-${entry.pr}-${entry.at}`} entry={entry} />
+                ))}
+              </List>
             )}
           </Panel>
         )}

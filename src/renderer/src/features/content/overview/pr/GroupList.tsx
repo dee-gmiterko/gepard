@@ -1,5 +1,5 @@
 import type { FileGroup } from '../../../../helpers/overview';
-import { Grid } from '../shared/overviewStyles';
+import { Table } from '../shared/overviewStyles';
 import { GroupRow } from './GroupRow';
 
 const MAX_ROWS = 8;
@@ -14,10 +14,10 @@ export function GroupList({
   onOpen?: (key: string) => void;
 }): React.JSX.Element {
   return (
-    <Grid $columns="minmax(0, 1fr) auto auto">
+    <Table>
       {groups.slice(0, MAX_ROWS).map((g) => (
         <GroupRow key={g.key} group={g} label={label} onOpen={onOpen} />
       ))}
-    </Grid>
+    </Table>
   );
 }

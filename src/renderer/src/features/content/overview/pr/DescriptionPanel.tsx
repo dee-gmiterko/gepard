@@ -1,5 +1,6 @@
 import { defineMessages, FormattedMessage } from 'react-intl';
 import styled from 'styled-components';
+import { Surface } from '../../../../components/Surface';
 import { Markdown } from '../../../../components/Markdown';
 import { Panel } from '../shared/Panel';
 import { Muted } from '../shared/overviewStyles';
@@ -12,9 +13,10 @@ const messages = defineMessages({
   },
 });
 
-const Scroll = styled.div`
-  max-height: 160px;
+const Scroll = styled(Surface).attrs({ $elevation: 'flat' })`
+  max-height: 240px;
   overflow: auto;
+  padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[3]};
 `;
 
 export function DescriptionPanel({ body }: { body: string }): React.JSX.Element {

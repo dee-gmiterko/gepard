@@ -1,6 +1,6 @@
 import { defineMessages, FormattedMessage } from 'react-intl';
 import type { OverviewPr } from '@gepard/common';
-import { Grid, HeaderCell } from '../shared/overviewStyles';
+import { HeaderCell, PR_COLUMNS, RowGrid, Table } from '../shared/overviewStyles';
 import { PrRow } from './PrRow';
 
 const messages = defineMessages({
@@ -12,21 +12,22 @@ const messages = defineMessages({
   updated: { id: 'content.overview.project.updated', defaultMessage: 'Updated' },
 });
 
-const COLUMNS = 'minmax(0, 1fr) 120px 150px 130px 100px 80px 70px';
 const HEADERS = ['pr', 'size', 'comments', 'decision', 'progress', 'updated'] as const;
 
 export function PrTable({ prs }: { prs: readonly OverviewPr[] }): React.JSX.Element {
   return (
-    <Grid $columns={COLUMNS}>
-      {HEADERS.map((key) => (
-        <HeaderCell key={key}>
-          <FormattedMessage {...messages[key]} />
-        </HeaderCell>
-      ))}
-      <span />
+    <Table>
+      <RowGrid $columns={PR_COLUMNS} $head>
+        {HEADERS.map((key) => (
+          <HeaderCell key={key}>
+            <FormattedMessage {...messages[key]} />
+          </HeaderCell>
+        ))}
+        <span />
+      </RowGrid>
       {prs.map((pr) => (
         <PrRow key={pr.number} pr={pr} />
       ))}
-    </Grid>
+    </Table>
   );
 }
