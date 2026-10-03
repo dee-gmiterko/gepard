@@ -3,7 +3,7 @@ import {
   codeViewCommentEntries,
   diffViewCommentEntries,
   fileReference,
-  generalThreadsReferencingFile,
+  prThreadsReferencingFile,
   sortThreadsChronologically,
 } from '../src/helpers/comment';
 import type { Anchor, Comment, ReviewThread } from '@gepard/common';
@@ -281,15 +281,15 @@ describe('fileReference', () => {
   });
 });
 
-describe('generalThreadsReferencingFile', () => {
-  it('matches local references and synced body lines of general threads only', () => {
+describe('prThreadsReferencingFile', () => {
+  it('matches local references and synced body lines of PR comment threads only', () => {
     const local = subjectThread('PR', 'local', 'a.ts');
     const synced = subjectThread('PR', 'hi\n\na.ts:1');
     const other = subjectThread('PR', 'hi\n\nb.ts:1');
     const prefixOnly = subjectThread('PR', 'a.ts:1x');
     const lineThread = subjectThread('LINE', 'x', 'a.ts');
     expect(
-      generalThreadsReferencingFile([local, synced, other, prefixOnly, lineThread], 'a.ts'),
+      prThreadsReferencingFile([local, synced, other, prefixOnly, lineThread], 'a.ts'),
     ).toEqual([local, synced]);
   });
 });

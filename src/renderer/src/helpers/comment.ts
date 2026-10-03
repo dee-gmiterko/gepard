@@ -113,7 +113,7 @@ export function fileReference(path: string): CommentReference {
   return { path, line: 1, kind: 'symbol' };
 }
 
-export function generalThreadsReferencingFile(
+export function prThreadsReferencingFile(
   threads: readonly ReviewThread[],
   path: string,
 ): ReviewThread[] {

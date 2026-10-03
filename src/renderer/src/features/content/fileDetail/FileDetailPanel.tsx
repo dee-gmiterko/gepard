@@ -12,7 +12,7 @@ import { ResizeHandle } from '../../../components/ResizeHandle';
 import { Inline, Stack } from '../../../components/Layout';
 import { Message } from '../../../components/Message';
 import { FileComments } from '../../commentEditor/FileComments';
-import { OutsideDiffComments } from '../../commentEditor/OutsideDiffComments';
+import { FilePrComments } from '../../commentEditor/FilePrComments';
 import { SymbolsTree } from './SymbolsTree';
 import { FileControls } from './FileControls';
 import { MassActions } from './massActions/MassActions';
@@ -177,7 +177,7 @@ export function FileDetailPanel(): React.JSX.Element | null {
                 <FileComments path={path} />
               </Stack>
             ) : (
-              <OutsideDiffComments path={path} />
+              <FilePrComments path={path} />
             )}
           </Body>
           <SymbolsTree path={path} />
