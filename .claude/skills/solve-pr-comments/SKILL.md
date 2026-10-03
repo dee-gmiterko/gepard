@@ -1,19 +1,37 @@
 ---
 name: solve-pr-comments
-description: Resolve all open/unresolved review comments on the current branch's PR by distributing fixes across parallel subagents, then verifying the combined result once. Use whenever the user asks to solve, resolve, address, or fix open PR comments/review threads/feedback for the current branch.
+description: Resolve all open/unresolved review comments on open PRs, one PR and one branch at a time, by distributing fixes across parallel subagents and verifying the combined result once per PR. Use whenever the user asks to solve, resolve, address, or fix open PR comments/review threads/feedback.
 ---
 
-Coordinate resolution of every unresolved review thread on the current branch's PR. Subagents make the edits. The coordinator is the only one who runs full verification and the only one who marks a thread resolved.
+Coordinate resolution of every unresolved review thread on the open PRs. The work is organized as a loop over PRs: exactly one PR, checked out on its own branch, is worked on at a time. Steps 1 to 6 run entirely within one iteration of that loop. Subagents make the edits. The coordinator is the only one who runs full verification and the only one who marks a thread resolved.
 
 A thread counts as resolved only when the coordinator has personally verified — by reading the diff and by a clean verification run — that the code now does what the comment asked. An agent's self-report and a GitHub "resolved" checkmark are both claims, not proof.
 
+## 0. Loop over PRs, one PR and one branch at a time
+
+Changes for a PR must be made, verified and committed on that PR's head branch. Process one PR at a time.
+
+PR list: the PRs the user named, otherwise the user's open PRs:
+
+```
+gh pr list --author "@me" --state open --json number,headRefName
+```
+
+Record the starting branch: `git branch --show-current`.
+
+For each PR:
+
+1. `git status --short` must print nothing. Otherwise stop and report.
+2. `gh pr checkout <number>`. `git branch --show-current` must equal the PR's `headRefName`.
+3. Run steps 1 to 6 for this PR's threads only.
+4. `git status --short` must print nothing and the step 5 commit must be on this branch. Then `git checkout <starting branch>`.
+
 ## 1. Gather every unresolved thread
 
-Get owner/repo and PR number if not already known:
+Get owner/repo if not already known. The PR number is the PR of the current iteration:
 
 ```
 gh repo view --json owner,name
-gh pr view --json number
 ```
 
 Query inline review threads directly via GraphQL — top-level PR comments and reviews miss them:

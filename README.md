@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="src/app/build/icon.png" alt="Gepard logo" width="128" />
+</p>
+
 # Gepard - Great Pull Request Review Tool
 
 Gepard is a desktop app for reviewing large GitHub pull requests. Instead of
@@ -64,3 +68,5 @@ bundled; more are installed from Settings without a restart.
   extensions.
 - [docs/gepard.md](docs/gepard.md): the full product spec.
 - [MIT license](LICENSE).
+
+ᓚᘏᗢ

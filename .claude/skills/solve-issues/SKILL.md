@@ -33,7 +33,7 @@ Do not pre-investigate an issue's cause or pre-decide its fix before dispatch â€
 
 Each agent's prompt must include, per issue it owns:
 
-- The issue number, title, URL, and the full (typo-corrected, intent-preserved) body plus any clarifying comments.
+- The issue number, title, URL, and the full (typo-corrected, intent-preserved) body plus any clarifying comments, pasted into the prompt in full. Never pass only an issue number or link, and never summarize, shorten, or paraphrase the text.
 - An instruction to fix the actual code â€” not acknowledge the issue, not describe the fix in documentation only.
 - An instruction to add or extend tests when the issue is a bug report, so the regression is covered.
 

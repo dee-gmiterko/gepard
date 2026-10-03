@@ -8,10 +8,10 @@ You are committing code changes following the project's git conventions, one bra
 
 ## Critical Rules
 
-- Stage whole files only (`git add <file>`), never `git add -p`
 - Never add Co-Authored-By lines
 - Follow conventional commit format: `type: description`
-- One branch, one commit, one pull request per goal. A goal is a coherent unit of intent, not a file or layer. Avoid over-splitting.
+- One branch and one pull request per issue, split by issue and nothing else. Every branch starts from the base branch and holds only the changes that issue needs, so each pull request is independent and can be reviewed and merged alone. More than one commit per branch is fine when it is sensible. Never group several issues into one branch, even when their changes are in the same files.
+- When one file holds changes for several issues, split it by relevant lines (`git add -p`, or check the file out from the combined work and restore it per issue) so each branch carries only its own lines. Regenerated files, such as locale files, are regenerated on each branch instead of copied.
 - Commit message is a single line only. No body, no multi-line messages.
 - No class names or file names in commit messages. Describe the goal in plain words.
 - Never name a specific retailer in a commit message.
@@ -22,7 +22,7 @@ You are committing code changes following the project's git conventions, one bra
 
 0. Read recent git log to understand established commit message patterns (note the format observed)
 1. Run `git status` to see all changed files
-2. Group changes into logical commits, one per issue or coherent group of issues
+2. Split the changes by issue, one group per issue
 3. For each group:
    1. Create a new branch from the base branch
    2. `git add` the relevant files, `git commit` with a conventional message
