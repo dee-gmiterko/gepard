@@ -12,6 +12,7 @@ import { ResizeHandle } from '../../../components/ResizeHandle';
 import { Inline, Stack } from '../../../components/Layout';
 import { Message } from '../../../components/Message';
 import { FileComments } from '../../commentEditor/FileComments';
+import { OutsideDiffComments } from '../../commentEditor/OutsideDiffComments';
 import { SymbolsTree } from './SymbolsTree';
 import { FileControls } from './FileControls';
 import { MassActions } from './massActions/MassActions';
@@ -35,10 +36,6 @@ const messages = defineMessages({
   noFileSelected: {
     id: 'content.fileCommentsPanel.noFileSelected',
     defaultMessage: 'No file selected',
-  },
-  notInDiff: {
-    id: 'content.fileCommentsPanel.notInDiff',
-    defaultMessage: 'This file is not part of the current diff.',
   },
 });
 
@@ -180,9 +177,7 @@ export function FileDetailPanel(): React.JSX.Element | null {
                 <FileComments path={path} />
               </Stack>
             ) : (
-              <Message tone="subtle">
-                <FormattedMessage {...messages.notInDiff} />
-              </Message>
+              <OutsideDiffComments path={path} />
             )}
           </Body>
           <SymbolsTree path={path} />

@@ -1,4 +1,4 @@
-import type { DiffSide, DraftAnchor, ReviewThread } from '@gepard/common';
+import type { CommentReference, DiffSide, DraftAnchor, ReviewThread } from '@gepard/common';
 
 export interface LineCommentEntry {
   docLine: number;
@@ -107,4 +107,26 @@ export function diffViewCommentEntries(
   }
 
   return entries;
+}
+
+export function fileReference(path: string): CommentReference {
+  return { path, line: 1, kind: 'symbol' };
+}
+
+export function generalThreadsReferencingFile(
+  threads: readonly ReviewThread[],
+  path: string,
+): ReviewThread[] {
+  const prefix = `${path}:`;
+  return threads.filter(
+    (t) =>
+      t.anchor.subjectType === 'PR' &&
+      t.comments.some(
+        (c) =>
+          c.local?.references.some((r) => r.path === path) ||
+          c.body
+            .split('\n')
+            .some((l) => l.startsWith(prefix) && /^\d+$/.test(l.slice(prefix.length))),
+      ),
+  );
 }
