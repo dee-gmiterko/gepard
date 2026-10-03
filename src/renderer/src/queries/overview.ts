@@ -2,7 +2,6 @@ import { skipToken, useQuery } from '@tanstack/react-query';
 import { invoke } from '../ipc/client';
 import { qk } from './keys';
 import { useAppState } from '../state/AppContext';
-import { parseCodeowners, CODEOWNERS_PATHS, type CodeownersRule } from '../helpers/codeowners';
 
 export function useProjectOverview() {
   const projectId = useAppState().projectId ?? '';
@@ -26,24 +25,15 @@ export function usePrOverviewDetails() {
   });
 }
 
-async function loadCodeowners(projectId: string, sha: string): Promise<CodeownersRule[] | null> {
-  for (const path of CODEOWNERS_PATHS) {
-    try {
-      const content = await invoke('files.content', { projectId, sha, path });
-      if (content.kind === 'text') return parseCodeowners(content.text);
-    } catch {
-      continue;
-    }
-  }
-  return null;
-}
-
-export function useCodeowners(sha: string | undefined) {
-  const projectId = useAppState().projectId ?? '';
+export function useChangedFileOwners() {
+  const state = useAppState();
+  const projectId = state.projectId ?? '';
+  const base = state.checkout?.base ?? '';
+  const head = state.checkout?.head ?? '';
   return useQuery({
-    queryKey: qk.codeowners(projectId, sha ?? ''),
-    queryFn: sha ? () => loadCodeowners(projectId, sha) : skipToken,
-    enabled: Boolean(projectId) && Boolean(sha),
+    queryKey: qk.changedFileOwners(projectId, base, head),
+    queryFn: () => invoke('overview.owners', { projectId, base, head }),
+    enabled: Boolean(projectId) && Boolean(base) && Boolean(head),
     staleTime: Infinity,
   });
 }

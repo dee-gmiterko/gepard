@@ -1,6 +1,6 @@
 import styled from 'styled-components';
-import { Caption } from '../../../components/Caption';
-import { focusVisible } from '../../../components/controlStyles';
+import { Caption } from '../../../../components/Caption';
+import { focusVisible } from '../../../../components/controlStyles';
 
 export const Page = styled.div`
   height: 100%;

@@ -1,6 +1,6 @@
 import { useAppState } from '../../../state/AppContext';
-import { PrOverview } from './PrOverview';
-import { ProjectOverview } from './ProjectOverview';
+import { PrOverview } from './pr/PrOverview';
+import { ProjectOverview } from './project/ProjectOverview';
 
 export function OverviewTab(): React.JSX.Element {
   const pr = useAppState().targeting.pr;
