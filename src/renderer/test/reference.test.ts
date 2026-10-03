@@ -31,7 +31,7 @@ describe('initialReferenceChoices', () => {
       symbolOpen: true,
       symbols: [sym],
       exactOpen: false,
-      patternOpen: false,
+      patternsDefaultOpen: false,
     });
   });
 
@@ -39,8 +39,8 @@ describe('initialReferenceChoices', () => {
     expect(initialReferenceChoices([])).toMatchObject({
       symbolOpen: false,
       exactOpen: false,
-      patternOpen: false,
-      patternSymbol: '',
+      patternsDefaultOpen: false,
+      patterns: {},
     });
   });
 });

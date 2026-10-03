@@ -1,14 +1,38 @@
 import { z } from 'zod';
 import { useMemo } from 'react';
-import { useDefinitions, useLineSymbols, useSearch, type SearchParams } from '../../queries/search';
+import {
+  useDefinitions,
+  useLineSymbols,
+  useSearch,
+  useSearches,
+  type SearchParams,
+} from '../../queries/search';
 import { useFileContent, useTargetedFiles } from '../../queries/files';
-import { referencesFromResult, type ReferenceChoices } from '../../helpers/reference';
+import {
+  isPatternOpen,
+  patternScopeOf,
+  referencesFromResult,
+  uniqueRefs,
+  type ReferenceChoices,
+} from '../../helpers/reference';
+import {
+  buildLinePatterns,
+  withoutExactMatches,
+  type LinePattern,
+} from '../../helpers/linePattern';
 import type { LineSymbol } from './SymbolDefinitionSection';
 import type { RefAnchor } from '../../helpers/anchor';
 import type { CommentReference, GroupedResult, SearchScope } from '@gepard/common';
 
 export const ExactDisabledReason = z.enum(['blankLine', 'noOtherMatch']);
 export type ExactDisabledReason = z.infer<typeof ExactDisabledReason>;
+
+export interface PatternView {
+  id: string;
+  display: string;
+  data: GroupedResult | undefined;
+  fetching: boolean;
+}
 
 export interface DerivedReferences {
   references: CommentReference[];
@@ -18,10 +42,7 @@ export interface DerivedReferences {
   exactDisabled: ExactDisabledReason | null;
   exactData: GroupedResult | undefined;
   exactFetching: boolean;
-  patternDisabled: boolean;
-  patternData: GroupedResult | undefined;
-  patternFetching: boolean;
-  effectivePatternSymbol: string;
+  patterns: PatternView[];
 }
 
 export function useDerivedReferences(
@@ -57,8 +78,6 @@ export function useDerivedReferences(
         !(d.location.path === refAnchor?.path && d.location.range.start.line === refAnchor.line),
     );
 
-  const effectivePatternSymbol = choices.patternSymbol || symbols[0]?.name || '';
-
   const lineText = useMemo(() => {
     if (!refAnchor) return null;
     const c = fileContent.data;
@@ -89,45 +108,52 @@ export function useDerivedReferences(
       ? 'noOtherMatch'
       : null;
 
-  const patternAnywhere = useSearch(
-    refAnchor?.sha ?? '',
-    refAnchor && effectivePatternSymbol
-      ? {
-          scope: 'all',
-          targetedPaths: [],
-          kind: 'pattern',
-          text: effectivePatternSymbol,
-          word: true,
-        }
-      : null,
+  const patterns = useMemo(() => buildLinePatterns(lineText ?? '', symbols), [lineText, symbols]);
+  function patternParams(pattern: LinePattern, scope: SearchScope): SearchParams {
+    return {
+      scope,
+      targetedPaths: scope === 'targeted' ? targetedPaths : [],
+      kind: 'regex',
+      text: pattern.regex,
+      caseSensitive: true,
+    };
+  }
+  const sha = refAnchor?.sha ?? '';
+  const anywhere = useSearches(sha, refAnchor ? patterns.map((p) => patternParams(p, 'all')) : []);
+  const targetedPatterns = patterns.filter(
+    (p) => isPatternOpen(choices, p.id) && patternScopeOf(choices, p.id) === 'targeted',
   );
-  const patternDisabled =
-    symbols.length === 0 ||
-    (!patternAnywhere.isFetching &&
-      patternAnywhere.data !== undefined &&
-      !patternAnywhere.data.files.some((f) =>
-        f.matches.some((m) => f.path !== refAnchor?.path || m.line !== refAnchor.line),
-      ));
-  const patternParams: SearchParams | null =
-    refAnchor && choices.patternOpen && !patternDisabled && effectivePatternSymbol
-      ? {
-          scope: choices.patternScope,
-          targetedPaths: choices.patternScope === 'targeted' ? targetedPaths : [],
-          kind: 'pattern',
-          text: effectivePatternSymbol,
-          word: true,
-        }
-      : null;
-  const patternSearch = useSearch(refAnchor?.sha ?? '', patternParams);
+  const targeted = useSearches(
+    sha,
+    refAnchor ? targetedPatterns.map((p) => patternParams(p, 'targeted')) : [],
+  );
 
-  const references = useMemo(
-    () => [
-      ...choices.symbols,
-      ...referencesFromResult(choices.exactOpen ? exactSearch.data : undefined, 'exact'),
-      ...referencesFromResult(choices.patternOpen ? patternSearch.data : undefined, 'pattern'),
-    ],
-    [choices.symbols, choices.exactOpen, exactSearch.data, choices.patternOpen, patternSearch.data],
-  );
+  const patternViews: PatternView[] = [];
+  const patternRefs: CommentReference[] = [];
+  if (refAnchor && lineText !== null) {
+    patterns.forEach((pattern, i) => {
+      const all = anywhere[i]?.data;
+      if (!all || withoutExactMatches(all, lineText, refAnchor).files.length === 0) return;
+      const open = isPatternOpen(choices, pattern.id);
+      const scoped = patternScopeOf(choices, pattern.id) === 'targeted';
+      const query = scoped ? targeted[targetedPatterns.indexOf(pattern)] : anywhere[i];
+      const raw = open ? query?.data : undefined;
+      const data = raw && withoutExactMatches(raw, lineText, refAnchor);
+      patternViews.push({
+        id: pattern.id,
+        display: pattern.display,
+        data,
+        fetching: open && Boolean(query?.isFetching),
+      });
+      patternRefs.push(...referencesFromResult(data, 'pattern'));
+    });
+  }
+
+  const references = [
+    ...choices.symbols,
+    ...referencesFromResult(choices.exactOpen ? exactSearch.data : undefined, 'exact'),
+    ...uniqueRefs(patternRefs),
+  ];
 
   return {
     references,
@@ -137,9 +163,6 @@ export function useDerivedReferences(
     exactDisabled,
     exactData: exactSearch.data,
     exactFetching: exactSearch.isFetching,
-    patternDisabled,
-    patternData: patternSearch.data,
-    patternFetching: patternSearch.isFetching,
-    effectivePatternSymbol,
+    patterns: patternViews,
   };
 }

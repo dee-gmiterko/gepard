@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { defineMessages, FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl';
+import styled from 'styled-components';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { Accordion } from '../../components/Accordion';
 import { Checkbox } from '../../components/Checkbox';
 import { Stack } from '../../components/Layout';
@@ -8,12 +8,16 @@ import { MatchLine } from '../../components/MatchLine';
 import { Message } from '../../components/Message';
 import { ScopeToggle } from '../../components/ScopeToggle';
 import type { SearchScope } from '@gepard/common';
-import { Select } from '../../components/Select';
 import { SymbolDefinitionSection, type LineSymbol } from './SymbolDefinitionSection';
-import { toggleRefIn, type ReferenceChoices } from '../../helpers/reference';
+import {
+  isPatternOpen,
+  patternScopeOf,
+  toggleRefIn,
+  type ReferenceChoices,
+} from '../../helpers/reference';
 import type { CommentReference, GroupedResult } from '@gepard/common';
 import type { RefAnchor } from '../../helpers/anchor';
-import type { ExactDisabledReason } from './useDerivedReferences';
+import type { ExactDisabledReason, PatternView } from './useDerivedReferences';
 
 const messages = defineMessages({
   searching: {
@@ -30,7 +34,7 @@ const messages = defineMessages({
   },
   samePatternIn: {
     id: 'commentEditor.referencesPanel.samePatternIn',
-    defaultMessage: 'Same pattern in',
+    defaultMessage: 'Same pattern <small>{pattern}</small> in:',
   },
   truncated: {
     id: 'commentEditor.referencesPanel.truncated',
@@ -38,49 +42,56 @@ const messages = defineMessages({
   },
 });
 
+const MAX_LIST_HEIGHT = '240px';
+
+const ScrollList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.space[2]};
+  max-height: ${MAX_LIST_HEIGHT};
+  overflow: auto;
+`;
+
+const PatternText = styled.span`
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ${({ theme }) => theme.font.mono};
+`;
+
 interface SearchRefsSectionProps {
-  title: MessageDescriptor;
+  title: React.ReactNode;
+  ariaLabel: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  disabled?: boolean;
   scope: SearchScope;
   onScopeChange: (scope: SearchScope) => void;
   data: GroupedResult | undefined;
   isFetching: boolean;
-  extra?: ReactNode;
 }
 
 function SearchRefsSection({
   title,
+  ariaLabel,
   open,
   onOpenChange,
-  disabled,
   scope,
   onScopeChange,
   data,
   isFetching,
-  extra,
 }: SearchRefsSectionProps): React.JSX.Element {
-  const intl = useIntl();
-
   return (
     <Accordion
       open={open}
-      disabled={disabled}
       onToggle={() => onOpenChange(!open)}
       leading={
-        <Checkbox
-          checked={open}
-          disabled={disabled}
-          ariaLabel={intl.formatMessage(title)}
-          onChange={() => onOpenChange(!open)}
-        />
+        <Checkbox checked={open} ariaLabel={ariaLabel} onChange={() => onOpenChange(!open)} />
       }
-      title={<FormattedMessage {...title} />}
+      title={title}
     >
       <Stack>
         <ScopeToggle value={scope} onChange={onScopeChange} />
-        {extra}
         {isFetching && (
           <Message layout="inline">
             <FormattedMessage {...messages.searching} />
@@ -91,14 +102,18 @@ function SearchRefsSection({
             <FormattedMessage {...messages.noMatches} />
           </Message>
         )}
-        {data?.files.map((f) => (
-          <div key={f.path}>
-            <PathLabel $small>{f.path}</PathLabel>
-            {f.matches.map((m) => (
-              <MatchLine key={m.line} line={m.line} preview={m.preview} spans={m.spans} />
+        {data && data.files.length > 0 && (
+          <ScrollList>
+            {data.files.map((f) => (
+              <div key={f.path}>
+                <PathLabel $small>{f.path}</PathLabel>
+                {f.matches.map((m) => (
+                  <MatchLine key={m.line} line={m.line} preview={m.preview} spans={m.spans} />
+                ))}
+              </div>
             ))}
-          </div>
-        ))}
+          </ScrollList>
+        )}
         {data?.truncated && (
           <Message layout="inline">
             <FormattedMessage {...messages.truncated} />
@@ -119,10 +134,7 @@ interface ReferencesPanelProps {
   exactDisabled: ExactDisabledReason | null;
   exactData: GroupedResult | undefined;
   exactFetching: boolean;
-  patternDisabled: boolean;
-  patternData: GroupedResult | undefined;
-  patternFetching: boolean;
-  effectivePatternSymbol: string;
+  patterns: PatternView[];
 }
 
 export function ReferencesPanel({
@@ -135,11 +147,9 @@ export function ReferencesPanel({
   exactDisabled,
   exactData,
   exactFetching,
-  patternDisabled,
-  patternData,
-  patternFetching,
-  effectivePatternSymbol,
+  patterns,
 }: ReferencesPanelProps): React.JSX.Element | null {
+  const intl = useIntl();
   function toggleSymbolRef(symbolRef: CommentReference): void {
     onChoicesChange((prev) => ({ ...prev, symbols: toggleRefIn(prev.symbols, symbolRef) }));
   }
@@ -152,17 +162,20 @@ export function ReferencesPanel({
   function setExactOpen(open: boolean): void {
     onChoicesChange((prev) => ({ ...prev, exactOpen: open }));
   }
-  function setPatternOpen(open: boolean): void {
-    onChoicesChange((prev) => ({ ...prev, patternOpen: open }));
+  function setPatternOpen(id: string, open: boolean): void {
+    onChoicesChange((prev) => ({
+      ...prev,
+      patterns: { ...prev.patterns, [id]: { ...prev.patterns[id], open } },
+    }));
   }
   function setExactScope(scope: SearchScope): void {
     onChoicesChange((prev) => ({ ...prev, exactScope: scope }));
   }
-  function setPatternScope(scope: SearchScope): void {
-    onChoicesChange((prev) => ({ ...prev, patternScope: scope }));
-  }
-  function setPatternSymbol(symbol: string): void {
-    onChoicesChange((prev) => ({ ...prev, patternSymbol: symbol }));
+  function setPatternScope(id: string, scope: SearchScope): void {
+    onChoicesChange((prev) => ({
+      ...prev,
+      patterns: { ...prev.patterns, [id]: { ...prev.patterns[id], scope } },
+    }));
   }
 
   if (!refAnchor) {
@@ -171,52 +184,53 @@ export function ReferencesPanel({
 
   return (
     <Stack>
-      <SymbolDefinitionSection
-        refAnchor={refAnchor}
-        symbols={symbols}
-        loading={symbolsLoading}
-        disabled={symbolDisabled}
-        selected={choices.symbols}
-        onToggleRef={toggleSymbolRef}
-        open={choices.symbolOpen}
-        onOpenChange={setSymbolOpen}
-      />
+      {!symbolDisabled && (
+        <SymbolDefinitionSection
+          refAnchor={refAnchor}
+          symbols={symbols}
+          loading={symbolsLoading}
+          disabled={false}
+          selected={choices.symbols}
+          onToggleRef={toggleSymbolRef}
+          open={choices.symbolOpen}
+          onOpenChange={setSymbolOpen}
+        />
+      )}
 
-      <SearchRefsSection
-        title={messages.alsoIn}
-        open={choices.exactOpen}
-        onOpenChange={setExactOpen}
-        disabled={exactDisabled !== null}
-        scope={choices.exactScope}
-        onScopeChange={setExactScope}
-        data={exactData}
-        isFetching={exactFetching}
-      />
+      {exactDisabled === null && (
+        <SearchRefsSection
+          title={<FormattedMessage {...messages.alsoIn} />}
+          ariaLabel={intl.formatMessage(messages.alsoIn)}
+          open={choices.exactOpen}
+          onOpenChange={setExactOpen}
+          scope={choices.exactScope}
+          onScopeChange={setExactScope}
+          data={exactData}
+          isFetching={exactFetching}
+        />
+      )}
 
-      <SearchRefsSection
-        title={messages.samePatternIn}
-        open={choices.patternOpen}
-        onOpenChange={setPatternOpen}
-        disabled={patternDisabled}
-        scope={choices.patternScope}
-        onScopeChange={setPatternScope}
-        data={patternData}
-        isFetching={patternFetching}
-        extra={
-          symbols.length > 1 ? (
-            <Select
-              value={effectivePatternSymbol}
-              onChange={(e) => setPatternSymbol(e.target.value)}
-            >
-              {symbols.map((s) => (
-                <option key={s.name} value={s.name}>
-                  {s.name}
-                </option>
-              ))}
-            </Select>
-          ) : undefined
-        }
-      />
+      {patterns.map((p) => (
+        <SearchRefsSection
+          key={p.id}
+          title={
+            <FormattedMessage
+              {...messages.samePatternIn}
+              values={{
+                pattern: p.display,
+                small: (chunks) => <PatternText>{chunks}</PatternText>,
+              }}
+            />
+          }
+          ariaLabel={p.display}
+          open={isPatternOpen(choices, p.id)}
+          onOpenChange={(open) => setPatternOpen(p.id, open)}
+          scope={patternScopeOf(choices, p.id)}
+          onScopeChange={(scope) => setPatternScope(p.id, scope)}
+          data={p.data}
+          isFetching={p.fetching}
+        />
+      ))}
     </Stack>
   );
 }
