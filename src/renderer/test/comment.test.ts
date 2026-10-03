@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   codeViewCommentEntries,
   diffViewCommentEntries,
+  fileReference,
+  generalThreadsReferencingFile,
   sortThreadsChronologically,
 } from '../src/helpers/comment';
 import type { Anchor, Comment, ReviewThread } from '@gepard/common';
@@ -253,5 +255,41 @@ describe('sortThreadsChronologically', () => {
 
     expect(sorted.map((t) => t.id)).toEqual(['b', 'a']);
     expect(input.map((t) => t.id)).toEqual(['a', 'b']);
+  });
+});
+
+function subjectThread(subjectType: 'PR' | 'LINE', body: string, refPath?: string): ReviewThread {
+  const base = threadOf(body, [
+    {
+      ...timedComment(body, '2026-01-01T00:00:00Z'),
+      body,
+      local: refPath
+        ? {
+            status: 'new',
+            updatedAt: '2026-01-01T00:00:00Z',
+            references: [{ path: refPath, line: 1, kind: 'symbol' }],
+          }
+        : undefined,
+    },
+  ]);
+  return { ...base, anchor: { ...base.anchor, subjectType } };
+}
+
+describe('fileReference', () => {
+  it('points at the first line of the file', () => {
+    expect(fileReference('a/b.ts')).toEqual({ path: 'a/b.ts', line: 1, kind: 'symbol' });
+  });
+});
+
+describe('generalThreadsReferencingFile', () => {
+  it('matches local references and synced body lines of general threads only', () => {
+    const local = subjectThread('PR', 'local', 'a.ts');
+    const synced = subjectThread('PR', 'hi\n\na.ts:1');
+    const other = subjectThread('PR', 'hi\n\nb.ts:1');
+    const prefixOnly = subjectThread('PR', 'a.ts:1x');
+    const lineThread = subjectThread('LINE', 'x', 'a.ts');
+    expect(
+      generalThreadsReferencingFile([local, synced, other, prefixOnly, lineThread], 'a.ts'),
+    ).toEqual([local, synced]);
   });
 });
