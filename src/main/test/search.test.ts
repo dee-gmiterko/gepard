@@ -34,7 +34,8 @@ vi.mock('../lsp', () => ({
   },
 }));
 
-const { runSearch, workspaceSymbols } = await import('../ipc/handlers/search');
+const { runSearch, workspaceSymbols, lineSymbols, definitionAt, documentSymbols } =
+  await import('../ipc/handlers/search');
 
 const SHA = 'a'.repeat(40);
 const PROJECT = 'owner__repo';
@@ -84,6 +85,7 @@ describe('search.run', () => {
     await writeRepoFile('exact.ts', 'const x = 1;\n');
     await writeRepoFile('exact2.ts', '  const x = 1;\nconst x = 10;\n');
     await writeRepoFile('case.txt', 'Needle\nneedle\nNEEDLE\n');
+    await writeRepoFile('x.ts', 'export const sym = 1;\n');
   });
 
   afterAll(async () => {
@@ -357,6 +359,18 @@ describe('search.run', () => {
       const result = await run({ kind: 'references', text: 'sym', at });
       expect(result).toMatchObject({ files: [], hasMore: false, matchesInPage: 0 });
     });
+
+    it('is empty, without asking the session, when the file is not in the worktree', async () => {
+      const references = vi.fn(() => Promise.resolve(referenced));
+      mocks.session = { references };
+      const result = await run({
+        kind: 'references',
+        text: 'sym',
+        at: { ...at, path: 'deleted.ts' },
+      });
+      expect(result).toMatchObject({ files: [], hasMore: false, matchesInPage: 0 });
+      expect(references).not.toHaveBeenCalled();
+    });
   });
 
   describe('stale requests', () => {
@@ -454,5 +468,63 @@ describe('symbols.workspace across sessions', () => {
     const out = await query(2, ['class', 'interface']);
     expect(out.map((s) => s.name)).toEqual(['Foo', 'Shape']);
     expect(workspaceSymbols.mock.calls[0][1]).toBeGreaterThan(2);
+  });
+});
+
+describe('symbols for a file missing from the worktree', () => {
+  const failing = (): Promise<never> => Promise.reject(new Error('ENOENT'));
+  const input = { projectId: PROJECT, sha: SHA, path: 'deleted.ts' };
+  let lineSymbolsFn: ReturnType<typeof vi.fn<LanguageSession['lineSymbols']>>;
+  let definitionFn: ReturnType<typeof vi.fn<LanguageSession['definition']>>;
+  let documentSymbolsFn: ReturnType<typeof vi.fn<LanguageSession['documentSymbols']>>;
+
+  beforeAll(async () => {
+    userData = await makeTmpDir('search-missing-file');
+    __setUserDataDir(userData.path);
+  });
+
+  afterAll(async () => {
+    await userData.cleanup();
+  });
+
+  beforeEach(() => {
+    mocks.currentSha = null;
+    lineSymbolsFn = vi.fn(failing);
+    definitionFn = vi.fn(failing);
+    documentSymbolsFn = vi.fn(failing);
+    mocks.session = fakeLanguageSession({
+      lineSymbols: lineSymbolsFn,
+      definition: definitionFn,
+      documentSymbols: documentSymbolsFn,
+    });
+  });
+
+  it('returns no document symbols', async () => {
+    await expect(documentSymbols(input)).resolves.toEqual({ path: 'deleted.ts', symbols: [] });
+    expect(documentSymbolsFn).not.toHaveBeenCalled();
+  });
+
+  it('returns no line symbols', async () => {
+    await expect(lineSymbols({ ...input, line: 1 })).resolves.toEqual({
+      path: 'deleted.ts',
+      line: 1,
+      symbols: [],
+    });
+    expect(lineSymbolsFn).not.toHaveBeenCalled();
+  });
+
+  it('returns no definitions', async () => {
+    await expect(definitionAt({ ...input, pos: { line: 1, col: 1 } })).resolves.toEqual({
+      symbol: '',
+      definitions: [],
+    });
+    expect(definitionFn).not.toHaveBeenCalled();
+  });
+
+  it('still asks the session once the file exists', async () => {
+    await writeRepoFile('present.ts', 'export const a = 1;\n');
+    documentSymbolsFn.mockResolvedValue([]);
+    await documentSymbols({ ...input, path: 'present.ts' });
+    expect(documentSymbolsFn).toHaveBeenCalledWith('present.ts', expect.anything());
   });
 });

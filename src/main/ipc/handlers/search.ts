@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { HandlerMap } from '../registry';
 import { withLatestWins } from '../cancellation';
@@ -30,8 +30,16 @@ function requireCurrentSha(projectId: string, sha: string): void {
   }
 }
 
-function findSession(projectId: string, filePath: string): LanguageSession | null {
-  return indexer.session(projectId, filePath);
+// Sessions read the file from the worktree, which lacks files the checked-out PR deletes
+// and paths still selected from a previous target.
+async function findSession(projectId: string, filePath: string): Promise<LanguageSession | null> {
+  const session = indexer.session(projectId, filePath);
+  if (!session) return null;
+  const onDisk = await access(join(projectRepoDir(projectId), filePath)).then(
+    () => true,
+    () => false,
+  );
+  return onDisk ? session : null;
 }
 
 export function runSearch(
@@ -47,7 +55,7 @@ export function runSearch(
       inScope ? files.filter((f) => inScope(f.path)) : files;
 
     if (input.kind === 'references') {
-      const session = findSession(input.projectId, input.at.path);
+      const session = await findSession(input.projectId, input.at.path);
       const raw = session ? await session.references(input.at.path, input.at.pos, token) : [];
       return toResult(input, applyPage(scoped(raw), opts));
     }
@@ -115,7 +123,7 @@ export function lineSymbols(
     `symbols.line:${input.projectId}:${input.path}:${input.line}`,
     async ({ token }) => {
       requireCurrentSha(input.projectId, input.sha);
-      const session = findSession(input.projectId, input.path);
+      const session = await findSession(input.projectId, input.path);
       const symbols = session ? await session.lineSymbols(input.path, input.line, token) : [];
       return { path: input.path, line: input.line, symbols };
     },
@@ -129,7 +137,7 @@ export function definitionAt(
     `symbols.definition:${input.projectId}:${input.path}:${input.pos.line}:${input.pos.col}`,
     async ({ token }) => {
       requireCurrentSha(input.projectId, input.sha);
-      const session = findSession(input.projectId, input.path);
+      const session = await findSession(input.projectId, input.path);
       const repoRoot = projectRepoDir(input.projectId);
       let symbol: string;
       try {
@@ -174,7 +182,7 @@ export function documentSymbols(
 ): Promise<ChannelOutput<'symbols.document'>> {
   return withLatestWins(`symbols.document:${input.projectId}:${input.path}`, async ({ token }) => {
     requireCurrentSha(input.projectId, input.sha);
-    const session = findSession(input.projectId, input.path);
+    const session = await findSession(input.projectId, input.path);
     const symbols = session
       ? navigationSymbols(await session.documentSymbols(input.path, token))
       : [];
