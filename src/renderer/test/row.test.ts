@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildTree, flattenLeafPaths, withRoot } from '../src/helpers/tree';
 import {
   aggregateRows,
+  changedLeaves,
   hideViewedRows,
   isViewedRow,
   viewedPercent,
@@ -54,5 +55,23 @@ describe('viewedPercent', () => {
   it('rounds the viewed share and is zero without tracked files', () => {
     expect(viewedPercent({ additions: 0, deletions: 0, viewedCount: 1, totalCount: 3 })).toBe(33);
     expect(viewedPercent({ additions: 0, deletions: 0, viewedCount: 0, totalCount: 0 })).toBe(0);
+  });
+});
+
+const rowWithTotal = (totalCount: number): RowData => ({
+  additions: 0,
+  deletions: 0,
+  viewedCount: 0,
+  totalCount,
+});
+
+describe('changedLeaves', () => {
+  it('lists only files with changes, recursing into folders', () => {
+    const tree = buildTree([
+      { path: 'src/a.ts', data: rowWithTotal(2) },
+      { path: 'src/b.ts', data: rowWithTotal(0) },
+      { path: 'c.ts', data: rowWithTotal(1) },
+    ]);
+    expect(tree.flatMap(changedLeaves)).toEqual(['src/a.ts', 'c.ts']);
   });
 });

@@ -2,13 +2,15 @@ import { describe, expect, it } from 'vitest';
 import {
   buildPrListArgs,
   buildPrsFilesQuery,
+  checkGqlErrors,
   filterPrsByPath,
+  isLineNotInDiffError,
   matchesPrSearch,
   parsePrCreateUrl,
   parsePrsFilesPageInfo,
   parsePrsFilesResponse,
 } from '../helpers/github/ghParsing';
-import type { PrListItem } from '@gepard/common';
+import { ExecError, type PrListItem } from '@gepard/common';
 
 const NOT_PAGED = { hasNextPage: false, endCursor: null };
 
@@ -207,5 +209,28 @@ describe('matchesPrSearch', () => {
 
   it('returns false when nothing in the corpus matches', () => {
     expect(matchesPrSearch(pr(1), 'nope')).toBe(false);
+  });
+});
+
+function execError(stderr: string): ExecError {
+  return new ExecError('EXEC_FAILED', 'failed', 'gh', [], 1, stderr);
+}
+
+describe('isLineNotInDiffError', () => {
+  it('matches an ExecError whose stderr says the line must be part of the diff', () => {
+    expect(isLineNotInDiffError(execError('Line must be part of the diff'))).toBe(true);
+    expect(isLineNotInDiffError(execError('boom'))).toBe(false);
+    expect(isLineNotInDiffError('must be part of the diff')).toBe(false);
+  });
+});
+
+describe('checkGqlErrors', () => {
+  it('does nothing without errors', () => {
+    expect(() => checkGqlErrors(undefined)).not.toThrow();
+    expect(() => checkGqlErrors([])).not.toThrow();
+  });
+
+  it('throws GRAPHQL_ERROR joining the messages', () => {
+    expect(() => checkGqlErrors([{ message: 'one' }, { message: 'two' }])).toThrow('one; two');
   });
 });
