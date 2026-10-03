@@ -4,10 +4,9 @@ import { defineMessages, useIntl } from 'react-intl';
 import { Combobox } from '../../components/Combobox';
 import { IconField } from '../../components/IconField';
 import { IconButton } from '../../components/IconButton';
-import { useChangedFiles, useTree } from '../../queries/files';
+import { useTree } from '../../queries/files';
 import { useAppState } from '../../state/AppContext';
 import { useTargetActions } from './useTargetActions';
-import { activeTargetRef, folderSourcePaths } from '../../state/selectors';
 import { foldersOf, isValidRepoPath } from '../../helpers/paths';
 
 const messages = defineMessages({
@@ -74,15 +73,8 @@ export function PathTarget(): React.JSX.Element {
   const state = useAppState();
   const { setPath } = useTargetActions();
   const tree = useTree();
-  const changed = useChangedFiles();
-  const scoped = activeTargetRef(state.targeting) !== null;
 
-  const folders = useMemo(() => {
-    const changedPaths = changed.data?.map((f) => f.path);
-    const source = folderSourcePaths(state.targeting, changedPaths, tree.data ?? []);
-    return foldersOf(source);
-  }, [state.targeting, changed.data, tree.data]);
-  const isFetching = scoped ? changed.isFetching : tree.isFetching;
+  const folders = useMemo(() => foldersOf(tree.data ?? []), [tree.data]);
 
   function commit(raw: string): void {
     const path = raw.trim() || null;
@@ -95,7 +87,7 @@ export function PathTarget(): React.JSX.Element {
       <PathTargetInput
         committed={state.targeting.path}
         folders={folders}
-        isFetching={isFetching}
+        isFetching={tree.isFetching}
         placeholder={intl.formatMessage(messages.placeholder)}
         onCommit={commit}
       />
