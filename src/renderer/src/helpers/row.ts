@@ -21,6 +21,10 @@ export function aggregateRows(children: RowData[]): RowData {
   );
 }
 
+export function viewedPercent(data: RowData): number {
+  return data.totalCount > 0 ? Math.round((data.viewedCount / data.totalCount) * 100) : 0;
+}
+
 export function isViewedRow(data: RowData): boolean {
   return data.totalCount > 0 && data.viewedCount === data.totalCount;
 }
