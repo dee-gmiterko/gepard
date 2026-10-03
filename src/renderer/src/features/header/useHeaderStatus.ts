@@ -1,0 +1,22 @@
+import { useEffect } from 'react';
+import { useAppDispatch, useAppState } from '../../state/AppContext';
+import type { HeaderStatus } from '../../state/reducer';
+
+const HEADER_STATUS_MS = 3000;
+
+export function useHeaderStatus(): HeaderStatus | null {
+  const dispatch = useAppDispatch();
+  const headerStatus = useAppState().headerStatus;
+  const headerStatusId = headerStatus?.id;
+
+  useEffect(() => {
+    if (headerStatusId === undefined) return;
+    const timer = setTimeout(
+      () => dispatch({ type: 'headerStatus/clear', id: headerStatusId }),
+      HEADER_STATUS_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [headerStatusId, dispatch]);
+
+  return headerStatus;
+}
