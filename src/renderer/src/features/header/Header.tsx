@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { PrTarget } from './PrTarget';
 import { CommitTarget } from './CommitTarget';
 import { PathTarget } from './PathTarget';
 import { useTargetingEffects } from './useTargetingEffects';
+import { useHeaderStatus } from './useHeaderStatus';
 import { Grid, Sidebar } from 'react-feather';
 import { IconButton } from '../../components/IconButton';
 import { Ellipsis } from '../../components/Ellipsis';
@@ -38,8 +38,6 @@ const messages = defineMessages({
     defaultMessage: 'File details',
   },
 });
-
-const HEADER_STATUS_MS = 3000;
 
 const Bar = styled.header`
   display: flex;
@@ -87,16 +85,7 @@ export function Header(): React.JSX.Element {
   const progress = aggregateRows((changedFiles ?? []).map((f) => rowFor(f.path)));
   const isChangedFile = useIsCheckedOutChangedFile(path);
 
-  const headerStatus = state.headerStatus;
-  const headerStatusId = headerStatus?.id;
-  useEffect(() => {
-    if (headerStatusId === undefined) return;
-    const timer = setTimeout(
-      () => dispatch({ type: 'headerStatus/clear', id: headerStatusId }),
-      HEADER_STATUS_MS,
-    );
-    return () => clearTimeout(timer);
-  }, [headerStatusId, dispatch]);
+  const headerStatus = useHeaderStatus();
 
   function toggleFileComments(): void {
     const open = !state.layout.fileCommentsPanelOpen;
