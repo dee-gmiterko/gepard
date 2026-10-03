@@ -19,11 +19,3 @@ export function openTabs(state: AppState): string[] {
     ? [...state.pinnedFiles, state.previewFile]
     : state.pinnedFiles;
 }
-
-export function folderSourcePaths(
-  targeting: Pick<Targeting, 'pr' | 'commit'>,
-  changedPaths: readonly string[] | undefined,
-  treePaths: readonly string[],
-): readonly string[] {
-  return activeTargetRef(targeting) !== null ? (changedPaths ?? []) : treePaths;
-}
