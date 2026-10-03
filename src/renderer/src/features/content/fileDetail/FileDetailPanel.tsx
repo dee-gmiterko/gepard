@@ -9,11 +9,12 @@ import { useIsCheckedOutChangedFile } from '../useIsCheckedOutChangedFile';
 import { ellipsis } from '../../../components/Ellipsis';
 import { IconButton } from '../../../components/IconButton';
 import { ResizeHandle } from '../../../components/ResizeHandle';
-import { Inline } from '../../../components/Layout';
+import { Inline, Stack } from '../../../components/Layout';
 import { Message } from '../../../components/Message';
 import { FileComments } from '../../commentEditor/FileComments';
 import { SymbolsTree } from './SymbolsTree';
 import { FileControls } from './FileControls';
+import { MassActions } from './MassActions';
 
 const MIN_WIDTH = 220;
 const MAX_WIDTH = 640;
@@ -174,7 +175,10 @@ export function FileDetailPanel(): React.JSX.Element | null {
         <>
           <Body>
             {isChangedFile ? (
-              <FileComments path={path} />
+              <Stack>
+                <MassActions path={path} />
+                <FileComments path={path} />
+              </Stack>
             ) : (
               <Message tone="subtle">
                 <FormattedMessage {...messages.notInDiff} />

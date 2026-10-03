@@ -35,6 +35,11 @@ const messages = defineMessages({
   },
 });
 
+const ScrollStack = styled(Stack)`
+  max-height: 240px;
+  overflow: auto;
+`;
+
 const SymbolName = styled.span`
   font-family: ${({ theme }) => theme.font.mono};
   color: ${({ theme }) => theme.colors.fg};
@@ -142,21 +147,23 @@ export function SymbolDefinitionSection({
     >
       <Stack $gap={1}>
         <ScopeToggle value={scope} onChange={setScope} />
-        {loading && (
-          <Message layout="inline">
-            <FormattedMessage {...messages.loading} />
-          </Message>
-        )}
-        {symbols.map((symbol, i) => (
-          <DefinitionRow
-            key={`${symbol.name}-${symbol.range.start.line}-${symbol.range.start.col}-${i}`}
-            refAnchor={refAnchor}
-            symbol={symbol}
-            scope={scope}
-            selected={selected}
-            onToggleRef={onToggleRef}
-          />
-        ))}
+        <ScrollStack $gap={1}>
+          {loading && (
+            <Message layout="inline">
+              <FormattedMessage {...messages.loading} />
+            </Message>
+          )}
+          {symbols.map((symbol, i) => (
+            <DefinitionRow
+              key={`${symbol.name}-${symbol.range.start.line}-${symbol.range.start.col}-${i}`}
+              refAnchor={refAnchor}
+              symbol={symbol}
+              scope={scope}
+              selected={selected}
+              onToggleRef={onToggleRef}
+            />
+          ))}
+        </ScrollStack>
       </Stack>
     </Accordion>
   );

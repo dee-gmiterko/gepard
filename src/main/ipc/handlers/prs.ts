@@ -14,6 +14,8 @@ export function createPrsHandlers(
   | 'pr.branches'
   | 'pr.create'
   | 'commits.list'
+  | 'overview.project'
+  | 'overview.pr'
 > {
   return {
     'pr.list': async ({ projectId, search, commit, path }) => {
@@ -51,6 +53,16 @@ export function createPrsHandlers(
     'pr.create': async ({ projectId, base, head, title, body }) => {
       const { owner, repo } = await gh.repoRefFor(projectId);
       return gh.createPr(owner, repo, { base, head, title, body });
+    },
+
+    'overview.project': async ({ projectId }) => {
+      const { owner, repo } = await gh.repoRefFor(projectId);
+      return gh.projectOverview(owner, repo);
+    },
+
+    'overview.pr': async ({ projectId, pr }) => {
+      const { owner, repo } = await gh.repoRefFor(projectId);
+      return gh.prOverview(owner, repo, pr);
     },
 
     'commits.list': ({ projectId, search, path, limit }) =>

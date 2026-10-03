@@ -50,6 +50,22 @@ export function useSearch(sha: string, params: SearchParams | null) {
   );
 }
 
+export function useSearches(sha: string, paramsList: SearchParams[]) {
+  const projectId = useAppState().projectId ?? '';
+  return useQueries({
+    queries: paramsList.map((params) => ({
+      queryKey: qk.search(projectId, sha, params.text, {
+        ...params,
+        targetedPaths: digestPaths(params.targetedPaths ?? []),
+      }),
+      queryFn: () => invoke('search.run', { ...params, projectId, sha }),
+      enabled: Boolean(projectId) && Boolean(sha),
+      staleTime: Infinity,
+      gcTime: SEARCH_GC_MS,
+    })),
+  });
+}
+
 export function useSearchPages(sha: string, params: SearchParams | null) {
   const projectId = useAppState().projectId ?? '';
   const query = params && projectId && sha ? { ...params, projectId, sha } : null;

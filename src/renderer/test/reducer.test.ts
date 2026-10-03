@@ -35,6 +35,24 @@ describe('targeting behaviors', () => {
   });
 });
 
+describe('overview tab', () => {
+  it('is the default main tab', () => {
+    expect(initialAppState.mainTab).toBe('overview');
+  });
+
+  it('falls back to the overview when the PR is cleared while on the comments tab', () => {
+    const s = state({ mainTab: 'comments', targeting: { pr: 7, commit: null, path: null } });
+    expect(appReducer(s, { type: 'target/pr', pr: null }).mainTab).toBe('overview');
+  });
+
+  it('keeps the current tab when a PR is targeted or cleared from the files tab', () => {
+    const s = state({ mainTab: 'files' });
+    const targeted = appReducer(s, { type: 'target/pr', pr: 7 });
+    expect(targeted.mainTab).toBe('files');
+    expect(appReducer(targeted, { type: 'target/pr', pr: null }).mainTab).toBe('files');
+  });
+});
+
 describe('opening a project', () => {
   it('resets everything, including pinned files', () => {
     const s = state({ pinnedFiles: ['a.ts'], projectId: 'proj-a' });
