@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { MessageDescriptor } from 'react-intl';
 import type { DiffSide } from '@gepard/common';
 import type { ReportTone } from '../errors/report';
 
@@ -16,6 +17,11 @@ export interface Toast {
   detail?: string;
 }
 
+export interface HeaderStatus {
+  id: number;
+  message: MessageDescriptor;
+}
+
 export interface Targeting {
   pr: number | null;
   commit: string | null;
@@ -29,6 +35,7 @@ export interface Layout {
   hideViewedFiles: boolean;
   fileControlsDocked: boolean;
   fileControlsPosition: { x: number; y: number } | null;
+  wrapLongLines: boolean;
 }
 
 export const defaultLayout: Layout = {
@@ -38,6 +45,7 @@ export const defaultLayout: Layout = {
   hideViewedFiles: false,
   fileControlsDocked: false,
   fileControlsPosition: null,
+  wrapLongLines: false,
 };
 
 export interface AppState {
@@ -53,6 +61,7 @@ export interface AppState {
   mainTab: MainTab;
   checkout: { base: string; head: string } | null;
   toasts: Toast[];
+  headerStatus: HeaderStatus | null;
   revealLine: { line: number; side: DiffSide } | null;
   settingsOpen: boolean;
   quickSearch: QuickSearchMode | null;
@@ -71,6 +80,7 @@ export const initialAppState: AppState = {
   mainTab: 'overview',
   checkout: null,
   toasts: [],
+  headerStatus: null,
   revealLine: null,
   settingsOpen: false,
   quickSearch: null,
@@ -90,6 +100,7 @@ export type AppAction =
   | { type: 'layout/setHideViewedFiles'; hide: boolean }
   | { type: 'layout/setFileControlsDocked'; docked: boolean }
   | { type: 'layout/setFileControlsPosition'; position: { x: number; y: number } | null }
+  | { type: 'layout/setWrapLongLines'; wrap: boolean }
   | { type: 'file/open'; path: string; line?: number | null; side?: DiffSide }
   | { type: 'file/focus'; path: string }
   | { type: 'file/pin'; path: string }
@@ -100,6 +111,8 @@ export type AppAction =
   | { type: 'mainTab/set'; tab: MainTab }
   | { type: 'toast/push'; toast: Toast }
   | { type: 'toast/dismiss'; id: string }
+  | { type: 'headerStatus/publish'; message: MessageDescriptor }
+  | { type: 'headerStatus/clear'; id: number }
   | { type: 'settings/setOpen'; open: boolean }
   | { type: 'quickSearch/open'; mode: QuickSearchMode }
   | { type: 'quickSearch/close' };
@@ -125,13 +138,19 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         projectId: action.projectId,
         layout: action.layout,
         toasts: state.toasts,
+        headerStatus: state.headerStatus,
         settingsOpen: state.settingsOpen,
       };
       const { pr, commit, path } = action.targeting;
       return withTarget(opened, action.targeting, pr !== null || commit !== null || path !== null);
     }
     case 'project/close':
-      return { ...initialAppState, toasts: state.toasts, settingsOpen: state.settingsOpen };
+      return {
+        ...initialAppState,
+        toasts: state.toasts,
+        headerStatus: state.headerStatus,
+        settingsOpen: state.settingsOpen,
+      };
     case 'target/pr':
       if (state.targeting.pr === action.pr) return state;
       return withTarget(
@@ -167,6 +186,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, layout: { ...state.layout, fileControlsDocked: action.docked } };
     case 'layout/setFileControlsPosition':
       return { ...state, layout: { ...state.layout, fileControlsPosition: action.position } };
+    case 'layout/setWrapLongLines':
+      return { ...state, layout: { ...state.layout, wrapLongLines: action.wrap } };
     case 'file/open': {
       const revealLine =
         action.line != null ? { line: action.line, side: action.side ?? ('RIGHT' as const) } : null;
@@ -220,6 +241,14 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, toasts: [...state.toasts, action.toast] };
     case 'toast/dismiss':
       return { ...state, toasts: state.toasts.filter((t) => t.id !== action.id) };
+    case 'headerStatus/publish':
+      return {
+        ...state,
+        headerStatus: { id: (state.headerStatus?.id ?? 0) + 1, message: action.message },
+      };
+    case 'headerStatus/clear':
+      if (state.headerStatus?.id !== action.id) return state;
+      return { ...state, headerStatus: null };
     case 'settings/setOpen':
       return { ...state, settingsOpen: action.open };
     case 'quickSearch/open':
