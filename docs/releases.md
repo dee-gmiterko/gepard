@@ -21,7 +21,7 @@ GitHub forced Node 24 for actions runtimes in 2026, so only Node 24 majors are u
 
 ### Validation
 
-`.github/workflows/validate.yml` runs on every pull request and on pushes to non-main branches: `yarn install --immutable`, `yarn validate`, `yarn test`, and on pull requests also commitlint over the PR commit range (CI has no husky hooks, so this closes the gap). Blocking is achieved by marking the `validate` job as a required status check in a branch protection rule or ruleset for `main`; this is a repository setting and cannot be committed. Superseded runs on the same ref are cancelled.
+`.github/workflows/validate.yml` runs on every pull request and on pushes to non-main branches: `yarn install --immutable`, `yarn validate`, `yarn test`, and on pull requests also commitlint over the PR commit range (CI has no husky hooks, so this closes the gap). Blocking is achieved by marking the `validate` job as a required status check in a branch protection rule or ruleset for `main`; this is a repository setting and cannot be committed. Superseded runs on the same ref are cancelled. GitHub sets `CI=true`, and each LSP extension's `vitest.config.ts` then excludes `test/extension.test.ts`, which launches the real language server (for example `godot`) that the runner does not have; the other tests, including `lsp.test.ts` and the semantic token tests, still run. Locally those tests run as before.
 
 ### Versioning: Conventional Commits with release-please
 
