@@ -199,6 +199,10 @@ const ProjectsList = styled(List)`
   margin-top: ${({ theme }) => theme.space[4]};
 `;
 
+const ProjectRow = styled(ListRow)`
+  padding: ${({ theme }) => theme.space[4]} ${({ theme }) => theme.space[4]};
+`;
+
 const RowMain = styled.div`
   flex: 1;
   min-width: 0;
@@ -415,7 +419,7 @@ export function Launchpad(): React.JSX.Element {
           const activeProgress = isActiveClone(progress) ? progress : undefined;
           const cloning = activeProgress !== undefined;
           return (
-            <ListRow
+            <ProjectRow
               key={project.id}
               $clickable={project.cloned}
               onClick={project.cloned ? () => void handleOpen(project.id) : undefined}
@@ -494,7 +498,7 @@ export function Launchpad(): React.JSX.Element {
                   />
                 )}
               </Inline>
-            </ListRow>
+            </ProjectRow>
           );
         })}
       </ProjectsList>
