@@ -2,6 +2,7 @@ import styled from 'styled-components';
 import { useAppDispatch, useAppState } from './state/AppContext';
 import { useGlobalKeys } from './keyboard/useGlobalKeys';
 import { useWindowTitle } from './hooks/useWindowTitle';
+import { useContextMenuLabels } from './hooks/useContextMenuLabels';
 import { Launchpad } from './features/launchpad/Launchpad';
 import { Header } from './features/header/Header';
 import { SidePanel } from './features/sidePanel/SidePanel';
@@ -24,6 +25,7 @@ const Body = styled.div`
 function App(): React.JSX.Element {
   useGlobalKeys();
   useWindowTitle();
+  useContextMenuLabels();
   const state = useAppState();
   const dispatch = useAppDispatch();
 

@@ -54,6 +54,8 @@ export const ChannelNameList = z.enum([
   'locales.list',
   'keybindings.getOverrides',
   'keybindings.setOverride',
+  'contextMenu.setLabels',
+  'contextMenu.setLineTarget',
 ]);
 export type ChannelNameList = z.infer<typeof ChannelNameList>;
 
