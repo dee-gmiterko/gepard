@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SearchQuery } from '@gepard/common';
-import { pageOptions, toResult } from '../helpers/search/query';
+import { pageOptions, searchRunKey, toResult } from '../helpers/search/query';
 
 const base = SearchQuery.parse({
   projectId: 'owner__repo',
@@ -68,5 +68,56 @@ describe('toResult', () => {
       nextOffset: null,
       truncated: true,
     });
+  });
+});
+
+describe('searchRunKey', () => {
+  const SHA = 'a'.repeat(40);
+  const base: { projectId: string; sha: string; scope: 'all' } = {
+    projectId: 'p',
+    sha: SHA,
+    scope: 'all',
+  };
+  const key = (query: SearchQuery): string => searchRunKey(SearchQuery.parse(query));
+
+  it('gives the side-panel pattern search one slot (latest-wins per keystroke)', () => {
+    expect(key({ ...base, kind: 'pattern', text: 'ab', word: false })).toBe(
+      key({ ...base, kind: 'pattern', text: 'abc', word: false }),
+    );
+  });
+
+  it('keeps "Same pattern in" for different symbols (two open editors) apart', () => {
+    expect(key({ ...base, kind: 'pattern', text: 'foo', word: true })).not.toBe(
+      key({ ...base, kind: 'pattern', text: 'bar', word: true }),
+    );
+  });
+
+  it('keeps the side panel apart from "Same pattern in" on the same text', () => {
+    expect(key({ ...base, kind: 'pattern', text: 'foo', word: false })).not.toBe(
+      key({ ...base, kind: 'pattern', text: 'foo', word: true }),
+    );
+  });
+
+  it('keys "Also in" by its anchor', () => {
+    const at = (line: number): string =>
+      key({ ...base, kind: 'exactLine', text: 'x', origin: { path: 'a.ts', line } });
+    expect(at(1)).not.toBe(at(2));
+  });
+
+  it('keys references by symbol position', () => {
+    const at = (col: number): string =>
+      key({
+        ...base,
+        kind: 'references',
+        text: 'x',
+        at: { path: 'a.ts', pos: { line: 1, col } },
+      });
+    expect(at(1)).not.toBe(at(5));
+  });
+
+  it('keeps different projects apart', () => {
+    expect(key({ ...base, kind: 'regex', text: 'a' })).not.toBe(
+      key({ ...base, projectId: 'q', kind: 'regex', text: 'a' }),
+    );
   });
 });
