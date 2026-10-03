@@ -181,7 +181,18 @@ const Avatar = styled.img`
 const AddForm = styled.form`
   display: flex;
   gap: ${({ theme }) => theme.space[2]};
+  align-items: stretch;
   margin-bottom: ${({ theme }) => theme.space[2]};
+
+  > :first-child {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+`;
+
+const AddButton = styled(Button)`
+  flex: 0 0 auto;
+  white-space: nowrap;
 `;
 
 const ProjectsList = styled(List)`
@@ -375,13 +386,13 @@ export function Launchpad(): React.JSX.Element {
           loading={viewerReposLoading}
           placeholder={intl.formatMessage(messages.urlPlaceholder)}
         />
-        <Button
+        <AddButton
           type="submit"
           variant="primary"
           disabled={addProject.isPending || urlValue.trim().length === 0}
         >
           <FormattedMessage {...messages.addProject} />
-        </Button>
+        </AddButton>
       </AddForm>
 
       <ProjectsList>
