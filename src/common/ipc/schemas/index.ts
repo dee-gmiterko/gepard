@@ -4,6 +4,7 @@ export * from './grammar';
 export * from './locale';
 export * from './log';
 export * from './lsp';
+export * from './overview';
 export * from './pr';
 export * from './project';
 export * from './search';

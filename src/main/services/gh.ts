@@ -17,6 +17,14 @@ import {
   PRS_FILES_CHUNK_SIZE,
 } from '../helpers/github/ghParsing';
 import {
+  GhPrOverview,
+  normalizePrOverview,
+  parseProjectOverview,
+  PR_OVERVIEW_FIELDS,
+  PROJECT_OVERVIEW_QUERY,
+  ProjectOverviewResponse,
+} from '../helpers/github/overview';
+import {
   NodeId,
   Sha,
   DiffSide,
@@ -569,6 +577,31 @@ export class GhService {
       ['pr', 'view', String(number), '-R', `${owner}/${repo}`, '--json', PR_SUMMARY_FIELDS],
       ghOpts(),
     );
+  }
+
+  async projectOverview(
+    owner: string,
+    repo: string,
+  ): Promise<ReturnType<typeof parseProjectOverview>> {
+    const res = await this.graphql(ProjectOverviewResponse, PROJECT_OVERVIEW_QUERY, {
+      owner,
+      name: repo,
+    });
+    return parseProjectOverview(res);
+  }
+
+  async prOverview(
+    owner: string,
+    repo: string,
+    number: number,
+  ): Promise<ReturnType<typeof normalizePrOverview>> {
+    const raw = await runJson(
+      GhPrOverview,
+      'gh',
+      ['pr', 'view', String(number), '-R', `${owner}/${repo}`, '--json', PR_OVERVIEW_FIELDS],
+      ghOpts(),
+    );
+    return normalizePrOverview(raw);
   }
 
   // gh returns a PR's commits in topological order, oldest first.

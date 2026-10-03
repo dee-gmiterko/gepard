@@ -20,6 +20,9 @@ export const qk = {
   prsAll: (p: string) => [...qk.project(p), 'prs'] as const,
   prs: (p: string, search?: string, commit?: string, path?: string) =>
     [...qk.prsAll(p), search, commit, path] as const,
+  projectOverview: (p: string) => [...qk.project(p), 'overview'] as const,
+  prOverview: (p: string, pr: number) => [...qk.pr(p, pr), 'overview'] as const,
+  codeowners: (p: string, sha: string) => [...qk.commit(p, sha), 'codeowners'] as const,
   branches: (p: string) => [...qk.project(p), 'branches'] as const,
   pr: (p: string, pr: number) => [...qk.project(p), 'pr', pr] as const,
   prSummary: (p: string, pr: number) => [...qk.pr(p, pr), 'summary'] as const,
