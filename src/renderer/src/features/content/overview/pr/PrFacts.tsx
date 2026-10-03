@@ -2,11 +2,12 @@ import { defineMessages, FormattedMessage } from 'react-intl';
 import styled from 'styled-components';
 import type { PrSummary } from '@gepard/common';
 import { Inline } from '../../../../components/Layout';
+import { Surface } from '../../../../components/Surface';
 import { useComments } from '../../../../queries/comments';
 import { usePrCommits } from '../../../../queries/prs';
 import { FileCount } from '../shared/FileCount';
 import { Lines } from '../shared/Lines';
-import { ProgressBar } from '../shared/ProgressBar';
+import { ProgressBar } from '../../../../components/ProgressBar';
 import { LinkButton, Muted, Num } from '../shared/overviewStyles';
 import { useOverviewActions } from '../shared/useOverviewActions';
 import { useChangedFileList } from './useChangedFileList';
@@ -25,14 +26,12 @@ const messages = defineMessages({
   progress: { id: 'content.overview.pr.progress', defaultMessage: '{done}/{total} files viewed' },
 });
 
-const Box = styled.div`
+const Box = styled(Surface).attrs({ $elevation: 'flat' })`
   display: flex;
   flex-wrap: wrap;
   gap: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[5]};
   align-items: center;
-  padding: ${({ theme }) => theme.space[3]};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radius.md};
+  padding: ${({ theme }) => theme.space[3]} ${({ theme }) => theme.space[4]};
   font-size: ${({ theme }) => theme.font.size.sm};
 `;
 
@@ -71,7 +70,7 @@ export function PrFacts({ pr }: { pr: PrSummary }): React.JSX.Element {
       </LinkButton>
       <LinkButton onClick={actions.openFiles}>
         <Inline $gap={2}>
-          <ProgressBar done={viewedCount} total={files.length} />
+          <ProgressBar value={viewedCount} max={files.length} />
           <Num>
             <FormattedMessage
               {...messages.progress}
