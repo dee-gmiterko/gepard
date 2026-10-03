@@ -137,6 +137,7 @@
   "header.prTarget.placeholder": "PR…",
   "header.prTarget.prLabel": "#{number} {title}",
   "header.prTarget.unresolvedLabel": "#{number}",
+  "header.progress": "{viewed} / {total} viewed",
   "header.projects": "Projects",
   "keyboard.acceptNext": "Mark viewed and go to next file",
   "keyboard.nextFile": "Next file in targeted list (skips viewed)",

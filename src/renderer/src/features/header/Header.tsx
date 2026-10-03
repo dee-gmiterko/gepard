@@ -10,6 +10,8 @@ import { Ellipsis } from '../../components/Ellipsis';
 import { Inline } from '../../components/Layout';
 import { useIndexStatus, useSetLayout } from '../../queries/projects';
 import { useAppDispatch, useAppState } from '../../state/AppContext';
+import { useRowData } from '../sidePanel/fileRows/rowData';
+import { aggregateRows, viewedPercent } from '../../helpers/row';
 import { useIsCheckedOutChangedFile } from '../content/useIsCheckedOutChangedFile';
 
 const messages = defineMessages({
@@ -25,6 +27,10 @@ const messages = defineMessages({
     id: 'header.indexing',
     defaultMessage: 'Indexing…',
   },
+  progress: {
+    id: 'header.progress',
+    defaultMessage: '{viewed} / {total} viewed',
+  },
   fileDetails: {
     id: 'content.fileControls.fileDetails',
     defaultMessage: 'File details',
@@ -34,6 +40,7 @@ const messages = defineMessages({
 const Bar = styled.header`
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: ${({ theme }) => theme.space[3]};
   height: 40px;
   padding: 0 ${({ theme }) => theme.space[3]};
@@ -42,12 +49,39 @@ const Bar = styled.header`
 `;
 
 const Status = styled(Ellipsis)`
+  flex: none;
+  width: 90px;
   font-size: ${({ theme }) => theme.font.size.xs};
   color: ${({ theme }) => theme.colors.fgMuted};
 `;
 
-const Spacer = styled.div`
-  flex: 1;
+const Group = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[3]};
+  min-width: 0;
+`;
+
+const Progress = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[2]};
+  font-size: ${({ theme }) => theme.font.size.xs};
+  color: ${({ theme }) => theme.colors.fgMuted};
+  white-space: nowrap;
+`;
+
+const ProgressTrack = styled.div`
+  width: 80px;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: ${({ theme }) => theme.colors.border};
+`;
+
+const ProgressFill = styled.div`
+  height: 100%;
+  background: ${({ theme }) => theme.colors.fgMuted};
 `;
 
 export function Header(): React.JSX.Element {
@@ -58,6 +92,8 @@ export function Header(): React.JSX.Element {
   const setLayout = useSetLayout();
   const { data: index } = useIndexStatus();
   const path = state.activeFile;
+  const { changedFiles, rowFor } = useRowData();
+  const progress = aggregateRows((changedFiles ?? []).map((f) => rowFor(f.path)));
   const isChangedFile = useIsCheckedOutChangedFile(path);
 
   function toggleFileComments(): void {
@@ -68,34 +104,53 @@ export function Header(): React.JSX.Element {
 
   return (
     <Bar>
-      <IconButton
-        icon={Grid}
-        label={intl.formatMessage(messages.projects)}
-        onClick={() => dispatch({ type: 'project/close' })}
-      />
-      <Inline $gap={5}>
-        <PrTarget />
-        <CommitTarget />
-        <PathTarget />
-      </Inline>
-      {pending && (
-        <Status>
-          <FormattedMessage {...messages.checkingOut} />
-        </Status>
-      )}
-      <Spacer />
-      {index?.state === 'indexing' && (
-        <Status>
-          <FormattedMessage {...messages.indexing} />
-        </Status>
-      )}
-      <IconButton
-        icon={Sidebar}
-        active={state.layout.fileCommentsPanelOpen}
-        disabled={!(state.targeting.pr !== null && path !== null && isChangedFile)}
-        label={intl.formatMessage(messages.fileDetails)}
-        onClick={toggleFileComments}
-      />
+      <Group>
+        <IconButton
+          icon={Grid}
+          label={intl.formatMessage(messages.projects)}
+          onClick={() => dispatch({ type: 'project/close' })}
+        />
+        <Inline $gap={5}>
+          <PrTarget />
+          <CommitTarget />
+          <PathTarget />
+        </Inline>
+        {pending && (
+          <Status>
+            <FormattedMessage {...messages.checkingOut} />
+          </Status>
+        )}
+      </Group>
+      <Group>
+        {progress.totalCount > 0 && (
+          <Progress>
+            <FormattedMessage
+              {...messages.progress}
+              values={{ viewed: progress.viewedCount, total: progress.totalCount }}
+            />
+            <ProgressTrack
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={viewedPercent(progress)}
+            >
+              <ProgressFill style={{ width: `${viewedPercent(progress)}%` }} />
+            </ProgressTrack>
+          </Progress>
+        )}
+        {index?.state === 'indexing' && (
+          <Status>
+            <FormattedMessage {...messages.indexing} />
+          </Status>
+        )}
+        <IconButton
+          icon={Sidebar}
+          active={state.layout.fileCommentsPanelOpen}
+          disabled={!(state.targeting.pr !== null && path !== null && isChangedFile)}
+          label={intl.formatMessage(messages.fileDetails)}
+          onClick={toggleFileComments}
+        />
+      </Group>
     </Bar>
   );
 }
