@@ -9,3 +9,4 @@ export * from './pr';
 export * from './project';
 export * from './search';
 export * from './theme';
+export * from './contextMenu';

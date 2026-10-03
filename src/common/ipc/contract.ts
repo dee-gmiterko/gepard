@@ -36,6 +36,7 @@ import { ExtensionInfo } from './schemas/extensions';
 import { GrammarModule } from './schemas/grammar';
 import { ThemeTemplateData } from './schemas/theme';
 import { LocaleData } from './schemas/locale';
+import { ContextMenuLabels, ContextMenuLineTarget } from './schemas/contextMenu';
 import type { ChannelNameList, EventNameList } from './names';
 
 const ch = <I extends z.ZodType, O extends z.ZodType>(
@@ -213,6 +214,9 @@ export const channels = {
     z.object({ id: z.string(), key: z.string().nullable() }),
     z.record(z.string(), z.string()),
   ),
+
+  'contextMenu.setLabels': ch(ContextMenuLabels, z.void()),
+  'contextMenu.setLineTarget': ch(ContextMenuLineTarget, z.void()),
 } as const satisfies Record<ChannelNameList, { input: z.ZodType; output: z.ZodType }>;
 
 export const events = {

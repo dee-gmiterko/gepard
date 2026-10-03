@@ -6,6 +6,7 @@ import icon from './resources/icon.png?asset';
 import { isAllowedExternalUrl } from './helpers/url';
 import { notifyMainFailure } from './notify';
 import { formatCaughtError } from './helpers/error';
+import { installContextMenu } from './contextMenu';
 
 function openExternal(url: string): void {
   shell
@@ -49,6 +50,8 @@ export function createMainWindow(): BrowserWindow {
       nodeIntegration: false,
     },
   });
+
+  installContextMenu(window.webContents);
 
   window.once('ready-to-show', () => {
     window.maximize();

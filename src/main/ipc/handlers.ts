@@ -14,6 +14,7 @@ import { grammarsHandlers } from './handlers/grammars';
 import { themeHandlers } from './handlers/theme';
 import { localesHandlers } from './handlers/locales';
 import { keybindingsHandlers } from './handlers/keybindings';
+import { contextMenuHandlers } from './handlers/contextMenu';
 
 export const handlers: HandlerMap = {
   ...createProjectsHandlers(ghService, gitService),
@@ -28,4 +29,5 @@ export const handlers: HandlerMap = {
   ...themeHandlers,
   ...localesHandlers,
   ...keybindingsHandlers,
+  ...contextMenuHandlers,
 };
