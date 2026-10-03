@@ -18,9 +18,8 @@ export interface ReferenceChoices {
   symbols: CommentReference[];
   exactOpen: boolean;
   exactScope: SearchScope;
-  patternOpen: boolean;
-  patternScope: SearchScope;
-  patternSymbol: string;
+  patternsDefaultOpen: boolean;
+  patterns: Record<string, { open?: boolean; scope?: SearchScope }>;
 }
 
 export function initialReferenceChoices(references: CommentReference[]): ReferenceChoices {
@@ -29,9 +28,8 @@ export function initialReferenceChoices(references: CommentReference[]): Referen
     symbols: references.filter((r) => r.kind === 'symbol'),
     exactOpen: references.some((r) => r.kind === 'exact'),
     exactScope: 'all',
-    patternOpen: references.some((r) => r.kind === 'pattern'),
-    patternScope: 'all',
-    patternSymbol: '',
+    patternsDefaultOpen: references.some((r) => r.kind === 'pattern'),
+    patterns: {},
   };
 }
 
@@ -41,4 +39,19 @@ export function referencesFromResult(
 ): CommentReference[] {
   if (!data) return [];
   return data.files.flatMap((f) => f.matches.map((m) => ({ path: f.path, line: m.line, kind })));
+}
+
+export function isPatternOpen(choices: ReferenceChoices, id: string): boolean {
+  return choices.patterns[id]?.open ?? choices.patternsDefaultOpen;
+}
+
+export function patternScopeOf(choices: ReferenceChoices, id: string): SearchScope {
+  return choices.patterns[id]?.scope ?? 'all';
+}
+
+export function uniqueRefs(references: CommentReference[]): CommentReference[] {
+  return references.reduce<CommentReference[]>(
+    (acc, r) => (acc.some((x) => sameRef(x, r)) ? acc : [...acc, r]),
+    [],
+  );
 }

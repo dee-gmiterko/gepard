@@ -112,10 +112,7 @@ export function CommentEditor({
         exactDisabled={derivedReferences.exactDisabled}
         exactData={derivedReferences.exactData}
         exactFetching={derivedReferences.exactFetching}
-        patternDisabled={derivedReferences.patternDisabled}
-        patternData={derivedReferences.patternData}
-        patternFetching={derivedReferences.patternFetching}
-        effectivePatternSymbol={derivedReferences.effectivePatternSymbol}
+        patterns={derivedReferences.patterns}
       />
       <ActionRow>
         {onCancel && (
