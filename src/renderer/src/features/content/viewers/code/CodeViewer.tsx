@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { closeHoverTooltips, lineNumbers } from '@codemirror/view';
+import { Compartment } from '@codemirror/state';
+import { closeHoverTooltips, EditorView, lineNumbers } from '@codemirror/view';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import { useAppDispatch, useAppState } from '../../../../state/AppContext';
 import { useCurrentHead } from '../../../../queries/projects';
@@ -13,6 +14,7 @@ import {
   symbolTooltip,
   useReadOnlyEditor,
 } from '../../../../components/CodeEditor';
+import { lineContextMenu } from '../../../../components/lineContextMenu';
 import { SymbolPortals } from '../../../../components/SymbolPortals';
 import { CommentPortals } from '../../../../components/CommentPortals';
 import { codeViewCommentEntries } from '../../../../helpers/comment';
@@ -78,7 +80,16 @@ function CodeText({ path, text }: { path: string; text: string }): React.JSX.Ele
     );
   }, [symbolPortals, lookupDefinition]);
   // Kept stable: a new extensions value makes the editor reload the whole document.
-  const extensions = useMemo(() => [lineNumbers(), symbolTooltip(symbolPortals)], [symbolPortals]);
+  const wrapCompartment = useMemo(() => new Compartment(), []);
+  const extensions = useMemo(
+    () => [
+      lineNumbers(),
+      symbolTooltip(symbolPortals),
+      lineContextMenu(path),
+      wrapCompartment.of([]),
+    ],
+    [symbolPortals, path, wrapCompartment],
+  );
   const { containerRef, view, comments, commentGutter } = useReadOnlyEditor(path, text, extensions);
   const [draft, setDraft] = useState<number | null>(null);
   const activeDraft = commentsEnabled ? draft : null;
@@ -90,6 +101,15 @@ function CodeText({ path, text }: { path: string; text: string }): React.JSX.Ele
     },
     [view, dispatch],
   );
+
+  const wrapLongLines = state.layout.wrapLongLines;
+  useEffect(() => {
+    if (!view) return;
+    view.dispatch({
+      effects: wrapCompartment.reconfigure(wrapLongLines ? EditorView.lineWrapping : []),
+    });
+    // The editor hook resets the extensions compartment whenever the document changes.
+  }, [wrapLongLines, view, wrapCompartment, path, text]);
 
   useEffect(() => {
     if (!view) return;

@@ -49,6 +49,10 @@ const messages = defineMessages({
     id: 'keyboard.quickSearchFile',
     defaultMessage: 'Find in the active file',
   },
+  toggleWrapLines: {
+    id: 'keyboard.toggleWrapLines',
+    defaultMessage: 'Toggle wrapping of long lines in the code viewer',
+  },
   quickSearchNavigate: {
     id: 'keyboard.quickSearchNavigate',
     defaultMessage: 'Go to file or symbol',
@@ -115,5 +119,11 @@ export const keyBindings: readonly KeyBinding[] = [
     key: `${MOD}+P`,
     label: messages.quickSearchNavigate,
     run: (commands) => commands.openQuickSearch('navigate'),
+  },
+  {
+    id: 'toggleWrapLines',
+    key: `${MOD}+Shift+L`,
+    label: messages.toggleWrapLines,
+    run: (commands) => commands.toggleWrapLines(),
   },
 ];

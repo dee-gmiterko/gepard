@@ -1,9 +1,22 @@
 import { useMemo } from 'react';
+import { defineMessages } from 'react-intl';
 import { useAppDispatch, useAppState } from '../state/AppContext';
 import type { QuickSearchMode, SidePanelTab } from '../state/reducer';
+import { useSetLayout } from '../queries/projects';
 import { useSetViewed, useViewed } from '../queries/comments';
 import { useChangedFiles, useTargetedFiles } from '../queries/files';
 import { nextTargetedFile } from '../helpers/targetedFiles';
+
+const messages = defineMessages({
+  wrapOn: {
+    id: 'keyboard.wrapLongLinesOn',
+    defaultMessage: 'Wrap long lines: on',
+  },
+  wrapOff: {
+    id: 'keyboard.wrapLongLinesOff',
+    defaultMessage: 'Wrap long lines: off',
+  },
+});
 
 export interface Commands {
   toggleViewed: (path?: string | null) => boolean;
@@ -14,6 +27,7 @@ export interface Commands {
   revertPrev: () => boolean;
   showSidePanelTab: (tab: SidePanelTab) => boolean;
   openQuickSearch: (mode: QuickSearchMode) => boolean;
+  toggleWrapLines: () => boolean;
 }
 
 export function useFileNavigation(): { canGoPrev: boolean; canGoNext: boolean } {
@@ -37,6 +51,8 @@ export function useCommands(): Commands {
 
   const { data: viewed } = useViewed();
   const { mutate: setViewed } = useSetViewed();
+  const { mutate: setLayout } = useSetLayout();
+  const layout = state.layout;
   const { data: changedFiles } = useChangedFiles();
   const activePath = state.activeFile;
   const acceptedFiles = state.acceptedFiles;
@@ -102,12 +118,24 @@ export function useCommands(): Commands {
         dispatch({ type: 'quickSearch/open', mode });
         return true;
       },
+      toggleWrapLines: () => {
+        const wrap = !layout.wrapLongLines;
+        dispatch({ type: 'layout/setWrapLongLines', wrap });
+        setLayout({ ...layout, wrapLongLines: wrap });
+        dispatch({
+          type: 'headerStatus/publish',
+          message: wrap ? messages.wrapOn : messages.wrapOff,
+        });
+        return true;
+      },
     };
   }, [
     activePath,
     acceptedFiles,
     pr,
     hideViewed,
+    layout,
+    setLayout,
     viewed,
     changedFiles,
     setViewed,

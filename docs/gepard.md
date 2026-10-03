@@ -8,7 +8,7 @@
 - electron desktop app
 - `gh` command used to interact with PRs over json<->zod schemas interface
 - React 19 dom, Vite, Typescript, Tanstack queries and mutations (hooks), AppContext holding app ui state
-- @codemirror editor for code and diff view (read only) 
+- @codemirror editor for code and diff view (read only); the code viewer can wrap long lines (project-level flag, persisted with the layout, toggled by a shortcut, with the new state announced in the header status message)
 - Localization: all UI text is localizable, English default; a script refreshes every locale from the source strings
 - Scripts (media/locale refresh, ...) are Typescript, run directly with `tsx`, no build step; package itself is ESM
 
@@ -111,6 +111,7 @@
 	- `Ctrl+Shift+F` - Show search
 	- `Ctrl+F` - Find in the active file
 	- `Ctrl+P` - Go to file or symbol
+	- `Ctrl+Shift+L` - Toggle wrapping of long lines in the code viewer
 
 ### Styling
 - heavy use of styled components - all dedicated locally defined in React components (any duplication is sign of missing component)

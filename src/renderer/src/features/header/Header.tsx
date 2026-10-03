@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { PrTarget } from './PrTarget';
@@ -37,6 +38,8 @@ const messages = defineMessages({
     defaultMessage: 'File details',
   },
 });
+
+const HEADER_STATUS_MS = 3000;
 
 const Bar = styled.header`
   display: flex;
@@ -84,6 +87,17 @@ export function Header(): React.JSX.Element {
   const progress = aggregateRows((changedFiles ?? []).map((f) => rowFor(f.path)));
   const isChangedFile = useIsCheckedOutChangedFile(path);
 
+  const headerStatus = state.headerStatus;
+  const headerStatusId = headerStatus?.id;
+  useEffect(() => {
+    if (headerStatusId === undefined) return;
+    const timer = setTimeout(
+      () => dispatch({ type: 'headerStatus/clear', id: headerStatusId }),
+      HEADER_STATUS_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [headerStatusId, dispatch]);
+
   function toggleFileComments(): void {
     const open = !state.layout.fileCommentsPanelOpen;
     dispatch({ type: 'layout/setFileCommentsPanelOpen', open });
@@ -106,6 +120,11 @@ export function Header(): React.JSX.Element {
         {pending && (
           <Status>
             <FormattedMessage {...messages.checkingOut} />
+          </Status>
+        )}
+        {headerStatus && (
+          <Status>
+            <FormattedMessage {...headerStatus.message} />
           </Status>
         )}
       </Group>

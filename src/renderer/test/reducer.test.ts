@@ -243,3 +243,39 @@ describe('quick search popup', () => {
     expect(appReducer(file, { type: 'project/close' }).quickSearch).toBeNull();
   });
 });
+
+describe('layout wrap long lines', () => {
+  it('sets the flag via layout/setWrapLongLines and defaults to off', () => {
+    expect(initialAppState.layout.wrapLongLines).toBe(false);
+    const on = appReducer(state(), { type: 'layout/setWrapLongLines', wrap: true });
+    expect(on.layout.wrapLongLines).toBe(true);
+    expect(
+      appReducer(on, { type: 'layout/setWrapLongLines', wrap: false }).layout.wrapLongLines,
+    ).toBe(false);
+  });
+});
+
+describe('header status slice', () => {
+  const message = { id: 'test.status', defaultMessage: 'Status' };
+
+  it('publishes a message with a new id each time', () => {
+    const first = appReducer(state(), { type: 'headerStatus/publish', message });
+    const second = appReducer(first, { type: 'headerStatus/publish', message });
+    expect(first.headerStatus?.message).toBe(message);
+    expect(second.headerStatus?.id).toBeGreaterThan(first.headerStatus?.id ?? 0);
+  });
+
+  it('clears only the matching message', () => {
+    const published = appReducer(state(), { type: 'headerStatus/publish', message });
+    const id = published.headerStatus?.id ?? 0;
+    expect(appReducer(published, { type: 'headerStatus/clear', id: id + 1 })).toBe(published);
+    expect(appReducer(published, { type: 'headerStatus/clear', id }).headerStatus).toBeNull();
+  });
+
+  it('survives closing the project', () => {
+    const published = appReducer(state(), { type: 'headerStatus/publish', message });
+    expect(appReducer(published, { type: 'project/close' }).headerStatus).toEqual(
+      published.headerStatus,
+    );
+  });
+});
