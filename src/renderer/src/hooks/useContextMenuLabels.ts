@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { defineMessages, useIntl } from 'react-intl';
+import { ContextMenuLabels } from '@gepard/common';
 import { reportQueryError } from '../errors/report';
 import { invoke } from '../ipc/client';
 
@@ -18,19 +19,23 @@ const messages = defineMessages({
   },
 });
 
-export function useContextMenuLabels(): void {
+export type ContextMenuLabelKey = keyof typeof messages;
+
+export function useContextMenuLabels(): (key: ContextMenuLabelKey) => string {
   const intl = useIntl();
+  const label = useCallback(
+    (key: ContextMenuLabelKey): string => intl.formatMessage(messages[key]),
+    [intl],
+  );
   useEffect(() => {
-    invoke('contextMenu.setLabels', {
-      undo: intl.formatMessage(messages.undo),
-      redo: intl.formatMessage(messages.redo),
-      cut: intl.formatMessage(messages.cut),
-      copy: intl.formatMessage(messages.copy),
-      paste: intl.formatMessage(messages.paste),
-      selectAll: intl.formatMessage(messages.selectAll),
-      addToDictionary: intl.formatMessage(messages.addToDictionary),
-      copyFilePath: intl.formatMessage(messages.copyFilePath),
-      copyLineReference: intl.formatMessage(messages.copyLineReference),
-    }).catch((error: unknown) => reportQueryError('contextMenu.setLabels', error));
+    const labels = ContextMenuLabels.parse(
+      Object.fromEntries(
+        Object.entries(messages).map(([key, message]) => [key, intl.formatMessage(message)]),
+      ),
+    );
+    invoke('contextMenu.setLabels', labels).catch((error: unknown) =>
+      reportQueryError('contextMenu.setLabels', error),
+    );
   }, [intl]);
+  return label;
 }
