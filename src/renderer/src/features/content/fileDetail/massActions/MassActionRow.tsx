@@ -2,24 +2,13 @@ import { useState } from 'react';
 import styled from 'styled-components';
 import { ChevronDown, ChevronRight } from 'react-feather';
 import { defineMessages, FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl';
-import { useSetViewed, useViewed } from '../../../queries/comments';
-import { Button } from '../../../components/Button';
-import { IconButton } from '../../../components/IconButton';
-import { Inline, Stack } from '../../../components/Layout';
-import { PathLabel } from '../../../components/PathLabel';
-import { useMassActions } from './useMassActions';
+import { useSetViewed, useViewed } from '../../../../queries/comments';
+import { Button } from '../../../../components/Button';
+import { IconButton } from '../../../../components/IconButton';
+import { Inline, Stack } from '../../../../components/Layout';
+import { PathLabel } from '../../../../components/PathLabel';
 
 const messages = defineMessages({
-  same: {
-    id: 'content.massActions.same',
-    defaultMessage:
-      'Same change also in: {count, plural, one {# other file} other {# other files}}',
-  },
-  similar: {
-    id: 'content.massActions.similar',
-    defaultMessage:
-      'Similar change also in: {count, plural, one {# other file} other {# other files}}',
-  },
   markAllViewed: {
     id: 'content.massActions.markAllViewed',
     defaultMessage: 'Mark all viewed',
@@ -53,7 +42,7 @@ const Title = styled.span`
   color: ${({ theme }) => theme.colors.fg};
 `;
 
-function MassActionRow({
+export function MassActionRow({
   message,
   paths,
 }: {
@@ -97,17 +86,6 @@ function MassActionRow({
           ))}
         </Files>
       )}
-    </Stack>
-  );
-}
-
-export function MassActions({ path }: { path: string }): React.JSX.Element | null {
-  const { same, similar } = useMassActions(path);
-  if (same.length === 0 && similar.length === 0) return null;
-  return (
-    <Stack>
-      {same.length > 0 && <MassActionRow message={messages.same} paths={same} />}
-      {similar.length > 0 && <MassActionRow message={messages.similar} paths={similar} />}
     </Stack>
   );
 }

@@ -1,16 +1,16 @@
 import { useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
-import { invoke } from '../../../ipc/client';
-import { qk } from '../../../queries/keys';
-import { useAppState } from '../../../state/AppContext';
-import { useChangedFiles, useFileDiff } from '../../../queries/files';
+import { invoke } from '../../../../ipc/client';
+import { qk } from '../../../../queries/keys';
+import { useAppState } from '../../../../state/AppContext';
+import { useChangedFiles, useFileDiff } from '../../../../queries/files';
 import {
   changeLines,
   changeSignature,
   changedRows,
   matchesSimilar,
   similarMatcher,
-} from '../../../helpers/massAction';
+} from '../../../../helpers/diff';
 import type { LineSymbol } from '@gepard/common';
 
 const MAX_SYMBOL_LINES = 60;

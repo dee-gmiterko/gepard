@@ -14,7 +14,7 @@ import { Message } from '../../../components/Message';
 import { FileComments } from '../../commentEditor/FileComments';
 import { SymbolsTree } from './SymbolsTree';
 import { FileControls } from './FileControls';
-import { MassActions } from './MassActions';
+import { MassActions } from './massActions/MassActions';
 
 const MIN_WIDTH = 220;
 const MAX_WIDTH = 640;
