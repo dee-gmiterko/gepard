@@ -16,6 +16,7 @@
     "build:win": "yarn workspace gepard run build:win",
     "build:mac": "yarn workspace gepard run build:mac",
     "build:linux": "turbo run build && yarn workspace gepard run build:linux",
+    "install:linux": "bash scripts/install-linux.sh",
     "test": "turbo run test && vitest run",
     "typecheck": "turbo run typecheck",
     "typecheck:scripts": "tsc --noEmit -p scripts/tsconfig.json",
