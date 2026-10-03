@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EditorState } from '@codemirror/state';
-import { hoveredSymbol } from '../src/components/CodeEditor/symbolTooltip';
+import { hoveredSymbol } from '../src/components/CodeEditor';
 
 const doc = 'const total = count + 42;\nreturn total;';
 const state = EditorState.create({ doc });

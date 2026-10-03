@@ -8,17 +8,17 @@
     "./react": "./react.mjs"
   },
   "dependencies": {
-    "@electron-toolkit/eslint-config-prettier": "3.0.0",
-    "@electron-toolkit/eslint-config-ts": "3.1.0",
-    "eslint": "9.39.5",
-    "eslint-plugin-formatjs": "8.1.0",
-    "eslint-plugin-react": "7.37.5",
-    "eslint-plugin-react-hooks": "7.1.1",
-    "eslint-plugin-react-refresh": "0.4.26"
+    "@electron-toolkit/eslint-config-prettier": "^3.0.1",
+    "@electron-toolkit/eslint-config-ts": "^4.0.0",
+    "@eslint-react/eslint-plugin": "^5.19.1",
+    "eslint": "^10.11.0",
+    "eslint-plugin-formatjs": "^8.1.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7"
   },
   "devDependencies": {
-    "prettier": "3.9.9",
-    "typescript": "5.9.3"
+    "prettier": "^3.9.9",
+    "typescript": "^7.0.2"
   },
   "scripts": {
     "format": "prettier --write .",

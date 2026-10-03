@@ -6,14 +6,15 @@ import { useCurrentHead } from '../../../../queries/projects';
 import { useFileContent } from '../../../../queries/files';
 import { useComments } from '../../../../queries/comments';
 import { useDefinitionLookup } from '../../../../queries/search';
-import { useReadOnlyEditor } from '../../../../components/CodeEditor/useReadOnlyEditor';
-import { revealDocLine } from '../../../../components/CodeEditor/revealLine';
-import { SymbolPortals, symbolTooltip } from '../../../../components/CodeEditor/symbolTooltip';
-import { CommentPortals } from '../../../../components/CodeEditor/commentPortals';
 import {
   commentAffordanceGutter,
   commentBlockDecorations,
-} from '../../../../components/CodeEditor/commentWidgets';
+  revealDocLine,
+  symbolTooltip,
+  useReadOnlyEditor,
+} from '../../../../components/CodeEditor';
+import { SymbolPortals } from '../../../../components/SymbolPortals';
+import { CommentPortals } from '../../../../components/CommentPortals';
 import { codeViewCommentEntries } from '../../../../helpers/comment';
 import { EditorHost } from '../../../../components/EditorHost';
 import { Message } from '../../../../components/Message';

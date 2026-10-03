@@ -1,6 +1,6 @@
 import { defineConfig } from 'eslint/config';
 import eslintConfigPrettier from '@electron-toolkit/eslint-config-prettier';
-import eslintPluginReact from 'eslint-plugin-react';
+import eslintReact from '@eslint-react/eslint-plugin';
 import eslintPluginReactHooks from 'eslint-plugin-react-hooks';
 import eslintPluginReactRefresh from 'eslint-plugin-react-refresh';
 import eslintPluginFormatjs from 'eslint-plugin-formatjs';
@@ -13,15 +13,7 @@ export default function createReactConfig(options) {
     typescript(options),
     {
       files: ['**/*.{ts,tsx}'],
-      extends: [
-        eslintPluginReact.configs.flat.recommended,
-        eslintPluginReact.configs.flat['jsx-runtime'],
-      ],
-      settings: {
-        react: {
-          version: 'detect',
-        },
-      },
+      extends: [eslintReact.configs['recommended-typescript']],
       plugins: {
         'react-hooks': eslintPluginReactHooks,
         'react-refresh': eslintPluginReactRefresh,

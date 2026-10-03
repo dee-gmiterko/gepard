@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 
 # `replace` only rewrites index.ts files that already exist, so entry points are never created.
 yarn barrelsby \
-  --directory src/common src/main/lsp src/renderer/src/components \
+  --directory src/common src/main/lsp \
   --location replace \
   --delete \
   --noHeader \
@@ -13,8 +13,8 @@ yarn barrelsby \
   --exclude "\.d\.ts$" "\.test\.tsx?$" "\.stories\.tsx?$" "vitest\.config\.ts$"
 
 # barrelsby exports nested barrels as ./dir/index
-find src/common src/main/lsp src/renderer/src/components -name index.ts -exec sed -i "s#/index';#';#" {} +
+find src/common src/main/lsp -name index.ts -exec sed -i "s#/index';#';#" {} +
 
 yarn prettier --write \
   src/common/index.ts src/main/lsp/index.ts \
-  "src/common/**/index.ts" "src/renderer/src/components/**/index.ts"
+  "src/common/**/index.ts"

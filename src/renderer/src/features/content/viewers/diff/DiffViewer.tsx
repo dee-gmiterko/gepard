@@ -4,20 +4,18 @@ import { defineMessages, FormattedMessage } from 'react-intl';
 import { useAppState } from '../../../../state/AppContext';
 import { useFileDiff } from '../../../../queries/files';
 import { useComments } from '../../../../queries/comments';
-import { useReadOnlyEditor } from '../../../../components/CodeEditor/useReadOnlyEditor';
 import {
   buildDiffDoc,
-  diffGutters,
-  diffLineDecorations,
-} from '../../../../components/CodeEditor/diffDecorations';
-import { diffViewCommentEntries } from '../../../../helpers/comment';
-import { findDiffDocLine } from '../../../../helpers/diff';
-import { revealDocLine } from '../../../../components/CodeEditor/revealLine';
-import { CommentPortals } from '../../../../components/CodeEditor/commentPortals';
-import {
   commentAffordanceGutter,
   commentBlockDecorations,
-} from '../../../../components/CodeEditor/commentWidgets';
+  diffGutters,
+  diffLineDecorations,
+  revealDocLine,
+  useReadOnlyEditor,
+} from '../../../../components/CodeEditor';
+import { diffViewCommentEntries } from '../../../../helpers/comment';
+import { findDiffDocLine } from '../../../../helpers/diff';
+import { CommentPortals } from '../../../../components/CommentPortals';
 import { EditorHost } from '../../../../components/EditorHost';
 import { Message } from '../../../../components/Message';
 import { CommentPortalHost } from '../CommentPortalHost';

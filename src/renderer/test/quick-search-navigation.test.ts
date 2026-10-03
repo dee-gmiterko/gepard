@@ -18,7 +18,7 @@ function symbol(
 const files = [
   'src/app/main.ts',
   'src/renderer/src/features/search/SearchPanel.tsx',
-  'src/renderer/src/components/Tree/Tree.tsx',
+  'src/renderer/src/components/Tree.tsx',
   'docs/search.md',
 ];
 
@@ -39,7 +39,7 @@ describe('rankNavigation', () => {
   });
 
   it('ranks a symbol whose name is the query above path matches and reports its line', () => {
-    const symbols = [symbol('Tree', 'src/renderer/src/components/Tree/Tree.tsx', 12)];
+    const symbols = [symbol('Tree', 'src/renderer/src/components/Tree.tsx', 12)];
     const [first] = rankNavigation('tree', files, symbols, new Set());
     expect(first).toMatchObject({ kind: 'symbol', path: symbols[0].location.path, line: 12 });
   });

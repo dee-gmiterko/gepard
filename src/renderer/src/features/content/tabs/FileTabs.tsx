@@ -4,7 +4,8 @@ import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
 import { openTabs } from '../../../state/selectors';
 import { basename } from '../../../helpers/paths';
-import { IconButton, focusVisible } from '../../../components/IconButton';
+import { focusVisible } from '../../../components/controlStyles';
+import { IconButton } from '../../../components/IconButton';
 import { Ellipsis } from '../../../components/Ellipsis';
 
 const messages = defineMessages({

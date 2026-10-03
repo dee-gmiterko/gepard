@@ -13,11 +13,11 @@
     "format:check": "prettier --check ."
   },
   "devDependencies": {
-    "@gepard/common": "workspace:*",
-    "@gepard/eslint-config": "workspace:*",
-    "@types/node": "24.19.0",
-    "eslint": "9.39.5",
-    "prettier": "3.9.9",
-    "typescript": "5.9.3"
+    "@gepard/common": "workspace:^",
+    "@gepard/eslint-config": "workspace:^",
+    "@types/node": "^26.6.4",
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.9",
+    "typescript": "^7.0.2"
   }
 }

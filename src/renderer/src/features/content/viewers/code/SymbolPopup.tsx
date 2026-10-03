@@ -2,10 +2,8 @@ import { useMemo, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage } from 'react-intl';
-import type {
-  SymbolPopupEntry,
-  SymbolPortals,
-} from '../../../../components/CodeEditor/symbolTooltip';
+import type { SymbolPopupEntry } from '../../../../components/CodeEditor';
+import type { SymbolPortals } from '../../../../components/SymbolPortals';
 import { Caption } from '../../../../components/Caption';
 import { MatchLine } from '../../../../components/MatchLine';
 import { Message } from '../../../../components/Message';

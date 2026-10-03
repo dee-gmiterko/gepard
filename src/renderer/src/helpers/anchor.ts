@@ -10,7 +10,7 @@ export interface RefAnchor {
 type Checkout = { base: string; head: string } | null;
 
 export function refAnchorFromThread(anchor: Anchor, checkout: Checkout): RefAnchor | null {
-  // Must stay in sync with the inline gutter filter in components/CodeEditor/commentWidgets.ts.
+  // Must stay in sync with the inline gutter filter in components/CodeEditor.ts.
   if (!checkout || anchor.commitOid !== checkout.head) return null;
   const line = anchor.line ?? anchor.originalLine;
   if (line == null) return null;

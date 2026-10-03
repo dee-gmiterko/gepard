@@ -40,6 +40,7 @@ export async function materializePayload(
   } catch (e) {
     throw new Error(
       `Bundled ${payload.label} not found; run the extension's vendor step (${errorMessage(e)})`,
+      { cause: e },
     );
   }
   const dir = path.join(dataDir, payload.installName?.(version) ?? version);

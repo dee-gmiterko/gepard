@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LanguageDescription, LanguageSupport, StreamLanguage } from '@codemirror/language';
 import type { GrammarExtension } from '@gepard/common';
-import {
-  allLanguageDescriptions,
-  grammarLanguageDescriptions,
-} from '../src/components/CodeEditor/languages';
+import { allLanguageDescriptions, grammarLanguageDescriptions } from '../src/components/CodeEditor';
 
 const demoModule: GrammarExtension = {
   id: 'demo',

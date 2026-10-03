@@ -17,17 +17,17 @@
     "format:check": "prettier --check ."
   },
   "devDependencies": {
-    "@codemirror/language": "6.12.4",
-    "@gepard/common": "workspace:*",
-    "@gepard/eslint-config": "workspace:*",
-    "@lezer/highlight": "1.2.4",
-    "@lezer/lr": "1.4.10",
-    "@types/node": "24.19.0",
-    "esbuild": "0.28.2",
-    "eslint": "9.39.5",
-    "prettier": "3.9.9",
-    "typescript": "5.9.3",
-    "vite": "7.3.6",
-    "vitest": "5.0.2"
+    "@codemirror/language": "^6.12.4",
+    "@gepard/common": "workspace:^",
+    "@gepard/eslint-config": "workspace:^",
+    "@lezer/highlight": "^1.2.5",
+    "@lezer/lr": "^1.4.10",
+    "@types/node": "^26.6.4",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.9",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
   }
 }

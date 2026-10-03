@@ -794,9 +794,9 @@ export class GhService {
     number: number,
   ): Promise<ReviewThreadsResult> {
     const threads: GqlReviewThreadRaw[] = [];
-    let prId = '';
-    let headRefOid = '';
-    let baseRefOid = '';
+    let prId: string;
+    let headRefOid: string;
+    let baseRefOid: string;
     let cursor: string | null = null;
     for (;;) {
       const page: z.output<typeof GqlReviewThreadsPage> = await this.graphql(
@@ -831,8 +831,8 @@ export class GhService {
 
   async fetchViewedFiles(owner: string, repo: string, number: number): Promise<FilesViewedResult> {
     const files: RemoteViewedFile[] = [];
-    let prId = '';
-    let headRefOid = '';
+    let prId: string;
+    let headRefOid: string;
     let cursor: string | null = null;
     for (;;) {
       const page: z.output<typeof FilesViewedPage> = await this.graphql(
@@ -990,7 +990,7 @@ export class GhService {
     number: number,
   ): Promise<GeneralCommentsResult> {
     const comments: GqlIssueCommentRaw[] = [];
-    let prId = '';
+    let prId: string;
     let cursor: string | null = null;
     for (;;) {
       const page: z.output<typeof GeneralCommentsPage> = await this.graphql(

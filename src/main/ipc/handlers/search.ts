@@ -131,7 +131,7 @@ export function definitionAt(
       requireCurrentSha(input.projectId, input.sha);
       const session = findSession(input.projectId, input.path);
       const repoRoot = projectRepoDir(input.projectId);
-      let symbol = '';
+      let symbol: string;
       try {
         const text = await readFile(join(repoRoot, input.path), 'utf8');
         const lineText = text.split('\n')[input.pos.line - 1] ?? '';

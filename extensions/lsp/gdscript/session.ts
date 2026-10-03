@@ -165,6 +165,7 @@ export class GodotSession implements LanguageSession {
         if (Date.now() > deadline) {
           throw new Error(
             `LSP server did not accept connections on port ${port}: ${errorMessage(e)}`,
+            { cause: e },
           );
         }
         await new Promise((r) => setTimeout(r, GodotSession.CONNECT_RETRY_MS));

@@ -39,10 +39,9 @@ async function indexOneFile(relPath: string): Promise<void> {
 async function build(files: string[]): Promise<void> {
   const total = files.length;
   const CHUNK = 200;
-  let done = 0;
   for (let i = 0; i < total; i += CHUNK) {
     await Promise.all(files.slice(i, i + CHUNK).map(indexOneFile));
-    done = Math.min(total, i + CHUNK);
+    const done = Math.min(total, i + CHUNK);
     post({ type: 'progress', done, total });
   }
   post({ type: 'built' });

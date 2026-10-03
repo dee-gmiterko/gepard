@@ -19,25 +19,25 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
-    "vscode-jsonrpc": "9.0.3",
-    "zod": "4.6.5"
+    "vscode-jsonrpc": "^9.0.3",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@gepard/common": "workspace:*",
-    "@gepard/eslint-config": "workspace:*",
-    "@types/node": "24.19.0",
-    "@typescript/typescript-darwin-arm64": "7.0.2",
-    "@typescript/typescript-darwin-x64": "7.0.2",
-    "@typescript/typescript-linux-arm64": "7.0.2",
-    "@typescript/typescript-linux-x64": "7.0.2",
-    "@typescript/typescript-win32-arm64": "7.0.2",
-    "@typescript/typescript-win32-x64": "7.0.2",
-    "esbuild": "0.28.2",
-    "eslint": "9.39.5",
-    "prettier": "3.9.9",
-    "tsx": "4.23.15",
-    "typescript": "5.9.3",
-    "vite": "7.3.6",
-    "vitest": "5.0.2"
+    "@gepard/common": "workspace:^",
+    "@gepard/eslint-config": "workspace:^",
+    "@types/node": "^26.6.4",
+    "@typescript/typescript-darwin-arm64": "^7.0.2",
+    "@typescript/typescript-darwin-x64": "^7.0.2",
+    "@typescript/typescript-linux-arm64": "^7.0.2",
+    "@typescript/typescript-linux-x64": "^7.0.2",
+    "@typescript/typescript-win32-arm64": "^7.0.2",
+    "@typescript/typescript-win32-x64": "^7.0.2",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.9",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
   }
 }

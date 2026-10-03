@@ -1,6 +1,7 @@
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
 import { useCommands } from '../../../keyboard/useCommands';
-import { Tree, TreeLabel } from '../../../components/Tree';
+import { Tree } from '../../../components/Tree';
+import { TreeLabel } from '../../../components/treeStyles';
 import type { TreeNode } from '../../../helpers/tree';
 import { FileRowMarks } from './FileRowMarks';
 import { changedLeaves, type RowData } from '../../../helpers/row';

@@ -133,6 +133,7 @@ function readCatalogFile(file: string): LocaleCatalog {
   } catch (error) {
     throw new Error(
       `${file} is not valid JSON, refusing to overwrite it: ${(error as Error).message}`,
+      { cause: error },
     );
   }
 }

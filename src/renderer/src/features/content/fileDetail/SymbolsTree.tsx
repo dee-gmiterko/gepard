@@ -4,7 +4,8 @@ import { defineMessages, FormattedMessage, useIntl, type MessageDescriptor } fro
 import { useAppDispatch } from '../../../state/AppContext';
 import { useCurrentHead } from '../../../queries/projects';
 import { useDocumentSymbols } from '../../../queries/search';
-import { Tree, TreeLabel } from '../../../components/Tree';
+import { Tree } from '../../../components/Tree';
+import { TreeLabel } from '../../../components/treeStyles';
 import { symbolTreeNodes, type SymbolRowData } from '../../../helpers/tree';
 import { Caption } from '../../../components/Caption';
 import { Message } from '../../../components/Message';

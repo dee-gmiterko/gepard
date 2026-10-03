@@ -2,7 +2,8 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import { Button } from '../components/Button';
-import { Message, centerLayout } from '../components/Message';
+import { centerLayout } from '../components/centerLayout';
+import { Message } from '../components/Message';
 import { Stack } from '../components/Layout';
 import { reportError } from './report';
 
