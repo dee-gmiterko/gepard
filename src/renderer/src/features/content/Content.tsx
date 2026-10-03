@@ -6,6 +6,7 @@ import { MissingViewer } from './viewers/missing/MissingViewer';
 import { FileControls } from './fileDetail/FileControls';
 import { FileDetailPanel } from './fileDetail/FileDetailPanel';
 import { CommentsTab } from './comments/CommentsTab';
+import { OverviewTab } from './overview/OverviewTab';
 
 const Main = styled.main`
   position: relative;
@@ -35,7 +36,11 @@ export function Content(): React.JSX.Element {
   return (
     <Main>
       <FileTabs />
-      {state.mainTab === 'comments' ? (
+      {state.mainTab === 'overview' ? (
+        <ViewerArea>
+          <OverviewTab />
+        </ViewerArea>
+      ) : state.mainTab === 'comments' ? (
         <ViewerArea>
           <CommentsTab />
         </ViewerArea>

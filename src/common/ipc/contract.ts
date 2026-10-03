@@ -31,6 +31,7 @@ import {
   LineSymbolsResult,
 } from './schemas/lsp';
 import { LogLevel } from './schemas/log';
+import { PrOverviewDetails, ProjectOverview } from './schemas/overview';
 import { ExtensionInfo } from './schemas/extensions';
 import { GrammarModule } from './schemas/grammar';
 import { ThemeTemplateData } from './schemas/theme';
@@ -116,6 +117,9 @@ export const channels = {
     }),
     z.array(Commit),
   ),
+
+  'overview.project': ch(z.object(ProjectRef), ProjectOverview),
+  'overview.pr': ch(z.object(PrRef), PrOverviewDetails),
 
   'files.changed': ch(z.object({ ...ProjectRef, base: Sha, head: Sha }), z.array(ChangedFile)),
   'files.diff': ch(z.object({ ...ProjectRef, base: Sha, head: Sha, path: RepoPath }), FileDiff),

@@ -4,7 +4,7 @@ import type { ReportTone } from '../errors/report';
 
 export const SidePanelTab = z.enum(['files', 'targeted', 'search']);
 export type SidePanelTab = z.infer<typeof SidePanelTab>;
-export const MainTab = z.enum(['files', 'comments']);
+export const MainTab = z.enum(['overview', 'files', 'comments']);
 export type MainTab = z.infer<typeof MainTab>;
 export const QuickSearchMode = z.enum(['file', 'navigate']);
 export type QuickSearchMode = z.infer<typeof QuickSearchMode>;
@@ -68,7 +68,7 @@ export const initialAppState: AppState = {
   acceptedFiles: [],
   previewFile: null,
   activeFile: null,
-  mainTab: 'files',
+  mainTab: 'overview',
   checkout: null,
   toasts: [],
   revealLine: null,
@@ -105,7 +105,8 @@ export type AppAction =
   | { type: 'quickSearch/close' };
 
 function withTarget(state: AppState, targeting: Targeting, set: boolean): AppState {
-  const mainTab = targeting.pr === null && state.mainTab === 'comments' ? 'files' : state.mainTab;
+  const mainTab =
+    targeting.pr === null && state.mainTab === 'comments' ? 'overview' : state.mainTab;
   return {
     ...state,
     targeting,

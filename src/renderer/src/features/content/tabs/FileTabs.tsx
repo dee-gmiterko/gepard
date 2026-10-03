@@ -1,4 +1,4 @@
-import { Bookmark, MessageSquare, X } from 'react-feather';
+import { Bookmark, Home, MessageSquare, X } from 'react-feather';
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
@@ -9,6 +9,10 @@ import { IconButton } from '../../../components/IconButton';
 import { Ellipsis } from '../../../components/Ellipsis';
 
 const messages = defineMessages({
+  overview: {
+    id: 'content.fileTabs.overview',
+    defaultMessage: 'Overview',
+  },
   allComments: {
     id: 'content.fileTabs.allComments',
     defaultMessage: 'All comments',
@@ -79,6 +83,22 @@ export function FileTabs(): React.JSX.Element {
 
   return (
     <TabStrip role="tablist">
+      <TabItem $active={state.mainTab === 'overview'}>
+        <Tab
+          type="button"
+          role="tab"
+          aria-selected={state.mainTab === 'overview'}
+          $active={state.mainTab === 'overview'}
+          $preview={false}
+          title={intl.formatMessage(messages.overview)}
+          onClick={() => dispatch({ type: 'mainTab/set', tab: 'overview' })}
+        >
+          <Home size={12} />
+          <Label>
+            <FormattedMessage {...messages.overview} />
+          </Label>
+        </Tab>
+      </TabItem>
       {state.targeting.pr != null && (
         <TabItem $active={state.mainTab === 'comments'}>
           <Tab
