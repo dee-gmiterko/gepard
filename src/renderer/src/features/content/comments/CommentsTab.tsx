@@ -1,20 +1,19 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import styled, { css } from 'styled-components';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage } from 'react-intl';
 import type { ReviewThread } from '@gepard/common';
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
-import { useComments, useUpsertComment } from '../../../queries/comments';
+import { useComments } from '../../../queries/comments';
 import { useViewer } from '../../../queries/projects';
 import { authorDisplayName } from '../../../helpers/actor';
-import { Button } from '../../../components/Button';
 import { Ellipsis } from '../../../components/Ellipsis';
-import { ActionRow, Inline, Stack } from '../../../components/Layout';
+import { Inline } from '../../../components/Layout';
 import { Markdown } from '../../../components/Markdown';
 import { PathAndLine } from '../../../components/PathAndLine';
 import { Byline } from '../../../components/Byline';
 import { Message } from '../../../components/Message';
 import { OutdatedBadge, ResolvedBadge } from '../../../components/StatusBadge';
-import { TextArea } from '../../../components/TextInput';
+import { PrCommentComposer } from '../../commentEditor/PrCommentComposer';
 import { ThreadWidget } from '../../commentEditor/ThreadWidget';
 import { sortThreadsChronologically } from '../../../helpers/comment';
 
@@ -90,50 +89,7 @@ const messages = defineMessages({
     id: 'content.commentsTab.empty',
     defaultMessage: 'No comments yet.',
   },
-  addCommentPlaceholder: {
-    id: 'content.commentsTab.addCommentPlaceholder',
-    defaultMessage: 'Leave a comment on this pull request…',
-  },
-  addComment: {
-    id: 'content.commentsTab.addComment',
-    defaultMessage: 'Comment',
-  },
 });
-
-function NewGeneralComment(): React.JSX.Element {
-  const intl = useIntl();
-  const [body, setBody] = useState('');
-  const upsert = useUpsertComment();
-
-  function handleSubmit(): void {
-    const trimmed = body.trim();
-    if (!trimmed) return;
-    upsert.mutate(
-      { id: null, threadId: null, anchor: null, general: true, body: trimmed, references: [] },
-      { onSuccess: () => setBody('') },
-    );
-  }
-
-  return (
-    <Stack>
-      <TextArea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        placeholder={intl.formatMessage(messages.addCommentPlaceholder)}
-        rows={3}
-      />
-      <ActionRow>
-        <Button
-          variant="primary"
-          onClick={handleSubmit}
-          disabled={!body.trim() || upsert.isPending}
-        >
-          <FormattedMessage {...messages.addComment} />
-        </Button>
-      </ActionRow>
-    </Stack>
-  );
-}
 
 export function CommentsTab(): React.JSX.Element {
   const state = useAppState();
@@ -219,7 +175,7 @@ export function CommentsTab(): React.JSX.Element {
         )}
       </ThreadList>
       <ComposerRow>
-        <NewGeneralComment />
+        <PrCommentComposer />
       </ComposerRow>
     </Panel>
   );

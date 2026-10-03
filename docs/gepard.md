@@ -63,8 +63,9 @@
 	- Right panel (file comments sidebar): closeable, right-hand side, resizable the same way as the side panel (drag edge, width persisted per project); replaces the old floating comments overlay.
 		- Opened/closed via the toggle button in the header (moved there from the file controls floating panel).
 		- Bottom section: a symbols tree for the active file, LSP-backed via a `symbols.document` IPC call (`LanguageSession.documentSymbols`, `textDocument/documentSymbol`) - shows the document's symbol hierarchy (name + kind), nested when the LSP replies hierarchically; clicking a symbol jumps to its line in the active file (same `file/open`/reveal-line mechanism as comment threads and search results).
+		- For a file outside the pull request's diff the panel shows the PR comments that reference the file plus a PR comment composer; the comment gets a reference to the file's first line.
 	- Overview tab (first, default): shows the project state while no PR is targeted and the pull request state otherwise. It gives a quick summary of what is under review.
-	- Comments tab: chronological view of all threads and replies; a composer below the list adds a new general (PR-level, no file/line anchor) comment.
+	- Comments tab: chronological view of all threads and replies; a composer below the list adds a new PR comment (PR-level, no file/line anchor).
 	- Quick search popup: a small input over the content, two modes: in-file find and file/symbol navigation.
 		- In-file mode: searches the active file and jumps the cursor to the best match live as the user types.
 		- Navigation mode: searches file names and symbol definitions (classes, interfaces and similar types; not variables), shows the top 8 matches in a keyboard navigable list - file path, optionally followed by the matched symbol, matched part highlighted - and opens the containing file scrolled to the match.
