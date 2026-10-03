@@ -1,25 +1,51 @@
 import styled from 'styled-components';
 
-const Track = styled.span`
+type Tone = 'success' | 'muted';
+
+const Track = styled.span<{ $width: string }>`
   display: inline-block;
-  width: 64px;
+  flex-shrink: 0;
+  width: ${({ $width }) => $width};
   height: 6px;
   border-radius: ${({ theme }) => theme.radius.sm};
   background: ${({ theme }) => theme.colors.border};
   overflow: hidden;
 `;
 
-const Fill = styled.span<{ $percent: number }>`
+const Fill = styled.span<{ $percent: number; $tone: Tone }>`
   display: block;
   height: 100%;
   width: ${({ $percent }) => $percent}%;
-  background: ${({ theme }) => theme.colors.success};
+  background: ${({ theme, $tone }) =>
+    $tone === 'success' ? theme.colors.success : theme.colors.fgMuted};
 `;
 
-export function ProgressBar({ done, total }: { done: number; total: number }): React.JSX.Element {
+interface ProgressBarProps {
+  value: number;
+  max?: number;
+  label?: string;
+  tone?: Tone;
+  width?: string;
+}
+
+export function ProgressBar({
+  value,
+  max = 100,
+  label,
+  tone = 'success',
+  width = '64px',
+}: ProgressBarProps): React.JSX.Element {
+  const percent = max > 0 ? Math.min(100, Math.max(0, Math.round((value / max) * 100))) : 0;
   return (
-    <Track>
-      <Fill $percent={total > 0 ? Math.round((done / total) * 100) : 0} />
+    <Track
+      $width={width}
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={percent}
+    >
+      <Fill $percent={percent} $tone={tone} />
     </Track>
   );
 }

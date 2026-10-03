@@ -1,16 +1,16 @@
 import { defineMessages, FormattedMessage } from 'react-intl';
-import styled from 'styled-components';
 import type { OverviewPr } from '@gepard/common';
 import { Badge } from '../../../../components/Badge';
 import { Button } from '../../../../components/Button';
+import { Inline } from '../../../../components/Layout';
 import { useOverviewActions } from '../shared/useOverviewActions';
 import { DecisionBadge } from '../shared/DecisionBadge';
 import { FileCount } from '../shared/FileCount';
 import { Lines } from '../shared/Lines';
 import { PrLabel } from '../shared/PrLabel';
-import { ProgressBar } from '../shared/ProgressBar';
+import { ProgressBar } from '../../../../components/ProgressBar';
 import { RelativeTime } from '../shared/RelativeTime';
-import { LinkButton, Muted, Num, Truncated } from '../shared/overviewStyles';
+import { Cell, LinkButton, Muted, Num, PR_COLUMNS, RowGrid } from '../shared/overviewStyles';
 
 const messages = defineMessages({
   review: { id: 'content.overview.project.review', defaultMessage: 'Review' },
@@ -23,38 +23,31 @@ const messages = defineMessages({
   authoredBy: { id: 'content.overview.project.authoredBy', defaultMessage: 'by {author}' },
 });
 
-const TitleCell = styled.div`
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-`;
-
 export function PrRow({ pr }: { pr: OverviewPr }): React.JSX.Element {
   const actions = useOverviewActions();
   return (
-    <>
-      <TitleCell>
-        <LinkButton onClick={() => actions.openPr(pr.number)}>
-          <Truncated>
+    <RowGrid $columns={PR_COLUMNS}>
+      <Cell>
+        <Inline $gap={2}>
+          <LinkButton onClick={() => actions.openPr(pr.number)}>
             <PrLabel number={pr.number} title={pr.title} />
-            {pr.isDraft && (
-              <Badge>
-                <FormattedMessage {...messages.draft} />
-              </Badge>
-            )}
-          </Truncated>
-        </LinkButton>
+          </LinkButton>
+          {pr.isDraft && (
+            <Badge>
+              <FormattedMessage {...messages.draft} />
+            </Badge>
+          )}
+        </Inline>
         <Muted>
           <FormattedMessage {...messages.authoredBy} values={{ author: pr.author ?? '' }} />
         </Muted>
-      </TitleCell>
-      <div>
+      </Cell>
+      <Cell>
         <Lines additions={pr.additions} deletions={pr.deletions} />
-        <br />
         <Muted>
           <FileCount files={pr.changedFiles} />
         </Muted>
-      </div>
+      </Cell>
       <LinkButton onClick={() => actions.openPr(pr.number)}>
         <Num>
           <FormattedMessage
@@ -63,22 +56,22 @@ export function PrRow({ pr }: { pr: OverviewPr }): React.JSX.Element {
           />
         </Num>
       </LinkButton>
-      <div>
+      <Cell>
         <DecisionBadge decision={pr.reviewDecision} />
-      </div>
-      <div>
-        <ProgressBar done={pr.viewedFiles} total={pr.countedFiles} />
+      </Cell>
+      <Cell>
+        <ProgressBar value={pr.viewedFiles} max={pr.countedFiles} />
         <Muted>
           <FormattedMessage
             {...messages.viewedCount}
             values={{ done: pr.viewedFiles, total: pr.countedFiles }}
           />
         </Muted>
-      </div>
+      </Cell>
       <RelativeTime value={pr.updatedAt} />
       <Button onClick={() => actions.reviewPr(pr.number)}>
         <FormattedMessage {...messages.review} />
       </Button>
-    </>
+    </RowGrid>
   );
 }
