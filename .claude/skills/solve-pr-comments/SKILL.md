@@ -34,13 +34,25 @@ Get owner/repo if not already known. The PR number is the PR of the current iter
 gh repo view --json owner,name
 ```
 
-Query inline review threads directly via GraphQL — top-level PR comments and reviews miss them:
+A PR has two kinds of comments, and both are gathered: inline review threads (anchored to a file and line) and global comments (the PR conversation and review summaries, anchored to no file). A query for one kind misses the other.
+
+Inline review threads, via GraphQL:
 
 ```
 gh api graphql --paginate -f query='query($endCursor: String) { repository(owner: "<owner>", name: "<repo>") { pullRequest(number: <N>) { reviewThreads(first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor } nodes { id isResolved isOutdated path line comments(first: 20) { nodes { author { login } body createdAt url } } } } } } }' | jq -s '[.[].data.repository.pullRequest.reviewThreads.nodes[]] | map(select(.isResolved==false))'
 ```
 
-`--paginate` is required: GraphQL caps a page at 100 threads, and unresolved threads can sit past the first page. The jq filter keeps `isResolved: false`. Read every comment body before delegating. Correct obvious typos when relaying a comment's text but preserve its intent — do not reinterpret an ambiguous comment into whatever is easiest to implement.
+`--paginate` is required: GraphQL caps a page at 100 threads, and unresolved threads can sit past the first page. The jq filter keeps `isResolved: false`.
+
+Global comments of the same PR:
+
+```
+gh pr view <N> --json comments,reviews --jq '{comments: [.comments[] | {author: .author.login, body, url, createdAt}], reviews: [.reviews[] | select(.body != "") | {author: .author.login, state, body}]}'
+```
+
+Global comments have no resolved state. Every comment and non-empty review body returned is a task, except those the PR author's own earlier replies or a previous iteration of this skill already answered (a later comment or commit referencing it). Their anchor is the PR as a whole; the agent finds the relevant code itself.
+
+Read every comment body before delegating. Correct obvious typos when relaying a comment's text but preserve its intent — do not reinterpret an ambiguous comment into whatever is easiest to implement.
 
 Every unresolved thread is a task at the same bar, regardless of phrasing or length. A comment naming a feature, behavior, or UI element that does not yet exist ("add X," "settings should gain Y," "new feature: ...") is a task to build that thing, not a task to document its absence. It does not need to say "please implement" to count.
 
@@ -50,8 +62,8 @@ Do not pre-investigate a thread's cause or pre-decide its fix before dispatch �
 
 Each agent's prompt must include, per thread it owns:
 
-- The thread ID and the full (typo-corrected, intent-preserved) comment text.
-- The file and line the thread is anchored to.
+- The thread ID (or the comment URL for a global comment) and the full (typo-corrected, intent-preserved) comment text.
+- The file and line the thread is anchored to, or "global, no anchor" for a global comment.
 - An instruction to fix the actual code — not acknowledge the comment, not describe the fix in documentation only.
 
 Tell every agent explicitly not to run project-wide verification (typecheck, lint, format, build, test, `yarn validate`, or any part of it) on its own. Concurrent agents in one working tree will collide on shared caches, lockfiles, and build artifacts if each verifies independently mid-flight. Verification runs exactly once, after every agent is done, by the coordinator.
@@ -83,6 +95,8 @@ For every thread whose fix has been verified in step 3, whose code has passed st
 ```
 gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: "<id>"}) { thread { isResolved } } }'
 ```
+
+A global comment has no thread to close. Once its fix is verified and committed, it is done and needs no GitHub action.
 
 Do not leave a verified thread open. Do not close a thread whose fix has not been verified. If a thread's GitHub state and its actual code state disagree, trust the code: reopen a thread closed prematurely, or fix the code before closing one still open.
 
