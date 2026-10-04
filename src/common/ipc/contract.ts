@@ -50,7 +50,6 @@ const ch = <I extends z.ZodType, O extends z.ZodType>(
 
 const ProjectRef = { projectId: ProjectId };
 const PrRef = { projectId: ProjectId, pr: z.int().positive() };
-// null addresses the local comments that are not assigned to any PR.
 const CommentsRef = { projectId: ProjectId, pr: z.int().positive().nullable() };
 
 export const channels = {
@@ -117,7 +116,6 @@ export const channels = {
       ...ProjectRef,
       title: z.string().min(1),
       body: z.string().default(''),
-      // Unassigned local threads to delete once the issue exists.
       clearUnassignedThreadIds: z.array(NodeId).default([]),
     }),
     IssueRef,

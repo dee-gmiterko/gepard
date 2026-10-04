@@ -31,7 +31,6 @@ const cache = new Map<string, ReviewStoreFile>();
 const cacheKey = (projectId: string, pr: number | null): string =>
   `${projectId}:${pr ?? 'unassigned'}`;
 
-// Stands in for the PR node id on threads that are not assigned to any PR.
 export const UNASSIGNED_PR_ID = 'unassigned';
 
 const locks = new Map<string, Promise<unknown>>();
