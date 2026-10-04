@@ -3,7 +3,6 @@ import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { PrTarget } from './PrTarget';
 import { CommitTarget } from './CommitTarget';
 import { PathTarget } from './PathTarget';
-import { useOpenNextFileWhenReady } from '../content/useOpenNextFileWhenReady';
 import { useTargetingEffects } from './useTargetingEffects';
 import { useHeaderStatus } from './useHeaderStatus';
 import { Grid, Sidebar } from 'react-feather';
@@ -77,7 +76,6 @@ const Progress = styled.div`
 export function Header(): React.JSX.Element {
   const intl = useIntl();
   const { pending } = useTargetingEffects();
-  useOpenNextFileWhenReady();
   const dispatch = useAppDispatch();
   const state = useAppState();
   const setLayout = useSetLayout();

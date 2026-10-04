@@ -60,8 +60,6 @@ export interface AppState {
   acceptedFiles: string[];
   previewFile: string | null;
   activeFile: string | null;
-  /** Open the next unviewed targeted file once the target's files have loaded. */
-  openNextFilePending: boolean;
   mainTab: MainTab;
   checkout: { base: string; head: string } | null;
   toasts: Toast[];
@@ -81,7 +79,6 @@ export const initialAppState: AppState = {
   acceptedFiles: [],
   previewFile: null,
   activeFile: null,
-  openNextFilePending: false,
   mainTab: 'overview',
   checkout: null,
   toasts: [],
@@ -114,8 +111,7 @@ export type AppAction =
   | { type: 'file/close'; path: string }
   | { type: 'file/accept'; path: string }
   | { type: 'file/revert' }
-  | { type: 'file/openNextWhenReady' }
-  | { type: 'file/openNextCancel' }
+  | { type: 'review/openFile'; targeting: Pick<Targeting, 'pr' | 'commit'>; path: string }
   | { type: 'mainTab/set'; tab: MainTab }
   | { type: 'toast/push'; toast: Toast }
   | { type: 'toast/dismiss'; id: string }
@@ -205,20 +201,13 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       const revealLine =
         action.line != null ? { line: action.line, side: action.side ?? ('RIGHT' as const) } : null;
       return state.pinnedFiles.includes(action.path)
-        ? {
-            ...state,
-            activeFile: action.path,
-            mainTab: 'files',
-            revealLine,
-            openNextFilePending: false,
-          }
+        ? { ...state, activeFile: action.path, mainTab: 'files', revealLine }
         : {
             ...state,
             previewFile: action.path,
             activeFile: action.path,
             mainTab: 'files',
             revealLine,
-            openNextFilePending: false,
           };
     }
     case 'file/focus':
@@ -255,10 +244,16 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       };
     case 'file/revert':
       return { ...state, acceptedFiles: state.acceptedFiles.slice(0, -1) };
-    case 'file/openNextWhenReady':
-      return { ...state, mainTab: 'files', openNextFilePending: true };
-    case 'file/openNextCancel':
-      return { ...state, openNextFilePending: false };
+    case 'review/openFile':
+      // Its file list loads asynchronously, so the review may have been left in the meantime.
+      if (
+        state.mainTab !== 'files' ||
+        state.targeting.pr !== action.targeting.pr ||
+        state.targeting.commit !== action.targeting.commit
+      ) {
+        return state;
+      }
+      return appReducer(state, { type: 'file/open', path: action.path });
     case 'mainTab/set':
       return { ...state, mainTab: action.tab };
     case 'toast/push':

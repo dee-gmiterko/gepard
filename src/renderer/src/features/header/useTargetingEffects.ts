@@ -15,7 +15,7 @@ export function useTargetingEffects(): TargetingEffectsStatus {
   const projectId = state.projectId;
   const { pr, commit } = state.targeting;
 
-  const { mutateAsync: checkoutTarget, isPending: checkoutPending } = useCheckoutTarget();
+  const { checkout: checkoutTarget, pending: checkoutPending } = useCheckoutTarget();
   const { mutate: syncRun, reset: syncReset } = useSync();
 
   useEffect(() => {

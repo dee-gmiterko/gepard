@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import {
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 import { invoke } from '../ipc/client';
 import { qk } from './keys';
 import { useAppDispatch, useAppState } from '../state/AppContext';
@@ -20,13 +26,19 @@ export function useComments() {
   });
 }
 
+export function viewedQuery(projectId: string, pr: number) {
+  return queryOptions({
+    queryKey: qk.viewed(projectId, pr),
+    queryFn: () => invoke('viewed.list', { projectId, pr }),
+  });
+}
+
 export function useViewed() {
   const state = useAppState();
   const projectId = state.projectId ?? '';
   const pr = state.targeting.pr ?? NaN;
   return useQuery({
-    queryKey: qk.viewed(projectId, pr),
-    queryFn: () => invoke('viewed.list', { projectId, pr }),
+    ...viewedQuery(projectId, pr),
     enabled: Boolean(projectId) && Number.isFinite(pr),
   });
 }

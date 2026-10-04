@@ -1,8 +1,16 @@
-import { skipToken, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
+import {
+  queryOptions,
+  skipToken,
+  useIsFetching,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { invoke } from '../ipc/client';
 import { qk } from './keys';
 import { useAppState } from '../state/AppContext';
-import type { ChannelInput, PrSummary, TargetRef } from '@gepard/common';
+import type { ChannelInput, CheckoutResult, PrSummary, TargetRef } from '@gepard/common';
 
 export function usePrList(search?: string) {
   const state = useAppState();
@@ -59,13 +67,33 @@ export function useCreatePr() {
   });
 }
 
-export function useCheckoutTarget() {
+function checkoutQuery(projectId: string, target: TargetRef) {
+  return queryOptions({
+    queryKey: qk.checkout(projectId, target),
+    queryFn: () => invoke('pr.checkout', { projectId, target }),
+    staleTime: 0,
+    retry: false,
+  });
+}
+
+export interface CheckoutTarget {
+  /** Calls made while the same target is still checking out share that checkout. */
+  checkout: (target: TargetRef) => Promise<CheckoutResult>;
+  pending: boolean;
+}
+
+export function useCheckoutTarget(): CheckoutTarget {
   const projectId = useAppState().projectId ?? '';
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (target: TargetRef) => invoke('pr.checkout', { projectId, target }),
-    onSettled: () => qc.invalidateQueries({ queryKey: qk.index(projectId) }),
-  });
+  const pending = useIsFetching({ queryKey: qk.checkoutAll(projectId) }) > 0;
+  const checkout = useCallback(
+    (target: TargetRef) =>
+      qc.fetchQuery(checkoutQuery(projectId, target)).finally(() => {
+        void qc.invalidateQueries({ queryKey: qk.index(projectId) });
+      }),
+    [qc, projectId],
+  );
+  return { checkout, pending };
 }
 
 export function useTargetedPr(): PrSummary | null {

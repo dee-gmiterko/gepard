@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
 import { invoke } from '../ipc/client';
 import { useAppState } from '../state/AppContext';
 import { isDiffView } from '../state/selectors';
@@ -31,16 +31,22 @@ export function useFileContent(sha: string, path: string) {
   });
 }
 
+export function changedFilesQuery(projectId: string, base: string, head: string) {
+  return queryOptions({
+    queryKey: qk.changedFiles(projectId, base, head),
+    queryFn: () => invoke('files.changed', { projectId, base, head }),
+    ...immutable,
+  });
+}
+
 export function useChangedFiles() {
   const state = useAppState();
   const projectId = state.projectId ?? '';
   const base = state.checkout?.base ?? '';
   const head = state.checkout?.head ?? '';
   return useQuery({
-    queryKey: qk.changedFiles(projectId, base, head),
-    queryFn: () => invoke('files.changed', { projectId, base, head }),
+    ...changedFilesQuery(projectId, base, head),
     enabled: Boolean(projectId) && Boolean(base) && Boolean(head),
-    ...immutable,
   });
 }
 
@@ -66,7 +72,12 @@ export function useTargetedFiles(): string[] {
 
   return useMemo(() => {
     const paths = diffMode ? (changed ?? []).map((f) => f.path) : path ? (tree.data ?? []) : [];
-    const scoped = path ? paths.filter((p) => matchesTarget(p, path)) : paths;
-    return flattenLeafPaths(buildTree(scoped.map((p) => ({ path: p, data: null }))));
+    return targetedFilePaths(paths, path);
   }, [diffMode, changed, path, tree.data]);
+}
+
+/** Scopes `paths` to the path target and orders them as the targeted file tree lists them. */
+export function targetedFilePaths(paths: readonly string[], path: string | null): string[] {
+  const scoped = path ? paths.filter((p) => matchesTarget(p, path)) : paths;
+  return flattenLeafPaths(buildTree(scoped.map((p) => ({ path: p, data: null }))));
 }
