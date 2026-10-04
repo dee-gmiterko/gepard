@@ -6,6 +6,7 @@ import {
   filterPrsByPath,
   isLineNotInDiffError,
   matchesPrSearch,
+  parseIssueCreateUrl,
   parsePrCreateUrl,
   parsePrsFilesPageInfo,
   parsePrsFilesResponse,
@@ -232,5 +233,26 @@ describe('checkGqlErrors', () => {
 
   it('throws GRAPHQL_ERROR joining the messages', () => {
     expect(() => checkGqlErrors([{ message: 'one' }, { message: 'two' }])).toThrow('one; two');
+  });
+});
+
+describe('parseIssueCreateUrl', () => {
+  it('extracts the issue number and URL from the last line gh issue create prints', () => {
+    const stdout = [
+      'Creating issue in cli/cli',
+      '',
+      'https://github.com/cli/cli/issues/42',
+      '',
+    ].join('\n');
+    expect(parseIssueCreateUrl(stdout)).toEqual({
+      number: 42,
+      url: 'https://github.com/cli/cli/issues/42',
+    });
+  });
+
+  it('throws when stdout has no issue URL to parse', () => {
+    expect(() => parseIssueCreateUrl('https://github.com/cli/cli/pull/1')).toThrow(
+      /did not return an issue URL/,
+    );
   });
 });

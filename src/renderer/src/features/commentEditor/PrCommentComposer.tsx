@@ -5,11 +5,16 @@ import { Button } from '../../components/Button';
 import { ActionRow, Stack } from '../../components/Layout';
 import { TextArea } from '../../components/TextInput';
 import { useUpsertComment } from '../../queries/comments';
+import { useAppState } from '../../state/AppContext';
 
 const messages = defineMessages({
   placeholder: {
     id: 'commentEditor.prCommentComposer.placeholder',
     defaultMessage: 'Leave a comment on this pull request…',
+  },
+  unassignedPlaceholder: {
+    id: 'commentEditor.prCommentComposer.unassignedPlaceholder',
+    defaultMessage: 'Leave a general comment…',
   },
   submit: {
     id: 'commentEditor.prCommentComposer.submit',
@@ -25,6 +30,7 @@ export function PrCommentComposer({ references = [] }: PrCommentComposerProps): 
   const intl = useIntl();
   const [body, setBody] = useState('');
   const upsert = useUpsertComment();
+  const unassigned = useAppState().targeting.pr === null;
 
   function handleSubmit(): void {
     const trimmed = body.trim();
@@ -40,7 +46,9 @@ export function PrCommentComposer({ references = [] }: PrCommentComposerProps): 
       <TextArea
         value={body}
         onChange={(e) => setBody(e.target.value)}
-        placeholder={intl.formatMessage(messages.placeholder)}
+        placeholder={intl.formatMessage(
+          unassigned ? messages.unassignedPlaceholder : messages.placeholder,
+        )}
         rows={3}
       />
       <ActionRow>

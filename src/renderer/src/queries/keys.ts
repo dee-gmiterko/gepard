@@ -29,6 +29,7 @@ export const qk = {
   prSummary: (p: string, pr: number) => [...qk.pr(p, pr), 'summary'] as const,
   prCommits: (p: string, pr: number, path?: string) => [...qk.pr(p, pr), 'commits', path] as const,
   comments: (p: string, pr: number) => [...qk.pr(p, pr), 'comments'] as const,
+  unassignedComments: (p: string) => [...qk.project(p), 'unassignedComments'] as const,
   viewed: (p: string, pr: number) => [...qk.pr(p, pr), 'viewed'] as const,
   pendingCount: (p: string, pr: number) => [...qk.pr(p, pr), 'pendingCount'] as const,
   commit: (p: string, sha: string) => [...qk.project(p), 'commit', sha] as const,

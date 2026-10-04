@@ -19,6 +19,7 @@ import { IconButton } from '../../../components/IconButton';
 import { Inline, Stack } from '../../../components/Layout';
 import { Surface } from '../../../components/Surface';
 import { SyncButton } from '../sync/SyncButton';
+import { ComposeIssueButton } from '../issue/ComposeIssueButton';
 
 const messages = defineMessages({
   viewed: {
@@ -289,7 +290,7 @@ function useDragOffset(
   return { offset, onPointerDown, onKeyDown };
 }
 
-export function FileControls({ docked = false }: { docked?: boolean }): React.JSX.Element | null {
+export function FileControls({ docked = false }: { docked?: boolean }): React.JSX.Element {
   const intl = useIntl();
   const state = useAppState();
   const dispatch = useAppDispatch();
@@ -309,8 +310,6 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
   const { canGoPrev, canGoNext } = useFileNavigation();
   const [pulse, setPulse] = useState(0);
 
-  if (pr === null) return null;
-
   const isViewed = path !== null && (viewed?.find((v) => v.path === path)?.viewed ?? false);
 
   function toggleDocked(): void {
@@ -327,7 +326,7 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
     >
       <Stack>
         <Row>
-          {path !== null && isChangedFile && (
+          {pr !== null && path !== null && isChangedFile && (
             <ViewedLabel>
               <CheckboxWrap>
                 {pulse > 0 && <Ring key={pulse} />}
@@ -389,7 +388,7 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
           />
         </NavRow>
 
-        <SyncButton block />
+        {pr === null ? <ComposeIssueButton block /> : <SyncButton block />}
       </Stack>
     </Wrapper>
   );

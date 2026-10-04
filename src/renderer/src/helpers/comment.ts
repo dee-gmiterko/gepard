@@ -12,11 +12,16 @@ export function sortThreadsChronologically(threads: readonly ReviewThread[]): Re
   );
 }
 
+function isCurrent(thread: ReviewThread, head: string | null): boolean {
+  return !thread.isOutdated && (head === null || thread.anchor.commitOid === head);
+}
+
+// A null head shows threads from every commit, as unassigned comments are not tied to a PR's head.
 export function codeViewCommentEntries(
   threads: readonly ReviewThread[],
   path: string,
   draftLine: number | null,
-  head: string,
+  head: string | null,
 ): LineCommentEntry[] {
   const byLine = new Map<number, ReviewThread[]>();
   for (const t of threads) {
@@ -27,7 +32,7 @@ export function codeViewCommentEntries(
       t.anchor.line == null
     )
       continue;
-    if (t.isOutdated || t.anchor.commitOid !== head) continue;
+    if (!isCurrent(t, head)) continue;
     const list = byLine.get(t.anchor.line) ?? [];
     list.push(t);
     byLine.set(t.anchor.line, list);
@@ -61,7 +66,7 @@ export function diffViewCommentEntries(
   path: string,
   infos: readonly { oldLine: number | null; newLine: number | null }[],
   draft: { docLine: number; side: DiffSide } | null,
-  head: string,
+  head: string | null,
 ): LineCommentEntry[] {
   const oldToDoc = new Map<number, number>();
   const newToDoc = new Map<number, number>();
@@ -74,7 +79,7 @@ export function diffViewCommentEntries(
   for (const t of threads) {
     if (t.anchor.path !== path || t.anchor.subjectType !== 'LINE' || t.anchor.line == null)
       continue;
-    if (t.isOutdated || t.anchor.commitOid !== head) continue;
+    if (!isCurrent(t, head)) continue;
     const docLine = (t.anchor.side === 'LEFT' ? oldToDoc : newToDoc).get(t.anchor.line);
     if (docLine == null) continue;
     const list = byLine.get(docLine) ?? [];

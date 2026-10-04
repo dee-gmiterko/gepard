@@ -90,7 +90,6 @@ export function DiffViewer({ path }: { path: string }): React.JSX.Element {
 function DiffText({ path, rows }: { path: string; rows: DiffRow[] }): React.JSX.Element {
   const state = useAppState();
   const pr = state.targeting.pr;
-  const commentsEnabled = pr !== null;
   const { data: threads } = useComments();
   const head = state.checkout?.head ?? '';
   const singleCommitInPr = pr !== null && state.targeting.commit !== null;
@@ -102,39 +101,40 @@ function DiffText({ path, rows }: { path: string; rows: DiffRow[] }): React.JSX.
   );
   const { containerRef, view, comments, commentGutter } = useReadOnlyEditor(path, doc, extensions);
   const [draft, setDraft] = useState<{ docLine: number; side: DiffSide } | null>(null);
-  const activeDraft = commentsEnabled ? draft : null;
   const portals = useMemo(() => new CommentPortals(), []);
 
   useEffect(() => {
     if (!view) return;
     view.dispatch({
       effects: commentGutter.reconfigure(
-        commentsEnabled
-          ? commentAffordanceGutter(
-              (docLine) => {
-                const kind = infos[docLine - 1]?.kind;
-                if (kind === undefined || kind === 'hunk') return false;
-                return !(singleCommitInPr && kind === 'delete');
-              },
-              (docLine) => {
-                const kind = infos[docLine - 1]?.kind;
-                setDraft({ docLine, side: kind === 'delete' ? 'LEFT' : 'RIGHT' });
-              },
-            )
-          : [],
+        commentAffordanceGutter(
+          (docLine) => {
+            const kind = infos[docLine - 1]?.kind;
+            if (kind === undefined || kind === 'hunk') return false;
+            return !(singleCommitInPr && kind === 'delete');
+          },
+          (docLine) => {
+            const kind = infos[docLine - 1]?.kind;
+            setDraft({ docLine, side: kind === 'delete' ? 'LEFT' : 'RIGHT' });
+          },
+        ),
       ),
     });
-  }, [commentsEnabled, infos, singleCommitInPr, view, commentGutter]);
+  }, [infos, singleCommitInPr, view, commentGutter]);
 
   useEffect(() => {
     if (!view) return;
-    const entries = commentsEnabled
-      ? diffViewCommentEntries(threads ?? [], path, infos, activeDraft, head)
-      : [];
+    const entries = diffViewCommentEntries(
+      threads ?? [],
+      path,
+      infos,
+      draft,
+      pr === null ? null : head,
+    );
     view.dispatch({
       effects: comments.reconfigure(commentBlockDecorations(view.state.doc, entries, portals)),
     });
-  }, [threads, activeDraft, commentsEnabled, path, infos, head, view, comments, portals]);
+  }, [threads, draft, pr, path, infos, head, view, comments, portals]);
 
   useEffect(() => {
     if (!view || state.activeFile !== path || state.revealLine == null) return;
@@ -145,9 +145,7 @@ function DiffText({ path, rows }: { path: string; rows: DiffRow[] }): React.JSX.
   return (
     <>
       <EditorHost ref={containerRef} />
-      {commentsEnabled && (
-        <CommentPortalHost portals={portals} onCloseDraft={() => setDraft(null)} />
-      )}
+      <CommentPortalHost portals={portals} onCloseDraft={() => setDraft(null)} />
     </>
   );
 }

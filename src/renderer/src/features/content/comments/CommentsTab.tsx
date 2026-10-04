@@ -7,6 +7,7 @@ import { useComments } from '../../../queries/comments';
 import { Message } from '../../../components/Message';
 import { PrCommentComposer } from '../../commentEditor/PrCommentComposer';
 import { ThreadWidget } from '../../commentEditor/ThreadWidget';
+import { ComposeIssueButton } from '../issue/ComposeIssueButton';
 import { sortThreadsChronologically } from '../../../helpers/comment';
 
 const Panel = styled.div`
@@ -30,15 +31,25 @@ const ComposerRow = styled.div`
   padding: ${({ theme }) => theme.space[3]};
 `;
 
+const Notice = styled.div`
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[2]};
+  padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[3]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
 const ThreadGroup = styled.div`
   padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[3]};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 const messages = defineMessages({
-  targetPr: {
-    id: 'content.commentsTab.targetPr',
-    defaultMessage: 'Target a PR to see its comments.',
+  unassigned: {
+    id: 'content.commentsTab.unassigned',
+    defaultMessage:
+      'No pull request is targeted. These local comments are not assigned to any pull request and can be composed into a new issue.',
   },
   loading: {
     id: 'content.commentsTab.loading',
@@ -59,12 +70,6 @@ export function CommentsTab(): React.JSX.Element {
 
   const ordered = useMemo(() => sortThreadsChronologically(threads), [threads]);
 
-  if (pr == null)
-    return (
-      <Message>
-        <FormattedMessage {...messages.targetPr} />
-      </Message>
-    );
   if (isLoading)
     return (
       <Message>
@@ -84,6 +89,14 @@ export function CommentsTab(): React.JSX.Element {
 
   return (
     <Panel>
+      {pr === null && (
+        <Notice>
+          <Message tone="subtle">
+            <FormattedMessage {...messages.unassigned} />
+          </Message>
+          <ComposeIssueButton />
+        </Notice>
+      )}
       <ThreadList>
         {ordered.length === 0 ? (
           <Message>

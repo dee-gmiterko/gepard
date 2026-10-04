@@ -1,18 +1,23 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { invoke } from '../ipc/client';
 import { qk } from './keys';
 import { useAppDispatch, useAppState } from '../state/AppContext';
 import { useTargetedPr } from './prs';
-import type { CommentDraft, LocalViewedState, SyncMode } from '@gepard/common';
+import type { ChannelInput, CommentDraft, LocalViewedState, SyncMode } from '@gepard/common';
 
+function commentsKey(projectId: string, pr: number | null) {
+  return pr === null ? qk.unassignedComments(projectId) : qk.comments(projectId, pr);
+}
+
+// Without a targeted PR these are the local comments not assigned to any PR.
 export function useComments() {
   const state = useAppState();
   const projectId = state.projectId ?? '';
-  const pr = state.targeting.pr ?? NaN;
+  const pr = state.targeting.pr;
   return useQuery({
-    queryKey: qk.comments(projectId, pr),
+    queryKey: commentsKey(projectId, pr),
     queryFn: () => invoke('comments.list', { projectId, pr }),
-    enabled: Boolean(projectId) && Number.isFinite(pr),
+    enabled: Boolean(projectId),
   });
 }
 
@@ -29,35 +34,48 @@ export function useViewed() {
 
 export type CommentDraftBody = Omit<CommentDraft, 'projectId' | 'pr' | 'prId'>;
 
+function invalidateComments(
+  qc: QueryClient,
+  projectId: string,
+  pr: number | null,
+): Promise<unknown> {
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: commentsKey(projectId, pr) }),
+    pr !== null && qc.invalidateQueries({ queryKey: qk.pendingCount(projectId, pr) }),
+  ]);
+}
+
 export function useUpsertComment() {
   const state = useAppState();
   const projectId = state.projectId ?? '';
-  const pr = state.targeting.pr ?? NaN;
+  const pr = state.targeting.pr;
   const prId = useTargetedPr()?.id ?? null;
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (draft: CommentDraftBody) =>
       invoke('comments.upsert', { ...draft, projectId, pr, prId }),
-    onSettled: () =>
-      Promise.all([
-        qc.invalidateQueries({ queryKey: qk.comments(projectId, pr) }),
-        qc.invalidateQueries({ queryKey: qk.pendingCount(projectId, pr) }),
-      ]),
+    onSettled: () => invalidateComments(qc, projectId, pr),
   });
 }
 
 export function useDeleteComment() {
   const state = useAppState();
   const projectId = state.projectId ?? '';
-  const pr = state.targeting.pr ?? NaN;
+  const pr = state.targeting.pr;
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (commentId: string) => invoke('comments.delete', { projectId, pr, commentId }),
-    onSettled: () =>
-      Promise.all([
-        qc.invalidateQueries({ queryKey: qk.comments(projectId, pr) }),
-        qc.invalidateQueries({ queryKey: qk.pendingCount(projectId, pr) }),
-      ]),
+    onSettled: () => invalidateComments(qc, projectId, pr),
+  });
+}
+
+export function useCreateIssue() {
+  const projectId = useAppState().projectId ?? '';
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Omit<ChannelInput<'issues.create'>, 'projectId'>) =>
+      invoke('issues.create', { projectId, ...input }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.unassignedComments(projectId) }),
   });
 }
 

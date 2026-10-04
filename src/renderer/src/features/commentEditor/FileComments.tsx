@@ -71,6 +71,7 @@ function ThreadSummary({ thread }: { thread: ReviewThread }): React.JSX.Element 
 
 export function FileComments({ path }: FileCommentsProps): React.JSX.Element {
   const state = useAppState();
+  const unassigned = state.targeting.pr === null;
   const checkedOutHead = state.checkout?.head ?? null;
   const { data: threads = [] } = useComments();
   const [openId, setOpenId] = useState<string | null>(null);
@@ -81,14 +82,17 @@ export function FileComments({ path }: FileCommentsProps): React.JSX.Element {
     () =>
       threads
         .filter(
-          (t) => t.anchor.path === path && !t.isOutdated && t.anchor.commitOid === checkedOutHead,
+          (t) =>
+            t.anchor.path === path &&
+            !t.isOutdated &&
+            (unassigned || t.anchor.commitOid === checkedOutHead),
         )
         .sort(
           (a, b) =>
             (a.anchor.line ?? Number.POSITIVE_INFINITY) -
             (b.anchor.line ?? Number.POSITIVE_INFINITY),
         ),
-    [threads, path, checkedOutHead],
+    [threads, path, unassigned, checkedOutHead],
   );
 
   return (

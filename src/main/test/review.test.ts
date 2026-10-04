@@ -338,4 +338,53 @@ describe('store/review', () => {
     expect(updated.find((r) => r.path === 'a.ts')?.viewed).toBe(false);
     expect(updated.find((r) => r.path === 'b.ts')?.viewed).toBe(true);
   });
+
+  it('keeps unassigned comments apart from PR comments and clears selected threads', async () => {
+    const unassignedCtx = { prId: review.UNASSIGNED_PR_ID, commitOid: ctx.commitOid };
+    const general = await review.upsertLocalComment('proj-g', null, unassignedCtx, {
+      id: null,
+      threadId: null,
+      anchor: null,
+      general: true,
+      body: 'global note',
+      references: [],
+    });
+    const line = await review.upsertLocalComment('proj-g', null, unassignedCtx, {
+      id: null,
+      threadId: null,
+      anchor: {
+        path: 'src/y.ts',
+        subjectType: 'LINE',
+        side: 'RIGHT',
+        line: 3,
+        startLine: null,
+        startSide: null,
+      },
+      general: false,
+      body: 'line note',
+      references: [],
+    });
+    await review.upsertLocalComment('proj-g', 1, ctx, {
+      id: null,
+      threadId: null,
+      anchor: null,
+      general: true,
+      body: 'pr note',
+      references: [],
+    });
+
+    const unassigned = await review.listThreads('proj-g', null);
+    expect(unassigned.map((t) => t.comments[0].body)).toEqual(['global note', 'line note']);
+    expect(unassigned.every((t) => t.prId === review.UNASSIGNED_PR_ID)).toBe(true);
+    expect((await review.listThreads('proj-g', 1)).map((t) => t.comments[0].body)).toEqual([
+      'pr note',
+    ]);
+
+    await review.clearUnassignedThreads('proj-g', [general.threadId]);
+    expect((await review.listThreads('proj-g', null)).map((t) => t.id)).toEqual([line.threadId]);
+    expect(await review.listThreads('proj-g', 1)).toHaveLength(1);
+
+    await review.deleteLocalComment('proj-g', null, line.id);
+    expect(await review.listThreads('proj-g', null)).toEqual([]);
+  });
 });

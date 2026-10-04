@@ -13,6 +13,7 @@ import {
   Commit,
   FileContent,
   FileDiff,
+  IssueRef,
   NodeId,
   PersistedTargeting,
   PrListItem,
@@ -49,6 +50,8 @@ const ch = <I extends z.ZodType, O extends z.ZodType>(
 
 const ProjectRef = { projectId: ProjectId };
 const PrRef = { projectId: ProjectId, pr: z.int().positive() };
+// null addresses the local comments that are not assigned to any PR.
+const CommentsRef = { projectId: ProjectId, pr: z.int().positive().nullable() };
 
 export const channels = {
   'app.viewer': ch(z.void(), Viewer.nullable()),
@@ -109,6 +112,16 @@ export const channels = {
     }),
     PrSummary,
   ),
+  'issues.create': ch(
+    z.object({
+      ...ProjectRef,
+      title: z.string().min(1),
+      body: z.string().default(''),
+      // Unassigned local threads to delete once the issue exists.
+      clearUnassignedThreadIds: z.array(NodeId).default([]),
+    }),
+    IssueRef,
+  ),
   'commits.list': ch(
     z.object({
       ...ProjectRef,
@@ -155,9 +168,9 @@ export const channels = {
     DocumentSymbolsResult,
   ),
 
-  'comments.list': ch(z.object(PrRef), z.array(ReviewThread)),
+  'comments.list': ch(z.object(CommentsRef), z.array(ReviewThread)),
   'comments.upsert': ch(CommentDraft, Comment),
-  'comments.delete': ch(z.object({ ...PrRef, commentId: z.string() }), z.void()),
+  'comments.delete': ch(z.object({ ...CommentsRef, commentId: z.string() }), z.void()),
   'viewed.list': ch(z.object(PrRef), z.array(LocalViewedState)),
   'viewed.set': ch(
     z.object({

@@ -28,11 +28,19 @@ function cloneStore(store: ReviewStoreFile): ReviewStoreFile {
 }
 
 const cache = new Map<string, ReviewStoreFile>();
-const cacheKey = (projectId: string, pr: number): string => `${projectId}:${pr}`;
+const cacheKey = (projectId: string, pr: number | null): string =>
+  `${projectId}:${pr ?? 'unassigned'}`;
+
+// Stands in for the PR node id on threads that are not assigned to any PR.
+export const UNASSIGNED_PR_ID = 'unassigned';
 
 const locks = new Map<string, Promise<unknown>>();
 
-export function withReviewLock<T>(projectId: string, pr: number, fn: () => Promise<T>): Promise<T> {
+export function withReviewLock<T>(
+  projectId: string,
+  pr: number | null,
+  fn: () => Promise<T>,
+): Promise<T> {
   const key = cacheKey(projectId, pr);
   const settledPrior = (locks.get(key) ?? Promise.resolve()).then(
     () => undefined,
@@ -49,11 +57,11 @@ export function withReviewLock<T>(projectId: string, pr: number, fn: () => Promi
   return result;
 }
 
-async function readStoreFile(projectId: string, pr: number): Promise<ReviewStoreFile> {
+async function readStoreFile(projectId: string, pr: number | null): Promise<ReviewStoreFile> {
   return readJsonFile(reviewJsonPath(projectId, pr), ReviewStoreFile, emptyStore);
 }
 
-export async function loadReview(projectId: string, pr: number): Promise<ReviewStoreFile> {
+export async function loadReview(projectId: string, pr: number | null): Promise<ReviewStoreFile> {
   const key = cacheKey(projectId, pr);
   const cached = cache.get(key);
   if (cached) return cloneStore(cached);
@@ -64,14 +72,14 @@ export async function loadReview(projectId: string, pr: number): Promise<ReviewS
 
 export async function saveReview(
   projectId: string,
-  pr: number,
+  pr: number | null,
   store: ReviewStoreFile,
 ): Promise<void> {
   await writeJsonFile(reviewJsonPath(projectId, pr), store);
   cache.set(cacheKey(projectId, pr), cloneStore(store));
 }
 
-export async function listThreads(projectId: string, pr: number): Promise<ReviewThread[]> {
+export async function listThreads(projectId: string, pr: number | null): Promise<ReviewThread[]> {
   const store = await loadReview(projectId, pr);
   return store.threads
     .filter((t) => t.local?.status !== 'deleted')
@@ -99,7 +107,7 @@ function findComment(
 
 async function upsertLocalCommentLocked(
   projectId: string,
-  pr: number,
+  pr: number | null,
   ctx: UpsertContext,
   draft: CommentDraftInput,
 ): Promise<Comment> {
@@ -198,7 +206,7 @@ async function upsertLocalCommentLocked(
 
 export function upsertLocalComment(
   projectId: string,
-  pr: number,
+  pr: number | null,
   ctx: UpsertContext,
   draft: CommentDraftInput,
 ): Promise<Comment> {
@@ -207,7 +215,7 @@ export function upsertLocalComment(
 
 async function deleteLocalCommentLocked(
   projectId: string,
-  pr: number,
+  pr: number | null,
   commentId: string,
 ): Promise<void> {
   const store = await loadReview(projectId, pr);
@@ -252,10 +260,19 @@ async function deleteLocalCommentLocked(
 
 export function deleteLocalComment(
   projectId: string,
-  pr: number,
+  pr: number | null,
   commentId: string,
 ): Promise<void> {
   return withReviewLock(projectId, pr, () => deleteLocalCommentLocked(projectId, pr, commentId));
+}
+
+export function clearUnassignedThreads(projectId: string, threadIds: string[]): Promise<void> {
+  return withReviewLock(projectId, null, async () => {
+    const store = await loadReview(projectId, null);
+    const ids = new Set(threadIds);
+    store.threads = store.threads.filter((t) => !ids.has(t.id));
+    await saveReview(projectId, null, store);
+  });
 }
 
 export async function listViewed(projectId: string, pr: number): Promise<LocalViewedState[]> {

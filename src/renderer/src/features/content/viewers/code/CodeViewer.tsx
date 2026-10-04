@@ -65,8 +65,7 @@ export function CodeViewer({ path }: { path: string }): React.JSX.Element {
 function CodeText({ path, text }: { path: string; text: string }): React.JSX.Element {
   const state = useAppState();
   const dispatch = useAppDispatch();
-  const pr = state.targeting.pr;
-  const commentsEnabled = pr !== null;
+  const unassigned = state.targeting.pr === null;
   const { data: threads } = useComments();
   const head = useCurrentHead() ?? '';
   const lookupDefinition = useDefinitionLookup(head, path);
@@ -92,7 +91,6 @@ function CodeText({ path, text }: { path: string; text: string }): React.JSX.Ele
   );
   const { containerRef, view, comments, commentGutter } = useReadOnlyEditor(path, text, extensions);
   const [draft, setDraft] = useState<number | null>(null);
-  const activeDraft = commentsEnabled ? draft : null;
   const portals = useMemo(() => new CommentPortals(), []);
   const openLocation = useCallback(
     (target: string, line: number) => {
@@ -114,21 +112,17 @@ function CodeText({ path, text }: { path: string; text: string }): React.JSX.Ele
   useEffect(() => {
     if (!view) return;
     view.dispatch({
-      effects: commentGutter.reconfigure(
-        commentsEnabled ? commentAffordanceGutter(() => true, setDraft) : [],
-      ),
+      effects: commentGutter.reconfigure(commentAffordanceGutter(() => true, setDraft)),
     });
-  }, [commentsEnabled, view, commentGutter]);
+  }, [view, commentGutter]);
 
   useEffect(() => {
     if (!view) return;
-    const entries = commentsEnabled
-      ? codeViewCommentEntries(threads ?? [], path, activeDraft, head)
-      : [];
+    const entries = codeViewCommentEntries(threads ?? [], path, draft, unassigned ? null : head);
     view.dispatch({
       effects: comments.reconfigure(commentBlockDecorations(view.state.doc, entries, portals)),
     });
-  }, [threads, activeDraft, commentsEnabled, path, head, view, comments, portals]);
+  }, [threads, draft, unassigned, path, head, view, comments, portals]);
 
   useEffect(() => {
     if (!view || state.activeFile !== path || state.revealLine == null) return;
@@ -139,9 +133,7 @@ function CodeText({ path, text }: { path: string; text: string }): React.JSX.Ele
     <>
       <EditorHost ref={containerRef} />
       <SymbolPopupHost portals={symbolPortals} sha={head} path={path} onOpen={openLocation} />
-      {commentsEnabled && (
-        <CommentPortalHost portals={portals} onCloseDraft={() => setDraft(null)} />
-      )}
+      <CommentPortalHost portals={portals} onCloseDraft={() => setDraft(null)} />
     </>
   );
 }

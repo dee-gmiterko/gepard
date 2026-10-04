@@ -40,9 +40,9 @@ describe('overview tab', () => {
     expect(initialAppState.mainTab).toBe('overview');
   });
 
-  it('falls back to the overview when the PR is cleared while on the comments tab', () => {
+  it('stays on the comments tab when the PR is cleared, to show the unassigned comments', () => {
     const s = state({ mainTab: 'comments', targeting: { pr: 7, commit: null, path: null } });
-    expect(appReducer(s, { type: 'target/pr', pr: null }).mainTab).toBe('overview');
+    expect(appReducer(s, { type: 'target/pr', pr: null }).mainTab).toBe('comments');
   });
 
   it('keeps the current tab when a PR is targeted or cleared from the files tab', () => {

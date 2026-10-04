@@ -1,6 +1,7 @@
 import type { HandlerMap } from '../registry';
 import type { GhService } from '../../services/gh';
 import type { GitService } from '../../services/git';
+import * as review from '../../store/review';
 import {
   CODEOWNERS_PATHS,
   ownersOf,
@@ -19,6 +20,7 @@ export function createPrsHandlers(
   | 'pr.checkout'
   | 'pr.branches'
   | 'pr.create'
+  | 'issues.create'
   | 'commits.list'
   | 'overview.project'
   | 'overview.pr'
@@ -60,6 +62,14 @@ export function createPrsHandlers(
     'pr.create': async ({ projectId, base, head, title, body }) => {
       const { owner, repo } = await gh.repoRefFor(projectId);
       return gh.createPr(owner, repo, { base, head, title, body });
+    },
+
+    'issues.create': async ({ projectId, title, body, clearUnassignedThreadIds }) => {
+      const { owner, repo } = await gh.repoRefFor(projectId);
+      const issue = await gh.createIssue(owner, repo, { title, body });
+      if (clearUnassignedThreadIds.length > 0)
+        await review.clearUnassignedThreads(projectId, clearUnassignedThreadIds);
+      return issue;
     },
 
     'overview.project': async ({ projectId }) => {

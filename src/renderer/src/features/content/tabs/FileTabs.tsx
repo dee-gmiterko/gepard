@@ -99,24 +99,22 @@ export function FileTabs(): React.JSX.Element {
           </Label>
         </Tab>
       </TabItem>
-      {state.targeting.pr != null && (
-        <TabItem $active={state.mainTab === 'comments'}>
-          <Tab
-            type="button"
-            role="tab"
-            aria-selected={state.mainTab === 'comments'}
-            $active={state.mainTab === 'comments'}
-            $preview={false}
-            title={intl.formatMessage(messages.allComments)}
-            onClick={() => dispatch({ type: 'mainTab/set', tab: 'comments' })}
-          >
-            <MessageSquare size={12} />
-            <Label>
-              <FormattedMessage {...messages.comments} />
-            </Label>
-          </Tab>
-        </TabItem>
-      )}
+      <TabItem $active={state.mainTab === 'comments'}>
+        <Tab
+          type="button"
+          role="tab"
+          aria-selected={state.mainTab === 'comments'}
+          $active={state.mainTab === 'comments'}
+          $preview={false}
+          title={intl.formatMessage(messages.allComments)}
+          onClick={() => dispatch({ type: 'mainTab/set', tab: 'comments' })}
+        >
+          <MessageSquare size={12} />
+          <Label>
+            <FormattedMessage {...messages.comments} />
+          </Label>
+        </Tab>
+      </TabItem>
       {tabs.map((path) => {
         const isPinned = state.pinnedFiles.includes(path);
         const isActive = state.mainTab === 'files' && state.activeFile === path;

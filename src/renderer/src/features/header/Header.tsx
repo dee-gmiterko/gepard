@@ -144,7 +144,7 @@ export function Header(): React.JSX.Element {
         <IconButton
           icon={Sidebar}
           active={state.layout.fileCommentsPanelOpen}
-          disabled={!(state.targeting.pr !== null && path !== null && isChangedFile)}
+          disabled={path === null || (state.targeting.pr !== null && !isChangedFile)}
           label={intl.formatMessage(messages.fileDetails)}
           onClick={toggleFileComments}
         />
