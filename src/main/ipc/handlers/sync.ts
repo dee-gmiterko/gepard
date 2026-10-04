@@ -8,7 +8,7 @@ import { indexer } from '../../lsp';
 export function createSyncHandlers(
   gh: GhService,
   syncService: SyncService,
-): Pick<HandlerMap, 'sync.run' | 'sync.pendingCount' | 'index.get'> {
+): Pick<HandlerMap, 'sync.run' | 'sync.pendingCount' | 'index.get' | 'index.languages'> {
   return {
     'sync.run': async ({ projectId, pr, mode }) => {
       const { owner, repo } = await gh.repoRefFor(projectId);
@@ -21,5 +21,7 @@ export function createSyncHandlers(
     },
 
     'index.get': ({ projectId }) => indexer.status(projectId),
+
+    'index.languages': ({ projectId }) => indexer.languages(projectId),
   };
 }

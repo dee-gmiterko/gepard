@@ -6,7 +6,8 @@ import { makeTmpDir, type TmpDir } from './support/tmp';
 
 const mocks = vi.hoisted(() => {
   const extensions: LanguageExtension[] = [];
-  return { extensions };
+  const lineIndexReady: Promise<void> = Promise.resolve();
+  return { extensions, lineIndexReady };
 });
 
 vi.mock('../log', () => ({ log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
@@ -15,7 +16,7 @@ vi.mock('../notify', () => ({
   notifyMainFailure: vi.fn(),
 }));
 vi.mock('../services/line-index-manager', () => ({
-  startLineIndex: () => Promise.resolve(null),
+  startLineIndex: () => mocks.lineIndexReady.then(() => null),
 }));
 vi.mock('../extensions/registry', () => ({
   extensionRegistry: { enabledLanguageExtensions: () => Promise.resolve(mocks.extensions) },
@@ -117,6 +118,82 @@ describe('indexer with several language extensions', () => {
     expect(status.state === 'error' && status.message).toContain('BROKEN1: broken1 exploded');
     expect(status.state === 'error' && status.message).toContain('BROKEN2: broken2 exploded');
     expect(indexer.sessions('p')).toEqual([]);
+  });
+
+  it('reports every enabled extension, with present ones active or failed and the rest absent', async () => {
+    mocks.extensions = [
+      fakeExtension('broken', '.a'),
+      fakeExtension('beta', '.b'),
+      fakeExtension('gamma', '.c'),
+    ];
+
+    await indexer.open('p', '/repo', ['x.a', 'y.b'], 'head');
+
+    expect(indexer.languages('p')).toEqual([
+      { id: 'broken', displayName: 'BROKEN', state: 'failed', message: 'broken exploded' },
+      { id: 'beta', displayName: 'BETA', state: 'active' },
+      { id: 'gamma', displayName: 'GAMMA', state: 'absent' },
+    ]);
+  });
+
+  it('reports every enabled extension as absent when none matches the project files', async () => {
+    mocks.extensions = [fakeExtension('alpha', '.a'), fakeExtension('beta', '.b')];
+
+    await indexer.open('p', '/repo', ['z.txt'], 'head');
+
+    expect(indexer.languages('p')).toEqual([
+      { id: 'alpha', displayName: 'ALPHA', state: 'absent' },
+      { id: 'beta', displayName: 'BETA', state: 'absent' },
+    ]);
+  });
+
+  it('reports a language session as starting until it settles', async () => {
+    let release: (session: LanguageSession) => void = () => {};
+    const slow = fakeExtension('slow', '.a');
+    slow.open = vi.fn(
+      () =>
+        new Promise<LanguageSession>((resolve) => {
+          release = resolve;
+        }),
+    );
+    mocks.extensions = [slow];
+
+    const opening = indexer.open('p', '/repo', ['x.a'], 'head');
+    await vi.waitFor(() => expect(slow.open).toHaveBeenCalled());
+
+    expect(indexer.languages('p')).toEqual([
+      { id: 'slow', displayName: 'SLOW', state: 'starting' },
+    ]);
+
+    release(fakeSession().session);
+    await opening;
+
+    expect(indexer.languages('p')).toEqual([{ id: 'slow', displayName: 'SLOW', state: 'active' }]);
+  });
+
+  it('reports no language server list for an unknown project', () => {
+    expect(indexer.languages('unknown')).toBeNull();
+  });
+
+  it('lists the language servers while files are still being indexed', async () => {
+    let finishFiles: () => void = () => {};
+    mocks.lineIndexReady = new Promise<void>((resolve) => {
+      finishFiles = resolve;
+    });
+    mocks.extensions = [fakeExtension('alpha', '.a'), fakeExtension('beta', '.b')];
+
+    const opening = indexer.open('p', '/repo', ['x.a'], 'head');
+    await vi.waitFor(() => expect(indexer.languages('p')).not.toBeNull());
+
+    expect(indexer.status('p')).toMatchObject({ state: 'indexing', phase: 'files' });
+    expect(indexer.languages('p')).toEqual([
+      { id: 'alpha', displayName: 'ALPHA', state: 'starting' },
+      { id: 'beta', displayName: 'BETA', state: 'absent' },
+    ]);
+
+    finishFiles();
+    mocks.lineIndexReady = Promise.resolve();
+    await opening;
   });
 
   it('forwards checkout changes to every session', async () => {

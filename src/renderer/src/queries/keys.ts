@@ -44,6 +44,7 @@ export const qk = {
   searchPages: (p: string, sha: string, query: string, opts?: unknown) =>
     [...qk.commit(p, sha), 'searchPages', query, opts] as const,
   index: (p: string) => [...qk.project(p), 'index'] as const,
+  languageServers: (p: string) => [...qk.project(p), 'languageServers'] as const,
   checkoutAll: (p: string) => [...qk.project(p), 'checkout'] as const,
   checkout: (p: string, target: unknown) => [...qk.checkoutAll(p), target] as const,
 };

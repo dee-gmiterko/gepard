@@ -29,6 +29,7 @@ import {
   DefinitionResult,
   DocumentSymbolsResult,
   IndexStatus,
+  LanguageServerStatus,
   LineSymbolsResult,
 } from './schemas/lsp';
 import { LogLevel } from './schemas/log';
@@ -195,6 +196,7 @@ export const channels = {
   ),
   'sync.pendingCount': ch(z.object(PrRef), z.int().nonnegative()),
   'index.get': ch(z.object(ProjectRef), IndexStatus),
+  'index.languages': ch(z.object(ProjectRef), z.array(LanguageServerStatus).nullable()),
 
   'log.write': ch(
     z.object({

@@ -97,6 +97,19 @@ export function useIndexStatus() {
   });
 }
 
+const LANGUAGE_SERVERS_POLL_MS = 2000;
+
+export function useLanguageServers() {
+  const projectId = useAppState().projectId ?? '';
+  return useQuery({
+    queryKey: qk.languageServers(projectId),
+    queryFn: () => invoke('index.languages', { projectId }),
+    enabled: Boolean(projectId),
+    refetchOnMount: 'always',
+    refetchInterval: LANGUAGE_SERVERS_POLL_MS,
+  });
+}
+
 export function useCurrentHead(): string | null {
   const state = useAppState();
   const open = useOpenProject();

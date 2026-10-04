@@ -39,6 +39,7 @@ export const ChannelNameList = z.enum([
   'sync.run',
   'sync.pendingCount',
   'index.get',
+  'index.languages',
   'log.write',
   'log.getPath',
   'extensions.list',

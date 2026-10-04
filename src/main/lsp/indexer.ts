@@ -3,6 +3,7 @@ import {
   errorMessage,
   languageIdOf,
   type IndexStatus,
+  type LanguageServerStatus,
   type ExtensionEvents,
   type FileChange,
   type LanguageExtension,
@@ -22,6 +23,7 @@ interface LanguageEntry {
 
 interface ProjectState {
   status: IndexStatus;
+  languages: LanguageServerStatus[] | null;
   sessions: LanguageEntry[];
   lineIndex: LineIndexHandle | null;
   pendingIndexChanges: FileChange[];
@@ -38,6 +40,16 @@ function setStatus(projectId: string, status: IndexStatus): void {
   const state = projects.get(projectId);
   if (state) state.status = status;
   emit('index.status', { projectId, status });
+}
+
+function setLanguageStatus(
+  state: ProjectState,
+  id: string,
+  patch: Pick<LanguageServerStatus, 'state' | 'message'>,
+): void {
+  state.languages = (state.languages ?? []).map((entry) =>
+    entry.id === id ? { id: entry.id, displayName: entry.displayName, ...patch } : entry,
+  );
 }
 
 function isCurrent(projectId: string, state: ProjectState): boolean {
@@ -110,6 +122,7 @@ export const indexer: {
   status(projectId: string): IndexStatus;
   session(projectId: string, filePath: string): LanguageSession | null;
   sessions(projectId: string): LanguageSession[];
+  languages(projectId: string): LanguageServerStatus[] | null;
   lineIndex(projectId: string): LineIndexHandle | null;
   currentSha(projectId: string): string | null;
 } = {
@@ -118,6 +131,7 @@ export const indexer: {
     await disposeLineIndex(projectId);
     const state: ProjectState = {
       status: { state: 'indexing', phase: 'files', done: 0, total: files.length },
+      languages: null,
       sessions: [],
       lineIndex: null,
       pendingIndexChanges: [],
@@ -129,6 +143,16 @@ export const indexer: {
     };
     projects.set(projectId, state);
     setStatus(projectId, { state: 'indexing', phase: 'files', done: 0, total: files.length });
+
+    const extensions = await extensionRegistry.enabledLanguageExtensions();
+    if (!isCurrent(projectId, state)) return;
+
+    const matching = extensions.filter((ext) => files.some((f) => isClaimedBy(ext, f)));
+    state.languages = extensions.map((extension): LanguageServerStatus => ({
+      id: extension.id,
+      displayName: extension.displayName,
+      state: matching.includes(extension) ? 'starting' : 'absent',
+    }));
 
     const lineIndex = await startLineIndex(
       repoRoot,
@@ -157,10 +181,6 @@ export const indexer: {
       }
     }
 
-    const extensions = await extensionRegistry.enabledLanguageExtensions();
-    if (!isCurrent(projectId, state)) return;
-
-    const matching = extensions.filter((ext) => files.some((f) => isClaimedBy(ext, f)));
     if (matching.length === 0) {
       state.pendingSessionChanges = [];
       state.sessionUnavailable = true;
@@ -171,7 +191,19 @@ export const indexer: {
     setStatus(projectId, { state: 'indexing', phase: 'language', done: 0 });
     const results = await Promise.allSettled(
       matching.map((extension) =>
-        startLanguageSession(projectId, state, extension, repoRoot, files),
+        startLanguageSession(projectId, state, extension, repoRoot, files).then(
+          (entry) => {
+            setLanguageStatus(state, extension.id, { state: 'active' });
+            return entry;
+          },
+          (error: Error) => {
+            setLanguageStatus(state, extension.id, {
+              state: 'failed',
+              message: errorMessage(error),
+            });
+            throw error;
+          },
+        ),
       ),
     );
     const started: LanguageEntry[] = [];
@@ -245,6 +277,10 @@ export const indexer: {
 
   sessions(projectId: string): LanguageSession[] {
     return projects.get(projectId)?.sessions.map((entry) => entry.session) ?? [];
+  },
+
+  languages(projectId: string): LanguageServerStatus[] | null {
+    return projects.get(projectId)?.languages ?? null;
   },
 
   lineIndex(projectId: string): LineIndexHandle | null {
