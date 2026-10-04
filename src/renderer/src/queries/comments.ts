@@ -9,7 +9,6 @@ function commentsKey(projectId: string, pr: number | null) {
   return pr === null ? qk.unassignedComments(projectId) : qk.comments(projectId, pr);
 }
 
-// Without a targeted PR these are the local comments not assigned to any PR.
 export function useComments() {
   const state = useAppState();
   const projectId = state.projectId ?? '';

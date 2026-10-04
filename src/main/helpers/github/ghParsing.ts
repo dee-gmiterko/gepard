@@ -40,7 +40,6 @@ export function parsePrCreateUrl(stdout: string): number {
   return Number(match[1]);
 }
 
-// `gh issue create` likewise prints only the new issue's URL as the last line.
 export function parseIssueCreateUrl(stdout: string): IssueRef {
   const url = stdout.trim().split('\n').at(-1)?.trim() ?? '';
   const match = url.match(/\/issues\/(\d+)$/);

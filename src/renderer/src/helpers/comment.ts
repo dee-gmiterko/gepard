@@ -16,7 +16,6 @@ function isCurrent(thread: ReviewThread, head: string | null): boolean {
   return !thread.isOutdated && (head === null || thread.anchor.commitOid === head);
 }
 
-// A null head shows threads from every commit, as unassigned comments are not tied to a PR's head.
 export function codeViewCommentEntries(
   threads: readonly ReviewThread[],
   path: string,
