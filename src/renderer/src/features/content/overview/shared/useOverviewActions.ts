@@ -1,5 +1,6 @@
-import { useAppDispatch } from '../../../../state/AppContext';
+import { useAppDispatch, useAppState } from '../../../../state/AppContext';
 import { useTargetActions } from '../../../header/useTargetActions';
+import { useOpenReview } from './useOpenReview';
 
 export interface OverviewActions {
   openPr: (pr: number) => void;
@@ -13,8 +14,10 @@ export interface OverviewActions {
 }
 
 export function useOverviewActions(): OverviewActions {
+  const state = useAppState();
   const dispatch = useAppDispatch();
   const { setPr, setPath, setCommit } = useTargetActions();
+  const openReview = useOpenReview();
 
   return {
     openPr: (pr) => {
@@ -23,11 +26,11 @@ export function useOverviewActions(): OverviewActions {
     },
     reviewPr: (pr) => {
       setPr(pr);
-      dispatch({ type: 'file/openNextWhenReady' });
+      openReview({ ...state.targeting, pr, commit: null });
     },
     showAllPrs: () => setPr(null),
     openComments: () => dispatch({ type: 'mainTab/set', tab: 'comments' }),
-    openFiles: () => dispatch({ type: 'file/openNextWhenReady' }),
+    openFiles: () => openReview(state.targeting),
     openFile: (path) => dispatch({ type: 'file/open', path }),
     openFolder: (path) => {
       setPath(path);

@@ -35,17 +35,22 @@ describe('targeting behaviors', () => {
   });
 });
 
-describe('opening the next file when ready', () => {
-  it('switches to the files tab and stays pending until a file opens', () => {
-    const pending = appReducer(state(), { type: 'file/openNextWhenReady' });
-    expect(pending).toMatchObject({ mainTab: 'files', openNextFilePending: true });
-    const opened = appReducer(pending, { type: 'file/open', path: 'a.ts' });
-    expect(opened).toMatchObject({ activeFile: 'a.ts', openNextFilePending: false });
+describe('opening the first file of a review', () => {
+  const targeting = { pr: 7, commit: null, path: null };
+
+  it('opens the file when the review is still showing', () => {
+    const s = state({ targeting, mainTab: 'files' });
+    const next = appReducer(s, { type: 'review/openFile', targeting, path: 'a.ts' });
+    expect(next).toMatchObject({ activeFile: 'a.ts', previewFile: 'a.ts', mainTab: 'files' });
   });
 
-  it('can be cancelled when there is nothing to open', () => {
-    const pending = appReducer(state(), { type: 'file/openNextWhenReady' });
-    expect(appReducer(pending, { type: 'file/openNextCancel' }).openNextFilePending).toBe(false);
+  it('is ignored once the target changed or the files tab was left', () => {
+    const otherPr = state({ targeting: { ...targeting, pr: 8 }, mainTab: 'files' });
+    expect(appReducer(otherPr, { type: 'review/openFile', targeting, path: 'a.ts' })).toBe(otherPr);
+    const overview = state({ targeting, mainTab: 'overview' });
+    expect(appReducer(overview, { type: 'review/openFile', targeting, path: 'a.ts' })).toBe(
+      overview,
+    );
   });
 
   it('forgets the previous checkout when the PR or commit changes, but not the path', () => {
