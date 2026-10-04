@@ -211,22 +211,24 @@ export function ThreadWidget({
           {!isGeneral && <PathAndLine path={anchor.path} line={anchor.line} />}
           {thread?.isResolved && <ResolvedBadge />}
           {thread?.isOutdated && <OutdatedBadge />}
-          {!isGeneral && onOpen && (
-            <IconButton
-              icon={ExternalLink}
-              label={intl.formatMessage(messages.openInFile)}
-              size={14}
-              onClick={onOpen}
-            />
-          )}
-          {!thread && onClose && (
-            <IconButton
-              icon={X}
-              label={intl.formatMessage(messages.close)}
-              size={14}
-              onClick={onClose}
-            />
-          )}
+          <RowActions>
+            {!isGeneral && onOpen && (
+              <IconButton
+                icon={ExternalLink}
+                label={intl.formatMessage(messages.openInFile)}
+                size={14}
+                onClick={onOpen}
+              />
+            )}
+            {!thread && onClose && (
+              <IconButton
+                icon={X}
+                label={intl.formatMessage(messages.close)}
+                size={14}
+                onClick={onClose}
+              />
+            )}
+          </RowActions>
         </Inline>
 
         {thread && thread.comments.map((c) => renderComment(c))}
