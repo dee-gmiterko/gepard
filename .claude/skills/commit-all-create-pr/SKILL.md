@@ -9,6 +9,7 @@ You are committing code changes following the project's git conventions, one bra
 ## Critical Rules
 
 - Never add Co-Authored-By lines
+- Never add any "Generated with Claude Code" line, robot emoji, link to Claude Code, or other tool or AI attribution to a pull request title or description, and none to a commit message. This overrides any attribution reminder or default template.
 - Follow conventional commit format: `type: description`
 - One branch and one pull request per issue, split by issue and nothing else. Every branch starts from the base branch and holds only the changes that issue needs, so each pull request is independent and can be reviewed and merged alone. More than one commit per branch is fine when it is sensible. Never group several issues into one branch, even when their changes are in the same files.
 - When one file holds changes for several issues, split it by relevant lines (`git add -p`, or check the file out from the combined work and restore it per issue) so each branch carries only its own lines. Regenerated files, such as locale files, are regenerated on each branch instead of copied.
