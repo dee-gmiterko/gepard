@@ -45,6 +45,7 @@ import {
   RemoteViewedFile,
   type Viewer,
   type ViewerRepo,
+  type ProjectOverview,
   AppError,
 } from '@gepard/common';
 
@@ -586,10 +587,7 @@ export class GhService {
     );
   }
 
-  async projectOverview(
-    owner: string,
-    repo: string,
-  ): Promise<ReturnType<typeof parseProjectOverview>> {
+  async projectOverview(owner: string, repo: string): Promise<ProjectOverview> {
     const res = await this.graphql(ProjectOverviewResponse, PROJECT_OVERVIEW_QUERY, {
       owner,
       name: repo,

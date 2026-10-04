@@ -35,7 +35,7 @@ export const LinkButton = styled.button`
   ${focusVisible}
 `;
 
-export const PR_COLUMNS = 'minmax(0, 1fr) 100px 140px 130px 80px 80px 72px';
+export const PR_COLUMNS = 'minmax(0, 1fr) 100px 140px 80px 80px 72px';
 export const PAIR_COLUMNS = 'minmax(0, 1fr) auto';
 export const GROUP_COLUMNS = 'minmax(0, 1fr) auto auto';
 

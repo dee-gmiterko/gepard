@@ -4,11 +4,17 @@ import { IsoDate, Login, ReviewState } from './pr';
 export const ReviewDecision = z.enum(['APPROVED', 'CHANGES_REQUESTED', 'REVIEW_REQUIRED']);
 export type ReviewDecision = z.infer<typeof ReviewDecision>;
 
+export const PrState = z.enum(['OPEN', 'CLOSED', 'MERGED']);
+export type PrState = z.infer<typeof PrState>;
+
 export const OverviewPr = z.object({
   number: z.int().positive(),
   title: z.string(),
   author: Login.nullable(),
+  state: PrState,
   isDraft: z.boolean(),
+  /** Open PR has its review: approved or changes requested. */
+  reviewed: z.boolean(),
   headRefName: z.string(),
   baseRefName: z.string(),
   createdAt: IsoDate,
@@ -39,12 +45,10 @@ export type OverviewActivity = z.infer<typeof OverviewActivity>;
 
 export const ProjectOverview = z.object({
   prs: z.array(OverviewPr),
+  closedPrs: z.array(OverviewPr),
   activity: z.array(OverviewActivity),
 });
 export type ProjectOverview = z.infer<typeof ProjectOverview>;
-
-export const PrState = z.enum(['OPEN', 'CLOSED', 'MERGED']);
-export type PrState = z.infer<typeof PrState>;
 
 export const PrOverviewDetails = z.object({
   state: PrState,
