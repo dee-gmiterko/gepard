@@ -45,7 +45,7 @@
 		- path accepts a glob, a folder prefix, an exact file, or a substring anywhere in the path; the select suggests folders
 		- path filters live as-you-type (each keystroke updates the target and narrows navigation), not only on Enter/selection
 	- `+` next to the PR select opens a New PR modal: base and head branch, title, description; creates the PR immediately and targets it
-	- Toggle for the file comments/right panel: shown whenever a PR is targeted and the active file is a changed file, or for any active file while no PR is targeted.
+	- Toggle for the file comments/right panel: shown whenever a PR is targeted and the active file is a changed file.
 - Side panel - navigation: vertical tabs:
 	- file browser - full tree.
 	- targeted file browser - limited to targeted files changed (or path targeted). Tree or flat list. When a PR is targeted, a toggle hides files already marked viewed (folders left empty disappear, the repository root stays); persisted per project. If the active file gets hidden, review moves on to the next unviewed file.
@@ -59,18 +59,14 @@
 	- File controls floating panel (default close to top right)
 		- Viewed checkbox
 		- Sync button - saves any new comments to `gh`, publishes viewed, pulls remote ones (timestamp based merging into local); also fetches the repo and checks out the targeted PR's latest head if it moved
-		- While no PR is targeted the Sync button becomes `Compose issue +{n}` (n = unassigned local comments, see Open commenting) and the viewed checkbox is hidden.
 		- Draggable; position persisted per project, kept clamped inside the viewer area.
 	- Right panel (file comments sidebar): closeable, right-hand side, resizable the same way as the side panel (drag edge, width persisted per project); replaces the old floating comments overlay.
 		- Opened/closed via the toggle button in the header (moved there from the file controls floating panel).
 		- Bottom section: a symbols tree for the active file, LSP-backed via a `symbols.document` IPC call (`LanguageSession.documentSymbols`, `textDocument/documentSymbol`) - shows the document's symbol hierarchy (name + kind), nested when the LSP replies hierarchically; clicking a symbol jumps to its line in the active file (same `file/open`/reveal-line mechanism as comment threads and search results).
 		- For a file outside the pull request's diff the panel shows the PR comments that reference the file plus a PR comment composer; the comment gets a reference to the file's first line.
-		- While no PR is targeted the panel lists the unassigned file and line comments of the active file, with a new file comment button.
 	- Overview tab (first, default): shows the project state while no PR is targeted and the pull request state otherwise. It gives a quick summary of what is under review.
-	- Comments tab: chronological view of all threads and replies; a composer below the list adds a new PR comment (PR-level, no file/line anchor). While no PR is targeted it lists the unassigned local comments instead, the composer adds a global one, and a `Compose issue` button sits above the list.
-	- Open commenting: with no PR targeted, comments can still be written on a line, on a whole file (right panel) or globally (Comments tab). They are stored locally, unassigned to any PR (`review/unassigned.json` in the project's data), shown only while no PR is targeted and never mixed into a PR's comments; unlike PR comments they stay visible on whatever commit is checked out.
-		- `Compose issue +{n}` opens a Compose issue modal: an empty, focused title and a description made of the comments joined by a blank line, each prefixed with its reference (`path` for a file comment, `path:line` for a line comment, nothing for a global one) and followed by its checked references.
-		- Creating the issue runs `gh issue create` on the project's repository; once it succeeds the unassigned comments included in it are deleted. On failure they are kept and the error is shown in the modal.
+	- Comments tab: chronological view of all threads and replies; a composer below the list adds a new PR comment (PR-level, no file/line anchor).
+	- Open commenting: while no PR is targeted, line, file and global comments can still be written; they are kept locally, apart from PR comments, and can be composed into a new GitHub issue.
 	- Quick search popup: a small input over the content, two modes: in-file find and file/symbol navigation.
 		- In-file mode: searches the active file and jumps the cursor to the best match live as the user types.
 		- Navigation mode: searches file names and symbol definitions (classes, interfaces and similar types; not variables), shows the top 8 matches in a keyboard navigable list - file path, optionally followed by the matched symbol, matched part highlighted - and opens the containing file scrolled to the match.
