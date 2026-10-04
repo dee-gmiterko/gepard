@@ -11,7 +11,8 @@ import { Inline } from '../../components/Layout';
 import { useIndexStatus, useSetLayout } from '../../queries/projects';
 import { useAppDispatch, useAppState } from '../../state/AppContext';
 import { useRowData } from '../sidePanel/fileRows/rowData';
-import { aggregateRows, viewedPercent } from '../../helpers/row';
+import { aggregateRows } from '../../helpers/row';
+import { ProgressBar } from '../../components/ProgressBar';
 import { useIsCheckedOutChangedFile } from '../content/useIsCheckedOutChangedFile';
 
 const messages = defineMessages({
@@ -71,19 +72,6 @@ const Progress = styled.div`
   white-space: nowrap;
 `;
 
-const ProgressTrack = styled.div`
-  width: 80px;
-  height: 6px;
-  border-radius: 3px;
-  overflow: hidden;
-  background: ${({ theme }) => theme.colors.border};
-`;
-
-const ProgressFill = styled.div`
-  height: 100%;
-  background: ${({ theme }) => theme.colors.fgMuted};
-`;
-
 export function Header(): React.JSX.Element {
   const intl = useIntl();
   const { pending } = useTargetingEffects();
@@ -128,14 +116,16 @@ export function Header(): React.JSX.Element {
               {...messages.progress}
               values={{ viewed: progress.viewedCount, total: progress.totalCount }}
             />
-            <ProgressTrack
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={viewedPercent(progress)}
-            >
-              <ProgressFill style={{ width: `${viewedPercent(progress)}%` }} />
-            </ProgressTrack>
+            <ProgressBar
+              value={progress.viewedCount}
+              max={progress.totalCount}
+              tone="muted"
+              width="80px"
+              label={intl.formatMessage(messages.progress, {
+                viewed: progress.viewedCount,
+                total: progress.totalCount,
+              })}
+            />
           </Progress>
         )}
         {index?.state === 'indexing' && (
