@@ -334,7 +334,9 @@ export class SyncService {
 
     const { id: prId, headRefOid, baseRefOid } = await this.gh.viewPr(ctx.owner, ctx.repo, pr);
 
-    await this.git.fetchOrigin(projectId);
+    await this.git.fetchOrigin(projectId).catch((e: unknown) => {
+      log.warn('sync', `projectId=${projectId} pr=${pr} fetch origin failed: ${String(e)}`);
+    });
     const { head: currentHead } = await this.git.workingTree(projectId);
     let checkout = { base: baseRefOid, head: currentHead };
     if (currentHead !== headRefOid) {

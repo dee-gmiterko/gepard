@@ -164,4 +164,22 @@ describe('GitService (integration)', () => {
     const tree = await gitService.listTree(projectId, fixture.featureHeadSha);
     expect([...tree].sort()).toEqual(['a.txt', 'image.png', 'sub/c.txt']);
   });
+
+  it('checkoutTarget: a force-pushed PR head is fetched and checked out', async () => {
+    await git(origin.path, ['checkout', 'feature']);
+    await git(origin.path, ['commit', '--amend', '-m', 'feature: rewritten']);
+    const rewrittenSha = (await git(origin.path, ['rev-parse', 'HEAD'])).trim();
+    await git(origin.path, ['checkout', 'main']);
+
+    const result = await gitService.checkoutTarget(projectId, {
+      kind: 'pr',
+      pr: 1,
+      headRefOid: rewrittenSha,
+      baseRefOid: fixture.baseSha,
+    });
+
+    expect(result).toEqual({ base: fixture.baseSha, head: rewrittenSha });
+    const checkedOut = (await git(projectRepoDir(projectId), ['rev-parse', 'HEAD'])).trim();
+    expect(checkedOut).toBe(rewrittenSha);
+  });
 });
