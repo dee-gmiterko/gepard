@@ -58,6 +58,8 @@ export interface AppState {
   acceptedFiles: string[];
   previewFile: string | null;
   activeFile: string | null;
+  /** Open the next unviewed targeted file once the target's files have loaded. */
+  openNextFilePending: boolean;
   mainTab: MainTab;
   checkout: { base: string; head: string } | null;
   toasts: Toast[];
@@ -77,6 +79,7 @@ export const initialAppState: AppState = {
   acceptedFiles: [],
   previewFile: null,
   activeFile: null,
+  openNextFilePending: false,
   mainTab: 'overview',
   checkout: null,
   toasts: [],
@@ -108,6 +111,8 @@ export type AppAction =
   | { type: 'file/close'; path: string }
   | { type: 'file/accept'; path: string }
   | { type: 'file/revert' }
+  | { type: 'file/openNextWhenReady' }
+  | { type: 'file/openNextCancel' }
   | { type: 'mainTab/set'; tab: MainTab }
   | { type: 'toast/push'; toast: Toast }
   | { type: 'toast/dismiss'; id: string }
@@ -150,14 +155,20 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       };
     case 'target/pr':
       if (state.targeting.pr === action.pr) return state;
-      return withTarget(
-        state,
-        { ...state.targeting, pr: action.pr, commit: null },
-        action.pr !== null,
-      );
+      return {
+        ...withTarget(
+          state,
+          { ...state.targeting, pr: action.pr, commit: null },
+          action.pr !== null,
+        ),
+        checkout: null,
+      };
     case 'target/commit':
       if (state.targeting.commit === action.sha) return state;
-      return withTarget(state, { ...state.targeting, commit: action.sha }, action.sha !== null);
+      return {
+        ...withTarget(state, { ...state.targeting, commit: action.sha }, action.sha !== null),
+        checkout: null,
+      };
     case 'target/path':
       if (state.targeting.path === action.path) return state;
       return withTarget(state, { ...state.targeting, path: action.path }, action.path !== null);
@@ -189,13 +200,20 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       const revealLine =
         action.line != null ? { line: action.line, side: action.side ?? ('RIGHT' as const) } : null;
       return state.pinnedFiles.includes(action.path)
-        ? { ...state, activeFile: action.path, mainTab: 'files', revealLine }
+        ? {
+            ...state,
+            activeFile: action.path,
+            mainTab: 'files',
+            revealLine,
+            openNextFilePending: false,
+          }
         : {
             ...state,
             previewFile: action.path,
             activeFile: action.path,
             mainTab: 'files',
             revealLine,
+            openNextFilePending: false,
           };
     }
     case 'file/focus':
@@ -232,6 +250,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       };
     case 'file/revert':
       return { ...state, acceptedFiles: state.acceptedFiles.slice(0, -1) };
+    case 'file/openNextWhenReady':
+      return { ...state, mainTab: 'files', openNextFilePending: true };
+    case 'file/openNextCancel':
+      return { ...state, openNextFilePending: false };
     case 'mainTab/set':
       return { ...state, mainTab: action.tab };
     case 'toast/push':

@@ -23,11 +23,11 @@ export function useOverviewActions(): OverviewActions {
     },
     reviewPr: (pr) => {
       setPr(pr);
-      dispatch({ type: 'mainTab/set', tab: 'files' });
+      dispatch({ type: 'file/openNextWhenReady' });
     },
     showAllPrs: () => setPr(null),
     openComments: () => dispatch({ type: 'mainTab/set', tab: 'comments' }),
-    openFiles: () => dispatch({ type: 'mainTab/set', tab: 'files' }),
+    openFiles: () => dispatch({ type: 'file/openNextWhenReady' }),
     openFile: (path) => dispatch({ type: 'file/open', path }),
     openFolder: (path) => {
       setPath(path);

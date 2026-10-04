@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextTargetedFile } from '../src/helpers/targetedFiles';
+import { firstFileToReview, nextTargetedFile } from '../src/helpers/targetedFiles';
 
 const files = ['a.ts', 'b.ts', 'c.ts', 'd.ts'];
 
@@ -39,5 +39,21 @@ describe('nextTargetedFile', () => {
 
   it('starts before the first file going down when the active file is not in the list', () => {
     expect(nextTargetedFile(files, 'missing.ts', new Set(), 1)).toBe('a.ts');
+  });
+});
+
+describe('firstFileToReview', () => {
+  const files = ['a.ts', 'b.ts', 'c.ts'];
+
+  it('starts at the first unviewed file', () => {
+    expect(firstFileToReview(files, new Set(['a.ts']))).toBe('b.ts');
+  });
+
+  it('falls back to the first file when all are viewed', () => {
+    expect(firstFileToReview(files, new Set(files))).toBe('a.ts');
+  });
+
+  it('is null without files', () => {
+    expect(firstFileToReview([], new Set())).toBeNull();
   });
 });
