@@ -15,8 +15,8 @@ const HEADERS = ['pr', 'size', 'comments', 'progress', 'updated'] as const;
 
 export function PrTable({ prs }: { prs: readonly OverviewPr[] }): React.JSX.Element {
   return (
-    <Table>
-      <RowGrid $columns={PR_COLUMNS} $head>
+    <Table $columns={PR_COLUMNS}>
+      <RowGrid $head>
         {HEADERS.map((key) => (
           <HeaderCell key={key}>
             <FormattedMessage {...messages[key]} />

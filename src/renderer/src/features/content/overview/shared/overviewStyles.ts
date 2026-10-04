@@ -35,18 +35,37 @@ export const LinkButton = styled.button`
   ${focusVisible}
 `;
 
-export const PR_COLUMNS = 'minmax(0, 1fr) 100px 140px 80px 80px 72px';
+export const PR_COLUMNS = 'minmax(0, 1fr) repeat(5, auto)';
 export const PAIR_COLUMNS = 'minmax(0, 1fr) auto';
 export const GROUP_COLUMNS = 'minmax(0, 1fr) auto auto';
 
-export const Table = styled(Surface).attrs({ $elevation: 'flat' })`
+/**
+ * With `$columns`, the table is one grid whose rows share the columns (via subgrid), so `auto`
+ * columns size to the widest cell across all rows instead of a fixed width.
+ */
+export const Table = styled(Surface).attrs({ $elevation: 'flat' })<{ $columns?: string }>`
   min-width: 0;
   overflow: hidden;
+
+  ${({ $columns }) =>
+    $columns &&
+    css`
+      display: grid;
+      grid-template-columns: ${$columns};
+    `}
 `;
 
-export const RowGrid = styled.div<{ $columns: string; $head?: boolean }>`
+export const RowGrid = styled.div<{ $columns?: string; $head?: boolean }>`
   display: grid;
-  grid-template-columns: ${({ $columns }) => $columns};
+  ${({ $columns }) =>
+    $columns
+      ? css`
+          grid-template-columns: ${$columns};
+        `
+      : css`
+          grid-column: 1 / -1;
+          grid-template-columns: subgrid;
+        `}
   align-items: center;
   gap: 0 ${({ theme }) => theme.space[3]};
   padding: ${({ theme, $head }) => ($head ? theme.space[1] : theme.space[2])}

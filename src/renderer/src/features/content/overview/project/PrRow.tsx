@@ -1,5 +1,6 @@
 import { defineMessages, FormattedMessage } from 'react-intl';
 import type { OverviewPr } from '@gepard/common';
+import styled from 'styled-components';
 import { Badge } from '../../../../components/Badge';
 import { Button } from '../../../../components/Button';
 import { Inline } from '../../../../components/Layout';
@@ -10,7 +11,7 @@ import { Lines } from '../shared/Lines';
 import { PrLabel } from '../shared/PrLabel';
 import { ProgressBar } from '../../../../components/ProgressBar';
 import { RelativeTime } from '../shared/RelativeTime';
-import { Cell, LinkButton, Muted, Num, PR_COLUMNS, RowGrid } from '../shared/overviewStyles';
+import { Cell, LinkButton, Muted, Num, RowGrid } from '../shared/overviewStyles';
 
 const messages = defineMessages({
   review: { id: 'content.overview.project.review', defaultMessage: 'Review' },
@@ -25,13 +26,22 @@ const messages = defineMessages({
   authoredBy: { id: 'content.overview.project.authoredBy', defaultMessage: 'by {author}' },
 });
 
+/** Fills the cell so a long title ellipsizes while the state badges keep their size. */
+const TitleLine = styled(Inline)`
+  align-self: stretch;
+
+  > :not(:first-child) {
+    flex-shrink: 0;
+  }
+`;
+
 export function PrRow({ pr }: { pr: OverviewPr }): React.JSX.Element {
   const actions = useOverviewActions();
   return (
-    <RowGrid $columns={PR_COLUMNS}>
+    <RowGrid>
       <Cell>
-        <Inline $gap={2}>
-          <LinkButton onClick={() => actions.openPr(pr.number)}>
+        <TitleLine $gap={2}>
+          <LinkButton title={pr.title} onClick={() => actions.openPr(pr.number)}>
             <PrLabel number={pr.number} title={pr.title} />
           </LinkButton>
           {pr.state === 'OPEN' && pr.isDraft && (
@@ -50,7 +60,7 @@ export function PrRow({ pr }: { pr: OverviewPr }): React.JSX.Element {
             </Badge>
           )}
           <DecisionBadge decision={pr.reviewDecision} />
-        </Inline>
+        </TitleLine>
         <Muted>
           <FormattedMessage {...messages.authoredBy} values={{ author: pr.author ?? '' }} />
         </Muted>
