@@ -35,6 +35,10 @@ const messages = defineMessages({
     id: 'content.diffViewer.renamedWithoutChanges',
     defaultMessage: 'File renamed without changes.',
   },
+  renamedPaths: {
+    id: 'content.diffViewer.renamedPaths',
+    defaultMessage: '{previousPath} → {path}',
+  },
   noContentChanges: {
     id: 'content.diffViewer.noContentChanges',
     defaultMessage: 'No content changes.',
@@ -65,9 +69,18 @@ export function DiffViewer({ path }: { path: string }): React.JSX.Element {
       if (data.rows.length === 0)
         return (
           <Message layout="center">
-            <FormattedMessage
-              {...(data.previousPath ? messages.renamedWithoutChanges : messages.noContentChanges)}
-            />
+            {data.previousPath ? (
+              <>
+                <FormattedMessage {...messages.renamedWithoutChanges} />
+                {'\n'}
+                <FormattedMessage
+                  {...messages.renamedPaths}
+                  values={{ previousPath: data.previousPath, path }}
+                />
+              </>
+            ) : (
+              <FormattedMessage {...messages.noContentChanges} />
+            )}
           </Message>
         );
       return <DiffText path={path} rows={data.rows} />;
