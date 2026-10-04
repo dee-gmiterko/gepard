@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Compartment } from '@codemirror/state';
+import { EditorView } from '@codemirror/view';
 import type { DiffRow, DiffSide } from '@gepard/common';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import { useAppState } from '../../../../state/AppContext';
@@ -95,13 +97,22 @@ function DiffText({ path, rows }: { path: string; rows: DiffRow[] }): React.JSX.
   const singleCommitInPr = pr !== null && state.targeting.commit !== null;
 
   const { doc, infos } = useMemo(() => buildDiffDoc(rows), [rows]);
+  const wrapCompartment = useMemo(() => new Compartment(), []);
   const extensions = useMemo(
-    () => [...diffGutters(infos), diffLineDecorations(doc, infos)],
-    [doc, infos],
+    () => [...diffGutters(infos), diffLineDecorations(doc, infos), wrapCompartment.of([])],
+    [doc, infos, wrapCompartment],
   );
   const { containerRef, view, comments, commentGutter } = useReadOnlyEditor(path, doc, extensions);
   const [draft, setDraft] = useState<{ docLine: number; side: DiffSide } | null>(null);
   const portals = useMemo(() => new CommentPortals(), []);
+
+  const wrapLongLines = state.layout.wrapLongLines;
+  useEffect(() => {
+    if (!view) return;
+    view.dispatch({
+      effects: wrapCompartment.reconfigure(wrapLongLines ? EditorView.lineWrapping : []),
+    });
+  }, [wrapLongLines, view, wrapCompartment, doc]);
 
   useEffect(() => {
     if (!view) return;
