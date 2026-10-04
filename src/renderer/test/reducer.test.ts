@@ -35,6 +35,28 @@ describe('targeting behaviors', () => {
   });
 });
 
+describe('opening the next file when ready', () => {
+  it('switches to the files tab and stays pending until a file opens', () => {
+    const pending = appReducer(state(), { type: 'file/openNextWhenReady' });
+    expect(pending).toMatchObject({ mainTab: 'files', openNextFilePending: true });
+    const opened = appReducer(pending, { type: 'file/open', path: 'a.ts' });
+    expect(opened).toMatchObject({ activeFile: 'a.ts', openNextFilePending: false });
+  });
+
+  it('can be cancelled when there is nothing to open', () => {
+    const pending = appReducer(state(), { type: 'file/openNextWhenReady' });
+    expect(appReducer(pending, { type: 'file/openNextCancel' }).openNextFilePending).toBe(false);
+  });
+
+  it('forgets the previous checkout when the PR or commit changes, but not the path', () => {
+    const checkout = { base: 'b', head: 'h' };
+    const s = state({ targeting: { pr: 1, commit: null, path: null }, checkout });
+    expect(appReducer(s, { type: 'target/pr', pr: 2 }).checkout).toBeNull();
+    expect(appReducer(s, { type: 'target/commit', sha: 'abc' }).checkout).toBeNull();
+    expect(appReducer(s, { type: 'target/path', path: 'src' }).checkout).toBe(checkout);
+  });
+});
+
 describe('overview tab', () => {
   it('is the default main tab', () => {
     expect(initialAppState.mainTab).toBe('overview');

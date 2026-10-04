@@ -15,3 +15,11 @@ export function nextTargetedFile(
   }
   return null;
 }
+
+/** Where a review starts: the first unviewed file, or the first file when all are viewed. */
+export function firstFileToReview(
+  files: readonly string[],
+  viewedPaths: ReadonlySet<string>,
+): string | null {
+  return nextTargetedFile(files, null, viewedPaths, 1) ?? files[0] ?? null;
+}
