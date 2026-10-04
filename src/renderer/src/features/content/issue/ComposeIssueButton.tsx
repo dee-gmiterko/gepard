@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertCircle } from 'react-feather';
+import { ArrowUp } from 'react-feather';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import { countComments } from '@gepard/common';
 import { useComments } from '../../../queries/comments';
@@ -22,7 +22,6 @@ const messages = defineMessages({
   },
 });
 
-// Only meaningful without a targeted PR, where useComments lists the unassigned local comments.
 export function ComposeIssueButton({ block = false }: { block?: boolean }): React.JSX.Element {
   const dispatch = useAppDispatch();
   const { data: threads = [] } = useComments();
@@ -32,7 +31,7 @@ export function ComposeIssueButton({ block = false }: { block?: boolean }): Reac
   return (
     <>
       <Button block={block} disabled={count === 0} onClick={() => setOpen(true)}>
-        <AlertCircle size={14} />
+        <ArrowUp size={14} />
         {count > 0 ? (
           <FormattedMessage
             {...messages.composeIssueWithCount}
