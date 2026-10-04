@@ -96,6 +96,9 @@ export const PersistedTargeting = z.object({
 });
 export type PersistedTargeting = z.infer<typeof PersistedTargeting>;
 
+export const IssueRef = z.object({ number: z.int().positive(), url: z.string() });
+export type IssueRef = z.infer<typeof IssueRef>;
+
 export const CheckoutResult = z.object({ base: Sha, head: Sha });
 export type CheckoutResult = z.infer<typeof CheckoutResult>;
 

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   GqlPageInfo,
   type GqlError,
+  type IssueRef,
   type PrListItem,
   matchesTarget,
   AppError,
@@ -37,6 +38,18 @@ export function parsePrCreateUrl(stdout: string): number {
   if (!match)
     throw new AppError('GH_PARSE_ERROR', `gh pr create did not return a PR URL: ${stdout.trim()}`);
   return Number(match[1]);
+}
+
+// `gh issue create` likewise prints only the new issue's URL as the last line.
+export function parseIssueCreateUrl(stdout: string): IssueRef {
+  const url = stdout.trim().split('\n').at(-1)?.trim() ?? '';
+  const match = url.match(/\/issues\/(\d+)$/);
+  if (!match)
+    throw new AppError(
+      'GH_PARSE_ERROR',
+      `gh issue create did not return an issue URL: ${stdout.trim()}`,
+    );
+  return { number: Number(match[1]), url };
 }
 
 export const PrFilesNode = z.object({

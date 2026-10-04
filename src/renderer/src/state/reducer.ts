@@ -118,12 +118,9 @@ export type AppAction =
   | { type: 'quickSearch/close' };
 
 function withTarget(state: AppState, targeting: Targeting, set: boolean): AppState {
-  const mainTab =
-    targeting.pr === null && state.mainTab === 'comments' ? 'overview' : state.mainTab;
   return {
     ...state,
     targeting,
-    mainTab,
     sidePanelTab: set ? 'targeted' : state.sidePanelTab,
     acceptedFiles: [],
   };

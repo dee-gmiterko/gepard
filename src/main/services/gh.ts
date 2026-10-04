@@ -10,6 +10,7 @@ import {
   filterPrsByPath,
   isLineNotInDiffError,
   matchesPrSearch,
+  parseIssueCreateUrl,
   parsePrCreateUrl,
   parsePrsFilesPageInfo,
   parsePrsFilesResponse,
@@ -29,6 +30,7 @@ import {
   Sha,
   DiffSide,
   IsoDate,
+  type IssueRef,
   ReviewState,
   PrListItem,
   PrSummary,
@@ -93,6 +95,11 @@ const PrHeadBase = z.object({ headRefOid: Sha, baseRefOid: Sha });
 export interface CreatePrInput {
   base: string;
   head: string;
+  title: string;
+  body: string;
+}
+
+export interface CreateIssueInput {
   title: string;
   body: string;
 }
@@ -651,6 +658,15 @@ export class GhService {
     );
     const number = parsePrCreateUrl(stdout);
     return this.viewPr(owner, repo, number);
+  }
+
+  async createIssue(owner: string, repo: string, input: CreateIssueInput): Promise<IssueRef> {
+    const { stdout } = await run(
+      'gh',
+      ['issue', 'create', '-R', `${owner}/${repo}`, '--title', input.title, '--body-file', '-'],
+      ghOpts({ stdin: input.body }),
+    );
+    return parseIssueCreateUrl(stdout);
   }
 
   // `gh api --paginate` concatenates REST pages into one JSON array.

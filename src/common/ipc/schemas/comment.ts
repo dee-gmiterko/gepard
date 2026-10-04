@@ -192,7 +192,8 @@ export type DraftAnchor = z.infer<typeof DraftAnchor>;
 export const CommentDraft = z
   .object({
     projectId: z.string(),
-    pr: z.int().positive(),
+    // null drafts a local comment that is not assigned to any PR.
+    pr: z.int().positive().nullable(),
     id: NodeId.nullable().default(null),
     threadId: NodeId.nullable().default(null),
     anchor: DraftAnchor.nullable().default(null),

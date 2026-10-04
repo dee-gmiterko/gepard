@@ -72,8 +72,9 @@ export function settingsJsonPath(): string {
   return join(userDataDir(), 'settings.json');
 }
 
-export function reviewJsonPath(id: string, pr: number): string {
-  return join(projectReviewDir(id), `${pr}.json`);
+// A null PR holds the local comments that are not assigned to any PR.
+export function reviewJsonPath(id: string, pr: number | null): string {
+  return join(projectReviewDir(id), `${pr ?? 'unassigned'}.json`);
 }
 
 export function logsDir(): string {

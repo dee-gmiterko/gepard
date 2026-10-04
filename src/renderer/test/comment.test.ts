@@ -73,6 +73,17 @@ describe('codeViewCommentEntries', () => {
     );
   });
 
+  it('keeps threads from any commit when no head is given, as for unassigned comments', () => {
+    const otherCommit = thread({
+      id: 't6',
+      anchor: { ...thread({ id: 't6' }).anchor, commitOid: OTHER },
+    });
+    const outdated = thread({ id: 't7', isOutdated: true });
+    expect(codeViewCommentEntries([otherCommit, outdated], 'a.ts', null, null)).toEqual([
+      { docLine: 5, threads: [otherCommit], draft: null },
+    ]);
+  });
+
   it('ignores a LEFT-side thread, since a file view only ever shows one side', () => {
     const left = thread({ id: 't5', anchor: { ...thread({ id: 't5' }).anchor, side: 'LEFT' } });
     expect(codeViewCommentEntries([left], 'a.ts', null, HEAD)).toEqual([]);

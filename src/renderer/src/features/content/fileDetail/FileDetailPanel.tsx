@@ -176,6 +176,8 @@ export function FileDetailPanel(): React.JSX.Element | null {
                 <MassActions path={path} />
                 <FileComments path={path} />
               </Stack>
+            ) : state.targeting.pr === null ? (
+              <FileComments path={path} />
             ) : (
               <FilePrComments path={path} />
             )}

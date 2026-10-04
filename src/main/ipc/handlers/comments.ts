@@ -33,7 +33,8 @@ export function createCommentsHandlers(
 
       let ctx: review.UpsertContext = { prId: '', commitOid: '' };
       if (isNewThread) {
-        const resolvedPrId = await resolvePrId(projectId, pr, prId);
+        const resolvedPrId =
+          pr === null ? review.UNASSIGNED_PR_ID : await resolvePrId(projectId, pr, prId);
         const commitOid = anchor !== null ? (await git.workingTree(projectId)).head : '';
         ctx = { prId: resolvedPrId, commitOid };
       }
