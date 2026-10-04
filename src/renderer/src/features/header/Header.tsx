@@ -5,7 +5,7 @@ import { CommitTarget } from './CommitTarget';
 import { PathTarget } from './PathTarget';
 import { useTargetingEffects } from './useTargetingEffects';
 import { useHeaderStatus } from './useHeaderStatus';
-import { Grid, Sidebar } from 'react-feather';
+import { Sidebar } from 'react-feather';
 import { IconButton } from '../../components/IconButton';
 import { Ellipsis } from '../../components/Ellipsis';
 import { Inline } from '../../components/Layout';
@@ -15,6 +15,8 @@ import { useRowData } from '../sidePanel/fileRows/rowData';
 import { aggregateRows } from '../../helpers/row';
 import { ProgressBar } from '../../components/ProgressBar';
 import { useIsCheckedOutChangedFile } from '../content/useIsCheckedOutChangedFile';
+import { focusVisible } from '../../components/controlStyles';
+import logo from '../../../../app/resources/logo.svg';
 
 const messages = defineMessages({
   projects: {
@@ -48,6 +50,32 @@ const Bar = styled.header`
   padding: 0 ${({ theme }) => theme.space[3]};
   background: ${({ theme }) => theme.colors.bgSubtle};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
+const LogoButton = styled.button`
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: ${({ theme }) => theme.radius.sm};
+  background: transparent;
+  cursor: pointer;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.bgHover};
+  }
+
+  ${focusVisible}
+`;
+
+const Logo = styled.img`
+  display: block;
+  width: 22px;
+  height: 22px;
 `;
 
 const Status = styled(Ellipsis)`
@@ -96,11 +124,14 @@ export function Header(): React.JSX.Element {
   return (
     <Bar>
       <Group>
-        <IconButton
-          icon={Grid}
-          label={intl.formatMessage(messages.projects)}
+        <LogoButton
+          type="button"
+          aria-label={intl.formatMessage(messages.projects)}
+          title={intl.formatMessage(messages.projects)}
           onClick={() => dispatch({ type: 'project/close' })}
-        />
+        >
+          <Logo src={logo} alt="" />
+        </LogoButton>
         <Inline $gap={5}>
           <PrTarget />
           <CommitTarget />
