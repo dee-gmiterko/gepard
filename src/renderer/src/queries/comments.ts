@@ -125,7 +125,11 @@ export function useSync() {
         checkout: { base: result.base, head: result.head },
       });
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: qk.pr(projectId, pr) }),
+    onSettled: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: qk.pr(projectId, pr) }),
+        qc.invalidateQueries({ queryKey: qk.index(projectId) }),
+      ]),
   });
 }
 

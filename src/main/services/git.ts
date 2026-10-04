@@ -234,6 +234,12 @@ export class GitService {
     }
   }
 
+  private async ensureCommit(repoRoot: string, sha: string): Promise<void> {
+    if (await this.hasCommit(repoRoot, sha)) return;
+    await this.gitRun(repoRoot, ['fetch', 'origin', '--prune']);
+    if (!(await this.hasCommit(repoRoot, sha))) throw new Error(`commit ${sha} is not on origin`);
+  }
+
   private async checkoutDetached(repoRoot: string, ref: string): Promise<void> {
     await this.gitRun(repoRoot, ['-c', 'advice.detachedHead=false', 'checkout', '--detach', ref]);
   }
@@ -273,18 +279,7 @@ export class GitService {
 
       let result: { base: string; head: string };
       if (target.kind === 'pr') {
-        // GitHub exposes PR heads (forks included) only via refs/pull/N/head,
-        // never as a normal branch ref.
-        if (!(await this.hasCommit(repoRoot, target.headRefOid))) {
-          await this.gitRun(repoRoot, [
-            'fetch',
-            'origin',
-            `+refs/pull/${target.pr}/head:refs/gepard/pr/${target.pr}`,
-          ]);
-        }
-        if (!(await this.hasCommit(repoRoot, target.baseRefOid))) {
-          await this.gitRun(repoRoot, ['fetch', 'origin', target.baseRefOid]);
-        }
+        await this.ensureCommit(repoRoot, target.headRefOid);
         await this.checkoutDetached(repoRoot, target.headRefOid);
         const { stdout } = await this.gitRun(repoRoot, [
           'merge-base',
@@ -370,18 +365,12 @@ export class GitService {
     });
   }
 
-  ensurePrCommitsFetched(projectId: string, pr: number, oids: string[]): Promise<void> {
+  ensurePrCommitsFetched(projectId: string, oids: string[]): Promise<void> {
     return this.enqueue(projectId, async () => {
       if (oids.length === 0) return;
       const repoRoot = projectRepoDir(projectId);
       const newest = oids[oids.length - 1];
-      if (!(await this.hasCommit(repoRoot, newest))) {
-        await this.gitRun(repoRoot, [
-          'fetch',
-          'origin',
-          `+refs/pull/${pr}/head:refs/gepard/pr/${pr}`,
-        ]);
-      }
+      await this.ensureCommit(repoRoot, newest);
     });
   }
 
