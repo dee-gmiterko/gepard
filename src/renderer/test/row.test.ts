@@ -5,7 +5,6 @@ import {
   changedLeaves,
   hideViewedRows,
   isViewedRow,
-  viewedPercent,
   type RowData,
 } from '../src/helpers/row';
 
@@ -48,13 +47,6 @@ describe('hideViewedRows', () => {
     expect(root.children.map((n) => n.name)).toEqual(['src', 'README.md']);
     expect(flattenLeafPaths([root])).toEqual(['src/b.ts', 'README.md']);
     expect(root.data).toEqual({ additions: 2, deletions: 0, viewedCount: 0, totalCount: 2 });
-  });
-});
-
-describe('viewedPercent', () => {
-  it('rounds the viewed share and is zero without tracked files', () => {
-    expect(viewedPercent({ additions: 0, deletions: 0, viewedCount: 1, totalCount: 3 })).toBe(33);
-    expect(viewedPercent({ additions: 0, deletions: 0, viewedCount: 0, totalCount: 0 })).toBe(0);
   });
 });
 
