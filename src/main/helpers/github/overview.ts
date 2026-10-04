@@ -1,23 +1,29 @@
 import { z } from 'zod';
 import {
   IsoDate,
+  PrState,
   ReviewState,
   type OverviewActivity,
   type OverviewPr,
   type PrOverviewDetails,
+  type ProjectOverview,
 } from '@gepard/common';
 
 export const PROJECT_OVERVIEW_QUERY = `
+fragment PrFields on PullRequest {
+  number title state isDraft createdAt updatedAt additions deletions changedFiles reviewDecision
+  headRefName baseRefName
+  author { login }
+  comments { totalCount }
+  latestOpinionatedReviews(first:1) { totalCount }
+  reviewThreads(first:100) { nodes { isResolved comments { totalCount } } }
+  files(first:100) { nodes { viewerViewedState } }
+}
 query($owner:String!, $name:String!) {
   repository(owner:$owner, name:$name) {
     open: pullRequests(states:OPEN, first:30, orderBy:{field:UPDATED_AT, direction:DESC}) {
       nodes {
-        number title isDraft createdAt updatedAt additions deletions changedFiles reviewDecision
-        headRefName baseRefName
-        author { login }
-        comments { totalCount }
-        reviewThreads(first:100) { nodes { isResolved comments { totalCount } } }
-        files(first:100) { nodes { viewerViewedState } }
+        ...PrFields
         timelineItems(last:5, itemTypes:[PULL_REQUEST_COMMIT, PULL_REQUEST_REVIEW, ISSUE_COMMENT]) {
           nodes {
             __typename
@@ -27,6 +33,9 @@ query($owner:String!, $name:String!) {
           }
         }
       }
+    }
+    closed: pullRequests(states:[CLOSED, MERGED], first:30, orderBy:{field:UPDATED_AT, direction:DESC}) {
+      nodes { ...PrFields }
     }
     merged: pullRequests(states:MERGED, first:5, orderBy:{field:UPDATED_AT, direction:DESC}) {
       nodes { number title mergedAt mergedBy { login } }
@@ -50,9 +59,10 @@ const TimelineNode = z.object({
   author: Author.optional(),
 });
 
-const OpenPrNode = z.object({
+const PrNode = z.object({
   number: z.int().positive(),
   title: z.string(),
+  state: PrState,
   isDraft: z.boolean(),
   createdAt: IsoDate,
   updatedAt: IsoDate,
@@ -64,6 +74,7 @@ const OpenPrNode = z.object({
   baseRefName: z.string(),
   author: Author,
   comments: z.object({ totalCount: z.int().nonnegative() }),
+  latestOpinionatedReviews: z.object({ totalCount: z.int().nonnegative() }),
   reviewThreads: z.object({
     nodes: z.array(
       z.object({
@@ -73,6 +84,9 @@ const OpenPrNode = z.object({
     ),
   }),
   files: z.object({ nodes: z.array(z.object({ viewerViewedState: z.string() })) }),
+});
+
+const OpenPrNode = PrNode.extend({
   timelineItems: z.object({ nodes: z.array(TimelineNode.nullable()) }),
 });
 
@@ -87,6 +101,7 @@ export const ProjectOverviewResponse = z.object({
   data: z.object({
     repository: z.object({
       open: z.object({ nodes: z.array(OpenPrNode) }),
+      closed: z.object({ nodes: z.array(PrNode) }),
       merged: z.object({ nodes: z.array(MergedPrNode) }),
     }),
   }),
@@ -125,11 +140,41 @@ function timelineActivity(
   return null;
 }
 
-export function parseProjectOverview(response: ProjectOverviewResponse): {
-  prs: OverviewPr[];
-  activity: OverviewActivity[];
-} {
-  const { open, merged } = response.data.repository;
+/**
+ * Whether an open PR has had its review: GitHub's decision when it gives one, otherwise (no
+ * required reviews on the base branch) whether anyone approved or requested changes.
+ */
+function isReviewed(node: z.infer<typeof PrNode>): boolean {
+  if (node.reviewDecision) return node.reviewDecision !== 'REVIEW_REQUIRED';
+  return node.latestOpinionatedReviews.totalCount > 0;
+}
+
+function toOverviewPr(node: z.infer<typeof PrNode>): OverviewPr {
+  const threads = node.reviewThreads.nodes;
+  return {
+    number: node.number,
+    title: node.title,
+    author: node.author?.login ?? null,
+    state: node.state,
+    isDraft: node.isDraft,
+    reviewed: isReviewed(node),
+    headRefName: node.headRefName,
+    baseRefName: node.baseRefName,
+    createdAt: node.createdAt,
+    updatedAt: node.updatedAt,
+    additions: node.additions,
+    deletions: node.deletions,
+    changedFiles: node.changedFiles,
+    comments: node.comments.totalCount + threads.reduce((sum, t) => sum + t.comments.totalCount, 0),
+    unresolvedThreads: threads.filter((t) => !t.isResolved).length,
+    reviewDecision: node.reviewDecision,
+    viewedFiles: node.files.nodes.filter((f) => f.viewerViewedState === 'VIEWED').length,
+    countedFiles: node.files.nodes.length,
+  };
+}
+
+export function parseProjectOverview(response: ProjectOverviewResponse): ProjectOverview {
+  const { open, closed, merged } = response.data.repository;
   const activity: OverviewActivity[] = [];
 
   const prs = open.nodes.map((node): OverviewPr => {
@@ -137,26 +182,7 @@ export function parseProjectOverview(response: ProjectOverviewResponse): {
       const entry = item && timelineActivity(item, node);
       if (entry) activity.push(entry);
     }
-    const threads = node.reviewThreads.nodes;
-    return {
-      number: node.number,
-      title: node.title,
-      author: node.author?.login ?? null,
-      isDraft: node.isDraft,
-      headRefName: node.headRefName,
-      baseRefName: node.baseRefName,
-      createdAt: node.createdAt,
-      updatedAt: node.updatedAt,
-      additions: node.additions,
-      deletions: node.deletions,
-      changedFiles: node.changedFiles,
-      comments:
-        node.comments.totalCount + threads.reduce((sum, t) => sum + t.comments.totalCount, 0),
-      unresolvedThreads: threads.filter((t) => !t.isResolved).length,
-      reviewDecision: node.reviewDecision,
-      viewedFiles: node.files.nodes.filter((f) => f.viewerViewedState === 'VIEWED').length,
-      countedFiles: node.files.nodes.length,
-    };
+    return toOverviewPr(node);
   });
 
   for (const node of merged.nodes) {
@@ -172,7 +198,11 @@ export function parseProjectOverview(response: ProjectOverviewResponse): {
   }
 
   activity.sort((a, b) => b.at.localeCompare(a.at));
-  return { prs, activity: activity.slice(0, ACTIVITY_LIMIT) };
+  return {
+    prs,
+    closedPrs: closed.nodes.map(toOverviewPr),
+    activity: activity.slice(0, ACTIVITY_LIMIT),
+  };
 }
 
 const GhReviewDecision = z
@@ -183,7 +213,7 @@ const GhReviewDecision = z
 const GhReviewRequest = z.object({ login: z.string().optional(), name: z.string().optional() });
 
 export const GhPrOverview = z.object({
-  state: z.enum(['OPEN', 'CLOSED', 'MERGED']),
+  state: PrState,
   isDraft: z.boolean(),
   body: z.string(),
   updatedAt: IsoDate,

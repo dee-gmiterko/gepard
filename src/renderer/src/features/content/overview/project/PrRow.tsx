@@ -15,6 +15,8 @@ import { Cell, LinkButton, Muted, Num, PR_COLUMNS, RowGrid } from '../shared/ove
 const messages = defineMessages({
   review: { id: 'content.overview.project.review', defaultMessage: 'Review' },
   draft: { id: 'content.overview.project.draft', defaultMessage: 'draft' },
+  merged: { id: 'content.overview.project.merged', defaultMessage: 'merged' },
+  closed: { id: 'content.overview.project.closed', defaultMessage: 'closed' },
   commentCount: {
     id: 'content.overview.project.commentCount',
     defaultMessage: '{total} ({unresolved} unresolved)',
@@ -32,11 +34,22 @@ export function PrRow({ pr }: { pr: OverviewPr }): React.JSX.Element {
           <LinkButton onClick={() => actions.openPr(pr.number)}>
             <PrLabel number={pr.number} title={pr.title} />
           </LinkButton>
-          {pr.isDraft && (
+          {pr.state === 'OPEN' && pr.isDraft && (
             <Badge>
               <FormattedMessage {...messages.draft} />
             </Badge>
           )}
+          {pr.state === 'MERGED' && (
+            <Badge $tone="success">
+              <FormattedMessage {...messages.merged} />
+            </Badge>
+          )}
+          {pr.state === 'CLOSED' && (
+            <Badge>
+              <FormattedMessage {...messages.closed} />
+            </Badge>
+          )}
+          <DecisionBadge decision={pr.reviewDecision} />
         </Inline>
         <Muted>
           <FormattedMessage {...messages.authoredBy} values={{ author: pr.author ?? '' }} />
@@ -56,9 +69,6 @@ export function PrRow({ pr }: { pr: OverviewPr }): React.JSX.Element {
           />
         </Num>
       </LinkButton>
-      <Cell>
-        <DecisionBadge decision={pr.reviewDecision} />
-      </Cell>
       <Cell>
         <ProgressBar value={pr.viewedFiles} max={pr.countedFiles} />
         <Muted>

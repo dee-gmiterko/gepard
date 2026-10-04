@@ -20,7 +20,7 @@ const messages = defineMessages({
 });
 
 export function ProjectSummary({ prs }: { prs: readonly OverviewPr[] }): React.JSX.Element {
-  const waiting = prs.filter((p) => !p.isDraft && p.reviewDecision !== 'APPROVED').length;
+  const waiting = prs.filter((p) => !p.isDraft && !p.reviewed).length;
   const drafts = prs.filter((p) => p.isDraft).length;
   return (
     <Muted>

@@ -30,13 +30,18 @@ Every linkable text opens the view that explains it, inside the app:
 
 Top to bottom:
 
-1. Header line: `owner/repo`, then three counts: open PRs, PRs waiting for review (not draft, no decision yet), drafts.
+1. Header line: `owner/repo`, then three counts: open PRs, PRs awaiting review (not draft, not yet reviewed), drafts.
    - Why: the one-glance answer to "is anything waiting on me?".
-2. Open pull requests table, newest activity first. One row per PR, columns:
-   - `#number title` (link), draft badge, author.
+2. Pull requests table, newest activity first, under three tabs, each labelled with its PR count:
+   - Open awaiting: open PRs not reviewed yet (drafts included).
+   - Open reviewed: open PRs that are approved or have changes requested. GitHub's review decision decides; when it reports none (no required reviews on the base branch), any approval or change request counts.
+   - Closed: the 30 most recently updated closed and merged PRs.
+   Why: separates what still needs a reviewer from what waits on its author, without losing sight of what just landed.
+
+   One row per PR, columns:
+   - `#number title` (link), draft / merged / closed badge, decision badge (Approved / Changes requested / Review required; omitted when GitHub reports none), author. Why: whether the PR is blocked and on whom, without a mostly empty column.
    - Size: `+additions -deletions` and `N files`. Why: review effort estimate before committing to it.
    - Comments: total comments and unresolved threads (link). Why: conversation state; unresolved is the "not done" signal.
-   - Decision: Approved / Changes requested / Review required. Why: whether the PR is blocked and on whom.
    - Progress: `viewed/files` with a thin bar, from GitHub's per-file viewed marks. Why: resume where you left off; a finished review is visible at a glance. The count covers GitHub's viewed marks on the first 100 files only (the denominator is the number counted), so unsynced local marks are not included here.
    - Updated: relative time. Why: staleness.
    - `Review` button: targets the PR and jumps into its files.
@@ -69,7 +74,7 @@ Top to bottom:
 6. Description: the PR body as markdown, at the bottom, collapsed to a few lines. Why: context, but the facts above matter more at a glance.
 
 ### Data
-- Project overview: one new IPC channel `overview.project` (GraphQL through `gh`): open PRs with counts, review decision, viewed marks of the first 100 files, last timeline items; plus the 5 most recently merged PRs for the feed.
+- Project overview: one new IPC channel `overview.project` (GraphQL through `gh`): open and the 30 latest closed PRs with counts, review decision and reviewed flag, viewed marks of the first 100 files, last timeline items; plus the 5 most recently merged PRs for the feed.
 - PR overview: one new channel `overview.pr` (`gh pr view --json`): state, draft, body, dates, reviews, review requests; commits, comments and changed files come from the existing channels, so the timeline is built from those plus the reviews. Everything else comes from queries the app already has: changed files, PR commits, comment threads, local viewed state, file content for CODEOWNERS.
 - Pure derivations (grouping, owners matching, timeline grouping, bucketing) live in a renderer helper and are unit tested.
 
