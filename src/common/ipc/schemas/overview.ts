@@ -13,7 +13,6 @@ export const OverviewPr = z.object({
   author: Login.nullable(),
   state: PrState,
   isDraft: z.boolean(),
-  /** Open PR has its review: approved or changes requested. */
   reviewed: z.boolean(),
   headRefName: z.string(),
   baseRefName: z.string(),

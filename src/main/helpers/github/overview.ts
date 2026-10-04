@@ -140,10 +140,7 @@ function timelineActivity(
   return null;
 }
 
-/**
- * Whether an open PR has had its review: GitHub's decision when it gives one, otherwise (no
- * required reviews on the base branch) whether anyone approved or requested changes.
- */
+// GitHub returns no reviewDecision when the base branch requires no reviews.
 function isReviewed(node: z.infer<typeof PrNode>): boolean {
   if (node.reviewDecision) return node.reviewDecision !== 'REVIEW_REQUIRED';
   return node.latestOpinionatedReviews.totalCount > 0;

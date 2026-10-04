@@ -39,10 +39,6 @@ export const PR_COLUMNS = 'minmax(0, 1fr) repeat(5, auto)';
 export const PAIR_COLUMNS = 'minmax(0, 1fr) auto';
 export const GROUP_COLUMNS = 'minmax(0, 1fr) auto auto';
 
-/**
- * With `$columns`, the table is one grid whose rows share the columns (via subgrid), so `auto`
- * columns size to the widest cell across all rows instead of a fixed width.
- */
 export const Table = styled(Surface).attrs({ $elevation: 'flat' })<{ $columns?: string }>`
   min-width: 0;
   overflow: hidden;

@@ -26,7 +26,6 @@ const messages = defineMessages({
   authoredBy: { id: 'content.overview.project.authoredBy', defaultMessage: 'by {author}' },
 });
 
-/** Fills the cell so a long title ellipsizes while the state badges keep their size. */
 const TitleLine = styled(Inline)`
   align-self: stretch;
 
