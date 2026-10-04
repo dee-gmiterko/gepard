@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import styled from 'styled-components';
-import { Edit2, Trash2, X } from 'react-feather';
+import { Edit2, ExternalLink, Trash2, X } from 'react-feather';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import type { Comment, DraftAnchor, ReviewThread } from '@gepard/common';
 import { useAppState } from '../../state/AppContext';
@@ -37,6 +37,10 @@ const messages = defineMessages({
     id: 'commentEditor.threadWidget.cancelDelete',
     defaultMessage: 'Cancel',
   },
+  openInFile: {
+    id: 'commentEditor.threadWidget.openInFile',
+    defaultMessage: 'Open in file',
+  },
   close: {
     id: 'commentEditor.threadWidget.close',
     defaultMessage: 'Close',
@@ -51,6 +55,7 @@ interface ThreadWidgetProps {
   thread?: ReviewThread;
   draftAnchor?: DraftAnchor;
   onClose?: () => void;
+  onOpen?: () => void;
 }
 
 const Wrapper = styled(Surface)`
@@ -105,6 +110,7 @@ export function ThreadWidget({
   thread,
   draftAnchor,
   onClose,
+  onOpen,
 }: ThreadWidgetProps): React.JSX.Element | null {
   const intl = useIntl();
   const state = useAppState();
@@ -205,6 +211,14 @@ export function ThreadWidget({
           {!isGeneral && <PathAndLine path={anchor.path} line={anchor.line} />}
           {thread?.isResolved && <ResolvedBadge />}
           {thread?.isOutdated && <OutdatedBadge />}
+          {!isGeneral && onOpen && (
+            <IconButton
+              icon={ExternalLink}
+              label={intl.formatMessage(messages.openInFile)}
+              size={14}
+              onClick={onOpen}
+            />
+          )}
           {!thread && onClose && (
             <IconButton
               icon={X}
