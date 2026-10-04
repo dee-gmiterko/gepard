@@ -1,5 +1,10 @@
 import type { MenuItemConstructorOptions } from 'electron';
-import type { ContextMenuLabels, ContextMenuLineTarget } from '@gepard/common';
+import type {
+  ContextMenuLabels,
+  ContextMenuLineTarget,
+  FileViewMenuPick,
+  FileViewMenuRequest,
+} from '@gepard/common';
 
 export interface ContextMenuParams {
   isEditable: boolean;
@@ -90,4 +95,25 @@ export function buildContextMenuTemplate(
   return sections.flatMap((section, i) =>
     i === 0 ? section : [{ type: 'separator' } as const, ...section],
   );
+}
+
+export function buildFileViewMenuTemplate(
+  state: Pick<FileViewMenuRequest, 'wrapLongLines' | 'fullFileDiff'>,
+  labels: ContextMenuLabels,
+  onPick: (pick: FileViewMenuPick) => void,
+): MenuItemConstructorOptions[] {
+  return [
+    {
+      label: labels.wrapLongLines,
+      type: 'checkbox',
+      checked: state.wrapLongLines,
+      click: () => onPick('wrapLongLines'),
+    },
+    {
+      label: labels.fullFile,
+      type: 'checkbox',
+      checked: state.fullFileDiff,
+      click: () => onPick('fullFile'),
+    },
+  ];
 }

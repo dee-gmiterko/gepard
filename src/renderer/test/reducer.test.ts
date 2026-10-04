@@ -174,6 +174,14 @@ describe('preview file', () => {
 });
 
 describe('layout', () => {
+  it('toggles the full file diff view via layout/setFullFileDiff', () => {
+    const on = appReducer(state(), { type: 'layout/setFullFileDiff', full: true });
+    expect(on.layout.fullFileDiff).toBe(true);
+    expect(
+      appReducer(on, { type: 'layout/setFullFileDiff', full: false }).layout.fullFileDiff,
+    ).toBe(false);
+  });
+
   it('toggles hiding viewed files via layout/setHideViewedFiles', () => {
     const hidden = appReducer(state(), { type: 'layout/setHideViewedFiles', hide: true });
     expect(hidden.layout.hideViewedFiles).toBe(true);

@@ -68,3 +68,36 @@ export function similarMatcher(
 export function matchesSimilar(matcher: RegExp, lines: readonly string[]): boolean {
   return matcher.test(changeSignature(lines));
 }
+
+export interface FullFileDiffMarks {
+  addedLines: ReadonlySet<number>;
+  deletedBefore: ReadonlyMap<number, readonly string[]>;
+}
+
+export function fullFileDiffMarks(rows: readonly DiffRow[]): FullFileDiffMarks {
+  const addedLines = new Set<number>();
+  const deletedBefore = new Map<number, string[]>();
+  let pending: string[] = [];
+  let lastNew: number | null = null;
+
+  function flush(anchor: number): void {
+    if (pending.length === 0) return;
+    deletedBefore.set(anchor, [...(deletedBefore.get(anchor) ?? []), ...pending]);
+    pending = [];
+  }
+
+  for (const row of rows) {
+    if (row.kind === 'hunk') {
+      flush((lastNew ?? 0) + 1);
+      lastNew = null;
+    } else if (row.kind === 'delete') {
+      pending.push(row.text);
+    } else if (row.newLine !== null) {
+      flush(row.newLine);
+      if (row.kind === 'add') addedLines.add(row.newLine);
+      lastNew = row.newLine;
+    }
+  }
+  flush((lastNew ?? 0) + 1);
+  return { addedLines, deletedBefore };
+}

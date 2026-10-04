@@ -5,6 +5,7 @@ import { useChangedFiles } from '../../../queries/files';
 import { useIsCheckedOutChangedFile } from '../useIsCheckedOutChangedFile';
 import { CodeViewer } from './code/CodeViewer';
 import { DiffViewer } from './diff/DiffViewer';
+import { FullFileDiffViewer } from './code/FullFileDiffViewer';
 import { Message } from '../../../components/Message';
 
 const messages = defineMessages({
@@ -15,7 +16,8 @@ const messages = defineMessages({
 });
 
 export function FileViewer({ path }: { path: string }): React.JSX.Element {
-  const checkout = useAppState().checkout;
+  const state = useAppState();
+  const checkout = state.checkout;
   const head = useCurrentHead();
   const { data: changedFiles } = useChangedFiles();
   const isChangedFile = useIsCheckedOutChangedFile(path);
@@ -30,7 +32,12 @@ export function FileViewer({ path }: { path: string }): React.JSX.Element {
     const changeType = changedFiles.find(
       (f) => f.path === path || f.previousPath === path,
     )?.changeType;
-    if (isChangedFile && changeType !== 'ADDED') return <DiffViewer path={path} />;
+    if (isChangedFile && changeType !== 'ADDED')
+      return state.layout.fullFileDiff ? (
+        <FullFileDiffViewer path={path} />
+      ) : (
+        <DiffViewer path={path} />
+      );
     return <CodeViewer path={path} />;
   }
 

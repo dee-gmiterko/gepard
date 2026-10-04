@@ -37,7 +37,12 @@ import { ExtensionInfo } from './schemas/extensions';
 import { GrammarModule } from './schemas/grammar';
 import { ThemeTemplateData } from './schemas/theme';
 import { LocaleData } from './schemas/locale';
-import { ContextMenuLabels, ContextMenuLineTarget } from './schemas/contextMenu';
+import {
+  ContextMenuLabels,
+  ContextMenuLineTarget,
+  FileViewMenuPick,
+  FileViewMenuRequest,
+} from './schemas/contextMenu';
 import type { ChannelNameList, EventNameList } from './names';
 
 const ch = <I extends z.ZodType, O extends z.ZodType>(
@@ -228,6 +233,7 @@ export const channels = {
 
   'contextMenu.setLabels': ch(ContextMenuLabels, z.void()),
   'contextMenu.setLineTarget': ch(ContextMenuLineTarget, z.void()),
+  'contextMenu.showFileView': ch(FileViewMenuRequest, FileViewMenuPick.nullable()),
 } as const satisfies Record<ChannelNameList, { input: z.ZodType; output: z.ZodType }>;
 
 export const events = {

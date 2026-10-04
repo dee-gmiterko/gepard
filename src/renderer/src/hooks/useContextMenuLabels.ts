@@ -17,6 +17,8 @@ const messages = defineMessages({
     id: 'contextMenu.copyLineReference',
     defaultMessage: 'Copy line reference',
   },
+  wrapLongLines: { id: 'contextMenu.wrapLongLines', defaultMessage: 'Wrap long lines' },
+  fullFile: { id: 'contextMenu.fullFile', defaultMessage: 'Full file' },
 });
 
 export type ContextMenuLabelKey = keyof typeof messages;

@@ -8,9 +8,19 @@ import {
   type RefObject,
 } from 'react';
 import styled, { css, keyframes } from 'styled-components';
-import { ArrowLeft, ArrowRight, CornerUpLeft, CornerUpRight, Move, Sidebar } from 'react-feather';
+import {
+  ArrowLeft,
+  ArrowRight,
+  CornerUpLeft,
+  CornerUpRight,
+  MoreHorizontal,
+  Move,
+  Sidebar,
+} from 'react-feather';
 import { defineMessages, useIntl } from 'react-intl';
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
+import { invoke } from '../../../ipc/client';
+import { reportQueryError } from '../../../errors/report';
 import { useSetLayout } from '../../../queries/projects';
 import { useViewed } from '../../../queries/comments';
 import { useCommands, useFileNavigation } from '../../../keyboard/useCommands';
@@ -25,6 +35,10 @@ const messages = defineMessages({
   viewed: {
     id: 'content.fileControls.viewed',
     defaultMessage: 'Viewed',
+  },
+  viewOptions: {
+    id: 'content.fileControls.viewOptions',
+    defaultMessage: 'View options',
   },
   move: {
     id: 'content.fileControls.move',
@@ -153,7 +167,7 @@ const ViewedInput = styled.input`
   accent-color: ${({ theme }) => theme.colors.success};
 `;
 
-const DockToggle = styled(IconButton)`
+const MenuToggle = styled(IconButton)`
   margin-left: auto;
 `;
 
@@ -312,6 +326,21 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
 
   const isViewed = path !== null && (viewed?.find((v) => v.path === path)?.viewed ?? false);
 
+  function openViewOptions(button: HTMLElement): void {
+    const rect = button.getBoundingClientRect();
+    invoke('contextMenu.showFileView', {
+      x: rect.left,
+      y: rect.bottom,
+      wrapLongLines: state.layout.wrapLongLines,
+      fullFileDiff: state.layout.fullFileDiff,
+    })
+      .then((pick) => {
+        if (pick === 'wrapLongLines') commands.toggleWrapLines();
+        if (pick === 'fullFile') commands.toggleFullFileDiff();
+      })
+      .catch((error: unknown) => reportQueryError('contextMenu.showFileView', error));
+  }
+
   function toggleDocked(): void {
     dispatch({ type: 'layout/setFileControlsDocked', docked: !docked });
     setLayout.mutate({ ...state.layout, fileControlsDocked: !docked });
@@ -342,7 +371,14 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
               {intl.formatMessage(messages.viewed)}
             </ViewedLabel>
           )}
-          <DockToggle
+          <MenuToggle
+            icon={MoreHorizontal}
+            size={14}
+            label={intl.formatMessage(messages.viewOptions)}
+            aria-haspopup="menu"
+            onClick={(e) => openViewOptions(e.currentTarget)}
+          />
+          <IconButton
             icon={Sidebar}
             size={14}
             label={intl.formatMessage(docked ? messages.undock : messages.dock)}

@@ -1,6 +1,15 @@
-import { clipboard, Menu, type WebContents } from 'electron';
-import type { ContextMenuLabels, ContextMenuLineTarget } from '@gepard/common';
-import { buildContextMenuTemplate, hasTextualContent } from './helpers/contextMenu';
+import { clipboard, Menu, type BrowserWindow, type WebContents } from 'electron';
+import type {
+  ContextMenuLabels,
+  ContextMenuLineTarget,
+  FileViewMenuPick,
+  FileViewMenuRequest,
+} from '@gepard/common';
+import {
+  buildContextMenuTemplate,
+  buildFileViewMenuTemplate,
+  hasTextualContent,
+} from './helpers/contextMenu';
 import { formatCaughtError } from './helpers/error';
 import { notifyMainFailure } from './notify';
 
@@ -42,5 +51,22 @@ export function installContextMenu(webContents: WebContents): void {
       },
     });
     Menu.buildFromTemplate(template).popup();
+  });
+}
+
+export function showFileViewMenu(
+  window: BrowserWindow | null,
+  request: FileViewMenuRequest,
+): Promise<FileViewMenuPick | null> {
+  if (labels === null || window === null) return Promise.resolve(null);
+  const current = labels;
+  return new Promise((resolve) => {
+    const template = buildFileViewMenuTemplate(request, current, resolve);
+    Menu.buildFromTemplate(template).popup({
+      window,
+      x: Math.round(request.x),
+      y: Math.round(request.y),
+      callback: () => setTimeout(() => resolve(null), 0),
+    });
   });
 }

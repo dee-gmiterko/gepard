@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'reac
 import { Compartment } from '@codemirror/state';
 import { closeHoverTooltips, EditorView, lineNumbers } from '@codemirror/view';
 import { defineMessages, FormattedMessage } from 'react-intl';
+import type { DiffRow } from '@gepard/common';
 import { useAppDispatch, useAppState } from '../../../../state/AppContext';
 import { useCurrentHead } from '../../../../queries/projects';
 import { useFileContent } from '../../../../queries/files';
@@ -10,6 +11,7 @@ import { useDefinitionLookup } from '../../../../queries/search';
 import {
   commentAffordanceGutter,
   commentBlockDecorations,
+  fullFileDiffDecorations,
   revealDocLine,
   symbolTooltip,
   useReadOnlyEditor,
@@ -18,6 +20,7 @@ import { lineContextMenu } from '../../../../components/lineContextMenu';
 import { SymbolPortals } from '../../../../components/SymbolPortals';
 import { CommentPortals } from '../../../../components/CommentPortals';
 import { codeViewCommentEntries } from '../../../../helpers/comment';
+import { fullFileDiffMarks } from '../../../../helpers/diff';
 import { EditorHost } from '../../../../components/EditorHost';
 import { Message } from '../../../../components/Message';
 import { CommentPortalHost } from '../CommentPortalHost';
@@ -36,7 +39,13 @@ const messages = defineMessages({
   },
 });
 
-export function CodeViewer({ path }: { path: string }): React.JSX.Element {
+export function CodeViewer({
+  path,
+  diffRows = null,
+}: {
+  path: string;
+  diffRows?: readonly DiffRow[] | null;
+}): React.JSX.Element {
   const sha = useCurrentHead() ?? '';
   const { data } = useFileContent(sha, path);
 
@@ -58,11 +67,19 @@ export function CodeViewer({ path }: { path: string }): React.JSX.Element {
         </Message>
       );
     case 'text':
-      return <CodeText path={path} text={data.text} />;
+      return <CodeText path={path} text={data.text} diffRows={diffRows} />;
   }
 }
 
-function CodeText({ path, text }: { path: string; text: string }): React.JSX.Element {
+function CodeText({
+  path,
+  text,
+  diffRows,
+}: {
+  path: string;
+  text: string;
+  diffRows: readonly DiffRow[] | null;
+}): React.JSX.Element {
   const state = useAppState();
   const dispatch = useAppDispatch();
   const unassigned = state.targeting.pr === null;
@@ -80,14 +97,16 @@ function CodeText({ path, text }: { path: string; text: string }): React.JSX.Ele
   }, [symbolPortals, lookupDefinition]);
   // Kept stable: a new extensions value makes the editor reload the whole document.
   const wrapCompartment = useMemo(() => new Compartment(), []);
+  const diffCompartment = useMemo(() => new Compartment(), []);
   const extensions = useMemo(
     () => [
       lineNumbers(),
       symbolTooltip(symbolPortals),
       lineContextMenu(path),
       wrapCompartment.of([]),
+      diffCompartment.of([]),
     ],
-    [symbolPortals, path, wrapCompartment],
+    [symbolPortals, path, wrapCompartment, diffCompartment],
   );
   const { containerRef, view, comments, commentGutter } = useReadOnlyEditor(path, text, extensions);
   const [draft, setDraft] = useState<number | null>(null);
@@ -108,6 +127,16 @@ function CodeText({ path, text }: { path: string; text: string }): React.JSX.Ele
     });
     // The editor hook resets the extensions compartment whenever the document changes.
   }, [wrapLongLines, view, wrapCompartment, path, text]);
+
+  const diffMarks = useMemo(() => (diffRows ? fullFileDiffMarks(diffRows) : null), [diffRows]);
+  useEffect(() => {
+    if (!view) return;
+    view.dispatch({
+      effects: diffCompartment.reconfigure(
+        diffMarks ? fullFileDiffDecorations(view.state.doc, diffMarks) : [],
+      ),
+    });
+  }, [diffMarks, view, diffCompartment, path, text]);
 
   useEffect(() => {
     if (!view) return;

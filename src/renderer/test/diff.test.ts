@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import type { DiffRow } from '@gepard/common';
 import {
   changeLines,
   changeSignature,
   findDiffDocLine,
+  fullFileDiffMarks,
   matchesSimilar,
   similarMatcher,
   type ChangeRow,
@@ -77,5 +79,46 @@ describe('similarMatcher', () => {
 
   it('returns null when no symbol is replaceable', () => {
     expect(similarMatcher(['+run()'], [[{ name: 'run', kind: 'function' as const }]])).toBeNull();
+  });
+});
+
+describe('fullFileDiffMarks', () => {
+  const hunk = (text: string): DiffRow => ({ kind: 'hunk', oldLine: null, newLine: null, text });
+  const ctx = (oldLine: number, newLine: number): DiffRow => ({
+    kind: 'context',
+    oldLine,
+    newLine,
+    text: 'c',
+  });
+  const add = (newLine: number): DiffRow => ({ kind: 'add', oldLine: null, newLine, text: 'a' });
+  const del = (oldLine: number, text: string): DiffRow => ({
+    kind: 'delete',
+    oldLine,
+    newLine: null,
+    text,
+  });
+
+  it('marks added lines by their new line number', () => {
+    const marks = fullFileDiffMarks([hunk('@@'), ctx(1, 1), add(2), add(3), ctx(2, 4)]);
+    expect([...marks.addedLines]).toEqual([2, 3]);
+    expect(marks.deletedBefore.size).toBe(0);
+  });
+
+  it('places deleted lines before the new line that follows them', () => {
+    const marks = fullFileDiffMarks([hunk('@@'), ctx(1, 1), del(2, 'x'), del(3, 'y'), add(2)]);
+    expect(marks.deletedBefore.get(2)).toEqual(['x', 'y']);
+  });
+
+  it('places deletions at the end of a hunk after its last new line', () => {
+    const marks = fullFileDiffMarks([
+      hunk('@@'),
+      ctx(1, 1),
+      del(2, 'x'),
+      hunk('@@'),
+      ctx(9, 8),
+      del(10, 'z'),
+    ]);
+    expect(marks.deletedBefore.get(2)).toEqual(['x']);
+    expect(marks.deletedBefore.get(9)).toEqual(['z']);
   });
 });
