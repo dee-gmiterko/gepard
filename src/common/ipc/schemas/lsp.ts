@@ -73,3 +73,14 @@ export const IndexStatus = z.discriminatedUnion('state', [
   z.object({ state: z.literal('error'), message: z.string() }),
 ]);
 export type IndexStatus = z.infer<typeof IndexStatus>;
+
+export const LanguageServerState = z.enum(['absent', 'starting', 'active', 'failed']);
+export type LanguageServerState = z.infer<typeof LanguageServerState>;
+
+export const LanguageServerStatus = z.object({
+  id: z.string(),
+  displayName: z.string(),
+  state: LanguageServerState,
+  message: z.string().optional(),
+});
+export type LanguageServerStatus = z.infer<typeof LanguageServerStatus>;

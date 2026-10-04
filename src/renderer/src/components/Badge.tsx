@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import styled from 'styled-components';
 
-export const BadgeTone = z.enum(['success', 'warning', 'muted']);
+export const BadgeTone = z.enum(['success', 'warning', 'danger', 'muted']);
 export type BadgeTone = z.infer<typeof BadgeTone>;
 
 export const Badge = styled.span<{ $tone?: BadgeTone }>`
@@ -15,5 +15,7 @@ export const Badge = styled.span<{ $tone?: BadgeTone }>`
       ? theme.colors.success
       : $tone === 'warning'
         ? theme.colors.warning
-        : theme.colors.fgMuted};
+        : $tone === 'danger'
+          ? theme.colors.danger
+          : theme.colors.fgMuted};
 `;

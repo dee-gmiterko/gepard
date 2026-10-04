@@ -11,6 +11,7 @@ import { ResizeHandle } from '../../components/ResizeHandle';
 import { FileTree } from './fileTree/FileTree';
 import { TargetedBrowser } from './targeted/TargetedBrowser';
 import { SearchPanel } from './search/SearchPanel';
+import { LanguageServersButton } from './LanguageServersButton';
 
 const MIN_WIDTH = 220;
 const MAX_WIDTH = 640;
@@ -65,6 +66,7 @@ const TabRail = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: ${({ theme }) => theme.space[1]};
   padding-top: ${({ theme }) => theme.space[2]};
   padding-bottom: ${({ theme }) => theme.space[2]};
   border-right: 1px solid ${({ theme }) => theme.colors.border};
@@ -159,6 +161,7 @@ export function SidePanel(): React.JSX.Element {
           })}
         </TabList>
         <TabRailSpacer />
+        <LanguageServersButton />
         <IconButton
           icon={Settings}
           label={intl.formatMessage(messages.openSettings)}
