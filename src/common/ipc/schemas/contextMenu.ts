@@ -1,18 +1,21 @@
 import { z } from 'zod';
 
-export const ContextMenuLabels = z.object({
-  undo: z.string(),
-  redo: z.string(),
-  cut: z.string(),
-  copy: z.string(),
-  paste: z.string(),
-  selectAll: z.string(),
-  addToDictionary: z.string(),
-  copyFilePath: z.string(),
-  copyLineReference: z.string(),
-  wrapLongLines: z.string(),
-  fullFile: z.string(),
-});
+export const ContextMenuLabelKey = z.enum([
+  'undo',
+  'redo',
+  'cut',
+  'copy',
+  'paste',
+  'selectAll',
+  'addToDictionary',
+  'copyFilePath',
+  'copyLineReference',
+  'wrapLongLines',
+  'fullFile',
+]);
+export type ContextMenuLabelKey = z.infer<typeof ContextMenuLabelKey>;
+
+export const ContextMenuLabels = z.record(ContextMenuLabelKey, z.string());
 export type ContextMenuLabels = z.infer<typeof ContextMenuLabels>;
 
 export const ContextMenuLineTarget = z.object({

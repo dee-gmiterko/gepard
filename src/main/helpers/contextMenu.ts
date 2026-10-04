@@ -1,9 +1,10 @@
 import type { MenuItemConstructorOptions } from 'electron';
-import type {
-  ContextMenuLabels,
-  ContextMenuLineTarget,
+import {
   FileViewMenuPick,
-  FileViewMenuRequest,
+  type ContextMenuLabelKey,
+  type ContextMenuLabels,
+  type ContextMenuLineTarget,
+  type FileViewMenuRequest,
 } from '@gepard/common';
 
 export interface ContextMenuParams {
@@ -43,6 +44,20 @@ export function hasTextualContent(
   );
 }
 
+const EDIT_ITEMS: readonly {
+  key: Extract<ContextMenuLabelKey, 'undo' | 'redo' | 'cut' | 'copy' | 'paste' | 'selectAll'>;
+  flag: keyof ContextMenuParams['editFlags'];
+  editableOnly: boolean;
+  separatorBefore?: boolean;
+}[] = [
+  { key: 'undo', flag: 'canUndo', editableOnly: true },
+  { key: 'redo', flag: 'canRedo', editableOnly: true },
+  { key: 'cut', flag: 'canCut', editableOnly: true, separatorBefore: true },
+  { key: 'copy', flag: 'canCopy', editableOnly: false },
+  { key: 'paste', flag: 'canPaste', editableOnly: true },
+  { key: 'selectAll', flag: 'canSelectAll', editableOnly: false },
+];
+
 export function buildContextMenuTemplate(
   params: ContextMenuParams,
   labels: ContextMenuLabels,
@@ -62,25 +77,14 @@ export function buildContextMenuTemplate(
     ]);
   }
 
-  const edit: MenuItemConstructorOptions[] = [];
-  if (params.isEditable) {
-    edit.push(
-      { label: labels.undo, role: 'undo', enabled: params.editFlags.canUndo },
-      { label: labels.redo, role: 'redo', enabled: params.editFlags.canRedo },
-      { type: 'separator' },
-      { label: labels.cut, role: 'cut', enabled: params.editFlags.canCut },
-    );
-  }
-  edit.push({ label: labels.copy, role: 'copy', enabled: params.editFlags.canCopy });
-  if (params.isEditable) {
-    edit.push({ label: labels.paste, role: 'paste', enabled: params.editFlags.canPaste });
-  }
-  edit.push({
-    label: labels.selectAll,
-    role: 'selectAll',
-    enabled: params.editFlags.canSelectAll,
-  });
-  sections.push(edit);
+  sections.push(
+    EDIT_ITEMS.filter((item) => !item.editableOnly || params.isEditable).flatMap(
+      ({ key, flag, separatorBefore }): MenuItemConstructorOptions[] => [
+        ...(separatorBefore ? [{ type: 'separator' } as const] : []),
+        { label: labels[key], role: key, enabled: params.editFlags[flag] },
+      ],
+    ),
+  );
 
   if (target !== null) {
     sections.push([
@@ -97,23 +101,22 @@ export function buildContextMenuTemplate(
   );
 }
 
+type FileViewMenuState = Pick<FileViewMenuRequest, 'wrapLongLines' | 'fullFileDiff'>;
+
+const FILE_VIEW_STATE: Record<FileViewMenuPick, keyof FileViewMenuState> = {
+  wrapLongLines: 'wrapLongLines',
+  fullFile: 'fullFileDiff',
+};
+
 export function buildFileViewMenuTemplate(
-  state: Pick<FileViewMenuRequest, 'wrapLongLines' | 'fullFileDiff'>,
+  state: FileViewMenuState,
   labels: ContextMenuLabels,
   onPick: (pick: FileViewMenuPick) => void,
 ): MenuItemConstructorOptions[] {
-  return [
-    {
-      label: labels.wrapLongLines,
-      type: 'checkbox',
-      checked: state.wrapLongLines,
-      click: () => onPick('wrapLongLines'),
-    },
-    {
-      label: labels.fullFile,
-      type: 'checkbox',
-      checked: state.fullFileDiff,
-      click: () => onPick('fullFile'),
-    },
-  ];
+  return FileViewMenuPick.options.map((pick): MenuItemConstructorOptions => ({
+    label: labels[pick],
+    type: 'checkbox',
+    checked: state[FILE_VIEW_STATE[pick]],
+    click: () => onPick(pick),
+  }));
 }

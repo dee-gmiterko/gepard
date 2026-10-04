@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { MenuItemConstructorOptions } from 'electron';
+import type { ContextMenuLabels } from '@gepard/common';
 import {
   buildContextMenuTemplate,
   buildFileViewMenuTemplate,
@@ -9,7 +10,7 @@ import {
   type ContextMenuParams,
 } from '../helpers/contextMenu';
 
-const labels = {
+const labels: ContextMenuLabels = {
   undo: 'Undo',
   redo: 'Redo',
   cut: 'Cut',

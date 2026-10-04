@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from 'react';
-import { defineMessages, useIntl } from 'react-intl';
-import { ContextMenuLabels } from '@gepard/common';
+import { defineMessages, useIntl, type MessageDescriptor } from 'react-intl';
+import { ContextMenuLabelKey, ContextMenuLabels } from '@gepard/common';
 import { reportQueryError } from '../errors/report';
 import { invoke } from '../ipc/client';
 
@@ -19,9 +19,7 @@ const messages = defineMessages({
   },
   wrapLongLines: { id: 'contextMenu.wrapLongLines', defaultMessage: 'Wrap long lines' },
   fullFile: { id: 'contextMenu.fullFile', defaultMessage: 'Full file' },
-});
-
-export type ContextMenuLabelKey = keyof typeof messages;
+}) satisfies Record<ContextMenuLabelKey, MessageDescriptor>;
 
 export function useContextMenuLabels(): (key: ContextMenuLabelKey) => string {
   const intl = useIntl();
@@ -32,7 +30,7 @@ export function useContextMenuLabels(): (key: ContextMenuLabelKey) => string {
   useEffect(() => {
     const labels = ContextMenuLabels.parse(
       Object.fromEntries(
-        Object.entries(messages).map(([key, message]) => [key, intl.formatMessage(message)]),
+        ContextMenuLabelKey.options.map((key) => [key, intl.formatMessage(messages[key])]),
       ),
     );
     invoke('contextMenu.setLabels', labels).catch((error: unknown) =>
