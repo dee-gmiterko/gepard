@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { MenuItemConstructorOptions } from 'electron';
 import {
   buildContextMenuTemplate,
+  buildFileViewMenuTemplate,
   formatLineReference,
   hasTextualContent,
   type ContextMenuActions,
@@ -18,6 +19,8 @@ const labels = {
   addToDictionary: 'Add to dictionary',
   copyFilePath: 'Copy file path',
   copyLineReference: 'Copy line reference',
+  wrapLongLines: 'Wrap long lines',
+  fullFile: 'Full file',
 };
 
 const flags = {
@@ -113,5 +116,32 @@ describe('buildContextMenuTemplate', () => {
     clickItem(t, 4);
     expect(a.copyText).toHaveBeenNthCalledWith(1, 'src/a.ts');
     expect(a.copyText).toHaveBeenNthCalledWith(2, 'src/a.ts:7');
+  });
+});
+
+describe('buildFileViewMenuTemplate', () => {
+  it('offers both toggles as checkboxes reflecting the current state', () => {
+    const t = buildFileViewMenuTemplate(
+      { wrapLongLines: true, fullFileDiff: false },
+      labels,
+      vi.fn(),
+    );
+    expect(t.map((i) => [i.label, i.type, i.checked])).toEqual([
+      ['Wrap long lines', 'checkbox', true],
+      ['Full file', 'checkbox', false],
+    ]);
+  });
+
+  it('reports which toggle was picked', () => {
+    const onPick = vi.fn();
+    const t = buildFileViewMenuTemplate(
+      { wrapLongLines: false, fullFileDiff: false },
+      labels,
+      onPick,
+    );
+    clickItem(t, 0);
+    clickItem(t, 1);
+    expect(onPick).toHaveBeenNthCalledWith(1, 'wrapLongLines');
+    expect(onPick).toHaveBeenNthCalledWith(2, 'fullFile');
   });
 });

@@ -16,6 +16,14 @@ const messages = defineMessages({
     id: 'keyboard.wrapLongLinesOff',
     defaultMessage: 'Wrap long lines: off',
   },
+  fullFileOn: {
+    id: 'keyboard.fullFileDiffOn',
+    defaultMessage: 'Full file: on',
+  },
+  fullFileOff: {
+    id: 'keyboard.fullFileDiffOff',
+    defaultMessage: 'Full file: off',
+  },
 });
 
 export interface Commands {
@@ -28,6 +36,7 @@ export interface Commands {
   showSidePanelTab: (tab: SidePanelTab) => boolean;
   openQuickSearch: (mode: QuickSearchMode) => boolean;
   toggleWrapLines: () => boolean;
+  toggleFullFileDiff: () => boolean;
 }
 
 export function useFileNavigation(): { canGoPrev: boolean; canGoNext: boolean } {
@@ -125,6 +134,16 @@ export function useCommands(): Commands {
         dispatch({
           type: 'headerStatus/publish',
           message: wrap ? messages.wrapOn : messages.wrapOff,
+        });
+        return true;
+      },
+      toggleFullFileDiff: () => {
+        const full = !layout.fullFileDiff;
+        dispatch({ type: 'layout/setFullFileDiff', full });
+        setLayout({ ...layout, fullFileDiff: full });
+        dispatch({
+          type: 'headerStatus/publish',
+          message: full ? messages.fullFileOn : messages.fullFileOff,
         });
         return true;
       },

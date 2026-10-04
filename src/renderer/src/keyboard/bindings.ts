@@ -53,6 +53,10 @@ const messages = defineMessages({
     id: 'keyboard.toggleWrapLines',
     defaultMessage: 'Toggle wrapping of long lines in the code viewer',
   },
+  toggleFullFileDiff: {
+    id: 'keyboard.toggleFullFileDiff',
+    defaultMessage: 'Toggle showing the full file with changes instead of changes only',
+  },
   quickSearchNavigate: {
     id: 'keyboard.quickSearchNavigate',
     defaultMessage: 'Go to file or symbol',
@@ -125,5 +129,11 @@ export const keyBindings: readonly KeyBinding[] = [
     key: `${MOD}+Shift+L`,
     label: messages.toggleWrapLines,
     run: (commands) => commands.toggleWrapLines(),
+  },
+  {
+    id: 'toggleFullFileDiff',
+    key: `${MOD}+Shift+D`,
+    label: messages.toggleFullFileDiff,
+    run: (commands) => commands.toggleFullFileDiff(),
   },
 ];

@@ -8,7 +8,7 @@
 - electron desktop app
 - `gh` command used to interact with PRs over json<->zod schemas interface
 - React 19 dom, Vite, Typescript, Tanstack queries and mutations (hooks), AppContext holding app ui state
-- @codemirror editor for code and diff view (read only); the code viewer can wrap long lines (project-level flag, persisted with the layout, toggled by a shortcut, with the new state announced in the header status message)
+- @codemirror editor for code and diff view (read only); both views can wrap long lines, and a changed file can show changes only or the full file with its changes highlighted (project-level flags, persisted with the layout, toggled by a shortcut or the file controls `…` menu, with the new state announced in the header status message)
 - Localization: all UI text is localizable, English default; a script refreshes every locale from the source strings
 - Scripts (media/locale refresh, ...) are Typescript, run directly with `tsx`, no build step; package itself is ESM
 
@@ -58,6 +58,7 @@
 		- A newly added file (nothing to diff against) always opens in the plain file (text) view, never diff - an all-green diff carries no information.
 	- File controls floating panel (default close to top right)
 		- Viewed checkbox
+		- `…` button opening a native menu with checkbox toggles: Wrap long lines, Full file (the full file at head with added lines highlighted and deleted lines shown inline, instead of changes only)
 		- Sync button - saves any new comments to `gh`, publishes viewed, pulls remote ones (timestamp based merging into local); also fetches the repo and checks out the targeted PR's latest head if it moved
 		- Draggable; position persisted per project, kept clamped inside the viewer area.
 	- Right panel (file comments sidebar): closeable, right-hand side, resizable the same way as the side panel (drag edge, width persisted per project); replaces the old floating comments overlay.
@@ -114,6 +115,7 @@
 	- `Ctrl+F` - Find in the active file
 	- `Ctrl+P` - Go to file or symbol
 	- `Ctrl+Shift+L` - Toggle wrapping of long lines in the code viewer
+	- `Ctrl+Shift+D` - Toggle showing the full file with changes instead of changes only
 
 ### Styling
 - heavy use of styled components - all dedicated locally defined in React components (any duplication is sign of missing component)

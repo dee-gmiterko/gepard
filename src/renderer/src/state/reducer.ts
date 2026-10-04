@@ -36,6 +36,7 @@ export interface Layout {
   fileControlsDocked: boolean;
   fileControlsPosition: { x: number; y: number } | null;
   wrapLongLines: boolean;
+  fullFileDiff: boolean;
 }
 
 export const defaultLayout: Layout = {
@@ -46,6 +47,7 @@ export const defaultLayout: Layout = {
   fileControlsDocked: false,
   fileControlsPosition: null,
   wrapLongLines: false,
+  fullFileDiff: false,
 };
 
 export interface AppState {
@@ -104,6 +106,7 @@ export type AppAction =
   | { type: 'layout/setFileControlsDocked'; docked: boolean }
   | { type: 'layout/setFileControlsPosition'; position: { x: number; y: number } | null }
   | { type: 'layout/setWrapLongLines'; wrap: boolean }
+  | { type: 'layout/setFullFileDiff'; full: boolean }
   | { type: 'file/open'; path: string; line?: number | null; side?: DiffSide }
   | { type: 'file/focus'; path: string }
   | { type: 'file/pin'; path: string }
@@ -196,6 +199,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, layout: { ...state.layout, fileControlsPosition: action.position } };
     case 'layout/setWrapLongLines':
       return { ...state, layout: { ...state.layout, wrapLongLines: action.wrap } };
+    case 'layout/setFullFileDiff':
+      return { ...state, layout: { ...state.layout, fullFileDiff: action.full } };
     case 'file/open': {
       const revealLine =
         action.line != null ? { line: action.line, side: action.side ?? ('RIGHT' as const) } : null;

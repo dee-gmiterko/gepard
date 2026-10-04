@@ -14,7 +14,9 @@ import {
   EditorSelection,
   EditorState,
   Prec,
+  RangeSet,
   RangeSetBuilder,
+  type Range,
   Text,
   type Extension,
 } from '@codemirror/state';
@@ -23,10 +25,12 @@ import {
   EditorView,
   drawSelection,
   gutter,
+  gutterLineClass,
   highlightActiveLine,
   highlightActiveLineGutter,
   hoverTooltip,
   keymap,
+  type GutterMarker,
   type Tooltip,
 } from '@codemirror/view';
 import {
@@ -57,7 +61,10 @@ import type { LineCommentEntry } from '../helpers/comment';
 import { useCommands, type Commands } from '../keyboard/useCommands';
 import { useGrammars } from '../queries/grammars';
 import type { Theme } from '../theme/tokens';
+import type { FullFileDiffMarks } from '../helpers/diff';
+import { AddedLineGutterMarker } from './AddedLineGutterMarker';
 import { AffordanceMarker } from './AffordanceMarker';
+import { DeletedLinesWidget } from './DeletedLinesWidget';
 import type { CommentPortals } from './CommentPortals';
 import { DiffLineNumberMarker } from './DiffLineNumberMarker';
 import type { SymbolPortals } from './SymbolPortals';
@@ -173,6 +180,33 @@ export function diffLineDecorations(doc: Text, infos: readonly DiffLineInfo[]): 
     builder.add(line.from, line.from, Decoration.line({ class: cls }));
   }
   return EditorView.decorations.of(builder.finish());
+}
+
+export function fullFileDiffDecorations(doc: Text, marks: FullFileDiffMarks): Extension {
+  const decorations: Range<Decoration>[] = [];
+  const gutterMarks: Range<GutterMarker>[] = [];
+  const added = Decoration.line({ class: 'cm-line-add' });
+  const addedGutter = new AddedLineGutterMarker();
+  for (const [lineNo, deleted] of marks.deletedBefore) {
+    const pastEnd = lineNo > doc.lines;
+    const line = doc.line(Math.min(lineNo, doc.lines));
+    const widget = Decoration.widget({
+      widget: new DeletedLinesWidget(deleted),
+      block: true,
+      side: pastEnd ? 1 : -1,
+    });
+    decorations.push(widget.range(pastEnd ? line.to : line.from));
+  }
+  for (const lineNo of marks.addedLines) {
+    if (lineNo > doc.lines) continue;
+    const from = doc.line(lineNo).from;
+    decorations.push(added.range(from));
+    gutterMarks.push(addedGutter.range(from));
+  }
+  return [
+    EditorView.decorations.of(Decoration.set(decorations, true)),
+    gutterLineClass.of(RangeSet.of(gutterMarks, true)),
+  ];
 }
 
 function lineInfoAt(
@@ -473,6 +507,15 @@ export function editorTheme(theme: Theme): Extension {
       '.cm-line-delete': {
         backgroundColor: c.diffDelBg,
         color: c.diffDelFg,
+      },
+      '.cm-deleted-line': {
+        padding: '0 2px 0 6px',
+        whiteSpace: 'pre',
+        backgroundColor: c.diffDelBg,
+        color: c.diffDelFg,
+      },
+      '.cm-gutter-line-add': {
+        backgroundColor: c.diffAddBg,
       },
       '.cm-line-hunk': {
         backgroundColor: c.diffHunk,

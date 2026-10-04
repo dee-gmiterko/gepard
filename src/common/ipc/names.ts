@@ -57,6 +57,7 @@ export const ChannelNameList = z.enum([
   'keybindings.setOverride',
   'contextMenu.setLabels',
   'contextMenu.setLineTarget',
+  'contextMenu.showFileView',
 ]);
 export type ChannelNameList = z.infer<typeof ChannelNameList>;
 
