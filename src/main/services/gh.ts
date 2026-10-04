@@ -346,15 +346,17 @@ const AddThreadResponse = z.object({
   data: z.object({
     addPullRequestReviewThread: z
       .object({
-        thread: z.object({
-          id: NodeId,
-          isResolved: z.boolean(),
-          path: z.string(),
-          line: z.number().nullable(),
-          startLine: z.number().nullable(),
-          diffSide: DiffSide,
-          comments: z.object({ nodes: z.array(NewThreadComment) }),
-        }),
+        thread: z
+          .object({
+            id: NodeId,
+            isResolved: z.boolean(),
+            path: z.string(),
+            line: z.number().nullable(),
+            startLine: z.number().nullable(),
+            diffSide: DiffSide,
+            comments: z.object({ nodes: z.array(NewThreadComment) }),
+          })
+          .nullable(),
       })
       .nullable(),
   }),
@@ -402,8 +404,8 @@ export interface NewThreadResult {
 
 type AddThreadResponseType = z.infer<typeof AddThreadResponse>;
 type ThreadPayload = NonNullable<
-  AddThreadResponseType['data']['addPullRequestReviewThread']
->['thread'];
+  NonNullable<AddThreadResponseType['data']['addPullRequestReviewThread']>['thread']
+>;
 
 const GENERAL_COMMENT_FIELDS = `
   id
@@ -973,13 +975,20 @@ export class GhService {
   }
 
   // GitHub rejects a LINE-anchored review comment on a line outside the diff
-  // with a 422 "must be part of the diff" error.
+  // either with a 422 "must be part of the diff" error or with a null thread.
   async addReviewThread(input: NewThreadInput): Promise<NewThreadResult> {
     if (input.line === null)
       return this.addThreadAsFile(input.pullRequestReviewId, input.path, input.body);
     const line = input.line;
+    const fallbackToFile = (): Promise<NewThreadResult> =>
+      this.addThreadAsFile(
+        input.pullRequestReviewId,
+        input.path,
+        `${input.path}:${line}\n\n${input.body}`,
+      );
+    let res: AddThreadResponseType;
     try {
-      const res = await this.graphql(AddThreadResponse, ADD_THREAD_LINE_QUERY, {
+      res = await this.graphql(AddThreadResponse, ADD_THREAD_LINE_QUERY, {
         reviewId: input.pullRequestReviewId,
         path: input.path,
         body: input.body,
@@ -989,13 +998,13 @@ export class GhService {
         startSide: input.startSide ?? null,
         subjectType: 'LINE',
       });
-      const { thread, root } = this.firstComment(res);
-      return { thread, rootComment: root, isFile: false };
     } catch (e) {
       if (!isLineNotInDiffError(e)) throw e;
-      const fallbackBody = `${input.path}:${line}\n\n${input.body}`;
-      return this.addThreadAsFile(input.pullRequestReviewId, input.path, fallbackBody);
+      return fallbackToFile();
     }
+    if (!res.data.addPullRequestReviewThread?.thread) return fallbackToFile();
+    const { thread, root } = this.firstComment(res);
+    return { thread, rootComment: root, isFile: false };
   }
 
   // GitHub accepts replies only to a thread root.
