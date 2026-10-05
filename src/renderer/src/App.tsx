@@ -3,6 +3,7 @@ import { useAppDispatch, useAppState } from './state/AppContext';
 import { useGlobalKeys } from './keyboard/useGlobalKeys';
 import { useWindowTitle } from './hooks/useWindowTitle';
 import { useContextMenuLabels } from './hooks/useContextMenuLabels';
+import { useLaunchProjectOnStartup } from './hooks/useLaunchProject';
 import { Launchpad } from './features/launchpad/Launchpad';
 import { Header } from './features/header/Header';
 import { SidePanel } from './features/sidePanel/SidePanel';
@@ -26,6 +27,7 @@ function App(): React.JSX.Element {
   useGlobalKeys();
   useWindowTitle();
   useContextMenuLabels();
+  useLaunchProjectOnStartup();
   const state = useAppState();
   const dispatch = useAppDispatch();
 

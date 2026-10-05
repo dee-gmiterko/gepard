@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type MouseEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import styled, { keyframes } from 'styled-components';
 import { Download, Folder, RefreshCw, Settings, Trash2 } from 'react-feather';
@@ -12,12 +12,14 @@ import { List, ListRow, RowTitle } from '../../components/List';
 import { Message } from '../../components/Message';
 import { SectionHeading } from '../../components/SectionHeading';
 import { reportQueryError } from '../../errors/report';
-import { invoke, useIpcEvent } from '../../ipc/client';
+import { useIpcEvent } from '../../ipc/client';
 import { qk } from '../../queries/keys';
 import {
   useAddProject,
   useCloneStart,
   useFetchProject,
+  useLaunchDetached,
+  useOpenProjectAction,
   useProjects,
   useRemoveProject,
   useViewer,
@@ -264,6 +266,8 @@ export function Launchpad(): React.JSX.Element {
   const removeProject = useRemoveProject();
   const cloneStart = useCloneStart();
   const fetchProject = useFetchProject();
+  const launchDetached = useLaunchDetached();
+  const openProject = useOpenProjectAction();
 
   const [url, setUrl] = useState('');
   const [urlTouched, setUrlTouched] = useState(false);
@@ -314,26 +318,9 @@ export function Launchpad(): React.JSX.Element {
     );
   }
 
-  async function handleOpen(projectId: string): Promise<void> {
-    qc.removeQueries({ queryKey: qk.open(projectId) });
-    try {
-      const [, opened] = await Promise.all([
-        qc.invalidateQueries({ queryKey: qk.project(projectId) }),
-        qc.fetchQuery({
-          queryKey: qk.open(projectId),
-          queryFn: () => invoke('projects.open', { projectId }),
-          staleTime: Infinity,
-        }),
-      ]);
-      dispatch({
-        type: 'project/open',
-        projectId,
-        targeting: opened.targeting,
-        layout: opened.layout,
-      });
-    } catch {
-      // Reported via the query cache's global error handler.
-    }
+  function handleOpen(projectId: string, e: MouseEvent): void {
+    if (e.ctrlKey || e.metaKey) launchDetached.mutate(projectId);
+    else void openProject(projectId);
   }
 
   function handleRemove(projectId: string): void {
@@ -422,7 +409,7 @@ export function Launchpad(): React.JSX.Element {
             <ProjectRow
               key={project.id}
               $clickable={project.cloned}
-              onClick={project.cloned ? () => void handleOpen(project.id) : undefined}
+              onClick={project.cloned ? (e) => handleOpen(project.id, e) : undefined}
             >
               <RowMain>
                 <RowTitle>
@@ -455,7 +442,7 @@ export function Launchpad(): React.JSX.Element {
                   <IconButton
                     icon={Folder}
                     label={intl.formatMessage(messages.open)}
-                    onClick={() => void handleOpen(project.id)}
+                    onClick={(e) => handleOpen(project.id, e)}
                   />
                 ) : (
                   <IconButton
