@@ -129,6 +129,19 @@ describe('GitService (integration)', () => {
     expect(result).toEqual({ base: EMPTY_TREE_SHA, head: fixture.rootSha });
   });
 
+  it('commitRange: spans a commit against its parent without touching the working tree', async () => {
+    await gitService.checkoutTarget(projectId, { kind: 'commit', sha: fixture.rootSha });
+    const result = await gitService.commitRange(projectId, fixture.featureHeadSha);
+    expect(result).toEqual({ base: fixture.baseSha, head: fixture.featureHeadSha });
+    const checkedOut = (await git(projectRepoDir(projectId), ['rev-parse', 'HEAD'])).trim();
+    expect(checkedOut).toBe(fixture.rootSha);
+  });
+
+  it('commitRange: a root commit spans from the empty tree', async () => {
+    const result = await gitService.commitRange(projectId, fixture.rootSha);
+    expect(result).toEqual({ base: EMPTY_TREE_SHA, head: fixture.rootSha });
+  });
+
   it('checkoutTarget: default after a commit checks out the head of the default branch', async () => {
     await gitService.checkoutTarget(projectId, { kind: 'commit', sha: fixture.rootSha });
     const result = await gitService.checkoutTarget(projectId, { kind: 'default' });
