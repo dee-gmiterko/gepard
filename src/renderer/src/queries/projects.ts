@@ -10,7 +10,7 @@ import { reportQueryError } from '../errors/report';
 import { invoke, useIpcEvent } from '../ipc/client';
 import { qk } from './keys';
 import { useAppDispatch, useAppState } from '../state/AppContext';
-import type { ChannelInput } from '@gepard/common';
+import type { ChannelInput, ChannelOutput } from '@gepard/common';
 
 export function useViewer() {
   return useQuery({ queryKey: qk.viewer(), queryFn: () => invoke('app.viewer') });
@@ -32,64 +32,66 @@ export function useAddProject() {
   });
 }
 
-export function useLaunchProject() {
-  return useQuery({
-    queryKey: qk.launch(),
-    queryFn: () => invoke('app.launch', { detached: false }),
-    staleTime: Infinity,
-  });
-}
-
-export function useLaunchDetached() {
+export function useLaunch() {
   return useMutation({
-    mutationKey: qk.launchDetached(),
-    mutationFn: (projectId: string) => invoke('app.launch', { detached: true, projectId }),
+    mutationKey: qk.launch(),
+    mutationFn: (input: ChannelInput<'app.launch'>) => invoke('app.launch', input),
   });
 }
 
-export function useLaunchingProjectIds(): unknown[] {
-  return useMutationState({
-    filters: { mutationKey: qk.launchDetached(), status: 'pending' },
-    select: (mutation) => mutation.state.variables,
-  });
-}
+type DetachedLaunch = Extract<ChannelInput<'app.launch'>, { detached: true }>;
 
-export function useOpenProjectAction(): (projectId: string) => Promise<void> {
-  const qc = useQueryClient();
-  const dispatch = useAppDispatch();
-  return useCallback(
-    async (projectId: string) => {
-      qc.removeQueries({ queryKey: qk.open(projectId) });
-      try {
-        const [, opened] = await Promise.all([
-          qc.invalidateQueries({ queryKey: qk.project(projectId) }),
-          qc.fetchQuery({
-            queryKey: qk.open(projectId),
-            queryFn: () => invoke('projects.open', { projectId }),
-            staleTime: Infinity,
-          }),
-        ]);
-        dispatch({
-          type: 'project/open',
-          projectId,
-          targeting: opened.targeting,
-          layout: opened.layout,
-        });
-      } catch {
-        // Reported via the query cache's global error handler.
-      }
-    },
-    [qc, dispatch],
+function isDetachedLaunch(input: unknown): input is DetachedLaunch {
+  return (
+    typeof input === 'object' && input !== null && 'detached' in input && input.detached === true
   );
 }
 
-export function useOpenProject() {
-  const projectId = useAppState().projectId;
-  return useQuery({
-    queryKey: qk.open(projectId ?? ''),
-    queryFn: projectId ? () => invoke('projects.open', { projectId }) : skipToken,
-    staleTime: Infinity,
+export function useLaunchingProjectIds(): string[] {
+  return useMutationState({
+    filters: { mutationKey: qk.launch(), status: 'pending' },
+    select: (mutation) => mutation.state.variables,
+  }).flatMap((input) => (isDetachedLaunch(input) ? [input.projectId] : []));
+}
+
+type OpenedProject = ChannelOutput<'projects.open'>;
+
+function useOpenHere() {
+  const qc = useQueryClient();
+  const dispatch = useAppDispatch();
+  return useMutation({
+    mutationFn: async (projectId: string) => {
+      const [, opened] = await Promise.all([
+        qc.invalidateQueries({ queryKey: qk.project(projectId) }),
+        invoke('projects.open', { projectId }),
+      ]);
+      return opened;
+    },
+    onSuccess: (opened, projectId) => {
+      qc.setQueryData<OpenedProject>(qk.open(projectId), opened);
+      dispatch({
+        type: 'project/open',
+        projectId,
+        targeting: opened.targeting,
+        layout: opened.layout,
+      });
+    },
   });
+}
+
+export function useOpenProject(): (projectId: string, detached: boolean) => void {
+  const { mutate: launch } = useLaunch();
+  const { mutate: openHere } = useOpenHere();
+  return useCallback(
+    (projectId: string, detached: boolean) =>
+      detached ? launch({ detached: true, projectId }) : openHere(projectId),
+    [launch, openHere],
+  );
+}
+
+export function useOpenedProject() {
+  const projectId = useAppState().projectId ?? '';
+  return useQuery<OpenedProject>({ queryKey: qk.open(projectId), queryFn: skipToken });
 }
 
 export function useSetTargeting() {
@@ -170,6 +172,6 @@ export function useLanguageServers() {
 
 export function useCurrentHead(): string | null {
   const state = useAppState();
-  const open = useOpenProject();
-  return state.checkout?.head ?? open.data?.head ?? null;
+  const opened = useOpenedProject();
+  return state.checkout?.head ?? opened.data?.head ?? null;
 }

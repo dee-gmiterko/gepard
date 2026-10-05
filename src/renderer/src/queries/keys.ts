@@ -3,7 +3,6 @@ export const qk = {
   viewer: () => [...qk.all, 'viewer'] as const,
   viewerRepos: () => [...qk.all, 'viewerRepos'] as const,
   launch: () => [...qk.all, 'launch'] as const,
-  launchDetached: () => [...qk.launch(), 'detached'] as const,
   projects: () => [...qk.all, 'projects'] as const,
   extensions: () => [...qk.all, 'extensions'] as const,
   extensionsDir: () => [...qk.all, 'extensionsDir'] as const,
@@ -47,6 +46,5 @@ export const qk = {
     [...qk.commit(p, sha), 'searchPages', query, opts] as const,
   index: (p: string) => [...qk.project(p), 'index'] as const,
   languageServers: (p: string) => [...qk.project(p), 'languageServers'] as const,
-  checkoutAll: (p: string) => [...qk.project(p), 'checkout'] as const,
-  checkout: (p: string, target: unknown) => [...qk.checkoutAll(p), target] as const,
+  checkout: (p: string) => [...qk.project(p), 'checkout'] as const,
 };

@@ -18,9 +18,8 @@ import {
   useAddProject,
   useCloneStart,
   useFetchProject,
-  useLaunchDetached,
   useLaunchingProjectIds,
-  useOpenProjectAction,
+  useOpenProject,
   useProjects,
   useRemoveProject,
   useViewer,
@@ -271,9 +270,8 @@ export function Launchpad(): React.JSX.Element {
   const removeProject = useRemoveProject();
   const cloneStart = useCloneStart();
   const fetchProject = useFetchProject();
-  const launchDetached = useLaunchDetached();
   const launchingIds = useLaunchingProjectIds();
-  const openProject = useOpenProjectAction();
+  const openProject = useOpenProject();
 
   const [url, setUrl] = useState('');
   const [urlTouched, setUrlTouched] = useState(false);
@@ -325,8 +323,7 @@ export function Launchpad(): React.JSX.Element {
   }
 
   function handleOpen(projectId: string, e: MouseEvent): void {
-    if (e.ctrlKey || e.metaKey) launchDetached.mutate(projectId);
-    else void openProject(projectId);
+    openProject(projectId, e.ctrlKey || e.metaKey);
   }
 
   function handleRemove(projectId: string): void {
