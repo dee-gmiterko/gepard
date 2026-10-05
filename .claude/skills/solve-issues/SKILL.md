@@ -27,6 +27,8 @@ Every open issue is a task at the same bar, regardless of label, phrasing, or le
 
 Skip only issues labeled `wontfix`, `duplicate`, `invalid`, or `question`. Do not pick up an issue that is already linked to an open PR (`gh pr list --search "linked:<N>"` or a "Closes #N" in an open PR body) — report it as already in progress instead.
 
+The release-please pull request (`chore(main): release x.y.z` on a `release-please--*` branch) is ignored by this skill: it is not an issue, it links no issue, and it must never be treated as in-progress work or touched.
+
 ## 2. Group and dispatch to parallel subagents
 
 Do not pre-investigate an issue's cause or pre-decide its fix before dispatch — that judgment belongs to the agent doing the work, not the coordinator. Group issues that touch the same area so one agent owns them; keep unrelated issues on separate agents. Launch all groups in one message so they run concurrently.
