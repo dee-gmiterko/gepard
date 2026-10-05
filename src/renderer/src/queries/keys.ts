@@ -2,6 +2,7 @@ export const qk = {
   all: ['gepard'] as const,
   viewer: () => [...qk.all, 'viewer'] as const,
   viewerRepos: () => [...qk.all, 'viewerRepos'] as const,
+  startup: () => [...qk.all, 'startup'] as const,
   launch: () => [...qk.all, 'launch'] as const,
   projects: () => [...qk.all, 'projects'] as const,
   extensions: () => [...qk.all, 'extensions'] as const,

@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import {
   skipToken,
   useMutation,
@@ -10,7 +9,7 @@ import { reportQueryError } from '../errors/report';
 import { invoke, useIpcEvent } from '../ipc/client';
 import { qk } from './keys';
 import { useAppDispatch, useAppState } from '../state/AppContext';
-import type { ChannelInput, ChannelOutput } from '@gepard/common';
+import type { ChannelInput, OpenedProject } from '@gepard/common';
 
 export function useViewer() {
   return useQuery({ queryKey: qk.viewer(), queryFn: () => invoke('app.viewer') });
@@ -32,42 +31,42 @@ export function useAddProject() {
   });
 }
 
-export function useLaunch() {
-  return useMutation({
-    mutationKey: qk.launch(),
-    mutationFn: (input: ChannelInput<'app.launch'>) => invoke('app.launch', input),
+export function useStartup() {
+  const qc = useQueryClient();
+  return useQuery({
+    queryKey: qk.startup(),
+    queryFn: async () => {
+      const opened = await invoke('app.startup');
+      if (opened) qc.setQueryData<OpenedProject>(qk.open(opened.project.id), opened);
+      return opened;
+    },
+    staleTime: Infinity,
+    gcTime: Infinity,
   });
 }
 
-type DetachedLaunch = Extract<ChannelInput<'app.launch'>, { detached: true }>;
+type LaunchInput = ChannelInput<'app.launch'>;
 
-function isDetachedLaunch(input: unknown): input is DetachedLaunch {
+function isLaunchInput(input: unknown): input is LaunchInput {
   return (
-    typeof input === 'object' && input !== null && 'detached' in input && input.detached === true
+    typeof input === 'object' &&
+    input !== null &&
+    'projectId' in input &&
+    typeof input.projectId === 'string' &&
+    'detached' in input &&
+    typeof input.detached === 'boolean'
   );
 }
 
-export function useLaunchingProjectIds(): string[] {
-  return useMutationState({
-    filters: { mutationKey: qk.launch(), status: 'pending' },
-    select: (mutation) => mutation.state.variables,
-  }).flatMap((input) => (isDetachedLaunch(input) ? [input.projectId] : []));
-}
-
-type OpenedProject = ChannelOutput<'projects.open'>;
-
-function useOpenHere() {
+export function useOpenProject() {
   const qc = useQueryClient();
   const dispatch = useAppDispatch();
   return useMutation({
-    mutationFn: async (projectId: string) => {
-      const [, opened] = await Promise.all([
-        qc.invalidateQueries({ queryKey: qk.project(projectId) }),
-        invoke('projects.open', { projectId }),
-      ]);
-      return opened;
-    },
-    onSuccess: (opened, projectId) => {
+    mutationKey: qk.launch(),
+    mutationFn: (input: LaunchInput) => invoke('app.launch', input),
+    onSuccess: (opened, { projectId }) => {
+      if (!opened) return;
+      void qc.invalidateQueries({ queryKey: qk.project(projectId) });
       qc.setQueryData<OpenedProject>(qk.open(projectId), opened);
       dispatch({
         type: 'project/open',
@@ -79,14 +78,11 @@ function useOpenHere() {
   });
 }
 
-export function useOpenProject(): (projectId: string, detached: boolean) => void {
-  const { mutate: launch } = useLaunch();
-  const { mutate: openHere } = useOpenHere();
-  return useCallback(
-    (projectId: string, detached: boolean) =>
-      detached ? launch({ detached: true, projectId }) : openHere(projectId),
-    [launch, openHere],
-  );
+export function useLaunchingProjectIds(): string[] {
+  return useMutationState({
+    filters: { mutationKey: qk.launch(), status: 'pending' },
+    select: (mutation) => mutation.state.variables,
+  }).flatMap((input) => (isLaunchInput(input) && input.detached ? [input.projectId] : []));
 }
 
 export function useOpenedProject() {

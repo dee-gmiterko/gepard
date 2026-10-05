@@ -1,36 +1,24 @@
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
-
-export const REPORT_WINDOW_SHOWN = 'report-window-shown';
+import { REPORT_WINDOW_SHOWN_SWITCH } from './helpers/process/instance';
 
 export interface Cli {
   target: string | null;
   reportWindowShown: boolean;
 }
 
-function stringsOf(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
-}
-
 export function parseCli(args: string[]): Cli {
   const parsed = yargs(args)
-    .parserConfiguration({
-      'unknown-options-as-args': true,
-      'parse-positional-numbers': false,
-      'populate--': true,
-    })
-    .option(REPORT_WINDOW_SHOWN, { type: 'boolean', default: false, hidden: true })
+    .parserConfiguration({ 'parse-positional-numbers': false })
+    .command('$0 [target]', false, (command) => command.positional('target', { type: 'string' }))
+    .option(REPORT_WINDOW_SHOWN_SWITCH, { type: 'boolean', default: false })
     .help(false)
     .version(false)
     .exitProcess(false)
     .parseSync();
-  const positional = [
-    ...parsed._.filter((arg) => !String(arg).startsWith('-')),
-    ...stringsOf(parsed['--']),
-  ];
   return {
-    target: positional.length > 0 ? String(positional[0]) : null,
-    reportWindowShown: parsed[REPORT_WINDOW_SHOWN],
+    target: typeof parsed['target'] === 'string' ? parsed['target'] : null,
+    reportWindowShown: parsed[REPORT_WINDOW_SHOWN_SWITCH],
   };
 }
 

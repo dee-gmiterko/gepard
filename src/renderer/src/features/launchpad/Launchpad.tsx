@@ -271,7 +271,7 @@ export function Launchpad(): React.JSX.Element {
   const cloneStart = useCloneStart();
   const fetchProject = useFetchProject();
   const launchingIds = useLaunchingProjectIds();
-  const openProject = useOpenProject();
+  const { mutate: openProject } = useOpenProject();
 
   const [url, setUrl] = useState('');
   const [urlTouched, setUrlTouched] = useState(false);
@@ -323,7 +323,7 @@ export function Launchpad(): React.JSX.Element {
   }
 
   function handleOpen(projectId: string, e: MouseEvent): void {
-    openProject(projectId, e.ctrlKey || e.metaKey);
+    openProject({ projectId, detached: e.ctrlKey || e.metaKey });
   }
 
   function handleRemove(projectId: string): void {

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { IsoDate, Login } from './pr';
+import { IsoDate, Login, PersistedTargeting, Sha } from './pr';
 
 export const ProjectId = z
   .string()
@@ -55,3 +55,11 @@ export const PersistedLayout = z.object({
   fullFileDiff: z.boolean().default(false),
 });
 export type PersistedLayout = z.infer<typeof PersistedLayout>;
+
+export const OpenedProject = z.object({
+  project: Project,
+  head: Sha,
+  targeting: PersistedTargeting,
+  layout: PersistedLayout,
+});
+export type OpenedProject = z.infer<typeof OpenedProject>;
