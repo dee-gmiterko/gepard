@@ -16,10 +16,10 @@ export interface InstanceEnv {
 }
 
 export function instanceCommand(
-  target: string,
+  target: string | null,
   env: InstanceEnv,
 ): { command: string; args: string[] } {
-  const args = [target, `--${REPORT_WINDOW_SHOWN_SWITCH}`];
+  const args = [...(target === null ? [] : [target]), `--${REPORT_WINDOW_SHOWN_SWITCH}`];
   if (env.appImage) return { command: env.appImage, args };
   if (env.defaultApp) return { command: env.execPath, args: [env.appPath, ...args] };
   return { command: env.execPath, args };
