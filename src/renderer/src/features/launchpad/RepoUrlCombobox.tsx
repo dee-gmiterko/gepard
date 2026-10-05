@@ -8,10 +8,6 @@ const messages = defineMessages({
     id: 'launchpad.repoCombobox.loading',
     defaultMessage: 'Loading repositories…',
   },
-  empty: {
-    id: 'launchpad.repoCombobox.empty',
-    defaultMessage: 'No matching repositories — typed URLs are still accepted',
-  },
 });
 
 interface RepoUrlComboboxProps {
@@ -41,7 +37,6 @@ export function RepoUrlCombobox({
       getLabel={repoFilterText}
       loading={loading}
       loadingLabel={intl.formatMessage(messages.loading)}
-      emptyLabel={intl.formatMessage(messages.empty)}
       placeholder={placeholder}
     />
   );

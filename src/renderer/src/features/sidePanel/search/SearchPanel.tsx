@@ -52,6 +52,10 @@ const messages = defineMessages({
     id: 'sidePanel.search.searching',
     defaultMessage: 'Searching…',
   },
+  noMatches: {
+    id: 'sidePanel.search.noMatches',
+    defaultMessage: 'No matches.',
+  },
   matchCount: {
     id: 'sidePanel.search.matchCount',
     defaultMessage: '{count, plural, one {# match} other {# matches}}',
@@ -282,6 +286,13 @@ export function SearchPanel(): React.JSX.Element {
         <Results>
           <Message>
             <FormattedMessage {...messages.searching} />
+          </Message>
+        </Results>
+      )}
+      {active && search.isSuccess && files.length === 0 && (
+        <Results>
+          <Message>
+            <FormattedMessage {...messages.noMatches} />
           </Message>
         </Results>
       )}
