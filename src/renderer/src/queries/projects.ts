@@ -1,5 +1,11 @@
 import { useCallback } from 'react';
-import { skipToken, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  skipToken,
+  useMutation,
+  useMutationState,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { reportQueryError } from '../errors/report';
 import { invoke, useIpcEvent } from '../ipc/client';
 import { qk } from './keys';
@@ -28,15 +34,23 @@ export function useAddProject() {
 
 export function useLaunchProject() {
   return useQuery({
-    queryKey: qk.launchProject(),
-    queryFn: () => invoke('app.launchProject'),
+    queryKey: qk.launch(),
+    queryFn: () => invoke('app.launch', { detached: false }),
     staleTime: Infinity,
   });
 }
 
 export function useLaunchDetached() {
   return useMutation({
-    mutationFn: (projectId: string) => invoke('app.launchDetached', { projectId }),
+    mutationKey: qk.launchDetached(),
+    mutationFn: (projectId: string) => invoke('app.launch', { detached: true, projectId }),
+  });
+}
+
+export function useLaunchingProjectIds(): unknown[] {
+  return useMutationState({
+    filters: { mutationKey: qk.launchDetached(), status: 'pending' },
+    select: (mutation) => mutation.state.variables,
   });
 }
 

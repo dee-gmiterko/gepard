@@ -2,6 +2,7 @@ import { mkdir, readdir, rm, stat } from 'node:fs/promises';
 import { z } from 'zod';
 import { Project, PersistedLayout, PersistedTargeting, AppError } from '@gepard/common';
 import { readJsonFile, writeJsonFile } from '../helpers/jsonFile';
+import { parseGitHubRepoUrl } from '../helpers/github/repoUrl';
 import {
   projectDir,
   projectId as makeProjectId,
@@ -85,30 +86,6 @@ export async function setLayout(id: string, layout: PersistedLayout): Promise<vo
   const file = await readProjectFile(id);
   if (!file) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${id}`);
   await writeProjectFile(id, { ...file, layout });
-}
-
-const NAME_RE = /^[A-Za-z0-9_.-]+$/;
-
-function parseGitHubRepoUrl(url: string): { owner: string; repo: string } {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    throw new AppError('BAD_INPUT', `not a valid URL: ${url}`);
-  }
-  const segments = parsed.pathname.split('/').filter(Boolean);
-  const owner = segments[0];
-  const repo = segments[1]?.replace(/\.git$/, '');
-  if (
-    parsed.protocol !== 'https:' ||
-    parsed.hostname !== 'github.com' ||
-    segments.length !== 2 ||
-    !NAME_RE.test(owner) ||
-    !repo ||
-    !NAME_RE.test(repo)
-  )
-    throw new AppError('BAD_INPUT', `expected https://github.com/<owner>/<repo>, got: ${url}`);
-  return { owner, repo };
 }
 
 export async function addProject(url: string): Promise<Project> {

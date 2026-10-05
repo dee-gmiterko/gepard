@@ -3,8 +3,7 @@ import { z } from 'zod';
 export const ChannelNameList = z.enum([
   'app.viewer',
   'app.viewerRepos',
-  'app.launchProject',
-  'app.launchDetached',
+  'app.launch',
   'projects.list',
   'projects.add',
   'projects.open',
