@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { defineMessages, FormattedMessage } from 'react-intl';
-import { useCurrentHead, useOpenProject } from '../../../queries/projects';
+import { useCurrentHead, useOpenedProject } from '../../../queries/projects';
 import { useTree } from '../../../queries/files';
 import { buildTree, withRoot } from '../../../helpers/tree';
 import { Message } from '../../../components/Message';
@@ -27,7 +27,7 @@ export function FileTree(): React.JSX.Element {
   const head = useCurrentHead();
   const { data: paths, isLoading } = useTree();
   const { rowFor } = useRowData();
-  const rootName = useOpenProject().data?.project.repo ?? '';
+  const rootName = useOpenedProject().data?.project.repo ?? '';
 
   const nodes = useMemo(() => {
     const options = { aggregateFolder: aggregateRows };

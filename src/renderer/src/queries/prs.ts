@@ -1,9 +1,7 @@
-import { useCallback } from 'react';
 import {
-  queryOptions,
   skipToken,
-  useIsFetching,
   useMutation,
+  useMutationState,
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
@@ -67,17 +65,7 @@ export function useCreatePr() {
   });
 }
 
-function checkoutQuery(projectId: string, target: TargetRef) {
-  return queryOptions({
-    queryKey: qk.checkout(projectId, target),
-    queryFn: () => invoke('pr.checkout', { projectId, target }),
-    staleTime: 0,
-    retry: false,
-  });
-}
-
 export interface CheckoutTarget {
-  /** Calls made while the same target is still checking out share that checkout. */
   checkout: (target: TargetRef) => Promise<CheckoutResult>;
   pending: boolean;
 }
@@ -85,14 +73,14 @@ export interface CheckoutTarget {
 export function useCheckoutTarget(): CheckoutTarget {
   const projectId = useAppState().projectId ?? '';
   const qc = useQueryClient();
-  const pending = useIsFetching({ queryKey: qk.checkoutAll(projectId) }) > 0;
-  const checkout = useCallback(
-    (target: TargetRef) =>
-      qc.fetchQuery(checkoutQuery(projectId, target)).finally(() => {
-        void qc.invalidateQueries({ queryKey: qk.index(projectId) });
-      }),
-    [qc, projectId],
-  );
+  const { mutateAsync: checkout } = useMutation({
+    mutationKey: qk.checkout(projectId),
+    mutationFn: (target: TargetRef) => invoke('pr.checkout', { projectId, target }),
+    onSettled: () => qc.invalidateQueries({ queryKey: qk.index(projectId) }),
+  });
+  const pending =
+    useMutationState({ filters: { mutationKey: qk.checkout(projectId), status: 'pending' } })
+      .length > 0;
   return { checkout, pending };
 }
 

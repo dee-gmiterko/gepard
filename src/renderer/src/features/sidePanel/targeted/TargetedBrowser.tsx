@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import { useAppDispatch, useAppState } from '../../../state/AppContext';
 import { isDiffView } from '../../../state/selectors';
-import { useOpenProject, useSetLayout } from '../../../queries/projects';
+import { useOpenedProject, useSetLayout } from '../../../queries/projects';
 import { useTargetedFiles, useTree } from '../../../queries/files';
 import { buildTree, buildFlatList, withRoot, type TreeNode } from '../../../helpers/tree';
 import { Message } from '../../../components/Message';
@@ -61,7 +61,7 @@ export function TargetedBrowser(): React.JSX.Element {
   const { diffMode, changedLoading, rowFor } = useRowData();
   const targetedFiles = useTargetedFiles();
   const fullTree = useTree();
-  const rootName = useOpenProject().data?.project.repo ?? '';
+  const rootName = useOpenedProject().data?.project.repo ?? '';
 
   const items = useMemo(
     () => targetedFiles.map((p) => ({ path: p, data: rowFor(p) })),
