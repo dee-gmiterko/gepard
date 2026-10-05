@@ -151,7 +151,7 @@ export function useSync() {
     mutationFn: async (mode: SyncMode = 'full') => ({
       pr,
       commit,
-      ...(await invoke('sync.run', { projectId, pr, mode, commit })),
+      ...(await invoke('sync.run', { projectId, pr, commit, mode })),
     }),
     onSuccess: (result) => {
       if (result.pr !== pr || result.commit !== commit) return;

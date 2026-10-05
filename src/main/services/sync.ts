@@ -326,9 +326,9 @@ export class SyncService {
   private async runSyncLocked(
     projectId: string,
     pr: number,
-    mode: SyncMode,
     ctx: SyncContext,
     commit: string | undefined,
+    mode: SyncMode,
   ): Promise<SyncResult> {
     log.info('sync', `projectId=${projectId} pr=${pr} mode=${mode} start`);
     const store = await review.loadReview(projectId, pr);
@@ -429,12 +429,12 @@ export class SyncService {
   async runSync(
     projectId: string,
     pr: number,
-    mode: SyncMode,
     ctx: SyncContext,
-    commit?: string,
+    commit: string | undefined,
+    mode: SyncMode,
   ): Promise<SyncResult> {
     return withReviewLock(projectId, pr, () =>
-      this.runSyncLocked(projectId, pr, mode, ctx, commit),
+      this.runSyncLocked(projectId, pr, ctx, commit, mode),
     );
   }
 }

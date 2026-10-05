@@ -10,9 +10,9 @@ export function createSyncHandlers(
   syncService: SyncService,
 ): Pick<HandlerMap, 'sync.run' | 'sync.pendingCount' | 'index.get' | 'index.languages'> {
   return {
-    'sync.run': async ({ projectId, pr, mode, commit }) => {
+    'sync.run': async ({ projectId, pr, commit, mode }) => {
       const { owner, repo } = await gh.repoRefFor(projectId);
-      return syncService.runSync(projectId, pr, mode, { owner, repo }, commit);
+      return syncService.runSync(projectId, pr, { owner, repo }, commit, mode);
     },
 
     'sync.pendingCount': async ({ projectId, pr }) => {
