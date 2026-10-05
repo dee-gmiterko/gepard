@@ -15,7 +15,7 @@ git fetch origin main
 # Start fresh from main on every run so stale merges never pile up.
 git checkout -B "$branch" origin/main
 
-mapfile -t prs < <(gh pr list --state open --json number --jq '.[].number')
+mapfile -t prs < <(gh pr list --state open --json number,headRefName --jq '.[] | select(.headRefName | startswith("release-please--") | not) | .number')
 
 for pr in "${prs[@]}"; do
   echo "Merging PR #$pr"
