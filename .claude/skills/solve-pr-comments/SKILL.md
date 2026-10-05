@@ -17,6 +17,8 @@ PR list: the PRs the user named, otherwise the user's open PRs:
 gh pr list --author "@me" --state open --json number,headRefName
 ```
 
+The release-please pull request (`chore(main): release x.y.z` on a `release-please--*` branch) is ignored by this skill: drop it from the list even when it appears there, and never check it out or push to it.
+
 Record the starting branch: `git branch --show-current`.
 
 For each PR:
