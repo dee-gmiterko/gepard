@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CommentsRef } from './refs';
 import {
   Actor,
   ChangeType,
@@ -189,19 +190,15 @@ export const DraftAnchor = z.object({
 });
 export type DraftAnchor = z.infer<typeof DraftAnchor>;
 
-export const CommentDraft = z
-  .object({
-    projectId: z.string(),
-    pr: z.int().positive().nullable(),
-    id: NodeId.nullable().default(null),
-    threadId: NodeId.nullable().default(null),
-    anchor: DraftAnchor.nullable().default(null),
-    general: z.boolean().default(false),
-    prId: NodeId.nullable().default(null),
-    body: z.string().min(1),
-    references: z.array(CommentReference).default([]),
-  })
-  .refine((d) => d.id !== null || d.threadId !== null || d.anchor !== null || d.general, {
-    message: 'a new thread needs an anchor',
-  });
+export const CommentDraft = CommentsRef.extend({
+  id: NodeId.nullable().default(null),
+  threadId: NodeId.nullable().default(null),
+  anchor: DraftAnchor.nullable().default(null),
+  general: z.boolean().default(false),
+  prId: NodeId.nullable().default(null),
+  body: z.string().min(1),
+  references: z.array(CommentReference).default([]),
+}).refine((d) => d.id !== null || d.threadId !== null || d.anchor !== null || d.general, {
+  message: 'a new thread needs an anchor',
+});
 export type CommentDraft = z.input<typeof CommentDraft>;

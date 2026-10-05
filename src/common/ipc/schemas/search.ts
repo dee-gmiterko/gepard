@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { RepoPath } from './pr';
+import { RepoPath, Sha } from './pr';
+import { ProjectRef } from './refs';
 
 export const Pos = z.object({ line: z.int().positive(), col: z.int().positive() });
 export type Pos = z.infer<typeof Pos>;
@@ -62,37 +63,32 @@ export const WorkspaceSymbol = z.object({
 });
 export type WorkspaceSymbol = z.infer<typeof WorkspaceSymbol>;
 
-const SearchBase = {
-  projectId: z.string(),
-  sha: z.string().regex(/^[0-9a-f]{40}$/),
+const SearchBase = ProjectRef.extend({
+  sha: Sha,
   scope: SearchScope,
   targetedPaths: z.array(RepoPath).default([]),
   limit: z.int().positive().max(200).optional(),
   offset: z.int().nonnegative().default(0),
   maxMatchesPerFile: z.int().positive().optional(),
-};
+});
 export const SearchQuery = z.discriminatedUnion('kind', [
-  z.object({
-    ...SearchBase,
+  SearchBase.extend({
     kind: z.literal('pattern'),
     text: z.string().min(1),
     word: z.boolean().default(false),
     caseSensitive: z.boolean().default(false),
   }),
-  z.object({
-    ...SearchBase,
+  SearchBase.extend({
     kind: z.literal('regex'),
     text: z.string().min(1),
     caseSensitive: z.boolean().default(false),
   }),
-  z.object({
-    ...SearchBase,
+  SearchBase.extend({
     kind: z.literal('exactLine'),
     text: z.string().min(1),
     origin: z.object({ path: RepoPath, line: z.int().positive() }),
   }),
-  z.object({
-    ...SearchBase,
+  SearchBase.extend({
     kind: z.literal('references'),
     text: z.string().min(1),
     at: z.object({ path: RepoPath, pos: Pos }),

@@ -1,12 +1,6 @@
 import { z } from 'zod';
-import {
-  ClonePhase,
-  Viewer,
-  ViewerRepo,
-  Project,
-  ProjectId,
-  PersistedLayout,
-} from './schemas/project';
+import { ClonePhase, Viewer, ViewerRepo, Project, PersistedLayout } from './schemas/project';
+import { CommentsRef, PrRef, ProjectRef } from './schemas/refs';
 import {
   ChangedFile,
   CheckoutResult,
@@ -46,223 +40,219 @@ import {
 } from './schemas/contextMenu';
 import type { ChannelNameList, EventNameList } from './names';
 
-const ch = <I extends z.ZodType, O extends z.ZodType>(
-  input: I,
-  output: O,
-): { input: I; output: O } => ({
-  input,
-  output,
-});
-
-const ProjectRef = { projectId: ProjectId };
-const PrRef = { projectId: ProjectId, pr: z.int().positive() };
-const CommentsRef = { projectId: ProjectId, pr: z.int().positive().nullable() };
+interface ChannelSpec {
+  input: z.ZodType;
+  output: z.ZodType;
+}
 
 export const channels = {
-  'app.viewer': ch(z.void(), Viewer.nullable()),
-  'app.viewerRepos': ch(z.void(), z.array(ViewerRepo)),
-  'app.launch': ch(
-    z.discriminatedUnion('detached', [
+  'app.viewer': { input: z.void(), output: Viewer.nullable() },
+  'app.viewerRepos': { input: z.void(), output: z.array(ViewerRepo) },
+  'app.launch': {
+    input: z.discriminatedUnion('detached', [
       z.object({ detached: z.literal(false) }),
-      z.object({ detached: z.literal(true), ...ProjectRef }),
+      ProjectRef.extend({ detached: z.literal(true) }),
     ]),
-    Project.nullable(),
-  ),
+    output: Project.nullable(),
+  },
 
-  'projects.list': ch(z.void(), z.array(Project)),
-  'projects.add': ch(
-    z.object({
+  'projects.list': { input: z.void(), output: z.array(Project) },
+  'projects.add': {
+    input: z.object({
       url: z.url({
         protocol: /^https$/,
         hostname: /^github\.com$/,
         error: 'expected https://github.com/<owner>/<repo>',
       }),
     }),
-    Project,
-  ),
-  'projects.open': ch(
-    z.object(ProjectRef),
-    z.object({
+    output: Project,
+  },
+  'projects.open': {
+    input: ProjectRef,
+    output: z.object({
       project: Project,
       head: Sha,
       targeting: PersistedTargeting,
       layout: PersistedLayout,
     }),
-  ),
-  'projects.setTargeting': ch(z.object({ ...ProjectRef, targeting: PersistedTargeting }), z.void()),
-  'projects.setLayout': ch(z.object({ ...ProjectRef, layout: PersistedLayout }), z.void()),
-  'projects.remove': ch(z.object(ProjectRef), z.void()),
-  'projects.fetch': ch(z.object(ProjectRef), z.void()),
-  'clone.start': ch(z.object(ProjectRef), z.void()),
+  },
+  'projects.setTargeting': {
+    input: ProjectRef.extend({ targeting: PersistedTargeting }),
+    output: z.void(),
+  },
+  'projects.setLayout': { input: ProjectRef.extend({ layout: PersistedLayout }), output: z.void() },
+  'projects.remove': { input: ProjectRef, output: z.void() },
+  'projects.fetch': { input: ProjectRef, output: z.void() },
+  'clone.start': { input: ProjectRef, output: z.void() },
 
-  'pr.list': ch(
-    z.object({
-      ...ProjectRef,
+  'pr.list': {
+    input: ProjectRef.extend({
       search: z.string().optional(),
       commit: Sha.optional(),
       path: RepoPath.optional(),
     }),
-    z.array(PrListItem),
-  ),
-  'pr.view': ch(z.object(PrRef), PrSummary),
-  'pr.commits': ch(z.object({ ...PrRef, path: RepoPath.optional() }), z.array(Commit)),
-  'pr.checkout': ch(z.object({ ...ProjectRef, target: TargetRef }), CheckoutResult),
-  'pr.branches': ch(
-    z.object(ProjectRef),
-    z.object({
+    output: z.array(PrListItem),
+  },
+  'pr.view': { input: PrRef, output: PrSummary },
+  'pr.commits': { input: PrRef.extend({ path: RepoPath.optional() }), output: z.array(Commit) },
+  'pr.checkout': { input: ProjectRef.extend({ target: TargetRef }), output: CheckoutResult },
+  'pr.branches': {
+    input: ProjectRef,
+    output: z.object({
       branches: z.array(z.string().min(1)),
       defaultBranch: z.string().min(1).nullable(),
     }),
-  ),
-  'pr.create': ch(
-    z.object({
-      ...ProjectRef,
+  },
+  'pr.create': {
+    input: ProjectRef.extend({
       base: z.string().min(1),
       head: z.string().min(1),
       title: z.string().min(1),
       body: z.string().default(''),
     }),
-    PrSummary,
-  ),
-  'issues.create': ch(
-    z.object({
-      ...ProjectRef,
+    output: PrSummary,
+  },
+  'issues.create': {
+    input: ProjectRef.extend({
       title: z.string().min(1),
       body: z.string().default(''),
       clearUnassignedThreadIds: z.array(NodeId).default([]),
     }),
-    IssueRef,
-  ),
-  'commits.list': ch(
-    z.object({
-      ...ProjectRef,
+    output: IssueRef,
+  },
+  'commits.list': {
+    input: ProjectRef.extend({
       search: z.string().optional(),
       path: RepoPath.optional(),
       limit: z.int().positive().optional(),
     }),
-    z.array(Commit),
-  ),
+    output: z.array(Commit),
+  },
 
-  'overview.project': ch(z.object(ProjectRef), ProjectOverview),
-  'overview.pr': ch(z.object(PrRef), PrOverviewDetails),
-  'overview.owners': ch(
-    z.object({ ...ProjectRef, base: Sha, head: Sha }),
-    ChangedFileOwners.nullable(),
-  ),
+  'overview.project': { input: ProjectRef, output: ProjectOverview },
+  'overview.pr': { input: PrRef, output: PrOverviewDetails },
+  'overview.owners': {
+    input: ProjectRef.extend({ base: Sha, head: Sha }),
+    output: ChangedFileOwners.nullable(),
+  },
 
-  'files.changed': ch(z.object({ ...ProjectRef, base: Sha, head: Sha }), z.array(ChangedFile)),
-  'files.diff': ch(z.object({ ...ProjectRef, base: Sha, head: Sha, path: RepoPath }), FileDiff),
-  'files.content': ch(z.object({ ...ProjectRef, sha: Sha, path: RepoPath }), FileContent),
-  'trees.get': ch(z.object({ ...ProjectRef, sha: Sha }), z.array(RepoPath)),
+  'files.changed': {
+    input: ProjectRef.extend({ base: Sha, head: Sha }),
+    output: z.array(ChangedFile),
+  },
+  'files.diff': {
+    input: ProjectRef.extend({ base: Sha, head: Sha, path: RepoPath }),
+    output: FileDiff,
+  },
+  'files.content': { input: ProjectRef.extend({ sha: Sha, path: RepoPath }), output: FileContent },
+  'trees.get': { input: ProjectRef.extend({ sha: Sha }), output: z.array(RepoPath) },
 
-  'search.run': ch(SearchQuery, GroupedResult),
-  'symbols.line': ch(
-    z.object({ ...ProjectRef, sha: Sha, path: RepoPath, line: z.int().positive() }),
-    LineSymbolsResult,
-  ),
-  'symbols.definition': ch(
-    z.object({ ...ProjectRef, sha: Sha, path: RepoPath, pos: Pos }),
-    DefinitionResult,
-  ),
-  'symbols.workspace': ch(
-    z.object({
-      ...ProjectRef,
+  'search.run': { input: SearchQuery, output: GroupedResult },
+  'symbols.line': {
+    input: ProjectRef.extend({ sha: Sha, path: RepoPath, line: z.int().positive() }),
+    output: LineSymbolsResult,
+  },
+  'symbols.definition': {
+    input: ProjectRef.extend({ sha: Sha, path: RepoPath, pos: Pos }),
+    output: DefinitionResult,
+  },
+  'symbols.workspace': {
+    input: ProjectRef.extend({
       sha: Sha,
       query: z.string(),
       limit: z.int().positive().optional(),
       kinds: z.array(SymbolKind).optional(),
     }),
-    z.array(WorkspaceSymbol),
-  ),
-  'symbols.document': ch(
-    z.object({ ...ProjectRef, sha: Sha, path: RepoPath }),
-    DocumentSymbolsResult,
-  ),
+    output: z.array(WorkspaceSymbol),
+  },
+  'symbols.document': {
+    input: ProjectRef.extend({ sha: Sha, path: RepoPath }),
+    output: DocumentSymbolsResult,
+  },
 
-  'comments.list': ch(z.object(CommentsRef), z.array(ReviewThread)),
-  'comments.upsert': ch(CommentDraft, Comment),
-  'comments.delete': ch(z.object({ ...CommentsRef, commentId: z.string() }), z.void()),
-  'viewed.list': ch(z.object(PrRef), z.array(LocalViewedState)),
-  'viewed.set': ch(
-    z.object({
-      ...PrRef,
+  'comments.list': { input: CommentsRef, output: z.array(ReviewThread) },
+  'comments.upsert': { input: CommentDraft, output: Comment },
+  'comments.delete': { input: CommentsRef.extend({ commentId: z.string() }), output: z.void() },
+  'viewed.list': { input: PrRef, output: z.array(LocalViewedState) },
+  'viewed.set': {
+    input: PrRef.extend({
       paths: z.array(RepoPath).min(1),
       viewed: z.boolean(),
       prId: NodeId.nullable().default(null),
     }),
-    z.array(LocalViewedState),
-  ),
+    output: z.array(LocalViewedState),
+  },
 
-  'sync.run': ch(
-    z.object({ ...PrRef, mode: SyncMode.default('full') }),
-    z.object({
+  'sync.run': {
+    input: PrRef.extend({ mode: SyncMode.default('full') }),
+    output: CheckoutResult.extend({
       syncedAt: z.iso.datetime({ offset: true }),
       droppedRemoteDeleted: z.int().nonnegative(),
-      ...CheckoutResult.shape,
     }),
-  ),
-  'sync.pendingCount': ch(z.object(PrRef), z.int().nonnegative()),
-  'index.get': ch(z.object(ProjectRef), IndexStatus),
-  'index.languages': ch(z.object(ProjectRef), z.array(LanguageServerStatus).nullable()),
+  },
+  'sync.pendingCount': { input: PrRef, output: z.int().nonnegative() },
+  'index.get': { input: ProjectRef, output: IndexStatus },
+  'index.languages': { input: ProjectRef, output: z.array(LanguageServerStatus).nullable() },
 
-  'log.write': ch(
-    z.object({
+  'log.write': {
+    input: z.object({
       level: LogLevel,
       scope: z.string(),
       message: z.string(),
     }),
-    z.void(),
-  ),
-  'log.getPath': ch(z.void(), z.string()),
+    output: z.void(),
+  },
+  'log.getPath': { input: z.void(), output: z.string() },
 
-  'extensions.list': ch(z.void(), z.array(ExtensionInfo)),
-  'extensions.setEnabled': ch(
-    z.object({ id: z.string(), enabled: z.boolean() }),
-    z.array(ExtensionInfo),
-  ),
-  'extensions.install': ch(z.object({ dialogTitle: z.string().min(1) }), z.array(ExtensionInfo)),
-  'extensions.dir': ch(z.void(), z.string()),
+  'extensions.list': { input: z.void(), output: z.array(ExtensionInfo) },
+  'extensions.setEnabled': {
+    input: z.object({ id: z.string(), enabled: z.boolean() }),
+    output: z.array(ExtensionInfo),
+  },
+  'extensions.install': {
+    input: z.object({ dialogTitle: z.string().min(1) }),
+    output: z.array(ExtensionInfo),
+  },
+  'extensions.dir': { input: z.void(), output: z.string() },
 
-  'grammars.list': ch(z.void(), z.array(GrammarModule)),
+  'grammars.list': { input: z.void(), output: z.array(GrammarModule) },
 
-  'theme.getSystemPrefersDark': ch(z.void(), z.boolean()),
-  'theme.getTemplateId': ch(z.void(), z.string().nullable()),
-  'theme.setTemplateId': ch(z.object({ templateId: z.string().nullable() }), z.string().nullable()),
-  'themes.list': ch(z.void(), z.array(ThemeTemplateData)),
+  'theme.getSystemPrefersDark': { input: z.void(), output: z.boolean() },
+  'theme.getTemplateId': { input: z.void(), output: z.string().nullable() },
+  'theme.setTemplateId': {
+    input: z.object({ templateId: z.string().nullable() }),
+    output: z.string().nullable(),
+  },
+  'themes.list': { input: z.void(), output: z.array(ThemeTemplateData) },
 
-  'locale.getLocaleId': ch(z.void(), z.string().nullable()),
-  'locale.setLocaleId': ch(z.object({ localeId: z.string().nullable() }), z.string().nullable()),
-  'locales.list': ch(z.void(), z.array(LocaleData)),
+  'locale.getLocaleId': { input: z.void(), output: z.string().nullable() },
+  'locale.setLocaleId': {
+    input: z.object({ localeId: z.string().nullable() }),
+    output: z.string().nullable(),
+  },
+  'locales.list': { input: z.void(), output: z.array(LocaleData) },
 
-  'keybindings.getOverrides': ch(z.void(), z.record(z.string(), z.string())),
-  'keybindings.setOverride': ch(
-    z.object({ id: z.string(), key: z.string().nullable() }),
-    z.record(z.string(), z.string()),
-  ),
+  'keybindings.getOverrides': { input: z.void(), output: z.record(z.string(), z.string()) },
+  'keybindings.setOverride': {
+    input: z.object({ id: z.string(), key: z.string().nullable() }),
+    output: z.record(z.string(), z.string()),
+  },
 
-  'contextMenu.setLabels': ch(ContextMenuLabels, z.void()),
-  'contextMenu.setLineTarget': ch(ContextMenuLineTarget, z.void()),
-  'contextMenu.showFileView': ch(FileViewMenuRequest, FileViewMenuPick.nullable()),
-} as const satisfies Record<ChannelNameList, { input: z.ZodType; output: z.ZodType }>;
+  'contextMenu.setLabels': { input: ContextMenuLabels, output: z.void() },
+  'contextMenu.setLineTarget': { input: ContextMenuLineTarget, output: z.void() },
+  'contextMenu.showFileView': { input: FileViewMenuRequest, output: FileViewMenuPick.nullable() },
+} as const satisfies Record<ChannelNameList, ChannelSpec>;
 
 export const events = {
-  'clone.progress': z.object({
-    projectId: z.string(),
+  'clone.progress': ProjectRef.extend({
     phase: ClonePhase,
     percent: z.number().min(0).max(100).nullable(),
     message: z.string().optional(),
   }),
-  'index.status': z.object({ projectId: z.string(), status: IndexStatus }),
+  'index.status': ProjectRef.extend({ status: IndexStatus }),
   'theme.changed': z.object({ dark: z.boolean() }),
   'app.error': z.object({ scope: z.string(), message: z.string() }),
 } as const satisfies Record<EventNameList, z.ZodType>;
-
-type ExtraChannel = Exclude<keyof typeof channels, ChannelNameList>;
-type ExtraEvent = Exclude<keyof typeof events, EventNameList>;
-type MustBeTrue<T extends true> = T;
-export type NamesComplete = MustBeTrue<
-  [ExtraChannel, ExtraEvent] extends [never, never] ? true : false
->;
 
 export type Channels = typeof channels;
 export type ChannelName = keyof Channels;
