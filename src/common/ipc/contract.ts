@@ -1,5 +1,12 @@
 import { z } from 'zod';
-import { ClonePhase, Viewer, ViewerRepo, Project, PersistedLayout } from './schemas/project';
+import {
+  ClonePhase,
+  OpenedProject,
+  Viewer,
+  ViewerRepo,
+  Project,
+  PersistedLayout,
+} from './schemas/project';
 import { CommentsRef, PrRef, ProjectRef } from './schemas/refs';
 import {
   ChangedFile,
@@ -49,12 +56,10 @@ export const channels = {
   'app.viewer': { input: z.void(), output: Viewer.nullable() },
   'app.viewerRepos': { input: z.void(), output: z.array(ViewerRepo) },
   'app.launch': {
-    input: z.discriminatedUnion('detached', [
-      z.object({ detached: z.literal(false) }),
-      ProjectRef.extend({ detached: z.literal(true) }),
-    ]),
-    output: Project.nullable(),
+    input: ProjectRef.extend({ detached: z.boolean() }),
+    output: OpenedProject.nullable(),
   },
+  'app.startup': { input: z.void(), output: OpenedProject.nullable() },
 
   'projects.list': { input: z.void(), output: z.array(Project) },
   'projects.add': {
@@ -66,15 +71,6 @@ export const channels = {
       }),
     }),
     output: Project,
-  },
-  'projects.open': {
-    input: ProjectRef,
-    output: z.object({
-      project: Project,
-      head: Sha,
-      targeting: PersistedTargeting,
-      layout: PersistedLayout,
-    }),
   },
   'projects.setTargeting': {
     input: ProjectRef.extend({ targeting: PersistedTargeting }),

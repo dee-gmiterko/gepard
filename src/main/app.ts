@@ -7,8 +7,7 @@ import { log } from './log';
 import { markRendererReady, notifyMainFailure } from './notify';
 import { formatCaughtError } from './helpers/error';
 import { startPortalThemeSync } from './helpers/portalTheme';
-import { WINDOW_SHOWN_MARKER } from './helpers/process/instance';
-import { cli } from './cli';
+import { launchService } from './services/launch';
 
 export function bootstrap(): void {
   // Electron derives the userData path from the app name at the first
@@ -53,12 +52,8 @@ export function bootstrap(): void {
         emit('theme.changed', { dark: nativeTheme.shouldUseDarkColors });
       });
 
-      const window = createMainWindow();
-      if (cli.reportWindowShown) {
-        // The launching instance may quit before this one stops logging to stdout.
-        process.stdout.on('error', () => undefined);
-        window.once('show', () => process.stdout.write(`${WINDOW_SHOWN_MARKER}\n`));
-      }
+      void launchService.startup();
+      createMainWindow();
 
       app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createMainWindow();

@@ -1,42 +1,93 @@
 import { spawn } from 'node:child_process';
 import { app } from 'electron';
-import { AppError, type Project } from '@gepard/common';
+import {
+  AppError,
+  type ChannelParsedInput,
+  type OpenedProject,
+  type Project,
+} from '@gepard/common';
 import { isGitHubRepoUrl } from '../helpers/github/repoUrl';
 import { findProjectByName } from '../helpers/projects';
-import { WINDOW_SHOWN_MARKER, appCommand, waitForLine } from '../helpers/process/instance';
-import { REPORT_WINDOW_SHOWN, cli } from '../cli';
+import { instanceCommand, waitForInstance } from '../helpers/process/instance';
+import { formatCaughtError } from '../helpers/error';
+import { cli } from '../cli';
 import * as store from '../store/projects';
+import { indexer } from '../lsp';
+import { projectRepoDir } from '../paths';
+import { emit } from '../ipc/registry';
+import { notifyMainFailure } from '../notify';
 import { log } from '../log';
-
-const WINDOW_SHOWN_TIMEOUT_MS = 15_000;
+import { gitService, type GitService } from './git';
 
 export class LaunchService {
-  private resolved: Promise<Project | null> | null = null;
+  private started: Promise<OpenedProject | null> | null = null;
 
-  constructor(private readonly target: string | null) {}
+  constructor(
+    private readonly git: GitService,
+    private readonly target: string | null,
+  ) {}
 
-  project(): Promise<Project | null> {
-    this.resolved ??= this.resolveTarget();
-    return this.resolved;
+  startup(): Promise<OpenedProject | null> {
+    this.started ??= this.openTarget();
+    return this.started;
   }
 
-  private async resolveTarget(): Promise<Project | null> {
+  private async openTarget(): Promise<OpenedProject | null> {
     if (this.target === null) return null;
-    log.info('launch', `opening ${this.target}`);
-    if (isGitHubRepoUrl(this.target)) return store.addProject(this.target);
-    const project = findProjectByName(await store.listProjects(), this.target);
+    try {
+      log.info('launch', `opening ${this.target}`);
+      const project = await this.resolveTarget(this.target);
+      if (project.cloned) return await this.open(project.id);
+      this.git.cloneProject(project.id, project.url).catch(() => undefined);
+      return null;
+    } catch (e) {
+      notifyMainFailure('launch', formatCaughtError(e));
+      return null;
+    }
+  }
+
+  private async resolveTarget(target: string): Promise<Project> {
+    if (isGitHubRepoUrl(target)) return store.addProject(target);
+    const project = findProjectByName(await store.listProjects(), target);
     if (!project)
       throw new AppError(
         'BAD_INPUT',
-        `unknown project "${this.target}": expected a project name (owner/repo) or a GitHub URL`,
+        `unknown project "${target}": expected a project name (owner/repo) or a GitHub URL`,
       );
     return project;
   }
 
-  async launchDetached(projectId: string): Promise<Project> {
+  async launch({
+    projectId,
+    detached,
+  }: ChannelParsedInput<'app.launch'>): Promise<OpenedProject | null> {
+    if (!detached) return this.open(projectId);
+    await this.launchDetached(projectId);
+    return null;
+  }
+
+  async open(projectId: string): Promise<OpenedProject> {
     const project = await store.getProject(projectId);
     if (!project) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${projectId}`);
-    const { command, args } = appCommand([project.url, `--${REPORT_WINDOW_SHOWN}`], {
+    if (!project.cloned)
+      throw new AppError('PROJECT_NOT_CLONED', `project ${projectId} is not cloned yet`);
+    const [{ head, files }, targeting, layout] = await Promise.all([
+      this.git.workingTree(projectId),
+      store.getLastTargeting(projectId),
+      store.getLayout(projectId),
+    ]);
+    indexer.open(projectId, projectRepoDir(projectId), files, head).catch((e) => {
+      const message = e instanceof Error ? e.message : String(e);
+      log.error('launch', `indexer failed for ${projectId}: ${message}`);
+      emit('index.status', { projectId, status: { state: 'error', message } });
+    });
+    return { project, head, targeting, layout };
+  }
+
+  private async launchDetached(projectId: string): Promise<void> {
+    const project = await store.getProject(projectId);
+    if (!project) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${projectId}`);
+    const { command, args } = instanceCommand(project.url, {
       execPath: process.execPath,
       appPath: app.getAppPath(),
       defaultApp: Boolean(process.defaultApp),
@@ -45,11 +96,8 @@ export class LaunchService {
     log.info('launch', `detached instance: ${command} ${args.join(' ')}`);
     const child = spawn(command, args, { detached: true, stdio: ['ignore', 'pipe', 'ignore'] });
     child.unref();
-    const shown = await waitForLine(child, WINDOW_SHOWN_MARKER, WINDOW_SHOWN_TIMEOUT_MS);
-    if (!shown)
-      log.warn('launch', `no window reported within ${WINDOW_SHOWN_TIMEOUT_MS}ms: ${command}`);
-    return project;
+    if (!(await waitForInstance(child))) log.warn('launch', `no window reported: ${command}`);
   }
 }
 
-export const launchService = new LaunchService(cli.target);
+export const launchService = new LaunchService(gitService, cli.target);

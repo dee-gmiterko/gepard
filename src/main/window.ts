@@ -7,6 +7,8 @@ import { isAllowedExternalUrl } from './helpers/url';
 import { notifyMainFailure } from './notify';
 import { formatCaughtError } from './helpers/error';
 import { installContextMenu } from './contextMenu';
+import { reportWindowShown } from './helpers/process/instance';
+import { cli } from './cli';
 
 function openExternal(url: string): void {
   shell
@@ -52,6 +54,7 @@ export function createMainWindow(): BrowserWindow {
   });
 
   installContextMenu(window.webContents);
+  if (cli.reportWindowShown) reportWindowShown(window);
 
   window.once('ready-to-show', () => {
     window.maximize();
