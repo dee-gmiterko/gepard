@@ -7,6 +7,7 @@ export * from './lsp';
 export * from './overview';
 export * from './pr';
 export * from './project';
+export * from './refs';
 export * from './search';
 export * from './theme';
 export * from './contextMenu';
