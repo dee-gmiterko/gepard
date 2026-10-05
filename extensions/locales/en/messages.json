@@ -270,6 +270,7 @@
   "launchpad.confirmRemoveQuestion": "Remove this project and its local review data?",
   "launchpad.empty": "No projects yet — add one above.",
   "launchpad.fetch": "Fetch",
+  "launchpad.launching": "Opening in a new window…",
   "launchpad.loading": "Loading projects…",
   "launchpad.open": "Open",
   "launchpad.openSettings": "Settings",
