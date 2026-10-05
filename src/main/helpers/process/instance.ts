@@ -3,7 +3,22 @@ import type { Readable } from 'node:stream';
 import { AppError, errorMessage } from '@gepard/common';
 import { makeLineSplitter } from './exec';
 
-export const WINDOW_SHOWN_SWITCH = 'report-window-shown';
+export interface AppCommandEnv {
+  execPath: string;
+  appPath: string;
+  defaultApp: boolean;
+  appImage: string | undefined;
+}
+
+export function appCommand(
+  args: string[],
+  env: AppCommandEnv,
+): { command: string; args: string[] } {
+  if (env.appImage) return { command: env.appImage, args };
+  if (env.defaultApp) return { command: env.execPath, args: [env.appPath, ...args] };
+  return { command: env.execPath, args };
+}
+
 export const WINDOW_SHOWN_MARKER = 'gepard:window-shown';
 
 export interface SpawnedProcess extends EventEmitter {
