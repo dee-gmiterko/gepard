@@ -27,7 +27,7 @@ export interface RunBufferResult {
   exitCode: number;
 }
 
-function makeLineSplitter(onLine: (line: string) => void): (chunk: Buffer | string) => void {
+export function makeLineSplitter(onLine: (line: string) => void): (chunk: Buffer | string) => void {
   let buf = '';
   return (chunk) => {
     buf += chunk.toString('utf8');

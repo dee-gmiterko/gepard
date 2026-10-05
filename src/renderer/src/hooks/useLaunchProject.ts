@@ -15,7 +15,7 @@ export function useLaunchProjectOnStartup(): void {
     if (!project || handled.current) return;
     handled.current = true;
     qc.invalidateQueries({ queryKey: qk.projects() }).catch((error: unknown) =>
-      reportQueryError('app.launchProject', error),
+      reportQueryError('app.launch', error),
     );
     if (project.cloned) void openProject(project.id);
     else startClone(project.id);

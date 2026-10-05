@@ -1,14 +1,18 @@
 import { spawn } from 'node:child_process';
 import { app } from 'electron';
 import { AppError, type Project } from '@gepard/common';
+import { isGitHubRepoUrl } from '../helpers/github/repoUrl';
+import { findProjectByName } from '../helpers/projects';
+import { appCommand, positionalFromArgv } from '../helpers/process/argv';
 import {
-  detachedLaunchCommand,
-  findProjectByName,
-  isGitHubUrl,
-  launchTargetFromArgv,
-} from '../helpers/launch';
+  WINDOW_SHOWN_MARKER,
+  WINDOW_SHOWN_SWITCH,
+  waitForLine,
+} from '../helpers/process/readiness';
 import * as store from '../store/projects';
 import { log } from '../log';
+
+const WINDOW_SHOWN_TIMEOUT_MS = 15_000;
 
 export class LaunchService {
   private resolved: Promise<Project | null> | null = null;
@@ -23,7 +27,7 @@ export class LaunchService {
   private async resolveTarget(): Promise<Project | null> {
     if (this.target === null) return null;
     log.info('launch', `opening ${this.target}`);
-    if (isGitHubUrl(this.target)) return store.addProject(this.target);
+    if (isGitHubRepoUrl(this.target)) return store.addProject(this.target);
     const project = findProjectByName(await store.listProjects(), this.target);
     if (!project)
       throw new AppError(
@@ -33,20 +37,25 @@ export class LaunchService {
     return project;
   }
 
-  async launchDetached(projectId: string): Promise<void> {
+  async launchDetached(projectId: string): Promise<Project> {
     const project = await store.getProject(projectId);
     if (!project) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${projectId}`);
-    const { command, args } = detachedLaunchCommand(project.url, {
+    const { command, args } = appCommand([project.url, `--${WINDOW_SHOWN_SWITCH}`], {
       execPath: process.execPath,
       appPath: app.getAppPath(),
       defaultApp: Boolean(process.defaultApp),
       appImage: process.env['APPIMAGE'],
     });
     log.info('launch', `detached instance: ${command} ${args.join(' ')}`);
-    spawn(command, args, { detached: true, stdio: 'ignore' }).unref();
+    const child = spawn(command, args, { detached: true, stdio: ['ignore', 'pipe', 'ignore'] });
+    child.unref();
+    const shown = await waitForLine(child, WINDOW_SHOWN_MARKER, WINDOW_SHOWN_TIMEOUT_MS);
+    if (!shown)
+      log.warn('launch', `no window reported within ${WINDOW_SHOWN_TIMEOUT_MS}ms: ${command}`);
+    return project;
   }
 }
 
 export const launchService = new LaunchService(
-  launchTargetFromArgv(process.argv, Boolean(process.defaultApp)),
+  positionalFromArgv(process.argv, Boolean(process.defaultApp)),
 );

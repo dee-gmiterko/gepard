@@ -1,11 +1,9 @@
 import type { HandlerMap } from '../registry';
 import type { LaunchService } from '../../services/launch';
 
-export function createLaunchHandlers(
-  launch: LaunchService,
-): Pick<HandlerMap, 'app.launchProject' | 'app.launchDetached'> {
+export function createLaunchHandlers(launch: LaunchService): Pick<HandlerMap, 'app.launch'> {
   return {
-    'app.launchProject': () => launch.project(),
-    'app.launchDetached': ({ projectId }) => launch.launchDetached(projectId),
+    'app.launch': (input) =>
+      input.detached ? launch.launchDetached(input.projectId) : launch.project(),
   };
 }
