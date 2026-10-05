@@ -328,6 +328,7 @@ export class SyncService {
     pr: number,
     mode: SyncMode,
     ctx: SyncContext,
+    commit: string | undefined,
   ): Promise<SyncResult> {
     log.info('sync', `projectId=${projectId} pr=${pr} mode=${mode} start`);
     const store = await review.loadReview(projectId, pr);
@@ -338,14 +339,21 @@ export class SyncService {
       log.warn('sync', `projectId=${projectId} pr=${pr} fetch origin failed: ${String(e)}`);
     });
     const { head: currentHead } = await this.git.workingTree(projectId);
-    let checkout = { base: baseRefOid, head: currentHead };
-    if (currentHead !== headRefOid) {
+    let checkout: { base: string; head: string };
+    if (commit !== undefined) {
+      checkout =
+        currentHead === commit
+          ? await this.git.commitRange(projectId, commit)
+          : await this.git.checkoutTarget(projectId, { kind: 'commit', sha: commit });
+    } else if (currentHead !== headRefOid) {
       checkout = await this.git.checkoutTarget(projectId, {
         kind: 'pr',
         pr,
         headRefOid,
         baseRefOid,
       });
+    } else {
+      checkout = { base: baseRefOid, head: currentHead };
     }
 
     const [threadsResult, generalResult, viewedResult] = await Promise.all([
@@ -423,8 +431,11 @@ export class SyncService {
     pr: number,
     mode: SyncMode,
     ctx: SyncContext,
+    commit?: string,
   ): Promise<SyncResult> {
-    return withReviewLock(projectId, pr, () => this.runSyncLocked(projectId, pr, mode, ctx));
+    return withReviewLock(projectId, pr, () =>
+      this.runSyncLocked(projectId, pr, mode, ctx, commit),
+    );
   }
 }
 

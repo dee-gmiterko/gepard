@@ -184,7 +184,7 @@ export const channels = {
   },
 
   'sync.run': {
-    input: PrRef.extend({ mode: SyncMode.default('full') }),
+    input: PrRef.extend({ mode: SyncMode.default('full'), commit: Sha.optional() }),
     output: CheckoutResult.extend({
       syncedAt: z.iso.datetime({ offset: true }),
       droppedRemoteDeleted: z.int().nonnegative(),

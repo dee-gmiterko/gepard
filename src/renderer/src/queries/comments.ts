@@ -145,10 +145,16 @@ export function useSync() {
   const dispatch = useAppDispatch();
   const projectId = state.projectId ?? '';
   const pr = state.targeting.pr ?? NaN;
+  const commit = state.targeting.commit ?? undefined;
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (mode: SyncMode = 'full') => invoke('sync.run', { projectId, pr, mode }),
+    mutationFn: async (mode: SyncMode = 'full') => ({
+      pr,
+      commit,
+      ...(await invoke('sync.run', { projectId, pr, mode, commit })),
+    }),
     onSuccess: (result) => {
+      if (result.pr !== pr || result.commit !== commit) return;
       dispatch({
         type: 'target/checkoutResult',
         checkout: { base: result.base, head: result.head },

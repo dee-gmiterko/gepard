@@ -258,6 +258,11 @@ export class GitService {
     }
   }
 
+  async commitRange(projectId: string, sha: string): Promise<{ base: string; head: string }> {
+    const repoRoot = projectRepoDir(projectId);
+    return { base: await this.parentOrEmptyTree(repoRoot, sha), head: sha };
+  }
+
   private describeCheckoutTarget(target: CheckoutTarget): string {
     if (target.kind === 'pr')
       return `pr=${target.pr} head=${target.headRefOid} base=${target.baseRefOid}`;
@@ -289,7 +294,7 @@ export class GitService {
         result = { base: stdout.trim(), head: target.headRefOid };
       } else if (target.kind === 'commit') {
         await this.checkoutDetached(repoRoot, target.sha);
-        result = { base: await this.parentOrEmptyTree(repoRoot, target.sha), head: target.sha };
+        result = await this.commitRange(projectId, target.sha);
       } else {
         // Check out the default branch from whatever origin/HEAD is known locally so
         // already-present content shows immediately; refresh origin in the background.
