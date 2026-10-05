@@ -7,7 +7,8 @@ import { log } from './log';
 import { markRendererReady, notifyMainFailure } from './notify';
 import { formatCaughtError } from './helpers/error';
 import { startPortalThemeSync } from './helpers/portalTheme';
-import { WINDOW_SHOWN_MARKER, WINDOW_SHOWN_SWITCH } from './helpers/process/readiness';
+import { WINDOW_SHOWN_MARKER } from './helpers/process/instance';
+import { cli } from './cli';
 
 export function bootstrap(): void {
   // Electron derives the userData path from the app name at the first
@@ -53,7 +54,7 @@ export function bootstrap(): void {
       });
 
       const window = createMainWindow();
-      if (app.commandLine.hasSwitch(WINDOW_SHOWN_SWITCH)) {
+      if (cli.reportWindowShown) {
         // The launching instance may quit before this one stops logging to stdout.
         process.stdout.on('error', () => undefined);
         window.once('show', () => process.stdout.write(`${WINDOW_SHOWN_MARKER}\n`));

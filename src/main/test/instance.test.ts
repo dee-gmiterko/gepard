@@ -1,7 +1,47 @@
 import { spawn } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 import { AppError } from '@gepard/common';
-import { WINDOW_SHOWN_MARKER, waitForLine } from '../helpers/process/readiness';
+import { WINDOW_SHOWN_MARKER, appCommand, waitForLine } from '../helpers/process/instance';
+
+describe('appCommand', () => {
+  const args = ['https://github.com/o/r', '--report-window-shown'];
+
+  it('runs the packaged executable with the arguments', () => {
+    expect(
+      appCommand(args, {
+        execPath: '/opt/gepard',
+        appPath: '/opt/resources/app.asar',
+        defaultApp: false,
+        appImage: undefined,
+      }),
+    ).toEqual({ command: '/opt/gepard', args });
+  });
+
+  it('passes the app path first under `electron .`', () => {
+    expect(
+      appCommand(args, {
+        execPath: '/repo/node_modules/electron/dist/electron',
+        appPath: '/repo/src/app',
+        defaultApp: true,
+        appImage: undefined,
+      }),
+    ).toEqual({
+      command: '/repo/node_modules/electron/dist/electron',
+      args: ['/repo/src/app', ...args],
+    });
+  });
+
+  it('prefers the AppImage file over the mounted executable', () => {
+    expect(
+      appCommand(args, {
+        execPath: '/tmp/.mount_gepard/gepard',
+        appPath: '/tmp/.mount_gepard/resources/app.asar',
+        defaultApp: false,
+        appImage: '/home/me/gepard.AppImage',
+      }),
+    ).toEqual({ command: '/home/me/gepard.AppImage', args });
+  });
+});
 
 const node = process.execPath;
 

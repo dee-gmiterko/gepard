@@ -31,6 +31,7 @@
     "mime-types": "^3.0.2",
     "picomatch": "^4.0.7",
     "vscode-jsonrpc": "^9.0.3",
+    "yargs": "^18.2.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {

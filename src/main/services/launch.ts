@@ -3,12 +3,8 @@ import { app } from 'electron';
 import { AppError, type Project } from '@gepard/common';
 import { isGitHubRepoUrl } from '../helpers/github/repoUrl';
 import { findProjectByName } from '../helpers/projects';
-import { appCommand, positionalFromArgv } from '../helpers/process/argv';
-import {
-  WINDOW_SHOWN_MARKER,
-  WINDOW_SHOWN_SWITCH,
-  waitForLine,
-} from '../helpers/process/readiness';
+import { WINDOW_SHOWN_MARKER, appCommand, waitForLine } from '../helpers/process/instance';
+import { REPORT_WINDOW_SHOWN, cli } from '../cli';
 import * as store from '../store/projects';
 import { log } from '../log';
 
@@ -40,7 +36,7 @@ export class LaunchService {
   async launchDetached(projectId: string): Promise<Project> {
     const project = await store.getProject(projectId);
     if (!project) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${projectId}`);
-    const { command, args } = appCommand([project.url, `--${WINDOW_SHOWN_SWITCH}`], {
+    const { command, args } = appCommand([project.url, `--${REPORT_WINDOW_SHOWN}`], {
       execPath: process.execPath,
       appPath: app.getAppPath(),
       defaultApp: Boolean(process.defaultApp),
@@ -56,6 +52,4 @@ export class LaunchService {
   }
 }
 
-export const launchService = new LaunchService(
-  positionalFromArgv(process.argv, Boolean(process.defaultApp)),
-);
+export const launchService = new LaunchService(cli.target);
