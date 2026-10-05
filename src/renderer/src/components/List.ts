@@ -13,7 +13,12 @@ export const List = styled.ul`
   border-top: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
-export const ListRow = styled.li<{ $gap?: Gap; $padding?: Gap; $clickable?: boolean }>`
+export const ListRow = styled.li<{
+  $gap?: Gap;
+  $padding?: Gap;
+  $clickable?: boolean;
+  $disabled?: boolean;
+}>`
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -21,6 +26,8 @@ export const ListRow = styled.li<{ $gap?: Gap; $padding?: Gap; $clickable?: bool
   padding: ${({ theme, $padding = 3 }) => theme.space[$padding]} 0;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   cursor: ${({ $clickable }) => ($clickable ? 'pointer' : 'default')};
+  opacity: ${({ $disabled }) => ($disabled ? 0.5 : 1)};
+  pointer-events: ${({ $disabled }) => ($disabled ? 'none' : 'auto')};
 
   ${({ $clickable, theme }) =>
     $clickable &&

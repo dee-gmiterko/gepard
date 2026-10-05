@@ -19,6 +19,7 @@ import {
   useCloneStart,
   useFetchProject,
   useLaunchDetached,
+  useLaunchingProjectIds,
   useOpenProjectAction,
   useProjects,
   useRemoveProject,
@@ -67,6 +68,10 @@ const messages = defineMessages({
   fetch: {
     id: 'launchpad.fetch',
     defaultMessage: 'Fetch',
+  },
+  launching: {
+    id: 'launchpad.launching',
+    defaultMessage: 'Opening in a new window…',
   },
   openSettings: {
     id: 'launchpad.openSettings',
@@ -267,6 +272,7 @@ export function Launchpad(): React.JSX.Element {
   const cloneStart = useCloneStart();
   const fetchProject = useFetchProject();
   const launchDetached = useLaunchDetached();
+  const launchingIds = useLaunchingProjectIds();
   const openProject = useOpenProjectAction();
 
   const [url, setUrl] = useState('');
@@ -405,11 +411,15 @@ export function Launchpad(): React.JSX.Element {
           const progress = progressById[project.id];
           const activeProgress = isActiveClone(progress) ? progress : undefined;
           const cloning = activeProgress !== undefined;
+          const launching = launchingIds.includes(project.id);
+          const openable = project.cloned && !launching;
           return (
             <ProjectRow
               key={project.id}
-              $clickable={project.cloned}
-              onClick={project.cloned ? (e) => handleOpen(project.id, e) : undefined}
+              $clickable={openable}
+              $disabled={launching}
+              aria-disabled={launching || undefined}
+              onClick={openable ? (e) => handleOpen(project.id, e) : undefined}
             >
               <RowMain>
                 <RowTitle>
@@ -419,6 +429,11 @@ export function Launchpad(): React.JSX.Element {
                   />
                 </RowTitle>
                 <RowUrl>{project.url}</RowUrl>
+                {launching && (
+                  <ProgressLabel>
+                    <FormattedMessage {...messages.launching} />
+                  </ProgressLabel>
+                )}
                 {cloning && (
                   <ProgressBar>
                     <ProgressFill style={{ width: `${progress?.percent ?? 0}%` }} />
@@ -442,6 +457,7 @@ export function Launchpad(): React.JSX.Element {
                   <IconButton
                     icon={Folder}
                     label={intl.formatMessage(messages.open)}
+                    disabled={launching}
                     onClick={(e) => handleOpen(project.id, e)}
                   />
                 ) : (
@@ -456,7 +472,7 @@ export function Launchpad(): React.JSX.Element {
                   <IconButton
                     icon={fetchingId === project.id ? SpinningFetchIcon : RefreshCw}
                     label={intl.formatMessage(messages.fetch)}
-                    disabled={cloning || fetchingId === project.id}
+                    disabled={cloning || launching || fetchingId === project.id}
                     onClick={() => handleFetch(project.id)}
                   />
                 )}
@@ -480,7 +496,7 @@ export function Launchpad(): React.JSX.Element {
                   <IconButton
                     icon={Trash2}
                     label={intl.formatMessage(messages.remove)}
-                    disabled={cloning}
+                    disabled={cloning || launching}
                     onClick={() => setConfirmRemoveId(project.id)}
                   />
                 )}
