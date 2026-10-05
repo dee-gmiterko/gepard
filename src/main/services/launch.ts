@@ -57,12 +57,9 @@ export class LaunchService {
     return project;
   }
 
-  async launch({
-    projectId,
-    detached,
-  }: ChannelParsedInput<'app.launch'>): Promise<OpenedProject | null> {
-    if (!detached) return this.open(projectId);
-    await this.launchDetached(projectId);
+  async launch(input: ChannelParsedInput<'app.launch'>): Promise<OpenedProject | null> {
+    if (!input.detached) return this.open(input.projectId);
+    await this.launchDetached(input.projectId);
     return null;
   }
 
@@ -84,10 +81,9 @@ export class LaunchService {
     return { project, head, targeting, layout };
   }
 
-  private async launchDetached(projectId: string): Promise<void> {
-    const project = await store.getProject(projectId);
-    if (!project) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${projectId}`);
-    const { command, args } = instanceCommand(project.url, {
+  private async launchDetached(projectId: string | null): Promise<void> {
+    const target = projectId === null ? null : await this.projectUrl(projectId);
+    const { command, args } = instanceCommand(target, {
       execPath: process.execPath,
       appPath: app.getAppPath(),
       defaultApp: Boolean(process.defaultApp),
@@ -97,6 +93,12 @@ export class LaunchService {
     const child = spawn(command, args, { detached: true, stdio: ['ignore', 'pipe', 'ignore'] });
     child.unref();
     if (!(await waitForInstance(child))) log.warn('launch', `no window reported: ${command}`);
+  }
+
+  private async projectUrl(projectId: string): Promise<string> {
+    const project = await store.getProject(projectId);
+    if (!project) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${projectId}`);
+    return project.url;
   }
 }
 

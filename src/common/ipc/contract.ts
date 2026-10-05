@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   ClonePhase,
   OpenedProject,
+  ProjectId,
   Viewer,
   ViewerRepo,
   Project,
@@ -56,7 +57,10 @@ export const channels = {
   'app.viewer': { input: z.void(), output: Viewer.nullable() },
   'app.viewerRepos': { input: z.void(), output: z.array(ViewerRepo) },
   'app.launch': {
-    input: ProjectRef.extend({ detached: z.boolean() }),
+    input: z.discriminatedUnion('detached', [
+      ProjectRef.extend({ detached: z.literal(false) }),
+      z.object({ detached: z.literal(true), projectId: ProjectId.nullable() }),
+    ]),
     output: OpenedProject.nullable(),
   },
   'app.startup': { input: z.void(), output: OpenedProject.nullable() },

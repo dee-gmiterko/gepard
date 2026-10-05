@@ -44,6 +44,28 @@ describe('instanceCommand', () => {
       }),
     ).toEqual({ command: '/home/me/gepard.AppImage', args });
   });
+
+  it('passes only the report switch without a target', () => {
+    expect(
+      instanceCommand(null, {
+        execPath: '/opt/gepard',
+        appPath: '/opt/resources/app.asar',
+        defaultApp: false,
+        appImage: undefined,
+      }),
+    ).toEqual({ command: '/opt/gepard', args: ['--report-window-shown'] });
+    expect(
+      instanceCommand(null, {
+        execPath: '/repo/node_modules/electron/dist/electron',
+        appPath: '/repo/src/app',
+        defaultApp: true,
+        appImage: undefined,
+      }),
+    ).toEqual({
+      command: '/repo/node_modules/electron/dist/electron',
+      args: ['/repo/src/app', '--report-window-shown'],
+    });
+  });
 });
 
 const node = process.execPath;

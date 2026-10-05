@@ -52,7 +52,7 @@ function isLaunchInput(input: unknown): input is LaunchInput {
     typeof input === 'object' &&
     input !== null &&
     'projectId' in input &&
-    typeof input.projectId === 'string' &&
+    (typeof input.projectId === 'string' || input.projectId === null) &&
     'detached' in input &&
     typeof input.detached === 'boolean'
   );
@@ -64,8 +64,9 @@ export function useOpenProject() {
   return useMutation({
     mutationKey: qk.launch(),
     mutationFn: (input: LaunchInput) => invoke('app.launch', input),
-    onSuccess: (opened, { projectId }) => {
+    onSuccess: (opened) => {
       if (!opened) return;
+      const projectId = opened.project.id;
       void qc.invalidateQueries({ queryKey: qk.project(projectId) });
       qc.setQueryData<OpenedProject>(qk.open(projectId), opened);
       dispatch({
@@ -78,7 +79,7 @@ export function useOpenProject() {
   });
 }
 
-export function useLaunchingProjectIds(): string[] {
+export function useLaunchingProjectIds(): (string | null)[] {
   return useMutationState({
     filters: { mutationKey: qk.launch(), status: 'pending' },
     select: (mutation) => mutation.state.variables,
