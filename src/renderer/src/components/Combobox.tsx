@@ -14,10 +14,6 @@ const messages = defineMessages({
     id: 'components.combobox.loading',
     defaultMessage: 'Loading…',
   },
-  noMatches: {
-    id: 'components.combobox.noMatches',
-    defaultMessage: 'No matches',
-  },
   clear: {
     id: 'components.combobox.clear',
     defaultMessage: 'Clear',
@@ -39,7 +35,6 @@ export interface ComboboxProps<T> {
   disabled?: boolean;
   loading?: boolean;
   loadingLabel?: string;
-  emptyLabel?: string;
   freeText?: {
     text: string;
     onTextChange: (text: string) => void;
@@ -88,13 +83,11 @@ export function Combobox<T>({
   disabled,
   loading,
   loadingLabel,
-  emptyLabel,
   freeText,
   renderOption,
 }: ComboboxProps<T>): React.JSX.Element {
   const intl = useIntl();
   const resolvedLoadingLabel = loadingLabel ?? intl.formatMessage(messages.loading);
-  const resolvedEmptyLabel = emptyLabel ?? intl.formatMessage(messages.noMatches);
   const resolvedClearLabel = intl.formatMessage(messages.clear);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -196,10 +189,9 @@ export function Combobox<T>({
           />
         )}
       </InputRow>
-      {open && !disabled && (
+      {open && !disabled && (loading || filtered.length > 0) && (
         <Menu id={listboxId} role="listbox" onMouseDown={(e) => e.preventDefault()}>
           {loading && <MenuMessage>{resolvedLoadingLabel}</MenuMessage>}
-          {!loading && filtered.length === 0 && <MenuMessage>{resolvedEmptyLabel}</MenuMessage>}
           {!loading &&
             filtered.map((item, i) => (
               <MenuItem
