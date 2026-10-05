@@ -1,8 +1,9 @@
+import { useCallback } from 'react';
 import { skipToken, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { reportQueryError } from '../errors/report';
 import { invoke, useIpcEvent } from '../ipc/client';
 import { qk } from './keys';
-import { useAppState } from '../state/AppContext';
+import { useAppDispatch, useAppState } from '../state/AppContext';
 import type { ChannelInput } from '@gepard/common';
 
 export function useViewer() {
@@ -23,6 +24,49 @@ export function useAddProject() {
     mutationFn: (input: ChannelInput<'projects.add'>) => invoke('projects.add', input),
     onSettled: () => qc.invalidateQueries({ queryKey: qk.projects() }),
   });
+}
+
+export function useLaunchProject() {
+  return useQuery({
+    queryKey: qk.launchProject(),
+    queryFn: () => invoke('app.launchProject'),
+    staleTime: Infinity,
+  });
+}
+
+export function useLaunchDetached() {
+  return useMutation({
+    mutationFn: (projectId: string) => invoke('app.launchDetached', { projectId }),
+  });
+}
+
+export function useOpenProjectAction(): (projectId: string) => Promise<void> {
+  const qc = useQueryClient();
+  const dispatch = useAppDispatch();
+  return useCallback(
+    async (projectId: string) => {
+      qc.removeQueries({ queryKey: qk.open(projectId) });
+      try {
+        const [, opened] = await Promise.all([
+          qc.invalidateQueries({ queryKey: qk.project(projectId) }),
+          qc.fetchQuery({
+            queryKey: qk.open(projectId),
+            queryFn: () => invoke('projects.open', { projectId }),
+            staleTime: Infinity,
+          }),
+        ]);
+        dispatch({
+          type: 'project/open',
+          projectId,
+          targeting: opened.targeting,
+          layout: opened.layout,
+        });
+      } catch {
+        // Reported via the query cache's global error handler.
+      }
+    },
+    [qc, dispatch],
+  );
 }
 
 export function useOpenProject() {

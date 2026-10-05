@@ -61,6 +61,8 @@ const CommentsRef = { projectId: ProjectId, pr: z.int().positive().nullable() };
 export const channels = {
   'app.viewer': ch(z.void(), Viewer.nullable()),
   'app.viewerRepos': ch(z.void(), z.array(ViewerRepo)),
+  'app.launchProject': ch(z.void(), Project.nullable()),
+  'app.launchDetached': ch(z.object(ProjectRef), z.void()),
 
   'projects.list': ch(z.void(), z.array(Project)),
   'projects.add': ch(
