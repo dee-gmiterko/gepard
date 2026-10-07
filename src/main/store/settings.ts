@@ -1,6 +1,7 @@
 import { z } from 'zod';
-import { settingsJsonPath } from '../paths';
+import { settingsJsonPath, writeLockPath } from '../paths';
 import { readJsonFile, writeJsonFile } from '../helpers/jsonFile';
+import { withFileLock } from '../helpers/fileLock';
 
 const SettingsFile = z.object({
   theme: z.object({ templateId: z.string().nullable() }),
@@ -18,6 +19,10 @@ const EMPTY_SETTINGS: SettingsFile = {
   keybindings: {},
 };
 
+function updateSettings<T>(fn: (settings: SettingsFile) => Promise<T>): Promise<T> {
+  return withFileLock(writeLockPath('settings'), async () => fn(await readSettings()));
+}
+
 async function readSettings(): Promise<SettingsFile> {
   return readJsonFile(settingsJsonPath(), SettingsFile, () => EMPTY_SETTINGS);
 }
@@ -28,9 +33,10 @@ export async function getTemplateId(): Promise<string | null> {
 }
 
 export async function setTemplateId(templateId: string | null): Promise<string | null> {
-  const settings = await readSettings();
-  await writeJsonFile(settingsJsonPath(), { ...settings, theme: { templateId } });
-  return templateId;
+  return updateSettings(async (settings) => {
+    await writeJsonFile(settingsJsonPath(), { ...settings, theme: { templateId } });
+    return templateId;
+  });
 }
 
 export async function getLocaleId(): Promise<string | null> {
@@ -39,9 +45,10 @@ export async function getLocaleId(): Promise<string | null> {
 }
 
 export async function setLocaleId(localeId: string | null): Promise<string | null> {
-  const settings = await readSettings();
-  await writeJsonFile(settingsJsonPath(), { ...settings, locale: { localeId } });
-  return localeId;
+  return updateSettings(async (settings) => {
+    await writeJsonFile(settingsJsonPath(), { ...settings, locale: { localeId } });
+    return localeId;
+  });
 }
 
 export type ExtensionsState = SettingsFile['extensions'];
@@ -51,9 +58,10 @@ export async function getEnabledMap(): Promise<ExtensionsState> {
 }
 
 export async function setEnabled(id: string, enabled: boolean): Promise<void> {
-  const settings = await readSettings();
-  const extensions = { ...settings.extensions, [id]: enabled };
-  await writeJsonFile(settingsJsonPath(), { ...settings, extensions });
+  return updateSettings(async (settings) => {
+    const extensions = { ...settings.extensions, [id]: enabled };
+    await writeJsonFile(settingsJsonPath(), { ...settings, extensions });
+  });
 }
 
 export type KeybindingOverrides = SettingsFile['keybindings'];
@@ -66,10 +74,11 @@ export async function setKeybindingOverride(
   id: string,
   key: string | null,
 ): Promise<KeybindingOverrides> {
-  const settings = await readSettings();
-  const keybindings = { ...settings.keybindings };
-  if (key === null) delete keybindings[id];
-  else keybindings[id] = key;
-  await writeJsonFile(settingsJsonPath(), { ...settings, keybindings });
-  return keybindings;
+  return updateSettings(async (settings) => {
+    const keybindings = { ...settings.keybindings };
+    if (key === null) delete keybindings[id];
+    else keybindings[id] = key;
+    await writeJsonFile(settingsJsonPath(), { ...settings, keybindings });
+    return keybindings;
+  });
 }
