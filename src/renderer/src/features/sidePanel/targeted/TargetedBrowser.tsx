@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage } from 'react-intl';
-import { useAppDispatch } from '../../../state/AppContext';
+import { useUiDispatch } from '../../../state/UiContext';
 import {
   useCheckoutHead,
   useIsDiffView,
@@ -67,7 +67,7 @@ export function TargetedBrowser(): React.JSX.Element {
   const checkoutHead = useCheckoutHead();
   const layout = useLayout();
   const targeting = useTargeting();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const setLayout = useSetLayout();
   const path = useTargetPath();
   const hideViewed = layout.hideViewedFiles;

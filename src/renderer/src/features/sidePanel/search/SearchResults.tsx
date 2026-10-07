@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
-import { useAppDispatch } from '../../../state/AppContext';
+import { useUiDispatch } from '../../../state/UiContext';
 import { useActiveFile } from '../../../state/hooks';
 import { Caption } from '../../../components/Caption';
 import { Message } from '../../../components/Message';
@@ -65,7 +65,7 @@ export function SearchResults({
 }): React.JSX.Element {
   const intl = useIntl();
   const activeFile = useActiveFile();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const { rowFor } = useRowData();
   const [defaultExpanded] = useState(initiallyExpanded);
   const [overrides, setOverrides] = useState<ReadonlyMap<string, boolean>>(() => new Map());

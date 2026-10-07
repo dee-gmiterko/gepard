@@ -1,16 +1,16 @@
 import type { Dispatch } from 'react';
 import { createStore, type StoreApi } from 'zustand';
-import { appReducer, type AppAction, type AppState } from './reducer';
+import { uiReducer, type UiAction, type UiState } from './reducer';
 
 export interface UiStoreHandle {
-  store: StoreApi<AppState>;
-  dispatch: Dispatch<AppAction>;
+  store: StoreApi<UiState>;
+  dispatch: Dispatch<UiAction>;
 }
 
-export function createUiStore(initial: AppState): UiStoreHandle {
-  const store = createStore<AppState>(() => initial);
+export function createUiStore(initial: UiState): UiStoreHandle {
+  const store = createStore<UiState>(() => initial);
   return {
     store,
-    dispatch: (action) => store.setState((state) => appReducer(state, action), true),
+    dispatch: (action) => store.setState((state) => uiReducer(state, action), true),
   };
 }

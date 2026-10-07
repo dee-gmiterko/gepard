@@ -60,7 +60,7 @@ export const defaultLayout: Layout = {
   fullFileDiff: false,
 };
 
-export interface AppState {
+export interface UiState {
   projectId: string | null;
   targeting: Targeting;
   layout: Layout;
@@ -79,7 +79,7 @@ export interface AppState {
   quickSearch: QuickSearchMode | null;
 }
 
-export const initialAppState: AppState = {
+export const initialUiState: UiState = {
   projectId: null,
   targeting: { pr: null, commit: null, path: null },
   layout: defaultLayout,
@@ -98,7 +98,7 @@ export const initialAppState: AppState = {
   quickSearch: null,
 };
 
-export type AppAction =
+export type UiAction =
   | { type: 'project/open'; projectId: string; targeting: Targeting; layout: Layout }
   | { type: 'project/close' }
   | { type: 'target/pr'; pr: number | null }
@@ -139,12 +139,12 @@ export type AppAction =
   | { type: 'review/acceptNext'; review: ReviewFiles }
   | { type: 'review/revertPrev' };
 
-export function appReducer(state: AppState, action: AppAction): AppState {
+export function uiReducer(state: UiState, action: UiAction): UiState {
   switch (action.type) {
     case 'project/open': {
       if (state.projectId === action.projectId) return state;
       const opened = {
-        ...initialAppState,
+        ...initialUiState,
         projectId: action.projectId,
         layout: action.layout,
         toasts: state.toasts,
@@ -156,7 +156,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     }
     case 'project/close':
       return {
-        ...initialAppState,
+        ...initialUiState,
         toasts: state.toasts,
         headerStatus: state.headerStatus,
         settingsOpen: state.settingsOpen,

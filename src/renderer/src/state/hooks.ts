@@ -1,7 +1,7 @@
-import { useAppSelector } from './AppContext';
+import { useUiSelector } from './UiContext';
 import { isDiffView } from './selectors';
 import type {
-  AppState,
+  UiState,
   HeaderStatus,
   Layout,
   MainTab,
@@ -12,81 +12,81 @@ import type {
 } from './reducer';
 
 export function useProjectId(): string | null {
-  return useAppSelector((s) => s.projectId);
+  return useUiSelector((s) => s.projectId);
 }
 
 export function useTargeting(): Targeting {
-  return useAppSelector((s) => s.targeting);
+  return useUiSelector((s) => s.targeting);
 }
 
 export function useLayout(): Layout {
-  return useAppSelector((s) => s.layout);
+  return useUiSelector((s) => s.layout);
 }
 
-export function useCheckoutHead(): AppState['checkoutHead'] {
-  return useAppSelector((s) => s.checkoutHead);
+export function useCheckoutHead(): UiState['checkoutHead'] {
+  return useUiSelector((s) => s.checkoutHead);
 }
 
 export function useActiveFile(): string | null {
-  return useAppSelector((s) => s.activeFile);
+  return useUiSelector((s) => s.activeFile);
 }
 
 export function usePreviewFile(): string | null {
-  return useAppSelector((s) => s.previewFile);
+  return useUiSelector((s) => s.previewFile);
 }
 
 export function usePinnedFiles(): string[] {
-  return useAppSelector((s) => s.pinnedFiles);
+  return useUiSelector((s) => s.pinnedFiles);
 }
 
 export function useAcceptedFiles(): string[] {
-  return useAppSelector((s) => s.acceptedFiles);
+  return useUiSelector((s) => s.acceptedFiles);
 }
 
-export function useRevealLine(): AppState['revealLine'] {
-  return useAppSelector((s) => s.revealLine);
+export function useRevealLine(): UiState['revealLine'] {
+  return useUiSelector((s) => s.revealLine);
 }
 
 export function useMainTab(): MainTab {
-  return useAppSelector((s) => s.mainTab);
+  return useUiSelector((s) => s.mainTab);
 }
 
 export function useSidePanelTab(): SidePanelTab {
-  return useAppSelector((s) => s.sidePanelTab);
+  return useUiSelector((s) => s.sidePanelTab);
 }
 
 export function useSidePanelFocusRequest(): number {
-  return useAppSelector((s) => s.sidePanelFocusRequest);
+  return useUiSelector((s) => s.sidePanelFocusRequest);
 }
 
 export function useToasts(): Toast[] {
-  return useAppSelector((s) => s.toasts);
+  return useUiSelector((s) => s.toasts);
 }
 
 export function useHeaderStatusState(): HeaderStatus | null {
-  return useAppSelector((s) => s.headerStatus);
+  return useUiSelector((s) => s.headerStatus);
 }
 
 export function useSettingsOpen(): boolean {
-  return useAppSelector((s) => s.settingsOpen);
+  return useUiSelector((s) => s.settingsOpen);
 }
 
 export function useQuickSearchMode(): QuickSearchMode | null {
-  return useAppSelector((s) => s.quickSearch);
+  return useUiSelector((s) => s.quickSearch);
 }
 
 export function useIsDiffView(): boolean {
-  return useAppSelector(isDiffView);
+  return useUiSelector(isDiffView);
 }
 
 export function useTargetPr(): number | null {
-  return useAppSelector((s) => s.targeting.pr);
+  return useUiSelector((s) => s.targeting.pr);
 }
 
 export function useTargetCommit(): string | null {
-  return useAppSelector((s) => s.targeting.commit);
+  return useUiSelector((s) => s.targeting.commit);
 }
 
 export function useTargetPath(): string | null {
-  return useAppSelector((s) => s.targeting.path);
+  return useUiSelector((s) => s.targeting.path);
 }

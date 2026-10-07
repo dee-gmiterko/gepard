@@ -1,7 +1,7 @@
-import { useAppDispatch } from '../../state/AppContext';
+import { useUiDispatch } from '../../state/UiContext';
 import { useTargeting } from '../../state/hooks';
 import { useSetTargeting } from '../../queries/projects';
-import type { AppAction, Targeting } from '../../state/reducer';
+import type { UiAction, Targeting } from '../../state/reducer';
 
 export interface TargetActions {
   setPr: (pr: number | null) => void;
@@ -11,10 +11,10 @@ export interface TargetActions {
 
 export function useTargetActions(): TargetActions {
   const targeting = useTargeting();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const setTargeting = useSetTargeting();
 
-  function apply(action: AppAction, targeting: Targeting): void {
+  function apply(action: UiAction, targeting: Targeting): void {
     dispatch(action);
     setTargeting.mutate(targeting);
   }

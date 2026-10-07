@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl';
-import { useAppDispatch } from '../../state/AppContext';
+import { useUiDispatch } from '../../state/UiContext';
 import { useQuickSearchMode } from '../../state/hooks';
 import type { QuickSearchMode } from '../../state/reducer';
 import { useTargetedFiles, useTree } from '../../queries/files';
@@ -133,7 +133,7 @@ export function QuickSearch(): React.JSX.Element | null {
 
 function QuickSearchPopup({ mode }: { mode: QuickSearchMode }): React.JSX.Element {
   const intl = useIntl();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const popupRef = useRef<HTMLDivElement>(null);
   const close = (): void => dispatch({ type: 'quickSearch/close' });
   useOutsideClick(popupRef, close);
@@ -219,7 +219,7 @@ function FindInFile({ onClose }: { onClose: () => void }): React.JSX.Element {
 
 function Navigate({ onClose }: { onClose: () => void }): React.JSX.Element {
   const intl = useIntl();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const inputRef = useAutoFocus();
   const [text, setText] = useState('');
   const [highlight, setHighlight] = useState(0);

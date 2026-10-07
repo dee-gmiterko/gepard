@@ -1,4 +1,4 @@
-import { useAppDispatch } from '../../../state/AppContext';
+import { useUiDispatch } from '../../../state/UiContext';
 import { useActiveFile } from '../../../state/hooks';
 import { Tree } from '../../../components/Tree';
 import { TreeLabel } from '../../../components/treeStyles';
@@ -9,7 +9,7 @@ import { useReviewActions, useRowData } from '../../../queries/review';
 
 export function ReviewTree({ nodes }: { nodes: TreeNode<null>[] }): React.JSX.Element {
   const activeFile = useActiveFile();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const { toggleViewed } = useReviewActions();
   const { rows, rowFor } = useRowData();
 

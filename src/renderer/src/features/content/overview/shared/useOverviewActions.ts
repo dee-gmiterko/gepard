@@ -1,4 +1,4 @@
-import { useAppDispatch } from '../../../../state/AppContext';
+import { useUiDispatch } from '../../../../state/UiContext';
 import { useTargeting } from '../../../../state/hooks';
 import { useTargetActions } from '../../../header/useTargetActions';
 import { useOpenReview } from './useOpenReview';
@@ -16,7 +16,7 @@ export interface OverviewActions {
 
 export function useOverviewActions(): OverviewActions {
   const targeting = useTargeting();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const { setPr, setPath, setCommit } = useTargetActions();
   const openReview = useOpenReview();
 

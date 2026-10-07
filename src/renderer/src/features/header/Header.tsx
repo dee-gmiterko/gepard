@@ -11,7 +11,7 @@ import { IconButton } from '../../components/IconButton';
 import { Ellipsis } from '../../components/Ellipsis';
 import { Inline } from '../../components/Layout';
 import { useIndexStatus, useSetLayout } from '../../queries/projects';
-import { useAppDispatch } from '../../state/AppContext';
+import { useUiDispatch } from '../../state/UiContext';
 import { useActiveFile, useLayout, useTargeting } from '../../state/hooks';
 import { ProgressBar } from '../../components/ProgressBar';
 import { useIsCheckedOutChangedFile, useReviewProgress } from '../../queries/review';
@@ -72,7 +72,7 @@ const Progress = styled.div`
 export function Header(): React.JSX.Element {
   const intl = useIntl();
   const { pending } = useTargetingEffects();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const layout = useLayout();
   const targeting = useTargeting();
   const setLayout = useSetLayout();
