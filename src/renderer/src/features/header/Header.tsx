@@ -13,10 +13,8 @@ import { Inline } from '../../components/Layout';
 import { useIndexStatus, useSetLayout } from '../../queries/projects';
 import { useAppDispatch } from '../../state/AppContext';
 import { useActiveFile, useLayout, useTargeting } from '../../state/hooks';
-import { useRowData } from '../sidePanel/fileRows/rowData';
-import { aggregateRows } from '../../helpers/row';
 import { ProgressBar } from '../../components/ProgressBar';
-import { useIsCheckedOutChangedFile } from '../content/useIsCheckedOutChangedFile';
+import { useIsCheckedOutChangedFile, useReviewProgress } from '../../queries/review';
 
 const messages = defineMessages({
   checkingOut: {
@@ -80,8 +78,7 @@ export function Header(): React.JSX.Element {
   const setLayout = useSetLayout();
   const { data: index } = useIndexStatus();
   const path = useActiveFile();
-  const { changedFiles, rowFor } = useRowData();
-  const progress = aggregateRows((changedFiles ?? []).map((f) => rowFor(f.path)));
+  const progress = useReviewProgress();
   const isChangedFile = useIsCheckedOutChangedFile(path);
 
   const headerStatus = useHeaderStatus();

@@ -2,7 +2,16 @@ import { z } from 'zod';
 import type { MessageDescriptor } from 'react-intl';
 import type { DiffSide } from '@gepard/common';
 import type { ReportTone } from '../errors/report';
-import { nextTargetedFile } from '../helpers/targetedFiles';
+import { canMarkViewed, viewedAfter, type ReviewFiles } from '../helpers/review';
+import {
+  acceptFile,
+  closeFile,
+  openFile,
+  sameCheckoutHead,
+  stepFile,
+  withLayout,
+  withTarget,
+} from './transitions';
 
 export const SidePanelTab = z.enum(['files', 'targeted', 'search']);
 export type SidePanelTab = z.infer<typeof SidePanelTab>;
@@ -21,18 +30,6 @@ export interface Toast {
 export interface HeaderStatus {
   id: number;
   message: MessageDescriptor;
-}
-
-export interface ReviewFiles {
-  targeted: string[];
-  changed: string[];
-  viewed: string[];
-}
-
-export interface ViewedRequest {
-  id: number;
-  paths: string[];
-  viewed: boolean;
 }
 
 export interface Targeting {
@@ -74,14 +71,12 @@ export interface AppState {
   previewFile: string | null;
   activeFile: string | null;
   mainTab: MainTab;
-  checkout: { base: string; head: string } | null;
+  checkoutHead: { base: string; head: string } | null;
   toasts: Toast[];
   headerStatus: HeaderStatus | null;
   revealLine: { line: number; side: DiffSide } | null;
   settingsOpen: boolean;
   quickSearch: QuickSearchMode | null;
-  reviewFiles: ReviewFiles;
-  viewedQueue: ViewedRequest[];
 }
 
 export const initialAppState: AppState = {
@@ -95,14 +90,12 @@ export const initialAppState: AppState = {
   previewFile: null,
   activeFile: null,
   mainTab: 'overview',
-  checkout: null,
+  checkoutHead: null,
   toasts: [],
   headerStatus: null,
   revealLine: null,
   settingsOpen: false,
   quickSearch: null,
-  reviewFiles: { targeted: [], changed: [], viewed: [] },
-  viewedQueue: [],
 };
 
 export type AppAction =
@@ -112,8 +105,8 @@ export type AppAction =
   | { type: 'target/commit'; sha: string | null }
   | { type: 'target/path'; path: string | null }
   | {
-      type: 'target/checkoutResult';
-      checkout: { base: string; head: string } | null;
+      type: 'target/checkoutHeadResult';
+      checkoutHead: { base: string; head: string } | null;
       for?: { pr: number | null; commit: string | null };
     }
   | { type: 'sidePanel/setTab'; tab: SidePanelTab; focus?: boolean }
@@ -141,83 +134,10 @@ export type AppAction =
   | { type: 'settings/setOpen'; open: boolean }
   | { type: 'quickSearch/open'; mode: QuickSearchMode }
   | { type: 'quickSearch/close' }
-  | { type: 'review/sync'; files: ReviewFiles }
-  | { type: 'viewed/mark'; paths: string[]; viewed: boolean }
-  | { type: 'viewed/toggle'; path?: string | null }
-  | { type: 'viewed/done'; id: number }
-  | { type: 'file/step'; direction: 1 | -1 }
-  | { type: 'review/acceptNext' }
+  | { type: 'viewed/mark'; paths: string[]; viewed: boolean; review: ReviewFiles }
+  | { type: 'file/step'; direction: 1 | -1; review: ReviewFiles }
+  | { type: 'review/acceptNext'; review: ReviewFiles }
   | { type: 'review/revertPrev' };
-
-export function canMarkViewed(
-  state: Pick<AppState, 'targeting' | 'reviewFiles'>,
-  path: string | null,
-): path is string {
-  return state.targeting.pr !== null && path !== null && state.reviewFiles.changed.includes(path);
-}
-
-function sameCheckout(a: AppState['checkout'], b: AppState['checkout']): boolean {
-  if (a === null || b === null) return a === b;
-  return a.base === b.base && a.head === b.head;
-}
-
-function sameList(a: readonly string[], b: readonly string[]): boolean {
-  return a.length === b.length && a.every((value, i) => value === b[i]);
-}
-
-function markViewed(state: AppState, paths: string[], viewed: boolean): AppState {
-  const marked = new Set(state.reviewFiles.viewed);
-  for (const path of paths) {
-    if (viewed) marked.add(path);
-    else marked.delete(path);
-  }
-  const request = { id: (state.viewedQueue.at(-1)?.id ?? 0) + 1, paths, viewed };
-  return {
-    ...state,
-    reviewFiles: { ...state.reviewFiles, viewed: [...marked] },
-    viewedQueue: [...state.viewedQueue, request],
-  };
-}
-
-function stepFile(
-  state: AppState,
-  direction: 1 | -1,
-  skip: ReadonlySet<string> = new Set(state.reviewFiles.viewed),
-): AppState {
-  const next = nextTargetedFile(state.reviewFiles.targeted, state.activeFile, skip, direction);
-  return next === null ? state : appReducer(state, { type: 'file/open', path: next });
-}
-
-function withTarget(state: AppState, targeting: Targeting, set: boolean): AppState {
-  return {
-    ...state,
-    targeting,
-    sidePanelTab: set ? 'targeted' : state.sidePanelTab,
-    acceptedFiles: [],
-  };
-}
-
-function samePosition(
-  a: Layout['fileControlsPosition'],
-  b: Layout['fileControlsPosition'],
-): boolean {
-  if (a === null || b === null) return a === b;
-  return a.x === b.x && a.y === b.y;
-}
-
-function withLayout(state: AppState, layout: Layout): AppState {
-  const prev = state.layout;
-  const same =
-    prev.sidePanelWidth === layout.sidePanelWidth &&
-    prev.fileCommentsPanelWidth === layout.fileCommentsPanelWidth &&
-    prev.fileCommentsPanelOpen === layout.fileCommentsPanelOpen &&
-    prev.hideViewedFiles === layout.hideViewedFiles &&
-    prev.fileControlsDocked === layout.fileControlsDocked &&
-    samePosition(prev.fileControlsPosition, layout.fileControlsPosition) &&
-    prev.wrapLongLines === layout.wrapLongLines &&
-    prev.fullFileDiff === layout.fullFileDiff;
-  return same ? state : { ...state, layout };
-}
 
 export function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
@@ -249,26 +169,26 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           { ...state.targeting, pr: action.pr, commit: null },
           action.pr !== null,
         ),
-        checkout: null,
+        checkoutHead: null,
       };
     case 'target/commit':
       if (state.targeting.commit === action.sha) return state;
       return {
         ...withTarget(state, { ...state.targeting, commit: action.sha }, action.sha !== null),
-        checkout: null,
+        checkoutHead: null,
       };
     case 'target/path':
       if (state.targeting.path === action.path) return state;
       return withTarget(state, { ...state.targeting, path: action.path }, action.path !== null);
-    case 'target/checkoutResult':
+    case 'target/checkoutHeadResult':
       if (
         action.for &&
         (action.for.pr !== state.targeting.pr || action.for.commit !== state.targeting.commit)
       ) {
         return state;
       }
-      if (sameCheckout(state.checkout, action.checkout)) return state;
-      return { ...state, checkout: action.checkout };
+      if (sameCheckoutHead(state.checkoutHead, action.checkoutHead)) return state;
+      return { ...state, checkoutHead: action.checkoutHead };
     case 'sidePanel/setTab':
       if (state.sidePanelTab === action.tab && !action.focus) return state;
       return {
@@ -294,28 +214,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return withLayout(state, { ...state.layout, wrapLongLines: action.wrap });
     case 'layout/setFullFileDiff':
       return withLayout(state, { ...state.layout, fullFileDiff: action.full });
-    case 'file/open': {
-      const revealLine =
-        action.line != null ? { line: action.line, side: action.side ?? ('RIGHT' as const) } : null;
-      if (
-        state.activeFile === action.path &&
-        state.mainTab === 'files' &&
-        state.revealLine === null &&
-        revealLine === null &&
-        (state.pinnedFiles.includes(action.path) || state.previewFile === action.path)
-      ) {
-        return state;
-      }
-      return state.pinnedFiles.includes(action.path)
-        ? { ...state, activeFile: action.path, mainTab: 'files', revealLine }
-        : {
-            ...state,
-            previewFile: action.path,
-            activeFile: action.path,
-            mainTab: 'files',
-            revealLine,
-          };
-    }
+    case 'file/open':
+      return openFile(state, action.path, action.line, action.side);
     case 'file/focus':
       if (
         state.activeFile === action.path &&
@@ -341,29 +241,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           : state.activeFile;
       return { ...state, pinnedFiles, activeFile, revealLine: null };
     }
-    case 'file/close': {
-      if (
-        !state.pinnedFiles.includes(action.path) &&
-        state.previewFile !== action.path &&
-        state.activeFile !== action.path &&
-        state.revealLine === null
-      ) {
-        return state;
-      }
-      const pinnedFiles = state.pinnedFiles.filter((p) => p !== action.path);
-      const previewFile = state.previewFile === action.path ? null : state.previewFile;
-      const activeFile =
-        state.activeFile === action.path
-          ? (previewFile ?? pinnedFiles.at(-1) ?? null)
-          : state.activeFile;
-      return { ...state, pinnedFiles, previewFile, activeFile, revealLine: null };
-    }
+    case 'file/close':
+      return closeFile(state, action.path);
     case 'file/accept':
-      if (state.acceptedFiles.at(-1) === action.path) return state;
-      return {
-        ...state,
-        acceptedFiles: [...state.acceptedFiles.filter((p) => p !== action.path), action.path],
-      };
+      return acceptFile(state, action.path);
     case 'file/revert':
       if (state.acceptedFiles.length === 0) return state;
       return { ...state, acceptedFiles: state.acceptedFiles.slice(0, -1) };
@@ -376,7 +257,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       ) {
         return state;
       }
-      return appReducer(state, { type: 'file/open', path: action.path });
+      return openFile(state, action.path);
     case 'mainTab/set':
       if (state.mainTab === action.tab) return state;
       return { ...state, mainTab: action.tab };
@@ -402,21 +283,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case 'quickSearch/close':
       if (state.quickSearch === null) return state;
       return { ...state, quickSearch: null };
-    case 'review/sync': {
-      const { targeted, changed, viewed } = state.reviewFiles;
-      const files = action.files;
-      if (
-        sameList(targeted, files.targeted) &&
-        sameList(changed, files.changed) &&
-        sameList(viewed, files.viewed)
-      ) {
-        return state;
-      }
-      return { ...state, reviewFiles: files };
-    }
     case 'viewed/mark': {
       if (state.targeting.pr === null) return state;
-      const marked = markViewed(state, action.paths, action.viewed);
       const { activeFile, layout } = state;
       if (
         action.viewed &&
@@ -424,39 +292,33 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         activeFile !== null &&
         action.paths.includes(activeFile)
       ) {
-        return stepFile(marked, 1);
+        const skip = viewedAfter(action.review, action.paths, true);
+        return stepFile(state, action.review.targeted, skip, 1);
       }
-      return marked;
+      return state;
     }
-    case 'viewed/toggle': {
-      const path = action.path === undefined ? state.activeFile : action.path;
-      if (!canMarkViewed(state, path)) return state;
-      return appReducer(state, {
-        type: 'viewed/mark',
-        paths: [path],
-        viewed: !state.reviewFiles.viewed.includes(path),
-      });
-    }
-    case 'viewed/done':
-      if (!state.viewedQueue.some((r) => r.id === action.id)) return state;
-      return { ...state, viewedQueue: state.viewedQueue.filter((r) => r.id !== action.id) };
     case 'file/step':
-      return stepFile(state, action.direction);
+      return stepFile(
+        state,
+        action.review.targeted,
+        new Set(action.review.viewed),
+        action.direction,
+      );
     case 'review/acceptNext': {
       const path = state.activeFile;
       if (path === null) return state;
-      const accepted = canMarkViewed(state, path)
-        ? appReducer(markViewed(state, [path], true), { type: 'file/accept', path })
-        : state;
-      const moved = stepFile(accepted, 1);
-      return moved === accepted ? appReducer(accepted, { type: 'file/close', path }) : moved;
+      const markable = canMarkViewed(state.targeting.pr, action.review, path);
+      const accepted = markable ? acceptFile(state, path) : state;
+      const skip = markable
+        ? viewedAfter(action.review, [path], true)
+        : new Set(action.review.viewed);
+      const moved = stepFile(accepted, action.review.targeted, skip, 1);
+      return moved === accepted ? closeFile(accepted, path) : moved;
     }
     case 'review/revertPrev': {
       const path = state.acceptedFiles.at(-1);
       if (path === undefined) return state;
-      const reverted = appReducer(state, { type: 'file/revert' });
-      const unmarked = state.targeting.pr !== null ? markViewed(reverted, [path], false) : reverted;
-      return appReducer(unmarked, { type: 'file/open', path });
+      return openFile({ ...state, acceptedFiles: state.acceptedFiles.slice(0, -1) }, path);
     }
     default:
       return state;

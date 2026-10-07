@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { Edit2, ExternalLink, Trash2, X } from 'react-feather';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import type { Comment, DraftAnchor, ReviewThread } from '@gepard/common';
-import { useCheckout } from '../../state/hooks';
+import { useCheckoutHead } from '../../state/hooks';
 import { IconButton } from '../../components/IconButton';
 import { Button } from '../../components/Button';
 import { Inline, Stack } from '../../components/Layout';
@@ -113,7 +113,7 @@ export function ThreadWidget({
   onOpen,
 }: ThreadWidgetProps): React.JSX.Element | null {
   const intl = useIntl();
-  const checkout = useCheckout();
+  const checkoutHead = useCheckoutHead();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [replyOpen, setReplyOpen] = useState(false);
@@ -124,8 +124,8 @@ export function ThreadWidget({
   if (!anchor) return null;
   const isGeneral = anchor.subjectType === 'PR';
   const refAnchor = thread
-    ? refAnchorFromThread(thread.anchor, checkout)
-    : refAnchorFromDraft(anchor, checkout);
+    ? refAnchorFromThread(thread.anchor, checkoutHead)
+    : refAnchorFromDraft(anchor, checkoutHead);
 
   function renderComment(comment: Comment): React.JSX.Element {
     if (editingId === comment.id) {

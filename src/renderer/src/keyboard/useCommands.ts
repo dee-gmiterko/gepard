@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
 import { defineMessages } from 'react-intl';
-import { useAppDispatch, useAppStore } from '../state/AppContext';
+import { useAppDispatch, useUiStore } from '../state/AppContext';
 import { useActiveFile } from '../state/hooks';
-import { canMarkViewed, type QuickSearchMode, type SidePanelTab } from '../state/reducer';
+import type { QuickSearchMode, SidePanelTab } from '../state/reducer';
 import { useSetLayout } from '../queries/projects';
 import { useViewed } from '../queries/comments';
 import { useTargetedFiles } from '../queries/files';
+import { useReviewActions } from '../queries/review';
 import { nextTargetedFile } from '../helpers/targetedFiles';
 
 const messages = defineMessages({
@@ -29,6 +30,7 @@ const messages = defineMessages({
 
 export interface Commands {
   toggleViewed: (path?: string | null) => boolean;
+  markViewed: (paths: string[], viewed: boolean) => void;
   nextFile: () => boolean;
   prevFile: () => boolean;
   acceptNext: () => boolean;
@@ -53,37 +55,19 @@ export function useFileNavigation(): { canGoPrev: boolean; canGoNext: boolean } 
 }
 
 export function useCommands(): Commands {
-  const store = useAppStore();
+  const store = useUiStore();
   const dispatch = useAppDispatch();
   const { mutate: setLayout } = useSetLayout();
+  const review = useReviewActions();
 
   return useMemo<Commands>(
     () => ({
-      toggleViewed: (path = store.getState().activeFile) => {
-        if (!canMarkViewed(store.getState(), path)) return false;
-        dispatch({ type: 'viewed/toggle', path });
-        return true;
-      },
-      nextFile: () => {
-        const before = store.getState();
-        dispatch({ type: 'file/step', direction: 1 });
-        return store.getState() !== before;
-      },
-      prevFile: () => {
-        const before = store.getState();
-        dispatch({ type: 'file/step', direction: -1 });
-        return store.getState() !== before;
-      },
-      acceptNext: () => {
-        if (store.getState().activeFile === null) return false;
-        dispatch({ type: 'review/acceptNext' });
-        return true;
-      },
-      revertPrev: () => {
-        if (store.getState().acceptedFiles.length === 0) return false;
-        dispatch({ type: 'review/revertPrev' });
-        return true;
-      },
+      toggleViewed: (path = store.getState().activeFile) => review.toggleViewed(path),
+      markViewed: review.markViewed,
+      nextFile: () => review.step(1),
+      prevFile: () => review.step(-1),
+      acceptNext: () => review.acceptNext(),
+      revertPrev: () => review.revertPrev(),
       showSidePanelTab: (tab) => {
         dispatch({ type: 'sidePanel/setTab', tab, focus: true });
         return true;
@@ -115,6 +99,6 @@ export function useCommands(): Commands {
         return true;
       },
     }),
-    [store, dispatch, setLayout],
+    [store, dispatch, setLayout, review],
   );
 }

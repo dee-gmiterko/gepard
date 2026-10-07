@@ -1,7 +1,6 @@
 import styled from 'styled-components';
 import { useAppDispatch } from './state/AppContext';
 import { useProjectId, useSettingsOpen } from './state/hooks';
-import { ReviewFilesSync } from './state/ReviewFilesSync';
 import { useGlobalKeys } from './keyboard/useGlobalKeys';
 import { useWindowTitle } from './hooks/useWindowTitle';
 import { useContextMenuLabels } from './hooks/useContextMenuLabels';
@@ -50,7 +49,6 @@ function App(): React.JSX.Element {
         <SidePanel />
         <Content />
       </Body>
-      <ReviewFilesSync />
       <QuickSearch />
       {settingsOpen && <SettingsOverlay onClose={closeSettings} />}
     </Shell>

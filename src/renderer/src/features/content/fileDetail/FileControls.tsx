@@ -25,7 +25,7 @@ import { reportQueryError } from '../../../errors/report';
 import { useSetLayout } from '../../../queries/projects';
 import { useViewed } from '../../../queries/comments';
 import { useCommands, useFileNavigation } from '../../../keyboard/useCommands';
-import { useIsCheckedOutChangedFile } from '../useIsCheckedOutChangedFile';
+import { useIsCheckedOutChangedFile } from '../../../queries/review';
 import { IconButton } from '../../../components/IconButton';
 import { Inline, Stack } from '../../../components/Layout';
 import { Surface } from '../../../components/Surface';
@@ -365,7 +365,7 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
                   type="checkbox"
                   checked={isViewed}
                   onChange={(e) => {
-                    dispatch({ type: 'viewed/mark', paths: [path], viewed: e.target.checked });
+                    commands.markViewed([path], e.target.checked);
                     if (e.target.checked) setPulse((n) => n + 1);
                   }}
                 />

@@ -9,7 +9,7 @@ import { reportQueryError } from '../errors/report';
 import { invoke, useIpcEvent } from '../ipc/client';
 import { qk } from './keys';
 import { useAppDispatch } from '../state/AppContext';
-import { useCheckout, useProjectId } from '../state/hooks';
+import { useCheckoutHead, useProjectId } from '../state/hooks';
 import type { ChannelInput, OpenedProject } from '@gepard/common';
 
 export function useViewer() {
@@ -169,7 +169,7 @@ export function useLanguageServers() {
 }
 
 export function useCurrentHead(): string | null {
-  const checkout = useCheckout();
+  const checkoutHead = useCheckoutHead();
   const opened = useOpenedProject();
-  return checkout?.head ?? opened.data?.head ?? null;
+  return checkoutHead?.head ?? opened.data?.head ?? null;
 }

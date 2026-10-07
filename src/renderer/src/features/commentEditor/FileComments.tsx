@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { Plus } from 'react-feather';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import type { ReviewThread } from '@gepard/common';
-import { useCheckout, useTargeting } from '../../state/hooks';
+import { useCheckoutHead, useTargeting } from '../../state/hooks';
 import { Accordion } from '../../components/Accordion';
 import { Button } from '../../components/Button';
 import { Caption } from '../../components/Caption';
@@ -70,10 +70,10 @@ function ThreadSummary({ thread }: { thread: ReviewThread }): React.JSX.Element 
 }
 
 export function FileComments({ path }: FileCommentsProps): React.JSX.Element {
-  const checkout = useCheckout();
+  const checkoutHead = useCheckoutHead();
   const targeting = useTargeting();
   const unassigned = targeting.pr === null;
-  const checkedOutHead = checkout?.head ?? null;
+  const checkedOutHead = checkoutHead?.head ?? null;
   const { data: threads = [] } = useComments();
   const [openId, setOpenId] = useState<string | null>(null);
   const [addingNew, setAddingNew] = useState(false);

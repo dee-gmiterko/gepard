@@ -4,7 +4,7 @@ import type { DiffRow, DiffSide } from '@gepard/common';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import {
   useActiveFile,
-  useCheckout,
+  useCheckoutHead,
   useLayout,
   useRevealLine,
   useTargetPr,
@@ -97,13 +97,13 @@ export function DiffViewer({ path }: { path: string }): React.JSX.Element {
 
 function DiffText({ path, rows }: { path: string; rows: DiffRow[] }): React.JSX.Element {
   const activeFile = useActiveFile();
-  const checkout = useCheckout();
+  const checkoutHead = useCheckoutHead();
   const layout = useLayout();
   const revealLine = useRevealLine();
   const targeting = useTargeting();
   const pr = useTargetPr();
   const { data: threads } = useComments();
-  const head = checkout?.head ?? '';
+  const head = checkoutHead?.head ?? '';
   const singleCommitInPr = pr !== null && targeting.commit !== null;
 
   const { doc, infos } = useMemo(() => buildDiffDoc(rows), [rows]);

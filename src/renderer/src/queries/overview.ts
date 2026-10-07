@@ -1,7 +1,7 @@
 import { skipToken, useQuery } from '@tanstack/react-query';
 import { invoke } from '../ipc/client';
 import { qk } from './keys';
-import { useCheckout, useProjectId, useTargetPr } from '../state/hooks';
+import { useCheckoutHead, useProjectId, useTargetPr } from '../state/hooks';
 
 export function useProjectOverview() {
   const projectId = useProjectId() ?? '';
@@ -25,10 +25,10 @@ export function usePrOverviewDetails() {
 }
 
 export function useChangedFileOwners() {
-  const checkout = useCheckout();
+  const checkoutHead = useCheckoutHead();
   const projectId = useProjectId() ?? '';
-  const base = checkout?.base ?? '';
-  const head = checkout?.head ?? '';
+  const base = checkoutHead?.base ?? '';
+  const head = checkoutHead?.head ?? '';
   return useQuery({
     queryKey: qk.changedFileOwners(projectId, base, head),
     queryFn: () => invoke('overview.owners', { projectId, base, head }),

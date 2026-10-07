@@ -7,7 +7,7 @@
 ### Tech
 - electron desktop app
 - `gh` command used to interact with PRs over json<->zod schemas interface
-- React 19 dom, Vite, Typescript, Tanstack queries and mutations (hooks), AppContext holding app ui state
+- React 19 dom, Vite, Typescript, Tanstack queries and mutations (hooks), a zustand UI store (`createUiStore`, one per `AppProvider`, driven by the `appReducer` through a plain `dispatch`) holding the ui state, read through narrow selector hooks
 - @codemirror editor for code and diff view (read only); both views can wrap long lines, and a changed file can show changes only or the full file with its changes highlighted (project-level flags, persisted with the layout, toggled by a shortcut or the file controls `…` menu, with the new state announced in the header status message)
 - Localization: all UI text is localizable, English default; a script refreshes every locale from the source strings
 - Scripts (media/locale refresh, ...) are Typescript, run directly with `tsx`, no build step; package itself is ESM

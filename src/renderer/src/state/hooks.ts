@@ -23,8 +23,8 @@ export function useLayout(): Layout {
   return useAppSelector((s) => s.layout);
 }
 
-export function useCheckout(): AppState['checkout'] {
-  return useAppSelector((s) => s.checkout);
+export function useCheckoutHead(): AppState['checkoutHead'] {
+  return useAppSelector((s) => s.checkoutHead);
 }
 
 export function useActiveFile(): string | null {
