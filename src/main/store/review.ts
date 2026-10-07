@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { readJsonFile, writeJsonFile } from '../helpers/jsonFile';
-import { reviewJsonPath } from '../paths';
+import { withFileLock } from '../helpers/fileLock';
+import { reviewJsonPath, writeLockPath } from '../paths';
 import {
   Comment,
   CommentDraft,
@@ -23,37 +24,19 @@ function emptyStore(): ReviewStoreFile {
   return { threads: [], viewed: [], pendingReviewId: null, lastSuccessfulSyncAt: null };
 }
 
-function cloneStore(store: ReviewStoreFile): ReviewStoreFile {
-  return structuredClone(store);
-}
-
-const cache = new Map<string, ReviewStoreFile>();
 const cacheKey = (projectId: string, pr: number | null): string =>
   `${projectId}:${pr ?? 'unassigned'}`;
 
 export const UNASSIGNED_PR_ID = 'unassigned';
 
-const locks = new Map<string, Promise<unknown>>();
-
+// Serializes read-modify-write cycles among callers in this process and among
+// app instances sharing the user data directory.
 export function withReviewLock<T>(
   projectId: string,
   pr: number | null,
   fn: () => Promise<T>,
 ): Promise<T> {
-  const key = cacheKey(projectId, pr);
-  const settledPrior = (locks.get(key) ?? Promise.resolve()).then(
-    () => undefined,
-    () => undefined,
-  );
-  const result = settledPrior.then(fn);
-  locks.set(
-    key,
-    result.then(
-      () => undefined,
-      () => undefined,
-    ),
-  );
-  return result;
+  return withFileLock(writeLockPath(`review-${cacheKey(projectId, pr)}`), fn);
 }
 
 async function readStoreFile(projectId: string, pr: number | null): Promise<ReviewStoreFile> {
@@ -61,12 +44,7 @@ async function readStoreFile(projectId: string, pr: number | null): Promise<Revi
 }
 
 export async function loadReview(projectId: string, pr: number | null): Promise<ReviewStoreFile> {
-  const key = cacheKey(projectId, pr);
-  const cached = cache.get(key);
-  if (cached) return cloneStore(cached);
-  const store = await readStoreFile(projectId, pr);
-  cache.set(key, store);
-  return cloneStore(store);
+  return readStoreFile(projectId, pr);
 }
 
 export async function saveReview(
@@ -75,7 +53,6 @@ export async function saveReview(
   store: ReviewStoreFile,
 ): Promise<void> {
   await writeJsonFile(reviewJsonPath(projectId, pr), store);
-  cache.set(cacheKey(projectId, pr), cloneStore(store));
 }
 
 export async function listThreads(projectId: string, pr: number | null): Promise<ReviewThread[]> {

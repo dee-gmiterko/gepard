@@ -95,18 +95,18 @@ export class KindRegistry<T> {
     known: extensionsStore.KnownFilesState,
   ): Promise<void> {
     if (loaded.length === 0) return;
-    const next = { ...known };
+    const next: extensionsStore.KnownFilesState = {};
     let changed = false;
     for (const { extension, dir } of loaded) {
       const id = this.spec.getId(extension);
       const displayName = this.spec.getDisplayName(extension);
-      const prev = next[dir];
+      const prev = known[dir];
       if (!prev || prev.id !== id || prev.displayName !== displayName) {
         next[dir] = { id, displayName };
         changed = true;
       }
     }
-    if (changed) await extensionsStore.setKnownFiles(next);
+    if (changed) await extensionsStore.mergeKnownFiles(next);
   }
 
   private known(): KnownExtension<T>[] {

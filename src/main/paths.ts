@@ -19,6 +19,10 @@ export function projectLocksDir(): string {
   return join(userDataDir(), 'locks');
 }
 
+export function writeLockPath(name: string): string {
+  return join(projectLocksDir(), `write-${encodeURIComponent(name)}.lock`);
+}
+
 export function projectId(owner: string, repo: string): string {
   return `${owner}__${repo}`.toLowerCase();
 }

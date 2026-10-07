@@ -2,6 +2,9 @@ import { mkdir, readdir, rm, stat } from 'node:fs/promises';
 import { z } from 'zod';
 import { Project, PersistedLayout, PersistedTargeting, AppError } from '@gepard/common';
 import { readJsonFile, writeJsonFile } from '../helpers/jsonFile';
+import { withFileLock } from '../helpers/fileLock';
+import { formatCaughtError } from '../helpers/error';
+import { log } from '../log';
 import { parseGitHubRepoUrl } from '../helpers/github/repoUrl';
 import {
   projectDir,
@@ -9,6 +12,7 @@ import {
   projectJsonPath,
   projectRepoDir,
   projectsDir,
+  writeLockPath,
 } from '../paths';
 
 const ProjectFile = Project.omit({ cloned: true }).extend({
@@ -42,6 +46,14 @@ async function readProjectFile(id: string): Promise<ProjectFile | null> {
   return readJsonFile(projectJsonPath(id), ProjectFile, () => null);
 }
 
+function updateProjectFile(id: string, update: (file: ProjectFile) => ProjectFile): Promise<void> {
+  return withFileLock(writeLockPath(`project-${id}`), async () => {
+    const file = await readProjectFile(id);
+    if (!file) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${id}`);
+    await writeProjectFile(id, update(file));
+  });
+}
+
 async function writeProjectFile(id: string, data: ProjectFile): Promise<void> {
   await writeJsonFile(projectJsonPath(id), data);
 }
@@ -52,9 +64,13 @@ export async function listProjects(): Promise<Project[]> {
   const projects: Project[] = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
-    const file = await readProjectFile(entry.name);
-    if (!file) continue;
-    projects.push(toProject(file, await isCloned(entry.name)));
+    try {
+      const file = await readProjectFile(entry.name);
+      if (!file) continue;
+      projects.push(toProject(file, await isCloned(entry.name)));
+    } catch (e) {
+      log.error('projects', `skipping ${entry.name}: ${formatCaughtError(e)}`);
+    }
   }
   projects.sort((a, b) => a.addedAt.localeCompare(b.addedAt));
   return projects;
@@ -72,9 +88,7 @@ export async function getLastTargeting(id: string): Promise<PersistedTargeting> 
 }
 
 export async function setLastTargeting(id: string, targeting: PersistedTargeting): Promise<void> {
-  const file = await readProjectFile(id);
-  if (!file) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${id}`);
-  await writeProjectFile(id, { ...file, lastTargeting: targeting });
+  await updateProjectFile(id, (file) => ({ ...file, lastTargeting: targeting }));
 }
 
 export async function getLayout(id: string): Promise<PersistedLayout> {
@@ -83,9 +97,7 @@ export async function getLayout(id: string): Promise<PersistedLayout> {
 }
 
 export async function setLayout(id: string, layout: PersistedLayout): Promise<void> {
-  const file = await readProjectFile(id);
-  if (!file) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${id}`);
-  await writeProjectFile(id, { ...file, layout });
+  await updateProjectFile(id, (file) => ({ ...file, layout }));
 }
 
 export async function addProject(url: string): Promise<Project> {
