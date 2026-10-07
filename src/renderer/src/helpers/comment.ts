@@ -5,6 +5,7 @@ import type {
   DraftAnchor,
   ReviewThread,
 } from '@gepard/common';
+import { deletedLineDocLines } from './diff';
 
 export interface LineCommentEntry {
   docLine: number;
@@ -20,31 +21,6 @@ export function sortThreadsChronologically(threads: readonly ReviewThread[]): Re
 
 function isCurrent(thread: ReviewThread, head: string | null): boolean {
   return !thread.isOutdated && (head === null || thread.anchor.commitOid === head);
-}
-
-export function deletedLineDocLines(rows: readonly DiffRow[]): Map<number, number> {
-  const docLines = new Map<number, number>();
-  let pending: number[] = [];
-  let lastNew: number | null = null;
-
-  function flush(anchor: number): void {
-    for (const oldLine of pending) docLines.set(oldLine, Math.max(anchor - 1, 1));
-    pending = [];
-  }
-
-  for (const row of rows) {
-    if (row.kind === 'hunk') {
-      flush((lastNew ?? 0) + 1);
-      lastNew = null;
-    } else if (row.kind === 'delete') {
-      if (row.oldLine !== null) pending.push(row.oldLine);
-    } else if (row.newLine !== null) {
-      flush(row.newLine);
-      lastNew = row.newLine;
-    }
-  }
-  flush((lastNew ?? 0) + 1);
-  return docLines;
 }
 
 export function codeViewCommentEntries(
