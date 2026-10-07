@@ -2,20 +2,18 @@ import styled from 'styled-components';
 
 type Tone = 'success' | 'muted';
 
-const Track = styled.span<{ $width: string }>`
+const Track = styled.span`
   display: inline-block;
   flex-shrink: 0;
-  width: ${({ $width }) => $width};
   height: 6px;
   border-radius: ${({ theme }) => theme.radius.sm};
   background: ${({ theme }) => theme.colors.border};
   overflow: hidden;
 `;
 
-const Fill = styled.span<{ $percent: number; $tone: Tone }>`
+const Fill = styled.span<{ $tone: Tone }>`
   display: block;
   height: 100%;
-  width: ${({ $percent }) => $percent}%;
   background: ${({ theme, $tone }) =>
     $tone === 'success' ? theme.colors.success : theme.colors.fgMuted};
 `;
@@ -38,14 +36,14 @@ export function ProgressBar({
   const percent = max > 0 ? Math.min(100, Math.max(0, Math.round((value / max) * 100))) : 0;
   return (
     <Track
-      $width={width}
+      style={{ width }}
       role="progressbar"
       aria-label={label}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={percent}
     >
-      <Fill $percent={percent} $tone={tone} />
+      <Fill $tone={tone} style={{ width: `${percent}%` }} />
     </Track>
   );
 }

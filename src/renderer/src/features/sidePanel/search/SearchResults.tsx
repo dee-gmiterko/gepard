@@ -12,7 +12,7 @@ import { ChevronSlot, FileRow, FolderRow, TreeLabel } from '../../../components/
 import { VirtualList } from '../../../components/VirtualList';
 import { focusVisible } from '../../../components/controlStyles';
 import { FileRowMarks } from '../fileRows/FileRowMarks';
-import { useRowData } from '../fileRows/rowData';
+import { useRowData } from '../../../queries/review';
 import { buildSearchRows, type FileMatches, type SearchRow } from '../../../helpers/search';
 
 const messages = defineMessages({

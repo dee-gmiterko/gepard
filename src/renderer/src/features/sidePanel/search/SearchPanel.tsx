@@ -1,14 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { AtSign, Hash, Type } from 'react-feather';
-import { defineMessages, FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { useCurrentHead } from '../../../queries/projects';
 import { useTargetedFiles } from '../../../queries/files';
-import { useSearchPages, useWorkspaceSymbols, type SearchParams } from '../../../queries/search';
+import { useSearchPages, type SearchParams } from '../../../queries/search';
 import { IconButton } from '../../../components/IconButton';
-import { Combobox } from '../../../components/Combobox';
-import { fuzzyRanges } from '../../../helpers/fuzzy';
-import { HighlightedText } from '../../../components/HighlightedText';
 import { Toolbar } from '../../../components/Toolbar';
 import { ScopeToggle } from '../../../components/ScopeToggle';
 import type { SearchScope } from '@gepard/common';
@@ -16,22 +13,16 @@ import { ViewModeToggle, type ViewMode } from '../../../components/ViewModeToggl
 import { Caption } from '../../../components/Caption';
 import { Inline } from '../../../components/Layout';
 import { Message } from '../../../components/Message';
-import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import { localizedErrorMessage } from '../../../errors/errorMessage';
 import { reportQueryError } from '../../../errors/report';
 import { SearchResults } from './SearchResults';
+import { SearchInput } from './SearchInput';
 import { countMatches } from '../../../helpers/search';
 import type { WorkspaceSymbol } from '@gepard/common';
-
-type SymbolKind = WorkspaceSymbol['kind'];
 
 const EXPAND_ALL_UP_TO_MATCHES = 100;
 
 const messages = defineMessages({
-  placeholder: {
-    id: 'sidePanel.search.placeholder',
-    defaultMessage: 'Search…',
-  },
   regex: {
     id: 'sidePanel.search.regex',
     defaultMessage: 'Regex',
@@ -72,55 +63,13 @@ const messages = defineMessages({
     id: 'sidePanel.search.summaryPartial',
     defaultMessage: '{matches} in {files} so far, scroll for more',
   },
-  symbolKindNamespace: { id: 'sidePanel.search.symbolKind.namespace', defaultMessage: 'namespace' },
-  symbolKindClass: { id: 'sidePanel.search.symbolKind.class', defaultMessage: 'class' },
-  symbolKindInterface: { id: 'sidePanel.search.symbolKind.interface', defaultMessage: 'interface' },
-  symbolKindEnum: { id: 'sidePanel.search.symbolKind.enum', defaultMessage: 'enum' },
-  symbolKindEnumMember: {
-    id: 'sidePanel.search.symbolKind.enumMember',
-    defaultMessage: 'enum member',
-  },
-  symbolKindType: { id: 'sidePanel.search.symbolKind.type', defaultMessage: 'type' },
-  symbolKindTypeParameter: {
-    id: 'sidePanel.search.symbolKind.typeParameter',
-    defaultMessage: 'type parameter',
-  },
-  symbolKindFunction: { id: 'sidePanel.search.symbolKind.function', defaultMessage: 'function' },
-  symbolKindMethod: { id: 'sidePanel.search.symbolKind.method', defaultMessage: 'method' },
-  symbolKindProperty: { id: 'sidePanel.search.symbolKind.property', defaultMessage: 'property' },
-  symbolKindVariable: { id: 'sidePanel.search.symbolKind.variable', defaultMessage: 'variable' },
-  symbolKindParameter: { id: 'sidePanel.search.symbolKind.parameter', defaultMessage: 'parameter' },
-  symbolKindConstant: { id: 'sidePanel.search.symbolKind.constant', defaultMessage: 'constant' },
-  symbolKindUnknown: { id: 'sidePanel.search.symbolKind.unknown', defaultMessage: 'unknown' },
 });
-
-const symbolKindMessages: Record<SymbolKind, MessageDescriptor> = {
-  namespace: messages.symbolKindNamespace,
-  class: messages.symbolKindClass,
-  interface: messages.symbolKindInterface,
-  enum: messages.symbolKindEnum,
-  enumMember: messages.symbolKindEnumMember,
-  type: messages.symbolKindType,
-  typeParameter: messages.symbolKindTypeParameter,
-  function: messages.symbolKindFunction,
-  method: messages.symbolKindMethod,
-  property: messages.symbolKindProperty,
-  variable: messages.symbolKindVariable,
-  parameter: messages.symbolKindParameter,
-  constant: messages.symbolKindConstant,
-  unknown: messages.symbolKindUnknown,
-};
 
 const Container = styled.div`
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
-`;
-
-const InputArea = styled.div`
-  padding: ${({ theme }) => theme.space[2]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 const Results = styled.div`
@@ -138,7 +87,7 @@ export function SearchPanel(): React.JSX.Element {
   const sha = useCurrentHead() ?? '';
   const targetedPaths = useTargetedFiles();
 
-  const [text, setText] = useState('');
+  const [query, setQuery] = useState('');
   const [regex, setRegex] = useState(false);
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [symbolFlag, setSymbolFlag] = useState(false);
@@ -149,30 +98,34 @@ export function SearchPanel(): React.JSX.Element {
     pos: { line: number; col: number };
   } | null>(null);
 
-  const debouncedText = useDebouncedValue(text);
-  const suggestions = useWorkspaceSymbols(debouncedText, 8);
-  const suggestionList = text.length > 0 ? (suggestions.data ?? []) : [];
+  const handleQueryChange = useCallback(
+    (next: string): void => {
+      setQuery(next);
+      if (next !== query) setSelectedAt(null);
+    },
+    [query],
+  );
 
   function pickSymbol(symbol: WorkspaceSymbol): void {
-    setText(symbol.name);
+    setQuery(symbol.name);
     if (symbolFlag) setSelectedAt({ path: symbol.location.path, pos: symbol.location.range.start });
   }
 
   const params = useMemo<SearchParams | null>(() => {
-    if (!debouncedText) return null;
+    if (!query) return null;
     const paths = scope === 'targeted' ? targetedPaths : [];
     if (symbolFlag && selectedAt) {
       return {
         kind: 'references',
         scope,
         targetedPaths: paths,
-        text: debouncedText,
+        text: query,
         at: selectedAt,
       };
     }
-    const base = { scope, targetedPaths: paths, text: debouncedText, caseSensitive };
+    const base = { scope, targetedPaths: paths, text: query, caseSensitive };
     return regex ? { kind: 'regex', ...base } : { kind: 'pattern', ...base };
-  }, [symbolFlag, selectedAt, regex, caseSensitive, scope, targetedPaths, debouncedText]);
+  }, [symbolFlag, selectedAt, regex, caseSensitive, scope, targetedPaths, query]);
 
   const searchIdentity = useMemo(
     () =>
@@ -203,35 +156,7 @@ export function SearchPanel(): React.JSX.Element {
 
   return (
     <Container>
-      <InputArea>
-        <Combobox<WorkspaceSymbol>
-          items={suggestionList}
-          value={null}
-          freeText={{
-            text,
-            onTextChange: (next) => {
-              setText(next);
-              setSelectedAt(null);
-            },
-            searchText: debouncedText,
-          }}
-          onSelect={(symbol) => symbol && pickSymbol(symbol)}
-          getKey={(symbol) =>
-            `${symbol.location.path}:${symbol.location.range.start.line}:${symbol.location.range.start.col}`
-          }
-          getLabel={(symbol) => symbol.name}
-          placeholder={intl.formatMessage(messages.placeholder)}
-          loading={suggestions.isFetching}
-          renderOption={(symbol, { searchText }) => (
-            <Inline $gap={1}>
-              <span>
-                <HighlightedText text={symbol.name} ranges={fuzzyRanges(searchText, symbol.name)} />
-              </span>
-              <Caption>{intl.formatMessage(symbolKindMessages[symbol.kind])}</Caption>
-            </Inline>
-          )}
-        />
-      </InputArea>
+      <SearchInput onQueryChange={handleQueryChange} onPick={pickSymbol} />
 
       <Toolbar>
         <Inline $gap={1}>
