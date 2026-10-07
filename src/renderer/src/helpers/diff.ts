@@ -11,6 +11,31 @@ export function findDiffDocLine(
   return i === -1 ? null : i + 1;
 }
 
+export function deletedLineDocLines(rows: readonly DiffRow[]): Map<number, number> {
+  const docLines = new Map<number, number>();
+  let pending: number[] = [];
+  let lastNew: number | null = null;
+
+  function flush(anchor: number): void {
+    for (const oldLine of pending) docLines.set(oldLine, Math.max(anchor - 1, 1));
+    pending = [];
+  }
+
+  for (const row of rows) {
+    if (row.kind === 'hunk') {
+      flush((lastNew ?? 0) + 1);
+      lastNew = null;
+    } else if (row.kind === 'delete') {
+      if (row.oldLine !== null) pending.push(row.oldLine);
+    } else if (row.newLine !== null) {
+      flush(row.newLine);
+      lastNew = row.newLine;
+    }
+  }
+  flush((lastNew ?? 0) + 1);
+  return docLines;
+}
+
 export type ChangeRow = Pick<DiffRow, 'kind' | 'oldLine' | 'newLine' | 'text'>;
 type NamedSymbol = Pick<LineSymbol, 'name' | 'kind'>;
 

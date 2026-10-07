@@ -1,5 +1,4 @@
 import type { Anchor, ReviewThread } from '../ipc/schemas/comment';
-import type { ForkFields } from '../ipc/schemas/pr';
 
 export function generalCommentAnchor(): Anchor {
   return {
@@ -41,12 +40,4 @@ export function composeIssueDescription(threads: readonly ReviewThread[]): strin
 
 export function countComments(threads: readonly ReviewThread[]): number {
   return threads.reduce((n, t) => n + t.comments.length, 0);
-}
-
-export function prHeadLabel(
-  pr: Pick<ForkFields, 'isCrossRepository' | 'headRepositoryOwner'> & { headRefName: string },
-): string {
-  if (!pr.isCrossRepository) return pr.headRefName;
-  const owner = pr.headRepositoryOwner?.login;
-  return owner ? `${owner}:${pr.headRefName}` : pr.headRefName;
 }
