@@ -8,21 +8,11 @@ export interface TreeNode<T> {
   data?: T;
 }
 
-interface Item<T> {
-  path: string;
-  data: T;
-}
-
-interface BuildTreeOptions<T> {
-  aggregateFolder?: (childData: T[]) => T;
-}
-
-interface MutableNode<T> {
+interface MutableNode {
   path: string;
   name: string;
   isFolder: boolean;
-  children: Map<string, MutableNode<T>>;
-  data?: T;
+  children: Map<string, MutableNode>;
 }
 
 const collator = new Intl.Collator();
@@ -32,10 +22,10 @@ function compareNodes<T>(a: TreeNode<T>, b: TreeNode<T>): number {
   return collator.compare(a.name, b.name);
 }
 
-export function buildTree<T>(items: Item<T>[], options: BuildTreeOptions<T> = {}): TreeNode<T>[] {
-  const root: MutableNode<T> = { path: '', name: '', isFolder: true, children: new Map() };
+export function buildTree(paths: readonly string[]): TreeNode<null>[] {
+  const root: MutableNode = { path: '', name: '', isFolder: true, children: new Map() };
 
-  for (const { path, data } of items) {
+  for (const path of paths) {
     const parts = path.split('/').filter(Boolean);
     let node = root;
     let acc = '';
@@ -47,48 +37,27 @@ export function buildTree<T>(items: Item<T>[], options: BuildTreeOptions<T> = {}
         child = { path: acc, name: part, isFolder: !isLast, children: new Map() };
         node.children.set(part, child);
       }
-      if (isLast) {
-        child.isFolder = false;
-        child.data = data;
-      }
+      if (isLast) child.isFolder = false;
       node = child;
     });
   }
 
-  function toNode(n: MutableNode<T>): TreeNode<T> {
+  function toNode(n: MutableNode): TreeNode<null> {
     const children = [...n.children.values()].map(toNode).sort(compareNodes);
-    const data = n.isFolder
-      ? options.aggregateFolder?.(
-          children.map((c) => c.data).filter((d): d is T => d !== undefined),
-        )
-      : n.data;
-    return { path: n.path, name: n.name, isFolder: n.isFolder, children, data };
+    return { path: n.path, name: n.name, isFolder: n.isFolder, children };
   }
 
   return [...root.children.values()].map(toNode).sort(compareNodes);
 }
 
-export function withRoot<T>(
-  nodes: TreeNode<T>[],
-  name: string,
-  options: BuildTreeOptions<T> = {},
-): TreeNode<T>[] {
-  const data = options.aggregateFolder?.(
-    nodes.map((n) => n.data).filter((d): d is T => d !== undefined),
-  );
-  return [{ path: '', name, isFolder: true, children: nodes, data }];
+export function withRoot<T>(nodes: TreeNode<T>[], name: string): TreeNode<T>[] {
+  return [{ path: '', name, isFolder: true, children: nodes }];
 }
 
-export function buildFlatList<T>(items: Item<T>[]): TreeNode<T>[] {
-  return [...items]
-    .sort((a, b) => collator.compare(a.path, b.path))
-    .map((item) => ({
-      path: item.path,
-      name: item.path,
-      isFolder: false,
-      children: [],
-      data: item.data,
-    }));
+export function buildFlatList(paths: readonly string[]): TreeNode<null>[] {
+  return [...paths]
+    .sort((a, b) => collator.compare(a, b))
+    .map((path) => ({ path, name: path, isFolder: false, children: [] }));
 }
 
 export function flattenLeafPaths<T>(nodes: TreeNode<T>[]): string[] {
@@ -100,6 +69,31 @@ export function flattenLeafPaths<T>(nodes: TreeNode<T>[]): string[] {
     }
   }
   walk(nodes);
+  return out;
+}
+
+export interface FlatRow<T> {
+  node: TreeNode<T>;
+  depth: number;
+  parentIndex: number;
+  position: number;
+  setSize: number;
+}
+
+export function flattenVisible<T>(
+  nodes: TreeNode<T>[],
+  collapsed: ReadonlySet<string>,
+): FlatRow<T>[] {
+  const out: FlatRow<T>[] = [];
+  function walk(list: TreeNode<T>[], depth: number, parentIndex: number): void {
+    list.forEach((node, i) => {
+      const index = out.length;
+      out.push({ node, depth, parentIndex, position: i + 1, setSize: list.length });
+      if (node.children.length > 0 && !collapsed.has(node.path))
+        walk(node.children, depth + 1, index);
+    });
+  }
+  walk(nodes, 0, -1);
   return out;
 }
 

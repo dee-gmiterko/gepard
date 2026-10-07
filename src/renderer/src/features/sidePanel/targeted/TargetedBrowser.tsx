@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
+import styled from 'styled-components';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import { useAppDispatch } from '../../../state/AppContext';
 import {
-  useCheckout,
+  useCheckoutHead,
   useIsDiffView,
   useLayout,
   useTargetPath,
@@ -17,8 +18,8 @@ import { Toolbar } from '../../../components/Toolbar';
 import { HideViewedToggle } from '../../../components/HideViewedToggle';
 import { ViewModeToggle, type ViewMode } from '../../../components/ViewModeToggle';
 import { ReviewTree } from '../fileRows/ReviewTree';
-import { aggregateRows, hideViewedRows, type RowData } from '../../../helpers/row';
-import { useRowData } from '../fileRows/rowData';
+import { isViewedRow } from '../../../helpers/row';
+import { useRowData } from '../../../queries/review';
 
 const messages = defineMessages({
   noTarget: {
@@ -55,8 +56,15 @@ const messages = defineMessages({
   },
 });
 
+const Column = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+`;
+
 export function TargetedBrowser(): React.JSX.Element {
-  const checkout = useCheckout();
+  const checkoutHead = useCheckoutHead();
   const layout = useLayout();
   const targeting = useTargeting();
   const dispatch = useAppDispatch();
@@ -71,19 +79,16 @@ export function TargetedBrowser(): React.JSX.Element {
   const fullTree = useTree();
   const rootName = useOpenedProject().data?.project.repo ?? '';
 
-  const items = useMemo(
-    () => targetedFiles.map((p) => ({ path: p, data: rowFor(p) })),
-    [targetedFiles, rowFor],
+  const visiblePaths = useMemo(
+    () => (hideViewed ? targetedFiles.filter((p) => !isViewedRow(rowFor(p))) : targetedFiles),
+    [targetedFiles, hideViewed, rowFor],
   );
 
-  const visibleItems = useMemo(() => hideViewedRows(items, hideViewed), [items, hideViewed]);
-
-  const nodes = useMemo<TreeNode<RowData>[]>(() => {
-    if (mode === 'flat') return buildFlatList(visibleItems);
-    const options = { aggregateFolder: aggregateRows };
-    const entries = buildTree(visibleItems, options);
-    return entries.length > 0 ? withRoot(entries, rootName, options) : entries;
-  }, [visibleItems, mode, rootName]);
+  const nodes = useMemo<TreeNode<null>[]>(() => {
+    if (mode === 'flat') return buildFlatList(visiblePaths);
+    const entries = buildTree(visiblePaths);
+    return entries.length > 0 ? withRoot(entries, rootName) : entries;
+  }, [visiblePaths, mode, rootName]);
 
   function setHideViewed(hide: boolean): void {
     dispatch({ type: 'layout/setHideViewedFiles', hide });
@@ -102,7 +107,7 @@ export function TargetedBrowser(): React.JSX.Element {
         <FormattedMessage {...messages.noTarget} />
       </Message>
     );
-  if (hasCheckoutTarget && !checkout)
+  if (hasCheckoutTarget && !checkoutHead)
     return (
       <Message>
         <FormattedMessage {...messages.checkingOut} />
@@ -114,7 +119,7 @@ export function TargetedBrowser(): React.JSX.Element {
         <FormattedMessage {...messages.loading} />
       </Message>
     );
-  if (items.length === 0) {
+  if (targetedFiles.length === 0) {
     const emptyMessage = diffMode
       ? path
         ? messages.emptyChangedForPath
@@ -130,7 +135,7 @@ export function TargetedBrowser(): React.JSX.Element {
   }
 
   return (
-    <div>
+    <Column>
       <Toolbar>
         <Inline $gap={1}>
           {targeting.pr !== null && (
@@ -139,13 +144,13 @@ export function TargetedBrowser(): React.JSX.Element {
           <ViewModeToggle value={mode} onChange={setMode} />
         </Inline>
       </Toolbar>
-      {visibleItems.length === 0 ? (
+      {visiblePaths.length === 0 ? (
         <Message>
           <FormattedMessage {...messages.allViewed} />
         </Message>
       ) : (
         <ReviewTree nodes={nodes} />
       )}
-    </div>
+    </Column>
   );
 }

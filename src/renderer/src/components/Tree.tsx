@@ -1,11 +1,18 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
 import styled from 'styled-components';
 import { ChevronDown, ChevronRight } from 'react-feather';
 import { defineMessages, useIntl } from 'react-intl';
 import { IconButton } from './IconButton';
-import { CHEVRON_SLOT_WIDTH, ChevronSlot, FileRow, FolderRow, TreeLabel } from './treeStyles';
-import { listReset } from './List';
-import type { TreeNode } from '../helpers/tree';
+import {
+  CHEVRON_SLOT_WIDTH,
+  ChevronSlot,
+  FileRow,
+  FolderRow,
+  TREE_ROW_HEIGHT,
+  TreeLabel,
+} from './treeStyles';
+import { VirtualList } from './VirtualList';
+import { flattenVisible, type TreeNode } from '../helpers/tree';
 
 const messages = defineMessages({
   collapse: {
@@ -28,27 +35,20 @@ export interface TreeProps<T> {
   renderFolder?: (node: TreeNode<T>) => ReactNode;
 }
 
-const List = styled.ul`
-  ${listReset}
+const Root = styled.div`
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
 `;
 
 const RootRow = styled(FolderRow)`
-  position: sticky;
-  top: 0;
-  z-index: 1;
   font-weight: 600;
   color: ${({ theme }) => theme.colors.fg};
   background: ${({ theme }) => theme.colors.bgSubtle};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 `;
-
-function onRowKeyDown(onActivate: () => void): (e: React.KeyboardEvent) => void {
-  return (e) => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    e.preventDefault();
-    onActivate();
-  };
-}
 
 const ChevronButton = styled(IconButton)`
   width: ${CHEVRON_SLOT_WIDTH}px;
@@ -58,9 +58,11 @@ const ChevronButton = styled(IconButton)`
 export function Chevron({
   expanded,
   onToggle,
+  tabIndex,
 }: {
   expanded: boolean;
   onToggle: () => void;
+  tabIndex?: number;
 }): React.JSX.Element {
   const intl = useIntl();
   return (
@@ -69,6 +71,7 @@ export function Chevron({
         icon={expanded ? ChevronDown : ChevronRight}
         label={intl.formatMessage(expanded ? messages.collapse : messages.expand)}
         size={12}
+        tabIndex={tabIndex}
         onClick={(e) => {
           e.stopPropagation();
           onToggle();
@@ -88,22 +91,24 @@ export function Tree<T>({
   renderFolder,
 }: TreeProps<T>): React.JSX.Element {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
-  const listRef = useRef<HTMLUListElement>(null);
-  const scrolled = useRef(false);
+  const [focusedPath, setFocusedPath] = useState<string | null>(null);
+  const pendingFocus = useRef<string | null>(null);
 
-  useEffect(() => {
-    scrolled.current = false;
-  }, [selectedPath]);
+  const rows = useMemo(() => flattenVisible(nodes, collapsed), [nodes, collapsed]);
 
-  // The selected row may not exist or be visible yet (rows still loading, a
-  // hidden tab), so keep trying on later renders until it has been scrolled to.
-  useEffect(() => {
-    if (scrolled.current) return;
-    const row = listRef.current?.querySelector<HTMLElement>('[aria-selected="true"]');
-    if (!row?.checkVisibility()) return;
-    row.scrollIntoView({ block: 'nearest' });
-    scrolled.current = true;
-  });
+  const selectedIndex = rows.findIndex(({ node }) =>
+    node.isFolder ? false : isSelected ? isSelected(node) : node.path === selectedPath,
+  );
+  const scrollTo = useMemo(
+    () =>
+      selectedIndex >= 0
+        ? { key: `selected:${selectedPath ?? ''}`, index: selectedIndex }
+        : undefined,
+    [selectedIndex, selectedPath],
+  );
+
+  const focusedIndex = rows.findIndex(({ node }) => node.path === focusedPath);
+  const tabbableIndex = focusedIndex >= 0 ? focusedIndex : Math.max(0, selectedIndex);
 
   function toggle(path: string): void {
     setCollapsed((prev) => {
@@ -114,73 +119,111 @@ export function Tree<T>({
     });
   }
 
-  function onFileRowKeyDown(node: TreeNode<T>): (e: React.KeyboardEvent) => void {
+  function moveTo(index: number): void {
+    const target = rows.at(index);
+    if (!target) return;
+    pendingFocus.current = target.node.path;
+    setFocusedPath(target.node.path);
+  }
+
+  function onRowKeyDown(index: number): (e: React.KeyboardEvent) => void {
     return (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        (onEnterFile ?? onSelectFile)?.(node);
-      } else if (e.key === ' ') {
-        e.preventDefault();
-        onSelectFile?.(node);
+      const { node, parentIndex } = rows[index];
+      const expandable = node.children.length > 0;
+      const expanded = !collapsed.has(node.path);
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          if (index + 1 < rows.length) moveTo(index + 1);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          if (index > 0) moveTo(index - 1);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          if (!expandable) break;
+          if (!expanded) toggle(node.path);
+          else moveTo(index + 1);
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          if (expandable && expanded) toggle(node.path);
+          else if (parentIndex >= 0) moveTo(parentIndex);
+          break;
+        case 'Enter':
+          e.preventDefault();
+          if (node.isFolder) toggle(node.path);
+          else (onEnterFile ?? onSelectFile)?.(node);
+          break;
+        case ' ':
+          e.preventDefault();
+          if (node.isFolder) toggle(node.path);
+          else onSelectFile?.(node);
+          break;
       }
     };
   }
 
-  function renderNodes(list: TreeNode<T>[], depth: number): ReactNode {
-    return list.map((node) => {
-      const hasChildren = node.children.length > 0;
-      const expanded = !collapsed.has(node.path);
-      if (node.isFolder) {
-        const Folder = node.path === '' ? RootRow : FolderRow;
-        return (
-          <li key={node.path} role="none">
-            <Folder
-              role="treeitem"
-              tabIndex={0}
-              aria-expanded={expanded}
-              $depth={depth}
-              onClick={() => toggle(node.path)}
-              onKeyDown={onRowKeyDown(() => toggle(node.path))}
-            >
-              <Chevron expanded={expanded} onToggle={() => toggle(node.path)} />
-              <TreeLabel title={node.path || node.name}>{node.name}</TreeLabel>
-              {renderFolder?.(node)}
-            </Folder>
-            {expanded && <List role="group">{renderNodes(node.children, depth + 1)}</List>}
-          </li>
-        );
-      }
-      const selected = isSelected ? isSelected(node) : node.path === selectedPath;
+  function renderRow(index: number): ReactNode {
+    const { node, depth, position, setSize } = rows[index];
+    const expandable = node.children.length > 0;
+    const expanded = !collapsed.has(node.path);
+    const common = {
+      role: 'treeitem',
+      tabIndex: index === tabbableIndex ? 0 : -1,
+      'aria-level': depth + 1,
+      'aria-posinset': position,
+      'aria-setsize': setSize,
+      'aria-expanded': expandable ? expanded : undefined,
+      $depth: depth,
+      onFocus: () => setFocusedPath(node.path),
+      onKeyDown: onRowKeyDown(index),
+      ref: (el: HTMLDivElement | null) => {
+        if (el && pendingFocus.current === node.path) {
+          pendingFocus.current = null;
+          el.focus();
+        }
+      },
+    };
+    if (node.isFolder) {
+      const Folder = node.path === '' ? RootRow : FolderRow;
       return (
-        <li key={node.path} role="none">
-          <FileRow
-            role="treeitem"
-            tabIndex={0}
-            $depth={depth}
-            $selected={selected}
-            aria-selected={selected}
-            aria-expanded={hasChildren ? expanded : undefined}
-            onClick={() => onSelectFile?.(node)}
-            onKeyDown={onFileRowKeyDown(node)}
-          >
-            {hasChildren ? (
-              <Chevron expanded={expanded} onToggle={() => toggle(node.path)} />
-            ) : (
-              <ChevronSlot aria-hidden="true" />
-            )}
-            {renderFile(node)}
-          </FileRow>
-          {hasChildren && expanded && (
-            <List role="group">{renderNodes(node.children, depth + 1)}</List>
-          )}
-        </li>
+        <Folder {...common} onClick={() => toggle(node.path)}>
+          <Chevron expanded={expanded} tabIndex={-1} onToggle={() => toggle(node.path)} />
+          <TreeLabel title={node.path || node.name}>{node.name}</TreeLabel>
+          {renderFolder?.(node)}
+        </Folder>
       );
-    });
+    }
+    const selected = isSelected ? isSelected(node) : node.path === selectedPath;
+    return (
+      <FileRow
+        {...common}
+        $selected={selected}
+        aria-selected={selected}
+        onClick={() => onSelectFile?.(node)}
+      >
+        {expandable ? (
+          <Chevron expanded={expanded} tabIndex={-1} onToggle={() => toggle(node.path)} />
+        ) : (
+          <ChevronSlot aria-hidden="true" />
+        )}
+        {renderFile(node)}
+      </FileRow>
+    );
   }
 
   return (
-    <List ref={listRef} role="tree">
-      {renderNodes(nodes, 0)}
-    </List>
+    <Root>
+      <VirtualList
+        role="tree"
+        rowCount={rows.length}
+        rowHeight={TREE_ROW_HEIGHT}
+        getKey={(i) => rows[i].node.path}
+        renderRow={renderRow}
+        scrollTo={scrollTo}
+      />
+    </Root>
   );
 }

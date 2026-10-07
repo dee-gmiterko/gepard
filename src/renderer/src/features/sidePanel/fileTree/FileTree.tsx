@@ -5,8 +5,6 @@ import { useTree } from '../../../queries/files';
 import { buildTree, withRoot } from '../../../helpers/tree';
 import { Message } from '../../../components/Message';
 import { ReviewTree } from '../fileRows/ReviewTree';
-import { aggregateRows } from '../../../helpers/row';
-import { useRowData } from '../fileRows/rowData';
 
 const messages = defineMessages({
   opening: {
@@ -26,17 +24,12 @@ const messages = defineMessages({
 export function FileTree(): React.JSX.Element {
   const head = useCurrentHead();
   const { data: paths, isLoading } = useTree();
-  const { rowFor } = useRowData();
   const rootName = useOpenedProject().data?.project.repo ?? '';
 
   const nodes = useMemo(() => {
-    const options = { aggregateFolder: aggregateRows };
-    const entries = buildTree(
-      (paths ?? []).map((path) => ({ path, data: rowFor(path) })),
-      options,
-    );
-    return entries.length > 0 ? withRoot(entries, rootName, options) : entries;
-  }, [paths, rowFor, rootName]);
+    const entries = buildTree(paths ?? []);
+    return entries.length > 0 ? withRoot(entries, rootName) : entries;
+  }, [paths, rootName]);
 
   if (!head)
     return (

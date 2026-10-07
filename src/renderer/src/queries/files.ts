@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { queryOptions, useQuery } from '@tanstack/react-query';
 import { invoke } from '../ipc/client';
-import { useCheckout, useIsDiffView, useProjectId, useTargetPath } from '../state/hooks';
+import { useCheckoutHead, useIsDiffView, useProjectId, useTargetPath } from '../state/hooks';
 import { useCurrentHead } from './projects';
 import { qk } from './keys';
 import { matchesTarget } from '@gepard/common';
@@ -39,10 +39,10 @@ export function changedFilesQuery(projectId: string, base: string, head: string)
 }
 
 export function useChangedFiles() {
-  const checkout = useCheckout();
+  const checkoutHead = useCheckoutHead();
   const projectId = useProjectId() ?? '';
-  const base = checkout?.base ?? '';
-  const head = checkout?.head ?? '';
+  const base = checkoutHead?.base ?? '';
+  const head = checkoutHead?.head ?? '';
   return useQuery({
     ...changedFilesQuery(projectId, base, head),
     enabled: Boolean(projectId) && Boolean(base) && Boolean(head),
@@ -50,10 +50,10 @@ export function useChangedFiles() {
 }
 
 export function useFileDiff(path: string) {
-  const checkout = useCheckout();
+  const checkoutHead = useCheckoutHead();
   const projectId = useProjectId() ?? '';
-  const base = checkout?.base ?? '';
-  const head = checkout?.head ?? '';
+  const base = checkoutHead?.base ?? '';
+  const head = checkoutHead?.head ?? '';
   return useQuery({
     queryKey: qk.fileDiff(projectId, base, head, path),
     queryFn: () => invoke('files.diff', { projectId, base, head, path }),
@@ -77,5 +77,5 @@ export function useTargetedFiles(): string[] {
 /** Scopes `paths` to the path target and orders them as the targeted file tree lists them. */
 export function targetedFilePaths(paths: readonly string[], path: string | null): string[] {
   const scoped = path ? paths.filter((p) => matchesTarget(p, path)) : paths;
-  return flattenLeafPaths(buildTree(scoped.map((p) => ({ path: p, data: null }))));
+  return flattenLeafPaths(buildTree(scoped));
 }
