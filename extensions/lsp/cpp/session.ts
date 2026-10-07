@@ -29,7 +29,6 @@ import {
   type SourcePos,
   type SourceWorkspaceSymbol,
   terminateChild,
-  trackChild,
 } from '@gepard/common';
 import { isSourceFile } from './compdb';
 import {
@@ -103,7 +102,6 @@ export class ClangdSession implements LanguageSession {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     this.child = child;
-    trackChild(child);
     child.stderr.on('data', (d: Buffer) => this.sink.log('warn', d.toString('utf8').trim()));
     let failLaunch: ((e: Error) => void) | null = null;
     let abandoned = false;

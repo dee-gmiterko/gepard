@@ -28,7 +28,6 @@ import {
   type SourcePos,
   type SourceWorkspaceSymbol,
   terminateChild,
-  trackChild,
 } from '@gepard/common';
 import { freePort } from './helpers/net';
 import { identifiersOn } from './helpers/identifier';
@@ -91,7 +90,6 @@ export class GodotSession implements LanguageSession {
 
     const child = await this.spawnServer();
     this.child = child;
-    trackChild(child);
     let failLaunch: ((e: Error) => void) | null = null;
     let abandoned = false;
     const launchFailed = new Promise<never>((_, reject) => {

@@ -27,7 +27,6 @@ import {
   type SourcePos,
   type SourceWorkspaceSymbol,
   terminateChild,
-  trackChild,
 } from '@gepard/common';
 import {
   flatSymbolsToTree,
@@ -94,7 +93,6 @@ export class PyrightSession implements LanguageSession {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     this.child = child;
-    trackChild(child);
     child.stderr.on('data', (d: Buffer) => this.sink.log('warn', d.toString('utf8').trim()));
     let failLaunch: ((e: Error) => void) | null = null;
     let abandoned = false;

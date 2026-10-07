@@ -1,6 +1,5 @@
 import { app, BrowserWindow, nativeTheme } from 'electron';
 import { electronApp, optimizer } from '@electron-toolkit/utils';
-import { serverChildren } from '@gepard/common';
 import { registerHandlers, emit } from './ipc/registry';
 import { handlers } from './ipc/handlers';
 import { createMainWindow } from './window';
@@ -74,9 +73,6 @@ export function bootstrap(): void {
     event.preventDefault();
     const cap = new Promise<void>((resolve) => setTimeout(resolve, QUIT_CLOSE_TIMEOUT_MS));
     void Promise.race([indexer.closeAll(), cap]).finally(() => app.quit());
-  });
-  process.on('exit', () => {
-    for (const child of serverChildren()) child.kill('SIGKILL');
   });
 
   app.on('window-all-closed', () => {
