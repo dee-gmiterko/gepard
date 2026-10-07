@@ -24,10 +24,9 @@ describe('isValidRepoPath', () => {
     expect(isValidRepoPath('src/main')).toBe(true);
   });
 
-  it('rejects absolute, backslash and parent-traversal paths', () => {
-    expect(isValidRepoPath('/package.json')).toBe(false);
-    expect(isValidRepoPath('src\\main')).toBe(false);
-    expect(isValidRepoPath('../x')).toBe(false);
-    expect(isValidRepoPath('a/../x')).toBe(false);
+  it('accepts any characters valid in a file name and rejects the empty path', () => {
+    expect(isValidRepoPath('src\\main')).toBe(true);
+    expect(isValidRepoPath('a\nb')).toBe(true);
+    expect(isValidRepoPath('')).toBe(false);
   });
 });

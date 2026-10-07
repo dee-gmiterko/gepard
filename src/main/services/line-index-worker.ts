@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { parentPort } from 'node:worker_threads';
 import { looksBinary } from '../helpers/binary';
+import { resolveInRepo } from '../helpers/repoPath';
 import { LineIndex } from './line-index';
 import type {
   LineIndexFileChange,
@@ -25,7 +25,7 @@ const MAX_INDEXED_BYTES = 8 * 1024 * 1024;
 
 async function indexOneFile(relPath: string): Promise<void> {
   try {
-    const buf = await readFile(join(repoRoot, relPath));
+    const buf = await readFile(resolveInRepo(repoRoot, relPath));
     if (buf.length > MAX_INDEXED_BYTES || looksBinary(buf)) {
       index.removeFile(relPath);
       return;
