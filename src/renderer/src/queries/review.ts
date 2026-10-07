@@ -3,7 +3,7 @@ import type { ChangedFile } from '@gepard/common';
 import { useCheckoutHead, useIsDiffView } from '../state/hooks';
 import { aggregateRows, rowsByPath, ZERO_ROW, type RowData } from '../helpers/row';
 import { canMarkViewed, type ReviewFiles } from '../helpers/review';
-import { useAppDispatch, useUiStore } from '../state/AppContext';
+import { useUiDispatch, useUiStore } from '../state/UiContext';
 import { useChangedFiles, useTargetedFiles } from './files';
 import { useSetViewed, useViewed } from './comments';
 
@@ -85,21 +85,22 @@ export interface ReviewActions {
 
 export function useReviewActions(): ReviewActions {
   const store = useUiStore();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const review = useReviewFiles();
   const { mutate: setViewed } = useSetViewed();
 
   return useMemo<ReviewActions>(() => {
     const markViewed = (paths: string[], viewed: boolean): void => {
       if (store.getState().targeting.pr === null) return;
-      dispatch({ type: 'viewed/mark', paths, viewed, review });
       setViewed({ paths, viewed });
     };
     return {
       markViewed,
       toggleViewed: (path) => {
         if (!canMarkViewed(store.getState().targeting.pr, review, path)) return false;
-        markViewed([path], !review.viewed.includes(path));
+        const viewed = !review.viewed.includes(path);
+        dispatch({ type: 'viewed/mark', paths: [path], viewed, review });
+        markViewed([path], viewed);
         return true;
       },
       step: (direction) => {

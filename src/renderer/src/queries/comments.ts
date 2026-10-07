@@ -7,7 +7,7 @@ import {
 } from '@tanstack/react-query';
 import { invoke } from '../ipc/client';
 import { qk } from './keys';
-import { useAppDispatch } from '../state/AppContext';
+import { useUiDispatch } from '../state/UiContext';
 import { useProjectId, useTargetCommit, useTargetPr } from '../state/hooks';
 import { useTargetedPr } from './prs';
 import type { ChannelInput, CommentDraft, LocalViewedState, SyncMode } from '@gepard/common';
@@ -126,18 +126,15 @@ export function useSetViewed() {
       if (context) qc.setQueryData(key, context.previous);
     },
     onSuccess: (data) => {
-      qc.setQueryData(key, data);
+      // An older response would overwrite the optimistic state of marks still in flight.
+      if (qc.isMutating({ mutationKey: [...key, 'set'] }) <= 1) qc.setQueryData(key, data);
     },
-    onSettled: () =>
-      Promise.all([
-        qc.invalidateQueries({ queryKey: key }),
-        qc.invalidateQueries({ queryKey: qk.pendingCount(projectId, pr) }),
-      ]),
+    onSettled: () => qc.invalidateQueries({ queryKey: qk.pendingCount(projectId, pr) }),
   });
 }
 
 export function useSync() {
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const projectId = useProjectId() ?? '';
   const pr = useTargetPr() ?? NaN;
   const commit = useTargetCommit() ?? undefined;
