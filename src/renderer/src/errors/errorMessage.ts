@@ -1,5 +1,4 @@
-import { defineMessages } from 'react-intl';
-import { getIntl } from '../i18n/intl';
+import { defineMessages, type IntlShape, type MessageDescriptor } from 'react-intl';
 import { errorMessage, IpcError } from '@gepard/common';
 
 const codeMessages = defineMessages({
@@ -96,16 +95,25 @@ function isKnownCode(code: string): code is keyof typeof codeMessages {
   return Object.hasOwn(codeMessages, code);
 }
 
-export interface LocalizedError {
-  message: string;
+export interface DescribedError {
+  message: string | MessageDescriptor;
   detail?: string;
 }
 
-export function localizedErrorMessage(error: unknown): LocalizedError {
+export function describeError(error: unknown): DescribedError {
   if (error instanceof IpcError) {
     if (isKnownCode(error.code)) {
-      return { message: getIntl().formatMessage(codeMessages[error.code]), detail: error.message };
+      return { message: codeMessages[error.code], detail: error.message };
     }
   }
   return { message: errorMessage(error) };
+}
+
+export function formatErrorText(intl: IntlShape, message: string | MessageDescriptor): string {
+  return typeof message === 'string' ? message : intl.formatMessage(message);
+}
+
+export function errorText(message: string | MessageDescriptor): string {
+  if (typeof message === 'string') return message;
+  return typeof message.defaultMessage === 'string' ? message.defaultMessage : (message.id ?? '');
 }

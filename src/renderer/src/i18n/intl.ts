@@ -20,14 +20,3 @@ export function buildIntl(locale: string, messages: Record<string, string>): Int
     cache,
   );
 }
-
-let activeIntl: IntlShape = buildIntl(defaultLocale, {});
-
-// Owned by IntlRoot; code outside the React tree reads the active translator through getIntl.
-export function setActiveIntl(intl: IntlShape): void {
-  activeIntl = intl;
-}
-
-export function getIntl(): IntlShape {
-  return activeIntl;
-}

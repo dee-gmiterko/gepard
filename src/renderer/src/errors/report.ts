@@ -1,14 +1,15 @@
 import { IpcError } from '@gepard/common';
+import type { MessageDescriptor } from 'react-intl';
 import { z } from 'zod';
 import { invoke, isCancelledError, isStaleShaError } from '../ipc/client';
-import { localizedErrorMessage } from './errorMessage';
+import { describeError, errorText } from './errorMessage';
 
 export const ReportTone = z.enum(['danger', 'warning']);
 export type ReportTone = z.infer<typeof ReportTone>;
 
 export interface ReportedError {
   scope: string;
-  message: string;
+  message: string | MessageDescriptor;
   tone?: ReportTone;
   detail?: string;
   loggedByMain?: boolean;
@@ -26,7 +27,8 @@ export function reportError(error: ReportedError): void {
   for (const listener of listeners) listener(error);
   if (error.loggedByMain) return;
 
-  const message = error.detail ? `${error.message}\n${error.detail}` : error.message;
+  const headline = errorText(error.message);
+  const message = error.detail ? `${headline}\n${error.detail}` : headline;
   invoke('log.write', {
     level: error.tone === 'warning' ? 'warn' : 'error',
     scope: error.scope,
@@ -36,7 +38,7 @@ export function reportError(error: ReportedError): void {
 
 export function reportQueryError(scope: string, error: unknown): void {
   if (isCancelledError(error) || isStaleShaError(error)) return;
-  const { message, detail } = localizedErrorMessage(error);
+  const { message, detail } = describeError(error);
   reportError({ scope, message, detail: mergeDetail(detail, errorDetail(error)) });
 }
 

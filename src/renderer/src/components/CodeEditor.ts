@@ -8,7 +8,7 @@ import {
   type RefObject,
 } from 'react';
 import { useTheme } from 'styled-components';
-import { defineMessages, useIntl } from 'react-intl';
+import { defineMessages, useIntl, type IntlShape } from 'react-intl';
 import {
   Compartment,
   EditorSelection,
@@ -125,17 +125,23 @@ export function commentBlockDecorations(
   return EditorView.decorations.of(builder.finish());
 }
 
+const addCommentMessage = defineMessages({
+  addComment: { id: 'codeEditor.addComment', defaultMessage: 'Add comment' },
+});
+
 export function commentAffordanceGutter(
+  intl: IntlShape,
   isCommentable: (docLine: number) => boolean,
   onClick: (docLine: number) => void,
 ): Extension {
+  const label = intl.formatMessage(addCommentMessage.addComment);
   return gutter({
     class: 'cm-comment-gutter',
     lineMarker: (view, line) => {
       const docLine = view.state.doc.lineAt(line.from).number;
-      return isCommentable(docLine) ? new AffordanceMarker() : null;
+      return isCommentable(docLine) ? new AffordanceMarker(label) : null;
     },
-    initialSpacer: () => new AffordanceMarker(),
+    initialSpacer: () => new AffordanceMarker(label),
     domEventHandlers: {
       click: (view, line) => {
         const docLine = view.state.doc.lineAt(line.from).number;
