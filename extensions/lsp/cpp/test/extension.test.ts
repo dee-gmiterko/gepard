@@ -1,5 +1,4 @@
 import { mkdir, readdir, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -7,7 +6,7 @@ import extension from '../index';
 import type { LanguageSession } from '@gepard/common';
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
-const DATA_DIR = join(tmpdir(), 'gepard-cpp-ext');
+const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'vendor');
 const sink = { status: () => {}, log: () => {} };
 
 describe('cpp extension', () => {
@@ -20,7 +19,7 @@ describe('cpp extension', () => {
     } finally {
       await session.dispose();
     }
-  }, 300_000);
+  }, 60_000);
 });
 
 describe('language server on fixtures', () => {
@@ -29,7 +28,7 @@ describe('language server on fixtures', () => {
   beforeAll(async () => {
     await mkdir(DATA_DIR, { recursive: true });
     session = await extension.open({ root: FIXTURES }, { dataDir: DATA_DIR }, sink);
-  }, 300_000);
+  }, 60_000);
 
   afterAll(async () => {
     await session?.dispose();
