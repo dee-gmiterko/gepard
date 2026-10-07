@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { FileText, Layers, Search, Settings } from 'react-feather';
 import { defineMessages, useIntl, type IntlShape, type MessageDescriptor } from 'react-intl';
-import { useAppDispatch, useAppState } from '../../state/AppContext';
+import { useAppDispatch } from '../../state/AppContext';
+import { useLayout, useSidePanelFocusRequest, useSidePanelTab } from '../../state/hooks';
 import type { SidePanelTab } from '../../state/reducer';
 import { useSetLayout } from '../../queries/projects';
-import { useResizeHandle } from '../../hooks/useResizeHandle';
 import { IconButton } from '../../components/IconButton';
-import { ResizeHandle } from '../../components/ResizeHandle';
+import { ResizablePanel } from '../../components/ResizablePanel';
 import { FileTree } from './fileTree/FileTree';
 import { TargetedBrowser } from './targeted/TargetedBrowser';
 import { SearchPanel } from './search/SearchPanel';
@@ -47,19 +47,14 @@ function panelId(id: SidePanelTab): string {
   return `sidePanel-panel-${id}`;
 }
 
-const Panel = styled.div<{ $width: number }>`
+const Panel = styled(ResizablePanel)`
   position: relative;
   display: grid;
   grid-template-columns: 32px 1fr;
   grid-template-rows: minmax(0, 1fr);
-  width: ${({ $width }) => $width}px;
   min-height: 0;
   border-right: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.bgSubtle};
-`;
-
-const Handle = styled(ResizeHandle)`
-  right: -3px;
 `;
 
 const TabRail = styled.div`
@@ -106,45 +101,38 @@ const TABS: {
 
 export function SidePanel(): React.JSX.Element {
   const intl: IntlShape = useIntl();
-  const state = useAppState();
+  const layout = useLayout();
+  const sidePanelFocusRequest = useSidePanelFocusRequest();
+  const sidePanelTab = useSidePanelTab();
   const dispatch = useAppDispatch();
   const setLayout = useSetLayout();
 
-  const [width, setWidth] = useState(state.layout.sidePanelWidth);
-  const draggingRef = useRef(false);
-  useEffect(() => {
-    if (!draggingRef.current) setWidth(state.layout.sidePanelWidth);
-  }, [state.layout.sidePanelWidth]);
-
   const searchPanelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (state.sidePanelFocusRequest === 0 || state.sidePanelTab !== 'search') return;
+    if (sidePanelFocusRequest === 0 || sidePanelTab !== 'search') return;
     searchPanelRef.current?.querySelector('input')?.focus();
-  }, [state.sidePanelFocusRequest, state.sidePanelTab]);
+  }, [sidePanelFocusRequest, sidePanelTab]);
 
-  const { onPointerDown } = useResizeHandle({
-    min: MIN_WIDTH,
-    max: MAX_WIDTH,
-    sign: 1,
-    getValue: () => width,
-    onChange: (value) => {
-      draggingRef.current = true;
-      setWidth(value);
-    },
-    onCommit: (value) => {
-      draggingRef.current = false;
+  const commitWidth = useCallback(
+    (value: number) => {
       dispatch({ type: 'layout/setSidePanelWidth', width: value });
-      setLayout.mutate({ ...state.layout, sidePanelWidth: value });
+      setLayout.mutate({ ...layout, sidePanelWidth: value });
     },
-  });
+    [dispatch, setLayout, layout],
+  );
 
   return (
-    <Panel $width={width}>
-      <Handle onPointerDown={onPointerDown} />
+    <Panel
+      width={layout.sidePanelWidth}
+      min={MIN_WIDTH}
+      max={MAX_WIDTH}
+      edge="right"
+      onCommit={commitWidth}
+    >
       <TabRail>
         <TabList role="tablist" aria-label={intl.formatMessage(messages.tablist)}>
           {TABS.map((tab) => {
-            const selected = state.sidePanelTab === tab.id;
+            const selected = sidePanelTab === tab.id;
             return (
               <IconButton
                 key={tab.id}
@@ -172,7 +160,7 @@ export function SidePanel(): React.JSX.Element {
         id={panelId('files')}
         role="tabpanel"
         aria-labelledby={tabId('files')}
-        hidden={state.sidePanelTab !== 'files'}
+        hidden={sidePanelTab !== 'files'}
       >
         <FileTree />
       </TabContent>
@@ -180,7 +168,7 @@ export function SidePanel(): React.JSX.Element {
         id={panelId('targeted')}
         role="tabpanel"
         aria-labelledby={tabId('targeted')}
-        hidden={state.sidePanelTab !== 'targeted'}
+        hidden={sidePanelTab !== 'targeted'}
       >
         <TargetedBrowser />
       </TabContent>
@@ -189,7 +177,7 @@ export function SidePanel(): React.JSX.Element {
         id={panelId('search')}
         role="tabpanel"
         aria-labelledby={tabId('search')}
-        hidden={state.sidePanelTab !== 'search'}
+        hidden={sidePanelTab !== 'search'}
       >
         <SearchPanel />
       </TabContent>

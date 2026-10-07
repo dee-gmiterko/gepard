@@ -1,4 +1,5 @@
-import { useAppDispatch, useAppState } from '../../../../state/AppContext';
+import { useAppDispatch } from '../../../../state/AppContext';
+import { useTargeting } from '../../../../state/hooks';
 import { useTargetActions } from '../../../header/useTargetActions';
 import { useOpenReview } from './useOpenReview';
 
@@ -14,7 +15,7 @@ export interface OverviewActions {
 }
 
 export function useOverviewActions(): OverviewActions {
-  const state = useAppState();
+  const targeting = useTargeting();
   const dispatch = useAppDispatch();
   const { setPr, setPath, setCommit } = useTargetActions();
   const openReview = useOpenReview();
@@ -26,11 +27,11 @@ export function useOverviewActions(): OverviewActions {
     },
     reviewPr: (pr) => {
       setPr(pr);
-      openReview({ ...state.targeting, pr, commit: null });
+      openReview({ ...targeting, pr, commit: null });
     },
     showAllPrs: () => setPr(null),
     openComments: () => dispatch({ type: 'mainTab/set', tab: 'comments' }),
-    openFiles: () => openReview(state.targeting),
+    openFiles: () => openReview(targeting),
     openFile: (path) => dispatch({ type: 'file/open', path }),
     openFolder: (path) => {
       setPath(path);

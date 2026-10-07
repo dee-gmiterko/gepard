@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
-import { useAppState } from '../../state/AppContext';
+import { useCheckout } from '../../state/hooks';
 import { useChangedFiles } from '../../queries/files';
 
 export function useIsCheckedOutChangedFile(path: string | null): boolean {
-  const checkout = useAppState().checkout;
+  const checkout = useCheckout();
   const { data: changedFiles } = useChangedFiles();
   return useMemo(() => {
     if (!checkout || !changedFiles || path === null) return false;

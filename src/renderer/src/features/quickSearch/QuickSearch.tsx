@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl';
-import { useAppDispatch, useAppState } from '../../state/AppContext';
+import { useAppDispatch } from '../../state/AppContext';
+import { useQuickSearchMode } from '../../state/hooks';
 import type { QuickSearchMode } from '../../state/reducer';
 import { useTargetedFiles, useTree } from '../../queries/files';
 import { useWorkspaceSymbols } from '../../queries/search';
@@ -125,7 +126,7 @@ const FilePath = styled(PathLabel)`
 `;
 
 export function QuickSearch(): React.JSX.Element | null {
-  const mode = useAppState().quickSearch;
+  const mode = useQuickSearchMode();
   if (mode === null) return null;
   return <QuickSearchPopup key={mode} mode={mode} />;
 }

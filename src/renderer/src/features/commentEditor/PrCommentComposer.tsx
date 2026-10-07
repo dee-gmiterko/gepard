@@ -5,7 +5,7 @@ import { Button } from '../../components/Button';
 import { ActionRow, Stack } from '../../components/Layout';
 import { TextArea } from '../../components/TextInput';
 import { useUpsertComment } from '../../queries/comments';
-import { useAppState } from '../../state/AppContext';
+import { useTargetPr } from '../../state/hooks';
 
 const messages = defineMessages({
   placeholder: {
@@ -30,7 +30,7 @@ export function PrCommentComposer({ references = [] }: PrCommentComposerProps): 
   const intl = useIntl();
   const [body, setBody] = useState('');
   const upsert = useUpsertComment();
-  const unassigned = useAppState().targeting.pr === null;
+  const unassigned = useTargetPr() === null;
 
   function handleSubmit(): void {
     const trimmed = body.trim();

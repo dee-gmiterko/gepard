@@ -1,4 +1,5 @@
-import { useAppDispatch, useAppState } from '../../state/AppContext';
+import { useAppDispatch } from '../../state/AppContext';
+import { useTargeting } from '../../state/hooks';
 import { useSetTargeting } from '../../queries/projects';
 import type { AppAction, Targeting } from '../../state/reducer';
 
@@ -9,7 +10,7 @@ export interface TargetActions {
 }
 
 export function useTargetActions(): TargetActions {
-  const state = useAppState();
+  const targeting = useTargeting();
   const dispatch = useAppDispatch();
   const setTargeting = useSetTargeting();
 
@@ -22,11 +23,9 @@ export function useTargetActions(): TargetActions {
     setPr: (pr) =>
       apply(
         { type: 'target/pr', pr },
-        pr === state.targeting.pr
-          ? state.targeting
-          : { pr, commit: null, path: state.targeting.path },
+        pr === targeting.pr ? targeting : { pr, commit: null, path: targeting.path },
       ),
-    setCommit: (sha) => apply({ type: 'target/commit', sha }, { ...state.targeting, commit: sha }),
-    setPath: (path) => apply({ type: 'target/path', path }, { ...state.targeting, path }),
+    setCommit: (sha) => apply({ type: 'target/commit', sha }, { ...targeting, commit: sha }),
+    setPath: (path) => apply({ type: 'target/path', path }, { ...targeting, path }),
   };
 }

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { invoke } from '../../../../ipc/client';
 import { qk } from '../../../../queries/keys';
-import { useAppState } from '../../../../state/AppContext';
+import { useCheckout, useProjectId } from '../../../../state/hooks';
 import { useChangedFiles, useFileDiff } from '../../../../queries/files';
 import {
   changeLines,
@@ -21,10 +21,10 @@ export interface MassActions {
 }
 
 export function useMassActions(path: string): MassActions {
-  const state = useAppState();
-  const projectId = state.projectId ?? '';
-  const base = state.checkout?.base ?? '';
-  const head = state.checkout?.head ?? '';
+  const checkout = useCheckout();
+  const projectId = useProjectId() ?? '';
+  const base = checkout?.base ?? '';
+  const head = checkout?.head ?? '';
   const diff = useFileDiff(path);
   const changed = useChangedFiles();
 

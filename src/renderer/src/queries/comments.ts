@@ -7,7 +7,8 @@ import {
 } from '@tanstack/react-query';
 import { invoke } from '../ipc/client';
 import { qk } from './keys';
-import { useAppDispatch, useAppState } from '../state/AppContext';
+import { useAppDispatch } from '../state/AppContext';
+import { useProjectId, useTargetCommit, useTargetPr } from '../state/hooks';
 import { useTargetedPr } from './prs';
 import type { ChannelInput, CommentDraft, LocalViewedState, SyncMode } from '@gepard/common';
 
@@ -16,9 +17,8 @@ function commentsKey(projectId: string, pr: number | null) {
 }
 
 export function useComments() {
-  const state = useAppState();
-  const projectId = state.projectId ?? '';
-  const pr = state.targeting.pr;
+  const projectId = useProjectId() ?? '';
+  const pr = useTargetPr();
   return useQuery({
     queryKey: commentsKey(projectId, pr),
     queryFn: () => invoke('comments.list', { projectId, pr }),
@@ -34,9 +34,8 @@ export function viewedQuery(projectId: string, pr: number) {
 }
 
 export function useViewed() {
-  const state = useAppState();
-  const projectId = state.projectId ?? '';
-  const pr = state.targeting.pr ?? NaN;
+  const projectId = useProjectId() ?? '';
+  const pr = useTargetPr() ?? NaN;
   return useQuery({
     ...viewedQuery(projectId, pr),
     enabled: Boolean(projectId) && Number.isFinite(pr),
@@ -57,9 +56,8 @@ function invalidateComments(
 }
 
 export function useUpsertComment() {
-  const state = useAppState();
-  const projectId = state.projectId ?? '';
-  const pr = state.targeting.pr;
+  const projectId = useProjectId() ?? '';
+  const pr = useTargetPr();
   const prId = useTargetedPr()?.id ?? null;
   const qc = useQueryClient();
   return useMutation({
@@ -70,9 +68,8 @@ export function useUpsertComment() {
 }
 
 export function useDeleteComment() {
-  const state = useAppState();
-  const projectId = state.projectId ?? '';
-  const pr = state.targeting.pr;
+  const projectId = useProjectId() ?? '';
+  const pr = useTargetPr();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (commentId: string) => invoke('comments.delete', { projectId, pr, commentId }),
@@ -81,7 +78,7 @@ export function useDeleteComment() {
 }
 
 export function useCreateIssue() {
-  const projectId = useAppState().projectId ?? '';
+  const projectId = useProjectId() ?? '';
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: Omit<ChannelInput<'issues.create'>, 'projectId'>) =>
@@ -91,9 +88,8 @@ export function useCreateIssue() {
 }
 
 export function useSetViewed() {
-  const state = useAppState();
-  const projectId = state.projectId ?? '';
-  const pr = state.targeting.pr ?? NaN;
+  const projectId = useProjectId() ?? '';
+  const pr = useTargetPr() ?? NaN;
   const prId = useTargetedPr()?.id ?? null;
   const qc = useQueryClient();
   const key = qk.viewed(projectId, pr);
@@ -141,11 +137,10 @@ export function useSetViewed() {
 }
 
 export function useSync() {
-  const state = useAppState();
   const dispatch = useAppDispatch();
-  const projectId = state.projectId ?? '';
-  const pr = state.targeting.pr ?? NaN;
-  const commit = state.targeting.commit ?? undefined;
+  const projectId = useProjectId() ?? '';
+  const pr = useTargetPr() ?? NaN;
+  const commit = useTargetCommit() ?? undefined;
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (mode: SyncMode = 'full') => ({
@@ -169,9 +164,8 @@ export function useSync() {
 }
 
 export function usePendingCount() {
-  const state = useAppState();
-  const projectId = state.projectId ?? '';
-  const pr = state.targeting.pr ?? NaN;
+  const projectId = useProjectId() ?? '';
+  const pr = useTargetPr() ?? NaN;
   return useQuery({
     queryKey: qk.pendingCount(projectId, pr),
     queryFn: () => invoke('sync.pendingCount', { projectId, pr }),

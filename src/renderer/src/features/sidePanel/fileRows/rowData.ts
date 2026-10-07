@@ -1,6 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { useAppState } from '../../../state/AppContext';
-import { isDiffView } from '../../../state/selectors';
+import { useCheckout, useIsDiffView } from '../../../state/hooks';
 import { useChangedFiles } from '../../../queries/files';
 import { useViewed } from '../../../queries/comments';
 import type { ChangedFile } from '@gepard/common';
@@ -14,8 +13,9 @@ interface RowDataSource {
 }
 
 export function useRowData(): RowDataSource {
-  const state = useAppState();
-  const diffMode = isDiffView(state) && state.checkout !== null;
+  const checkout = useCheckout();
+  const isDiff = useIsDiffView();
+  const diffMode = isDiff && checkout !== null;
   const changed = useChangedFiles();
   const { data: viewedList } = useViewed();
 

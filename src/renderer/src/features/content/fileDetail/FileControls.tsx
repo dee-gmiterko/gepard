@@ -18,7 +18,8 @@ import {
   Sidebar,
 } from 'react-feather';
 import { defineMessages, useIntl } from 'react-intl';
-import { useAppDispatch, useAppState } from '../../../state/AppContext';
+import { useAppDispatch } from '../../../state/AppContext';
+import { useAcceptedFiles, useActiveFile, useLayout, useTargetPr } from '../../../state/hooks';
 import { invoke } from '../../../ipc/client';
 import { reportQueryError } from '../../../errors/report';
 import { useSetLayout } from '../../../queries/projects';
@@ -306,16 +307,17 @@ function useDragOffset(
 
 export function FileControls({ docked = false }: { docked?: boolean }): React.JSX.Element {
   const intl = useIntl();
-  const state = useAppState();
+  const acceptedFiles = useAcceptedFiles();
+  const layout = useLayout();
   const dispatch = useAppDispatch();
   const setLayout = useSetLayout();
-  const pr = state.targeting.pr;
-  const path = state.activeFile;
+  const pr = useTargetPr();
+  const path = useActiveFile();
   const panelRef = useRef<HTMLDivElement>(null);
-  const initialPosition = state.layout.fileControlsPosition ?? { x: 0, y: 0 };
+  const initialPosition = layout.fileControlsPosition ?? { x: 0, y: 0 };
   const { offset, onPointerDown, onKeyDown } = useDragOffset(panelRef, initialPosition, (next) => {
     dispatch({ type: 'layout/setFileControlsPosition', position: next });
-    setLayout.mutate({ ...state.layout, fileControlsPosition: next });
+    setLayout.mutate({ ...layout, fileControlsPosition: next });
   });
 
   const { data: viewed } = useViewed();
@@ -331,8 +333,8 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
     invoke('contextMenu.showFileView', {
       x: rect.left,
       y: rect.bottom,
-      wrapLongLines: state.layout.wrapLongLines,
-      fullFileDiff: state.layout.fullFileDiff,
+      wrapLongLines: layout.wrapLongLines,
+      fullFileDiff: layout.fullFileDiff,
     })
       .then((pick) => {
         if (pick === 'wrapLongLines') commands.toggleWrapLines();
@@ -343,7 +345,7 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
 
   function toggleDocked(): void {
     dispatch({ type: 'layout/setFileControlsDocked', docked: !docked });
-    setLayout.mutate({ ...state.layout, fileControlsDocked: !docked });
+    setLayout.mutate({ ...layout, fileControlsDocked: !docked });
   }
 
   const Wrapper = docked ? Docked : Floating;
@@ -363,7 +365,7 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
                   type="checkbox"
                   checked={isViewed}
                   onChange={(e) => {
-                    commands.setViewedPaths([path], e.target.checked);
+                    dispatch({ type: 'viewed/mark', paths: [path], viewed: e.target.checked });
                     if (e.target.checked) setPulse((n) => n + 1);
                   }}
                 />
@@ -406,7 +408,7 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
             $tone="danger"
             icon={CornerUpLeft}
             label={intl.formatMessage(messages.revertLast)}
-            disabled={state.acceptedFiles.length === 0}
+            disabled={acceptedFiles.length === 0}
             onClick={() => commands.revertPrev()}
           />
           <NavButton

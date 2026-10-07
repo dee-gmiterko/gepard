@@ -6,7 +6,7 @@ import { IconField } from '../../components/IconField';
 import { usePrCommits, useCommits } from '../../queries/prs';
 import { unionByKey } from '../../helpers/array';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
-import { useAppState } from '../../state/AppContext';
+import { useTargeting } from '../../state/hooks';
 import { useTargetActions } from './useTargetActions';
 import type { Commit } from '@gepard/common';
 
@@ -23,9 +23,9 @@ const messages = defineMessages({
 
 export function CommitTarget(): React.JSX.Element {
   const intl = useIntl();
-  const state = useAppState();
+  const targeting = useTargeting();
   const { setCommit } = useTargetActions();
-  const usingPr = state.targeting.pr !== null;
+  const usingPr = targeting.pr !== null;
 
   const [queryText, setQueryText] = useState('');
   const [picked, setPicked] = useState<Commit | null>(null);
@@ -60,17 +60,15 @@ export function CommitTarget(): React.JSX.Element {
 
   const value = useMemo(
     () =>
-      state.targeting.commit === null
+      targeting.commit === null
         ? null
-        : (items.find((c) => c.oid === state.targeting.commit) ??
-          (picked?.oid === state.targeting.commit ? picked : null)),
-    [state.targeting.commit, items, picked],
+        : (items.find((c) => c.oid === targeting.commit) ??
+          (picked?.oid === targeting.commit ? picked : null)),
+    [targeting.commit, items, picked],
   );
 
   const unresolvedLabel =
-    value === null && state.targeting.commit !== null
-      ? state.targeting.commit.slice(0, 7)
-      : undefined;
+    value === null && targeting.commit !== null ? targeting.commit.slice(0, 7) : undefined;
 
   return (
     <IconField icon={GitCommit}>

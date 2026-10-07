@@ -3,7 +3,8 @@ import { Compartment } from '@codemirror/state';
 import { closeHoverTooltips, EditorView, lineNumbers } from '@codemirror/view';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import type { DiffRow } from '@gepard/common';
-import { useAppDispatch, useAppState } from '../../../../state/AppContext';
+import { useAppDispatch } from '../../../../state/AppContext';
+import { useActiveFile, useLayout, useRevealLine, useTargeting } from '../../../../state/hooks';
 import { useCurrentHead } from '../../../../queries/projects';
 import { useFileContent } from '../../../../queries/files';
 import { useComments } from '../../../../queries/comments';
@@ -80,9 +81,12 @@ function CodeText({
   text: string;
   diffRows: readonly DiffRow[] | null;
 }): React.JSX.Element {
-  const state = useAppState();
+  const activeFile = useActiveFile();
+  const layout = useLayout();
+  const revealLine = useRevealLine();
+  const targeting = useTargeting();
   const dispatch = useAppDispatch();
-  const unassigned = state.targeting.pr === null;
+  const unassigned = targeting.pr === null;
   const { data: threads } = useComments();
   const head = useCurrentHead() ?? '';
   const lookupDefinition = useDefinitionLookup(head, path);
@@ -95,18 +99,17 @@ function CodeText({
       ),
     );
   }, [symbolPortals, lookupDefinition]);
-  // Kept stable: a new extensions value makes the editor reload the whole document.
-  const wrapCompartment = useMemo(() => new Compartment(), []);
+  const wrapLongLines = layout.wrapLongLines;
   const diffCompartment = useMemo(() => new Compartment(), []);
   const extensions = useMemo(
     () => [
       lineNumbers(),
       symbolTooltip(symbolPortals),
       lineContextMenu(path),
-      wrapCompartment.of([]),
+      wrapLongLines ? EditorView.lineWrapping : [],
       diffCompartment.of([]),
     ],
-    [symbolPortals, path, wrapCompartment, diffCompartment],
+    [symbolPortals, path, wrapLongLines, diffCompartment],
   );
   const { containerRef, view, comments, commentGutter } = useReadOnlyEditor(path, text, extensions);
   const [draft, setDraft] = useState<number | null>(null);
@@ -119,15 +122,6 @@ function CodeText({
     [view, dispatch],
   );
 
-  const wrapLongLines = state.layout.wrapLongLines;
-  useEffect(() => {
-    if (!view) return;
-    view.dispatch({
-      effects: wrapCompartment.reconfigure(wrapLongLines ? EditorView.lineWrapping : []),
-    });
-    // The editor hook resets the extensions compartment whenever the document changes.
-  }, [wrapLongLines, view, wrapCompartment, path, text]);
-
   const diffMarks = useMemo(() => (diffRows ? fullFileDiffMarks(diffRows) : null), [diffRows]);
   useEffect(() => {
     if (!view) return;
@@ -136,7 +130,7 @@ function CodeText({
         diffMarks ? fullFileDiffDecorations(view.state.doc, diffMarks) : [],
       ),
     });
-  }, [diffMarks, view, diffCompartment, path, text]);
+  }, [diffMarks, view, diffCompartment, extensions, text]);
 
   useEffect(() => {
     if (!view) return;
@@ -157,14 +151,14 @@ function CodeText({
     view.dispatch({
       effects: comments.reconfigure(commentBlockDecorations(view.state.doc, entries, portals)),
     });
-  }, [threads, draft, unassigned, path, head, diffRows, view, comments, portals]);
+  }, [threads, draft, unassigned, path, head, diffRows, view, comments, portals, text]);
 
   useEffect(() => {
-    if (!view || state.activeFile !== path || state.revealLine == null) return;
-    const { line, side } = state.revealLine;
+    if (!view || activeFile !== path || revealLine == null) return;
+    const { line, side } = revealLine;
     const docLine = side === 'LEFT' && diffRows ? deletedLineDocLines(diffRows).get(line) : line;
     if (docLine != null) revealDocLine(view, docLine);
-  }, [view, path, state.activeFile, state.revealLine, diffRows]);
+  }, [view, path, activeFile, revealLine, diffRows]);
 
   return (
     <>

@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
-import { useAppState } from '../../../state/AppContext';
-import { useCommands } from '../../../keyboard/useCommands';
+import { useAppDispatch } from '../../../state/AppContext';
+import { useTargetPr } from '../../../state/hooks';
 import { Checkbox } from '../../../components/Checkbox';
 import { Inline } from '../../../components/Layout';
 import type { RowData } from '../../../helpers/row';
@@ -48,10 +48,10 @@ export function FileRowMarks({
   paths: string[];
 }): React.JSX.Element | null {
   const intl = useIntl();
-  const state = useAppState();
-  const commands = useCommands();
+  const pr = useTargetPr();
+  const dispatch = useAppDispatch();
   const hasCounts = data.additions > 0 || data.deletions > 0;
-  const hasViewed = state.targeting.pr !== null && data.totalCount > 0;
+  const hasViewed = pr !== null && data.totalCount > 0;
   if (!hasCounts && !hasViewed) return null;
 
   return (
@@ -75,7 +75,7 @@ export function FileRowMarks({
           checked={data.viewedCount === data.totalCount}
           indeterminate={data.viewedCount > 0 && data.viewedCount < data.totalCount}
           ariaLabel={intl.formatMessage(messages.viewed)}
-          onChange={(checked) => commands.setViewedPaths(paths, checked)}
+          onChange={(checked) => dispatch({ type: 'viewed/mark', paths, viewed: checked })}
         />
       )}
     </Marks>

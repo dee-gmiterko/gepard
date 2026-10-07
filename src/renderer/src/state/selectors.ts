@@ -11,12 +11,12 @@ export function activeTargetRef({
   return null;
 }
 
-export function isDiffView(state: AppState): boolean {
+export function isDiffView(state: Pick<AppState, 'targeting'>): boolean {
   return activeTargetRef(state.targeting) !== null;
 }
 
-export function openTabs(state: AppState): string[] {
-  return state.previewFile !== null && !state.pinnedFiles.includes(state.previewFile)
-    ? [...state.pinnedFiles, state.previewFile]
-    : state.pinnedFiles;
+export function openTabs(pinnedFiles: string[], previewFile: string | null): string[] {
+  return previewFile !== null && !pinnedFiles.includes(previewFile)
+    ? [...pinnedFiles, previewFile]
+    : pinnedFiles;
 }

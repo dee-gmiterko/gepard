@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import styled from 'styled-components';
-import { useAppState } from '../../../../state/AppContext';
+import { useCheckout } from '../../../../state/hooks';
 import { useChangedFileOwners } from '../../../../queries/overview';
 import {
   groupByExtension,
@@ -34,7 +34,7 @@ const Columns = styled.div`
 
 export function FileBreakdown(): React.JSX.Element {
   const actions = useOverviewActions();
-  const checkout = useAppState().checkout;
+  const checkout = useCheckout();
   const { files, isLoading, error } = useChangedFileList();
   const ownersByPath = useChangedFileOwners().data;
 

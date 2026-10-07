@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { MessageDescriptor } from 'react-intl';
 import type { DiffSide } from '@gepard/common';
 import type { ReportTone } from '../errors/report';
+import { nextTargetedFile } from '../helpers/targetedFiles';
 
 export const SidePanelTab = z.enum(['files', 'targeted', 'search']);
 export type SidePanelTab = z.infer<typeof SidePanelTab>;
@@ -20,6 +21,18 @@ export interface Toast {
 export interface HeaderStatus {
   id: number;
   message: MessageDescriptor;
+}
+
+export interface ReviewFiles {
+  targeted: string[];
+  changed: string[];
+  viewed: string[];
+}
+
+export interface ViewedRequest {
+  id: number;
+  paths: string[];
+  viewed: boolean;
 }
 
 export interface Targeting {
@@ -67,6 +80,8 @@ export interface AppState {
   revealLine: { line: number; side: DiffSide } | null;
   settingsOpen: boolean;
   quickSearch: QuickSearchMode | null;
+  reviewFiles: ReviewFiles;
+  viewedQueue: ViewedRequest[];
 }
 
 export const initialAppState: AppState = {
@@ -86,6 +101,8 @@ export const initialAppState: AppState = {
   revealLine: null,
   settingsOpen: false,
   quickSearch: null,
+  reviewFiles: { targeted: [], changed: [], viewed: [] },
+  viewedQueue: [],
 };
 
 export type AppAction =
@@ -123,7 +140,53 @@ export type AppAction =
   | { type: 'headerStatus/clear'; id: number }
   | { type: 'settings/setOpen'; open: boolean }
   | { type: 'quickSearch/open'; mode: QuickSearchMode }
-  | { type: 'quickSearch/close' };
+  | { type: 'quickSearch/close' }
+  | { type: 'review/sync'; files: ReviewFiles }
+  | { type: 'viewed/mark'; paths: string[]; viewed: boolean }
+  | { type: 'viewed/toggle'; path?: string | null }
+  | { type: 'viewed/done'; id: number }
+  | { type: 'file/step'; direction: 1 | -1 }
+  | { type: 'review/acceptNext' }
+  | { type: 'review/revertPrev' };
+
+export function canMarkViewed(
+  state: Pick<AppState, 'targeting' | 'reviewFiles'>,
+  path: string | null,
+): path is string {
+  return state.targeting.pr !== null && path !== null && state.reviewFiles.changed.includes(path);
+}
+
+function sameCheckout(a: AppState['checkout'], b: AppState['checkout']): boolean {
+  if (a === null || b === null) return a === b;
+  return a.base === b.base && a.head === b.head;
+}
+
+function sameList(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((value, i) => value === b[i]);
+}
+
+function markViewed(state: AppState, paths: string[], viewed: boolean): AppState {
+  const marked = new Set(state.reviewFiles.viewed);
+  for (const path of paths) {
+    if (viewed) marked.add(path);
+    else marked.delete(path);
+  }
+  const request = { id: (state.viewedQueue.at(-1)?.id ?? 0) + 1, paths, viewed };
+  return {
+    ...state,
+    reviewFiles: { ...state.reviewFiles, viewed: [...marked] },
+    viewedQueue: [...state.viewedQueue, request],
+  };
+}
+
+function stepFile(
+  state: AppState,
+  direction: 1 | -1,
+  skip: ReadonlySet<string> = new Set(state.reviewFiles.viewed),
+): AppState {
+  const next = nextTargetedFile(state.reviewFiles.targeted, state.activeFile, skip, direction);
+  return next === null ? state : appReducer(state, { type: 'file/open', path: next });
+}
 
 function withTarget(state: AppState, targeting: Targeting, set: boolean): AppState {
   return {
@@ -132,6 +195,28 @@ function withTarget(state: AppState, targeting: Targeting, set: boolean): AppSta
     sidePanelTab: set ? 'targeted' : state.sidePanelTab,
     acceptedFiles: [],
   };
+}
+
+function samePosition(
+  a: Layout['fileControlsPosition'],
+  b: Layout['fileControlsPosition'],
+): boolean {
+  if (a === null || b === null) return a === b;
+  return a.x === b.x && a.y === b.y;
+}
+
+function withLayout(state: AppState, layout: Layout): AppState {
+  const prev = state.layout;
+  const same =
+    prev.sidePanelWidth === layout.sidePanelWidth &&
+    prev.fileCommentsPanelWidth === layout.fileCommentsPanelWidth &&
+    prev.fileCommentsPanelOpen === layout.fileCommentsPanelOpen &&
+    prev.hideViewedFiles === layout.hideViewedFiles &&
+    prev.fileControlsDocked === layout.fileControlsDocked &&
+    samePosition(prev.fileControlsPosition, layout.fileControlsPosition) &&
+    prev.wrapLongLines === layout.wrapLongLines &&
+    prev.fullFileDiff === layout.fullFileDiff;
+  return same ? state : { ...state, layout };
 }
 
 export function appReducer(state: AppState, action: AppAction): AppState {
@@ -182,8 +267,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       ) {
         return state;
       }
+      if (sameCheckout(state.checkout, action.checkout)) return state;
       return { ...state, checkout: action.checkout };
     case 'sidePanel/setTab':
+      if (state.sidePanelTab === action.tab && !action.focus) return state;
       return {
         ...state,
         sidePanelTab: action.tab,
@@ -192,24 +279,33 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           : state.sidePanelFocusRequest,
       };
     case 'layout/setSidePanelWidth':
-      return { ...state, layout: { ...state.layout, sidePanelWidth: action.width } };
+      return withLayout(state, { ...state.layout, sidePanelWidth: action.width });
     case 'layout/setFileCommentsPanelWidth':
-      return { ...state, layout: { ...state.layout, fileCommentsPanelWidth: action.width } };
+      return withLayout(state, { ...state.layout, fileCommentsPanelWidth: action.width });
     case 'layout/setFileCommentsPanelOpen':
-      return { ...state, layout: { ...state.layout, fileCommentsPanelOpen: action.open } };
+      return withLayout(state, { ...state.layout, fileCommentsPanelOpen: action.open });
     case 'layout/setHideViewedFiles':
-      return { ...state, layout: { ...state.layout, hideViewedFiles: action.hide } };
+      return withLayout(state, { ...state.layout, hideViewedFiles: action.hide });
     case 'layout/setFileControlsDocked':
-      return { ...state, layout: { ...state.layout, fileControlsDocked: action.docked } };
+      return withLayout(state, { ...state.layout, fileControlsDocked: action.docked });
     case 'layout/setFileControlsPosition':
-      return { ...state, layout: { ...state.layout, fileControlsPosition: action.position } };
+      return withLayout(state, { ...state.layout, fileControlsPosition: action.position });
     case 'layout/setWrapLongLines':
-      return { ...state, layout: { ...state.layout, wrapLongLines: action.wrap } };
+      return withLayout(state, { ...state.layout, wrapLongLines: action.wrap });
     case 'layout/setFullFileDiff':
-      return { ...state, layout: { ...state.layout, fullFileDiff: action.full } };
+      return withLayout(state, { ...state.layout, fullFileDiff: action.full });
     case 'file/open': {
       const revealLine =
         action.line != null ? { line: action.line, side: action.side ?? ('RIGHT' as const) } : null;
+      if (
+        state.activeFile === action.path &&
+        state.mainTab === 'files' &&
+        state.revealLine === null &&
+        revealLine === null &&
+        (state.pinnedFiles.includes(action.path) || state.previewFile === action.path)
+      ) {
+        return state;
+      }
       return state.pinnedFiles.includes(action.path)
         ? { ...state, activeFile: action.path, mainTab: 'files', revealLine }
         : {
@@ -221,6 +317,13 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           };
     }
     case 'file/focus':
+      if (
+        state.activeFile === action.path &&
+        state.mainTab === 'files' &&
+        state.revealLine === null
+      ) {
+        return state;
+      }
       return { ...state, activeFile: action.path, mainTab: 'files', revealLine: null };
     case 'file/pin':
       if (state.pinnedFiles.includes(action.path)) return state;
@@ -239,6 +342,14 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, pinnedFiles, activeFile, revealLine: null };
     }
     case 'file/close': {
+      if (
+        !state.pinnedFiles.includes(action.path) &&
+        state.previewFile !== action.path &&
+        state.activeFile !== action.path &&
+        state.revealLine === null
+      ) {
+        return state;
+      }
       const pinnedFiles = state.pinnedFiles.filter((p) => p !== action.path);
       const previewFile = state.previewFile === action.path ? null : state.previewFile;
       const activeFile =
@@ -248,11 +359,13 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, pinnedFiles, previewFile, activeFile, revealLine: null };
     }
     case 'file/accept':
+      if (state.acceptedFiles.at(-1) === action.path) return state;
       return {
         ...state,
         acceptedFiles: [...state.acceptedFiles.filter((p) => p !== action.path), action.path],
       };
     case 'file/revert':
+      if (state.acceptedFiles.length === 0) return state;
       return { ...state, acceptedFiles: state.acceptedFiles.slice(0, -1) };
     case 'review/openFile':
       // Its file list loads asynchronously, so the review may have been left in the meantime.
@@ -265,10 +378,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       }
       return appReducer(state, { type: 'file/open', path: action.path });
     case 'mainTab/set':
+      if (state.mainTab === action.tab) return state;
       return { ...state, mainTab: action.tab };
     case 'toast/push':
       return { ...state, toasts: [...state.toasts, action.toast] };
     case 'toast/dismiss':
+      if (!state.toasts.some((t) => t.id === action.id)) return state;
       return { ...state, toasts: state.toasts.filter((t) => t.id !== action.id) };
     case 'headerStatus/publish':
       return {
@@ -279,6 +394,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       if (state.headerStatus?.id !== action.id) return state;
       return { ...state, headerStatus: null };
     case 'settings/setOpen':
+      if (state.settingsOpen === action.open) return state;
       return { ...state, settingsOpen: action.open };
     case 'quickSearch/open':
       if (state.quickSearch === action.mode) return state;
@@ -286,6 +402,62 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case 'quickSearch/close':
       if (state.quickSearch === null) return state;
       return { ...state, quickSearch: null };
+    case 'review/sync': {
+      const { targeted, changed, viewed } = state.reviewFiles;
+      const files = action.files;
+      if (
+        sameList(targeted, files.targeted) &&
+        sameList(changed, files.changed) &&
+        sameList(viewed, files.viewed)
+      ) {
+        return state;
+      }
+      return { ...state, reviewFiles: files };
+    }
+    case 'viewed/mark': {
+      if (state.targeting.pr === null) return state;
+      const marked = markViewed(state, action.paths, action.viewed);
+      const { activeFile, layout } = state;
+      if (
+        action.viewed &&
+        layout.hideViewedFiles &&
+        activeFile !== null &&
+        action.paths.includes(activeFile)
+      ) {
+        return stepFile(marked, 1);
+      }
+      return marked;
+    }
+    case 'viewed/toggle': {
+      const path = action.path === undefined ? state.activeFile : action.path;
+      if (!canMarkViewed(state, path)) return state;
+      return appReducer(state, {
+        type: 'viewed/mark',
+        paths: [path],
+        viewed: !state.reviewFiles.viewed.includes(path),
+      });
+    }
+    case 'viewed/done':
+      if (!state.viewedQueue.some((r) => r.id === action.id)) return state;
+      return { ...state, viewedQueue: state.viewedQueue.filter((r) => r.id !== action.id) };
+    case 'file/step':
+      return stepFile(state, action.direction);
+    case 'review/acceptNext': {
+      const path = state.activeFile;
+      if (path === null) return state;
+      const accepted = canMarkViewed(state, path)
+        ? appReducer(markViewed(state, [path], true), { type: 'file/accept', path })
+        : state;
+      const moved = stepFile(accepted, 1);
+      return moved === accepted ? appReducer(accepted, { type: 'file/close', path }) : moved;
+    }
+    case 'review/revertPrev': {
+      const path = state.acceptedFiles.at(-1);
+      if (path === undefined) return state;
+      const reverted = appReducer(state, { type: 'file/revert' });
+      const unmarked = state.targeting.pr !== null ? markViewed(reverted, [path], false) : reverted;
+      return appReducer(unmarked, { type: 'file/open', path });
+    }
     default:
       return state;
   }

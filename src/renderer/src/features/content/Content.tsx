@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { useAppState } from '../../state/AppContext';
+import { useActiveFile, useLayout, useMainTab } from '../../state/hooks';
 import { FileTabs } from './tabs/FileTabs';
 import { FileViewer } from './viewers/FileViewer';
 import { MissingViewer } from './viewers/missing/MissingViewer';
@@ -31,30 +31,30 @@ const ViewerArea = styled.div`
 `;
 
 export function Content(): React.JSX.Element {
-  const state = useAppState();
+  const activeFile = useActiveFile();
+  const layout = useLayout();
+  const mainTab = useMainTab();
 
   return (
     <Main>
       <FileTabs />
-      {state.mainTab === 'overview' ? (
+      {mainTab === 'overview' ? (
         <ViewerArea>
           <OverviewTab />
         </ViewerArea>
-      ) : state.mainTab === 'comments' ? (
+      ) : mainTab === 'comments' ? (
         <ViewerArea>
           <CommentsTab />
         </ViewerArea>
       ) : (
         <FilesRow>
           <ViewerArea>
-            {state.activeFile ? (
-              <FileViewer key={state.activeFile} path={state.activeFile} />
+            {activeFile ? (
+              <FileViewer key={activeFile} path={activeFile} />
             ) : (
               <MissingViewer path={null} />
             )}
-            {!(state.layout.fileControlsDocked && state.layout.fileCommentsPanelOpen) && (
-              <FileControls />
-            )}
+            {!(layout.fileControlsDocked && layout.fileCommentsPanelOpen) && <FileControls />}
           </ViewerArea>
           <FileDetailPanel />
         </FilesRow>

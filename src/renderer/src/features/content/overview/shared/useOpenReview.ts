@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useAppDispatch, useAppState } from '../../../../state/AppContext';
+import { useAppDispatch, useAppStore } from '../../../../state/AppContext';
 import { activeTargetRef } from '../../../../state/selectors';
 import type { Targeting } from '../../../../state/reducer';
 import { useCheckoutTarget } from '../../../../queries/prs';
@@ -8,7 +8,7 @@ import { viewedQuery } from '../../../../queries/comments';
 import { firstFileToReview } from '../../../../helpers/targetedFiles';
 
 export function useOpenReview(): (targeting: Targeting) => void {
-  const state = useAppState();
+  const store = useAppStore();
   const dispatch = useAppDispatch();
   const qc = useQueryClient();
   const { checkout } = useCheckoutTarget();
@@ -16,9 +16,10 @@ export function useOpenReview(): (targeting: Targeting) => void {
   async function firstFile(projectId: string, targeting: Targeting): Promise<string | null> {
     const target = activeTargetRef(targeting);
     if (!target) return null;
+    const current = store.getState();
     const known =
-      state.targeting.pr === targeting.pr && state.targeting.commit === targeting.commit
-        ? state.checkout
+      current.targeting.pr === targeting.pr && current.targeting.commit === targeting.commit
+        ? current.checkout
         : null;
     const { base, head } = known ?? (await checkout(target));
     const [changed, viewed] = await Promise.all([
@@ -35,7 +36,7 @@ export function useOpenReview(): (targeting: Targeting) => void {
 
   return (targeting) => {
     dispatch({ type: 'mainTab/set', tab: 'files' });
-    const projectId = state.projectId;
+    const projectId = store.getState().projectId;
     if (!projectId) return;
     firstFile(projectId, targeting)
       .then((path) => {

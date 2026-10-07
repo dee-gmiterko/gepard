@@ -1,14 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { Copy, X } from 'react-feather';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
-import { useAppDispatch, useAppState } from '../../../state/AppContext';
+import { useAppDispatch } from '../../../state/AppContext';
+import { useActiveFile, useLayout, useTargeting } from '../../../state/hooks';
 import { useSetLayout } from '../../../queries/projects';
-import { useResizeHandle } from '../../../hooks/useResizeHandle';
 import { useIsCheckedOutChangedFile } from '../useIsCheckedOutChangedFile';
 import { ellipsis } from '../../../components/Ellipsis';
 import { IconButton } from '../../../components/IconButton';
-import { ResizeHandle } from '../../../components/ResizeHandle';
+import { ResizablePanel } from '../../../components/ResizablePanel';
 import { Inline, Stack } from '../../../components/Layout';
 import { Message } from '../../../components/Message';
 import { FileComments } from '../../commentEditor/FileComments';
@@ -39,18 +38,13 @@ const messages = defineMessages({
   },
 });
 
-const Panel = styled.div<{ $width: number }>`
+const Panel = styled(ResizablePanel)`
   position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 2fr) minmax(0, 1fr);
-  width: ${({ $width }) => $width}px;
   min-height: 0;
   border-left: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.bgSubtle};
-`;
-
-const Handle = styled(ResizeHandle)`
-  left: -3px;
 `;
 
 const Header = styled(Inline)`
@@ -104,44 +98,33 @@ const Body = styled.div`
 
 export function FileDetailPanel(): React.JSX.Element | null {
   const intl = useIntl();
-  const state = useAppState();
+  const layout = useLayout();
+  const targeting = useTargeting();
   const dispatch = useAppDispatch();
   const setLayout = useSetLayout();
-  const path = state.activeFile;
+  const path = useActiveFile();
   const isChangedFile = useIsCheckedOutChangedFile(path);
 
-  const [width, setWidth] = useState(state.layout.fileCommentsPanelWidth);
-  const draggingRef = useRef(false);
-  useEffect(() => {
-    if (!draggingRef.current) setWidth(state.layout.fileCommentsPanelWidth);
-  }, [state.layout.fileCommentsPanelWidth]);
+  function commitWidth(value: number): void {
+    dispatch({ type: 'layout/setFileCommentsPanelWidth', width: value });
+    setLayout.mutate({ ...layout, fileCommentsPanelWidth: value });
+  }
 
-  const { onPointerDown } = useResizeHandle({
-    min: MIN_WIDTH,
-    max: MAX_WIDTH,
-    sign: -1,
-    getValue: () => width,
-    onChange: (value) => {
-      draggingRef.current = true;
-      setWidth(value);
-    },
-    onCommit: (value) => {
-      draggingRef.current = false;
-      dispatch({ type: 'layout/setFileCommentsPanelWidth', width: value });
-      setLayout.mutate({ ...state.layout, fileCommentsPanelWidth: value });
-    },
-  });
-
-  if (!state.layout.fileCommentsPanelOpen) return null;
+  if (!layout.fileCommentsPanelOpen) return null;
 
   function close(): void {
     dispatch({ type: 'layout/setFileCommentsPanelOpen', open: false });
-    setLayout.mutate({ ...state.layout, fileCommentsPanelOpen: false });
+    setLayout.mutate({ ...layout, fileCommentsPanelOpen: false });
   }
 
   return (
-    <Panel $width={width}>
-      <Handle onPointerDown={onPointerDown} />
+    <Panel
+      width={layout.fileCommentsPanelWidth}
+      min={MIN_WIDTH}
+      max={MAX_WIDTH}
+      edge="left"
+      onCommit={commitWidth}
+    >
       <Top>
         <Header>
           <Title>{intl.formatMessage(messages.title)}</Title>
@@ -166,7 +149,7 @@ export function FileDetailPanel(): React.JSX.Element | null {
             />
           </PathRow>
         )}
-        {state.layout.fileControlsDocked && <FileControls docked />}
+        {layout.fileControlsDocked && <FileControls docked />}
       </Top>
       {path !== null ? (
         <>
@@ -176,7 +159,7 @@ export function FileDetailPanel(): React.JSX.Element | null {
                 <MassActions path={path} />
                 <FileComments key={path} path={path} />
               </Stack>
-            ) : state.targeting.pr === null ? (
+            ) : targeting.pr === null ? (
               <FileComments key={path} path={path} />
             ) : (
               <FilePrComments key={path} path={path} />

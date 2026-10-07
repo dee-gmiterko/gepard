@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { useAppDispatch, useAppState } from '../../state/AppContext';
+import { useAppDispatch } from '../../state/AppContext';
+import { useProjectId, useTargeting } from '../../state/hooks';
 import { useCheckoutTarget } from '../../queries/prs';
 import { useSync } from '../../queries/comments';
 import { activeTargetRef } from '../../state/selectors';
@@ -10,10 +11,10 @@ interface TargetingEffectsStatus {
 }
 
 export function useTargetingEffects(): TargetingEffectsStatus {
-  const state = useAppState();
+  const targeting = useTargeting();
   const dispatch = useAppDispatch();
-  const projectId = state.projectId;
-  const { pr, commit } = state.targeting;
+  const projectId = useProjectId();
+  const { pr, commit } = targeting;
 
   const { checkout: checkoutTarget, pending: checkoutPending } = useCheckoutTarget();
   const { mutate: syncRun, reset: syncReset } = useSync();

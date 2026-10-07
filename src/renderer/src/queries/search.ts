@@ -8,7 +8,7 @@ import {
 } from '@tanstack/react-query';
 import { invoke, isCancelledError } from '../ipc/client';
 import { qk } from './keys';
-import { useAppState } from '../state/AppContext';
+import { useProjectId } from '../state/hooks';
 import { useCurrentHead } from './projects';
 import { digestPaths } from '../helpers/pathsDigest';
 import type { SearchQuery, WorkspaceSymbol, DefinitionResult } from '@gepard/common';
@@ -37,7 +37,7 @@ function useParamsKey(params: SearchParams | null): unknown {
 }
 
 export function useSearch(sha: string, params: SearchParams | null) {
-  const projectId = useAppState().projectId ?? '';
+  const projectId = useProjectId() ?? '';
   const query = params && projectId && sha ? { ...params, projectId, sha } : null;
   const paramsKey = useParamsKey(params);
   return ignoreCancelled(
@@ -51,7 +51,7 @@ export function useSearch(sha: string, params: SearchParams | null) {
 }
 
 export function useSearches(sha: string, paramsList: SearchParams[]) {
-  const projectId = useAppState().projectId ?? '';
+  const projectId = useProjectId() ?? '';
   return useQueries({
     queries: paramsList.map((params) => ({
       queryKey: qk.search(projectId, sha, params.text, {
@@ -67,7 +67,7 @@ export function useSearches(sha: string, paramsList: SearchParams[]) {
 }
 
 export function useSearchPages(sha: string, params: SearchParams | null) {
-  const projectId = useAppState().projectId ?? '';
+  const projectId = useProjectId() ?? '';
   const query = params && projectId && sha ? { ...params, projectId, sha } : null;
   const paramsKey = useParamsKey(params);
   return ignoreCancelled(
@@ -86,7 +86,7 @@ export function useSearchPages(sha: string, params: SearchParams | null) {
 }
 
 export function useWorkspaceSymbols(query: string, limit?: number, kinds?: SymbolKind[]) {
-  const projectId = useAppState().projectId ?? '';
+  const projectId = useProjectId() ?? '';
   const sha = useCurrentHead() ?? '';
   return ignoreCancelled(
     useQuery({
@@ -98,7 +98,7 @@ export function useWorkspaceSymbols(query: string, limit?: number, kinds?: Symbo
 }
 
 export function useLineSymbols(sha: string, path: string, line: number) {
-  const projectId = useAppState().projectId ?? '';
+  const projectId = useProjectId() ?? '';
   return ignoreCancelled(
     useQuery({
       queryKey: [...qk.file(projectId, sha, path), 'lineSymbols', line] as const,
@@ -119,7 +119,7 @@ function fetchDefinition(projectId: string, sha: string, path: string, pos: Pos)
 }
 
 export function useDefinition(sha: string, path: string, pos: Pos | null) {
-  const projectId = useAppState().projectId ?? '';
+  const projectId = useProjectId() ?? '';
   return ignoreCancelled(
     useQuery({
       queryKey: definitionKey(projectId, sha, path, pos),
@@ -130,7 +130,7 @@ export function useDefinition(sha: string, path: string, pos: Pos | null) {
 }
 
 export function useDefinitions(sha: string, path: string, positions: Pos[]) {
-  const projectId = useAppState().projectId ?? '';
+  const projectId = useProjectId() ?? '';
   return useQueries({
     queries: positions.map((pos) => ({
       queryKey: definitionKey(projectId, sha, path, pos),
@@ -145,7 +145,7 @@ export function useDefinitions(sha: string, path: string, positions: Pos[]) {
 }
 
 export function useDefinitionLookup(sha: string, path: string) {
-  const projectId = useAppState().projectId ?? '';
+  const projectId = useProjectId() ?? '';
   const qc = useQueryClient();
   return useCallback(
     (pos: Pos): Promise<DefinitionResult> => {
@@ -161,7 +161,7 @@ export function useDefinitionLookup(sha: string, path: string) {
 }
 
 export function useDocumentSymbols(sha: string, path: string) {
-  const projectId = useAppState().projectId ?? '';
+  const projectId = useProjectId() ?? '';
   return ignoreCancelled(
     useQuery({
       queryKey: [...qk.file(projectId, sha, path), 'documentSymbols'] as const,

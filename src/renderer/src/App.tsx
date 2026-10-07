@@ -1,5 +1,7 @@
 import styled from 'styled-components';
-import { useAppDispatch, useAppState } from './state/AppContext';
+import { useAppDispatch } from './state/AppContext';
+import { useProjectId, useSettingsOpen } from './state/hooks';
+import { ReviewFilesSync } from './state/ReviewFilesSync';
 import { useGlobalKeys } from './keyboard/useGlobalKeys';
 import { useWindowTitle } from './hooks/useWindowTitle';
 import { useContextMenuLabels } from './hooks/useContextMenuLabels';
@@ -26,16 +28,17 @@ function App(): React.JSX.Element {
   useGlobalKeys();
   useWindowTitle();
   useContextMenuLabels();
-  const state = useAppState();
+  const projectId = useProjectId();
+  const settingsOpen = useSettingsOpen();
   const dispatch = useAppDispatch();
 
   const closeSettings = (): void => dispatch({ type: 'settings/setOpen', open: false });
 
-  if (!state.projectId) {
+  if (!projectId) {
     return (
       <>
         <Launchpad />
-        {state.settingsOpen && <SettingsOverlay onClose={closeSettings} />}
+        {settingsOpen && <SettingsOverlay onClose={closeSettings} />}
       </>
     );
   }
@@ -47,8 +50,9 @@ function App(): React.JSX.Element {
         <SidePanel />
         <Content />
       </Body>
+      <ReviewFilesSync />
       <QuickSearch />
-      {state.settingsOpen && <SettingsOverlay onClose={closeSettings} />}
+      {settingsOpen && <SettingsOverlay onClose={closeSettings} />}
     </Shell>
   );
 }
