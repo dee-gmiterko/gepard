@@ -26,7 +26,7 @@ export function utf16ByteBoundaries(text: string): number[] {
     const codePoint = text.codePointAt(i) ?? 0;
     bytes += Buffer.byteLength(String.fromCodePoint(codePoint), 'utf8');
     if (codePoint > 0xffff) {
-      boundaries[i + 1] = bytes;
+      boundaries[i + 1] = bytes - 1;
       boundaries[i + 2] = bytes;
       i += 2;
     } else {
