@@ -33,7 +33,6 @@ export function CommitTarget(): React.JSX.Element {
 
   const prCommits = usePrCommits();
   const repoCommits = useCommits();
-  // pr.commits has no server search, so this only applies when browsing the full repo.
   const repoCommitsSearch = useCommits(debouncedQuery || undefined);
 
   const items = useMemo(
