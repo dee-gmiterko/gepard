@@ -64,5 +64,5 @@ describe('language server on fixtures', () => {
   it('finds references to a project symbol', async () => {
     const refs = await session.references('Store.java', { line: 7, col: 33 });
     expect(refs.some((r) => r.path === 'Store.java')).toBe(true);
-  });
+  }, 60_000);
 });

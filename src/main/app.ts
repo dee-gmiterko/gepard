@@ -1,5 +1,6 @@
 import { app, BrowserWindow, nativeTheme } from 'electron';
 import { electronApp, optimizer } from '@electron-toolkit/utils';
+import { serverChildren } from '@gepard/common';
 import { registerHandlers, emit } from './ipc/registry';
 import { handlers } from './ipc/handlers';
 import { createMainWindow } from './window';
@@ -8,6 +9,9 @@ import { markRendererReady, notifyMainFailure } from './notify';
 import { formatCaughtError } from './helpers/error';
 import { startPortalThemeSync } from './helpers/portalTheme';
 import { launchService } from './services/launch';
+import { indexer } from './lsp';
+
+const QUIT_CLOSE_TIMEOUT_MS = 1_000;
 
 export function bootstrap(): void {
   // Electron derives the userData path from the app name at the first
@@ -62,6 +66,18 @@ export function bootstrap(): void {
     .catch((err: unknown) => {
       notifyMainFailure('app', `startup failed: ${formatCaughtError(err)}`);
     });
+
+  let closingSessions = false;
+  app.on('before-quit', (event) => {
+    if (closingSessions) return;
+    closingSessions = true;
+    event.preventDefault();
+    const cap = new Promise<void>((resolve) => setTimeout(resolve, QUIT_CLOSE_TIMEOUT_MS));
+    void Promise.race([indexer.closeAll(), cap]).finally(() => app.quit());
+  });
+  process.on('exit', () => {
+    for (const child of serverChildren()) child.kill('SIGKILL');
+  });
 
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();

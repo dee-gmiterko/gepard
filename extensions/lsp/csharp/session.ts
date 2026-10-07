@@ -26,6 +26,8 @@ import {
   type SourceMatch,
   type SourcePos,
   type SourceWorkspaceSymbol,
+  terminateChild,
+  trackChild,
 } from '@gepard/common';
 import {
   flatSymbolsToTree,
@@ -72,7 +74,7 @@ export class RoslynSession implements LanguageSession {
   private static readonly RESTART_WINDOW_MS = 60_000;
   private static readonly RESTART_BASE_DELAY_MS = 500;
   private static readonly RESTART_MAX_DELAY_MS = 30_000;
-  private static readonly DISPOSE_TIMEOUT_MS = 3_000;
+  private static readonly DISPOSE_TIMEOUT_MS = 1_000;
 
   private constructor(
     private readonly spec: ServerSpec,
@@ -86,21 +88,20 @@ export class RoslynSession implements LanguageSession {
   }
 
   private async launch(): Promise<void> {
-    this.crashGate.reset();
-
     const child = spawn(this.spec.command, this.spec.args, {
       cwd: this.spec.cwd,
       env: this.spec.env ?? process.env,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     this.child = child;
+    trackChild(child);
     child.stderr.on('data', (d: Buffer) => this.sink.log('warn', d.toString('utf8').trim()));
     let failLaunch: ((e: Error) => void) | null = null;
     let abandoned = false;
     const launchFailed = new Promise<never>((_, reject) => {
       failLaunch = reject;
     });
-    child.once('error', (err) => {
+    child.on('error', (err) => {
       if (abandoned) return;
       const message = `LSP process error: ${err.message}`;
       if (failLaunch) failLaunch(new Error(message));
@@ -115,12 +116,12 @@ export class RoslynSession implements LanguageSession {
       else this.handleExit(code, signal);
     });
 
+    let conn: MessageConnection | undefined;
     try {
-      const conn = createMessageConnection(
+      conn = createMessageConnection(
         new StreamMessageReader(child.stdout),
         new StreamMessageWriter(child.stdin),
       );
-      this.conn = conn;
       this.wireClientObligations(conn);
       conn.listen();
       const initResult: unknown = await Promise.race([
@@ -129,10 +130,12 @@ export class RoslynSession implements LanguageSession {
       ]);
       this.legend = legendOf(initResult);
       await Promise.race([conn.sendNotification('initialized', {}), launchFailed]);
+      this.conn = conn;
+      this.crashGate.reset();
     } catch (e) {
       abandoned = true;
-      this.conn?.dispose();
-      if (child.exitCode === null && child.signalCode === null) child.kill();
+      conn?.dispose();
+      await terminateChild(child, RoslynSession.DISPOSE_TIMEOUT_MS);
       throw e;
     } finally {
       failLaunch = null;
@@ -185,6 +188,7 @@ export class RoslynSession implements LanguageSession {
 
   private handleExit(code: number | null, signal: NodeJS.Signals | null): void {
     if (this.disposed) return;
+    this.conn?.dispose();
     if (this.crashGate.crash()) {
       this.sink.log('error', `LSP process exited unexpectedly (code=${code}, signal=${signal})`);
     }
@@ -244,6 +248,7 @@ export class RoslynSession implements LanguageSession {
   }
 
   private toRepoLocation(uri: string): RepoLocation {
+    if (!uri.startsWith('file:')) return { path: uri, external: true };
     const abs = url.fileURLToPath(uri);
     const rel = path.relative(this.spec.root, abs);
     const isInside =
@@ -258,8 +263,9 @@ export class RoslynSession implements LanguageSession {
   }
 
   private sendRequest<R>(method: string, params: unknown): Promise<R> {
-    const real = this.conn.sendRequest<R>(method, params);
-    return this.crashGate.guard(real);
+    return this.crashGate.guard(
+      Promise.resolve().then(() => this.conn.sendRequest<R>(method, params)),
+    );
   }
 
   private withOpenDocument<T>(filePath: string, fn: (text: string) => Promise<T>): Promise<T> {
@@ -267,15 +273,20 @@ export class RoslynSession implements LanguageSession {
     const run = previous
       .catch(() => undefined)
       .then(async () => {
+        const conn = this.conn;
         const text = await fs.readFile(filePath, 'utf8');
         const uri = url.pathToFileURL(filePath).toString();
-        await this.conn.sendNotification('textDocument/didOpen', {
+        await conn.sendNotification('textDocument/didOpen', {
           textDocument: { uri, languageId: 'csharp', version: 1, text },
         });
         try {
           return await fn(text);
         } finally {
-          await this.conn.sendNotification('textDocument/didClose', { textDocument: { uri } });
+          try {
+            await conn.sendNotification('textDocument/didClose', { textDocument: { uri } });
+          } catch {
+            // The connection may already be gone.
+          }
         }
       });
     this.docQueue.set(
@@ -444,14 +455,8 @@ export class RoslynSession implements LanguageSession {
     }
   }
 
-  private async terminate(): Promise<void> {
-    if (this.child.exitCode !== null || this.child.signalCode !== null) return;
-    const exited = new Promise<void>((resolve) => this.child.once('exit', () => resolve()));
-    this.child.kill();
-    await Promise.race([
-      exited,
-      new Promise<void>((resolve) => setTimeout(resolve, RoslynSession.DISPOSE_TIMEOUT_MS)),
-    ]);
+  private terminate(): Promise<void> {
+    return terminateChild(this.child, RoslynSession.DISPOSE_TIMEOUT_MS);
   }
 
   async dispose(): Promise<void> {

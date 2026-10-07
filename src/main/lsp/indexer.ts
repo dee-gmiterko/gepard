@@ -119,6 +119,7 @@ export const indexer: {
   open(projectId: string, repoRoot: string, files: string[], head: string): Promise<void>;
   onCheckout(projectId: string, changes: FileChange[], newSha: string, fileCount: number): void;
   close(projectId: string): Promise<void>;
+  closeAll(): Promise<void>;
   status(projectId: string): IndexStatus;
   session(projectId: string, filePath: string): LanguageSession | null;
   sessions(projectId: string): LanguageSession[];
@@ -127,6 +128,9 @@ export const indexer: {
   currentSha(projectId: string): string | null;
 } = {
   async open(projectId, repoRoot, files, head): Promise<void> {
+    await Promise.all(
+      [...projects.keys()].filter((id) => id !== projectId).map((id) => indexer.close(id)),
+    );
     await disposeSessions(projectId, projects.get(projectId)?.sessions ?? []);
     await disposeLineIndex(projectId);
     const state: ProjectState = {
@@ -262,6 +266,10 @@ export const indexer: {
     await disposeSessions(projectId, projects.get(projectId)?.sessions ?? []).catch(() => {});
     await disposeLineIndex(projectId).catch(() => {});
     projects.delete(projectId);
+  },
+
+  async closeAll(): Promise<void> {
+    await Promise.all([...projects.keys()].map((id) => indexer.close(id)));
   },
 
   status(projectId: string): IndexStatus {
