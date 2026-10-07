@@ -55,13 +55,14 @@ export const HeadRepositoryOwner = z.preprocess(
   z.object({ login: Login }).nullable(),
 );
 
-export const ForkFields = {
+export const ForkFields = z.object({
   isCrossRepository: z.boolean().default(false),
   headRepository: HeadRepository,
   headRepositoryOwner: HeadRepositoryOwner,
-};
+});
+export type ForkFields = z.infer<typeof ForkFields>;
 
-export const PrListItem = z.object({
+export const PrListItem = ForkFields.extend({
   number: z.int().positive(),
   // GitHub mutations require the GraphQL node id, not the PR number.
   id: NodeId,
@@ -74,7 +75,6 @@ export const PrListItem = z.object({
   headRefName: z.string(),
   baseRefName: z.string(),
   headRefOid: Sha,
-  ...ForkFields,
   createdAt: IsoDate,
   changedFiles: z.int().nonnegative(),
   labels: z.array(z.object({ name: z.string(), color: z.string() })),
