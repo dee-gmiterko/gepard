@@ -3,6 +3,7 @@ import { focusVisible } from './controlStyles';
 import { PathLabel } from './PathLabel';
 
 export const CHEVRON_SLOT_WIDTH = 18;
+export const TREE_ROW_HEIGHT = 28;
 
 export const TreeLabel = styled(PathLabel)`
   font-family: inherit;
