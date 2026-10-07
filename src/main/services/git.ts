@@ -336,8 +336,6 @@ export class GitService {
         await this.checkoutDetached(repoRoot, target.sha);
         result = await this.commitRange(projectId, target.sha);
       } else {
-        // Check out the default branch from whatever origin/HEAD is known locally so
-        // already-present content shows immediately; refresh origin in the background.
         await this.checkoutDetached(repoRoot, DEFAULT_BRANCH_REF);
         const head = await this.currentHeadSha(repoRoot);
         result = { base: head, head };

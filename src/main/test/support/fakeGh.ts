@@ -121,8 +121,7 @@ export interface SyncRepo {
   cleanup: () => Promise<void>;
 }
 
-// A bare origin with main advanced past the point where feature branched off,
-// cloned as `projectId` by the real GitService. Requires __setUserDataDir first.
+// Requires __setUserDataDir first.
 export async function createSyncRepo(
   projectId: string,
   svc: GitService,

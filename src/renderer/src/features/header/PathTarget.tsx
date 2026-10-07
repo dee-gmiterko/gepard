@@ -37,9 +37,6 @@ function PathTargetInput({
   onCommit,
 }: PathTargetInputProps): React.JSX.Element {
   const [text, setText] = useState(committed ?? '');
-  // Typing updates the committed target after a short pause, so `committed`
-  // changes too; only resync from it when it changed for some other reason
-  // (cleared elsewhere, restored on project open, ...).
   const lastOwnCommit = useRef(committed ?? '');
 
   useEffect(() => {

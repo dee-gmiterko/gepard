@@ -50,8 +50,6 @@ async function release(path: string, token: string): Promise<void> {
   }
 }
 
-// Serializes `fn` among callers in this process and among all processes
-// sharing the lock file. A lock whose owner process is gone is taken over.
 export function withFileLock<T>(path: string, fn: () => Promise<T>): Promise<T> {
   const settledPrior = (queues.get(path) ?? Promise.resolve()).then(
     () => undefined,

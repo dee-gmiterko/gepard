@@ -98,7 +98,6 @@ export class LaunchService {
     return { project, head, targeting, layout };
   }
 
-  // A project is open in at most one window across all running instances.
   private async claim(projectId: string): Promise<void> {
     const result = await this.locks.acquire(projectId);
     if (!result.acquired) {

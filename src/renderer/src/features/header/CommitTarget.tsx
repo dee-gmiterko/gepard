@@ -33,9 +33,7 @@ export function CommitTarget(): React.JSX.Element {
 
   const prCommits = usePrCommits();
   const repoCommits = useCommits();
-  // The fetched page only covers the repo's first commits; widen the
-  // candidate set with a server search for the typed text (pr.commits has no
-  // server search, so this only applies when browsing the full repo).
+  // pr.commits has no server search, so this only applies when browsing the full repo.
   const repoCommitsSearch = useCommits(debouncedQuery || undefined);
 
   const items = useMemo(
