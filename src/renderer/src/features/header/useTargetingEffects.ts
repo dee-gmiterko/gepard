@@ -25,14 +25,14 @@ export function useTargetingEffects(): TargetingEffectsStatus {
     const active = activeTargetRef({ pr, commit });
     const target: TargetRef = active ?? { kind: 'default' };
 
-    dispatch({ type: 'target/checkoutResult', checkout: null });
+    dispatch({ type: 'target/checkoutHeadResult', checkoutHead: null });
     syncReset();
 
     let cancelled = false;
     checkoutTarget(target)
       .then((result) => {
         if (cancelled || !active) return;
-        dispatch({ type: 'target/checkoutResult', checkout: result });
+        dispatch({ type: 'target/checkoutHeadResult', checkoutHead: result });
         // Refreshing from origin runs after content is already showing, so it
         // must not feed into the blocking "Checking out…" status below.
         if (pr !== null) syncRun('pull');

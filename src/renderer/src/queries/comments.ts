@@ -150,8 +150,8 @@ export function useSync() {
     }),
     onSuccess: (result) => {
       dispatch({
-        type: 'target/checkoutResult',
-        checkout: { base: result.base, head: result.head },
+        type: 'target/checkoutHeadResult',
+        checkoutHead: { base: result.base, head: result.head },
         for: { pr: result.pr, commit: result.commit ?? null },
       });
     },

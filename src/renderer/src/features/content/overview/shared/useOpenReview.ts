@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useAppDispatch, useAppStore } from '../../../../state/AppContext';
+import { useAppDispatch, useUiStore } from '../../../../state/AppContext';
 import { activeTargetRef } from '../../../../state/selectors';
 import type { Targeting } from '../../../../state/reducer';
 import { useCheckoutTarget } from '../../../../queries/prs';
@@ -8,7 +8,7 @@ import { viewedQuery } from '../../../../queries/comments';
 import { firstFileToReview } from '../../../../helpers/targetedFiles';
 
 export function useOpenReview(): (targeting: Targeting) => void {
-  const store = useAppStore();
+  const store = useUiStore();
   const dispatch = useAppDispatch();
   const qc = useQueryClient();
   const { checkout } = useCheckoutTarget();
@@ -19,7 +19,7 @@ export function useOpenReview(): (targeting: Targeting) => void {
     const current = store.getState();
     const known =
       current.targeting.pr === targeting.pr && current.targeting.commit === targeting.commit
-        ? current.checkout
+        ? current.checkoutHead
         : null;
     const { base, head } = known ?? (await checkout(target));
     const [changed, viewed] = await Promise.all([

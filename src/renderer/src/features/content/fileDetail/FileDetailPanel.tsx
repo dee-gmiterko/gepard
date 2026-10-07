@@ -4,7 +4,7 @@ import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { useAppDispatch } from '../../../state/AppContext';
 import { useActiveFile, useLayout, useTargeting } from '../../../state/hooks';
 import { useSetLayout } from '../../../queries/projects';
-import { useIsCheckedOutChangedFile } from '../useIsCheckedOutChangedFile';
+import { useIsCheckedOutChangedFile } from '../../../queries/review';
 import { ellipsis } from '../../../components/Ellipsis';
 import { IconButton } from '../../../components/IconButton';
 import { ResizablePanel } from '../../../components/ResizablePanel';

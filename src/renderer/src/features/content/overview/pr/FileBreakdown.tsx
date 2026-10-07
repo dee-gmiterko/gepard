@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import styled from 'styled-components';
-import { useCheckout } from '../../../../state/hooks';
+import { useCheckoutHead } from '../../../../state/hooks';
 import { useChangedFileOwners } from '../../../../queries/overview';
 import {
   groupByExtension,
@@ -34,7 +34,7 @@ const Columns = styled.div`
 
 export function FileBreakdown(): React.JSX.Element {
   const actions = useOverviewActions();
-  const checkout = useCheckout();
+  const checkoutHead = useCheckoutHead();
   const { files, isLoading, error } = useChangedFileList();
   const ownersByPath = useChangedFileOwners().data;
 
@@ -45,7 +45,8 @@ export function FileBreakdown(): React.JSX.Element {
     [files, ownersByPath],
   );
 
-  if (files.length === 0) return <QueryState isLoading={isLoading || !checkout} error={error} />;
+  if (files.length === 0)
+    return <QueryState isLoading={isLoading || !checkoutHead} error={error} />;
 
   return (
     <Columns>

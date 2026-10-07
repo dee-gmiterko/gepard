@@ -1,8 +1,8 @@
 import { defineMessages, FormattedMessage } from 'react-intl';
-import { useCheckout, useLayout } from '../../../state/hooks';
+import { useCheckoutHead, useLayout } from '../../../state/hooks';
 import { useCurrentHead } from '../../../queries/projects';
 import { useChangedFiles } from '../../../queries/files';
-import { useIsCheckedOutChangedFile } from '../useIsCheckedOutChangedFile';
+import { useIsCheckedOutChangedFile } from '../../../queries/review';
 import { CodeViewer } from './code/CodeViewer';
 import { DiffViewer } from './diff/DiffViewer';
 import { FullFileDiffViewer } from './code/FullFileDiffViewer';
@@ -17,12 +17,12 @@ const messages = defineMessages({
 
 export function FileViewer({ path }: { path: string }): React.JSX.Element {
   const layout = useLayout();
-  const checkout = useCheckout();
+  const checkoutHead = useCheckoutHead();
   const head = useCurrentHead();
   const { data: changedFiles } = useChangedFiles();
   const isChangedFile = useIsCheckedOutChangedFile(path);
 
-  if (checkout) {
+  if (checkoutHead) {
     if (!changedFiles)
       return (
         <Message layout="center">

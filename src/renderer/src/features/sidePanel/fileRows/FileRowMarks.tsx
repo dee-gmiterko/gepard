@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
-import { useAppDispatch } from '../../../state/AppContext';
 import { useTargetPr } from '../../../state/hooks';
+import { useReviewActions } from '../../../queries/review';
 import { Checkbox } from '../../../components/Checkbox';
 import { Inline } from '../../../components/Layout';
 import type { RowData } from '../../../helpers/row';
@@ -49,7 +49,7 @@ export function FileRowMarks({
 }): React.JSX.Element | null {
   const intl = useIntl();
   const pr = useTargetPr();
-  const dispatch = useAppDispatch();
+  const { markViewed } = useReviewActions();
   const hasCounts = data.additions > 0 || data.deletions > 0;
   const hasViewed = pr !== null && data.totalCount > 0;
   if (!hasCounts && !hasViewed) return null;
@@ -75,7 +75,7 @@ export function FileRowMarks({
           checked={data.viewedCount === data.totalCount}
           indeterminate={data.viewedCount > 0 && data.viewedCount < data.totalCount}
           ariaLabel={intl.formatMessage(messages.viewed)}
-          onChange={(checked) => dispatch({ type: 'viewed/mark', paths, viewed: checked })}
+          onChange={(checked) => markViewed(paths, checked)}
         />
       )}
     </Marks>
