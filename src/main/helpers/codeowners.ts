@@ -10,7 +10,7 @@ function escapeRegex(ch: string): string {
 }
 
 function globToRegex(glob: string): RegExp | null {
-  if (glob.startsWith('!') || glob.includes('[')) return null;
+  if (glob.startsWith('!')) return null;
   const anchored = glob.startsWith('/') || glob.replace(/\/$/, '').includes('/');
   const body = glob.replace(/^\//, '').replace(/\/$/, '');
   let out = '';
@@ -26,9 +26,16 @@ function globToRegex(glob: string): RegExp | null {
       }
     } else if (ch === '*') out += '[^/]*';
     else if (ch === '?') out += '[^/]';
-    else out += escapeRegex(ch);
+    else if (ch === '[' && body.indexOf(']', i + 2) > 0) {
+      const end = body.indexOf(']', i + 2);
+      const negated = body[i + 1] === '!' || body[i + 1] === '^';
+      const members = body.slice(i + (negated ? 2 : 1), end).replace(/[\\\]]/g, '\\$&');
+      out += `[${negated ? '^' : ''}${members}]`;
+      i = end;
+    } else out += escapeRegex(ch);
   }
-  return new RegExp(`^${anchored ? '' : '(?:.*/)?'}${out}(?:/.*)?$`);
+  const directChildrenOnly = body.endsWith('*') && !body.endsWith('**');
+  return new RegExp(`^${anchored ? '' : '(?:.*/)?'}${out}${directChildrenOnly ? '' : '(?:/.*)?'}$`);
 }
 
 export function parseCodeowners(text: string): CodeownersRule[] {
