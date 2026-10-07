@@ -100,6 +100,7 @@ type Expect = 'function' | 'class' | 'signal' | 'variable' | 'constant' | null;
 export interface GDScriptState {
   string: { quote: string; triple: boolean } | null;
   expect: Expect;
+  operand: boolean;
 }
 
 const NUMBER =
@@ -183,51 +184,35 @@ function identifier(word: string, stream: StringStream, state: GDScriptState): s
   return 'variableName';
 }
 
+const NON_OPERAND = new Set([
+  'operator',
+  'operatorKeyword',
+  'controlKeyword',
+  'definitionKeyword',
+  'keyword',
+]);
+
 export const gdscript: StreamParser<GDScriptState> = {
   name: 'gdscript',
 
   startState(): GDScriptState {
-    return { string: null, expect: null };
+    return { string: null, expect: null, operand: false };
   },
 
   copyState(state: GDScriptState): GDScriptState {
-    return { string: state.string ? { ...state.string } : null, expect: state.expect };
+    return {
+      string: state.string ? { ...state.string } : null,
+      expect: state.expect,
+      operand: state.operand,
+    };
   },
 
   token(stream: StringStream, state: GDScriptState): string | null {
-    if (state.string) return readString(stream, state, state.string);
-    if (stream.eatSpace()) return null;
-    if (stream.sol()) state.expect = null;
-
-    const ch = stream.peek();
-    if (ch === '#') {
-      stream.skipToEnd();
-      return 'comment';
+    const cls = readToken(stream, state);
+    if (cls !== 'comment' && stream.current().trim() !== '') {
+      state.operand = cls === null ? /[)\]}]$/.test(stream.current()) : !NON_OPERAND.has(cls);
     }
-    if (ch === '\\') {
-      stream.next();
-      return null;
-    }
-
-    const opening = stream.match(/^[r&^]?("""|'''|"|')/);
-    if (opening && opening !== true) {
-      const string = { quote: opening[1][0], triple: opening[1].length === 3 };
-      state.string = string;
-      return readString(stream, state, string);
-    }
-
-    if (stream.match(/^\$\s*(?:"[^"]*"|'[^']*')/)) return 'string.special';
-    if (stream.match(/^(?:\$%?|%)\s*\/?[A-Za-z_]\w*(?:\/[A-Za-z_]\w*)*/)) return 'string.special';
-
-    if (stream.match(/^@[A-Za-z_]\w*/)) return 'attributeName';
-    if (stream.match(NUMBER)) return 'number';
-
-    const word = stream.match(/^[A-Za-z_]\w*/);
-    if (word && word !== true) return identifier(word[0], stream, state);
-
-    if (stream.match(OPERATOR)) return 'operator';
-    stream.next();
-    return null;
+    return cls;
   },
 
   languageData: {
@@ -235,3 +220,41 @@ export const gdscript: StreamParser<GDScriptState> = {
     closeBrackets: { brackets: ['(', '[', '{', "'", '"'] },
   },
 };
+
+function readToken(stream: StringStream, state: GDScriptState): string | null {
+  if (state.string) return readString(stream, state, state.string);
+  if (stream.sol()) state.operand = false;
+  if (stream.eatSpace()) return null;
+  if (stream.sol()) state.expect = null;
+
+  const ch = stream.peek();
+  if (ch === '#') {
+    stream.skipToEnd();
+    return 'comment';
+  }
+  if (ch === '\\') {
+    stream.next();
+    return null;
+  }
+
+  const opening = stream.match(/^[r&^]?("""|'''|"|')/);
+  if (opening && opening !== true) {
+    const string = { quote: opening[1][0], triple: opening[1].length === 3 };
+    state.string = string;
+    return readString(stream, state, string);
+  }
+
+  if (stream.match(/^\$\s*(?:"[^"]*"|'[^']*')/)) return 'string.special';
+  if (stream.match(/^\$%?\s*\/?[A-Za-z_]\w*(?:\/[A-Za-z_]\w*)*/)) return 'string.special';
+  if (!state.operand && stream.match(/^%[A-Za-z_]\w*(?:\/[A-Za-z_]\w*)*/)) return 'string.special';
+
+  if (stream.match(/^@[A-Za-z_]\w*/)) return 'attributeName';
+  if (stream.match(NUMBER)) return 'number';
+
+  const word = stream.match(/^[A-Za-z_]\w*/);
+  if (word && word !== true) return identifier(word[0], stream, state);
+
+  if (stream.match(OPERATOR)) return 'operator';
+  stream.next();
+  return null;
+}
