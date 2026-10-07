@@ -130,7 +130,7 @@ export function Combobox<T>({
       e.preventDefault();
       setHighlight(Math.max(active - 1, NO_HIGHLIGHT));
     } else if (e.key === 'Enter') {
-      if (active === NO_HIGHLIGHT) return;
+      if (!open || active === NO_HIGHLIGHT) return;
       const item = filtered[active];
       if (item) {
         e.preventDefault();
@@ -138,6 +138,7 @@ export function Combobox<T>({
       }
     } else if (e.key === 'Escape') {
       setOpen(false);
+      setHighlight(NO_HIGHLIGHT);
       resetQuery();
     }
   }

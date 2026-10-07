@@ -94,7 +94,11 @@ export type AppAction =
   | { type: 'target/pr'; pr: number | null }
   | { type: 'target/commit'; sha: string | null }
   | { type: 'target/path'; path: string | null }
-  | { type: 'target/checkoutResult'; checkout: { base: string; head: string } | null }
+  | {
+      type: 'target/checkoutResult';
+      checkout: { base: string; head: string } | null;
+      for?: { pr: number | null; commit: string | null };
+    }
   | { type: 'sidePanel/setTab'; tab: SidePanelTab; focus?: boolean }
   | { type: 'layout/setSidePanelWidth'; width: number }
   | { type: 'layout/setFileCommentsPanelWidth'; width: number }
@@ -172,6 +176,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       if (state.targeting.path === action.path) return state;
       return withTarget(state, { ...state.targeting, path: action.path }, action.path !== null);
     case 'target/checkoutResult':
+      if (
+        action.for &&
+        (action.for.pr !== state.targeting.pr || action.for.commit !== state.targeting.commit)
+      ) {
+        return state;
+      }
       return { ...state, checkout: action.checkout };
     case 'sidePanel/setTab':
       return {

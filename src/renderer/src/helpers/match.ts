@@ -52,7 +52,7 @@ export function findBestMatch(
   folded: string = foldCase(text),
 ): TextMatch | null {
   if (query.length === 0) return null;
-  const needle = folded === text ? query : query.toLowerCase();
+  const needle = text.toLowerCase().length === text.length ? query.toLowerCase() : query;
   const hits = occurrences(folded, needle);
   if (hits.length === 0) return fuzzyLineMatch(text, query);
   let best: { at: number; score: number; distance: number } | null = null;
@@ -76,7 +76,7 @@ export function nextMatch(
   folded: string = foldCase(text),
 ): TextMatch | null {
   if (query.length === 0) return null;
-  const needle = folded === text ? query : query.toLowerCase();
+  const needle = text.toLowerCase().length === text.length ? query.toLowerCase() : query;
   let at: number;
   if (direction === 1) {
     at = folded.indexOf(needle, current.from + 1);

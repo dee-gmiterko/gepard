@@ -28,6 +28,7 @@ export function CommitTarget(): React.JSX.Element {
   const usingPr = state.targeting.pr !== null;
 
   const [queryText, setQueryText] = useState('');
+  const [picked, setPicked] = useState<Commit | null>(null);
   const debouncedQuery = useDebouncedValue(queryText);
 
   const prCommits = usePrCommits();
@@ -61,8 +62,9 @@ export function CommitTarget(): React.JSX.Element {
     () =>
       state.targeting.commit === null
         ? null
-        : (items.find((c) => c.oid === state.targeting.commit) ?? null),
-    [state.targeting.commit, items],
+        : (items.find((c) => c.oid === state.targeting.commit) ??
+          (picked?.oid === state.targeting.commit ? picked : null)),
+    [state.targeting.commit, items, picked],
   );
 
   const unresolvedLabel =
@@ -81,7 +83,10 @@ export function CommitTarget(): React.JSX.Element {
         placeholder={intl.formatMessage(messages.placeholder)}
         unresolvedLabel={unresolvedLabel}
         onQueryChange={setQueryText}
-        onSelect={(commit) => setCommit(commit?.oid ?? null)}
+        onSelect={(commit) => {
+          setPicked(commit);
+          setCommit(commit?.oid ?? null);
+        }}
       />
     </IconField>
   );

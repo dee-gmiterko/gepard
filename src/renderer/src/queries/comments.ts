@@ -154,10 +154,10 @@ export function useSync() {
       ...(await invoke('sync.run', { projectId, pr, commit, mode })),
     }),
     onSuccess: (result) => {
-      if (result.pr !== pr || result.commit !== commit) return;
       dispatch({
         type: 'target/checkoutResult',
         checkout: { base: result.base, head: result.head },
+        for: { pr: result.pr, commit: result.commit ?? null },
       });
     },
     onSettled: () =>

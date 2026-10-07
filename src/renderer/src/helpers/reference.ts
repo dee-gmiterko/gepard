@@ -22,6 +22,8 @@ export interface ReferenceChoices {
   exactScope: SearchScope;
   patternsDefaultOpen: boolean;
   patterns: Record<string, { open?: boolean; scope?: SearchScope }>;
+  savedExact: CommentReference[];
+  savedPatterns: CommentReference[];
 }
 
 export function initialReferenceChoices(references: CommentReference[]): ReferenceChoices {
@@ -30,8 +32,10 @@ export function initialReferenceChoices(references: CommentReference[]): Referen
     symbols: references.filter((r) => r.kind === 'symbol'),
     exactOpen: references.some((r) => r.kind === 'exact'),
     exactScope: 'all',
-    patternsDefaultOpen: references.some((r) => r.kind === 'pattern'),
+    patternsDefaultOpen: false,
     patterns: {},
+    savedExact: references.filter((r) => r.kind === 'exact'),
+    savedPatterns: references.filter((r) => r.kind === 'pattern'),
   };
 }
 
@@ -44,7 +48,7 @@ export function referencesFromResult(
 }
 
 export function isPatternOpen(choices: ReferenceChoices, id: string): boolean {
-  return choices.patterns[id]?.open ?? choices.patternsDefaultOpen;
+  return choices.patterns[id]?.open ?? (id in choices.patterns || choices.patternsDefaultOpen);
 }
 
 export function patternScopeOf(choices: ReferenceChoices, id: string): SearchScope {
@@ -164,9 +168,13 @@ export function combineReferences(
   exactData: GroupedResult | undefined,
   patternReferences: CommentReference[],
 ): CommentReference[] {
-  return [
-    ...choices.symbols,
-    ...referencesFromResult(choices.exactOpen ? exactData : undefined, 'exact'),
-    ...patternReferences,
-  ];
+  const exact = !choices.exactOpen
+    ? []
+    : exactData
+      ? referencesFromResult(exactData, 'exact')
+      : choices.savedExact;
+  const untouched = Object.keys(choices.patterns).length === 0;
+  const patterns =
+    patternReferences.length === 0 && untouched ? choices.savedPatterns : patternReferences;
+  return [...choices.symbols, ...exact, ...patterns];
 }

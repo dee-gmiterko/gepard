@@ -174,12 +174,12 @@ export function FileDetailPanel(): React.JSX.Element | null {
             {isChangedFile ? (
               <Stack>
                 <MassActions path={path} />
-                <FileComments path={path} />
+                <FileComments key={path} path={path} />
               </Stack>
             ) : state.targeting.pr === null ? (
-              <FileComments path={path} />
+              <FileComments key={path} path={path} />
             ) : (
-              <FilePrComments path={path} />
+              <FilePrComments key={path} path={path} />
             )}
           </Body>
           <SymbolsTree path={path} />

@@ -20,7 +20,12 @@ export function useTargetActions(): TargetActions {
 
   return {
     setPr: (pr) =>
-      apply({ type: 'target/pr', pr }, { pr, commit: null, path: state.targeting.path }),
+      apply(
+        { type: 'target/pr', pr },
+        pr === state.targeting.pr
+          ? state.targeting
+          : { pr, commit: null, path: state.targeting.path },
+      ),
     setCommit: (sha) => apply({ type: 'target/commit', sha }, { ...state.targeting, commit: sha }),
     setPath: (path) => apply({ type: 'target/path', path }, { ...state.targeting, path }),
   };
