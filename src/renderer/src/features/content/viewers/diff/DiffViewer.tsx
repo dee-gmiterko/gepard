@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Compartment } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import type { DiffRow, DiffSide } from '@gepard/common';
 import { defineMessages, FormattedMessage } from 'react-intl';
-import { useAppState } from '../../../../state/AppContext';
+import {
+  useActiveFile,
+  useCheckout,
+  useLayout,
+  useRevealLine,
+  useTargetPr,
+  useTargeting,
+} from '../../../../state/hooks';
 import { useFileDiff } from '../../../../queries/files';
 import { useComments } from '../../../../queries/comments';
 import {
@@ -90,29 +96,29 @@ export function DiffViewer({ path }: { path: string }): React.JSX.Element {
 }
 
 function DiffText({ path, rows }: { path: string; rows: DiffRow[] }): React.JSX.Element {
-  const state = useAppState();
-  const pr = state.targeting.pr;
+  const activeFile = useActiveFile();
+  const checkout = useCheckout();
+  const layout = useLayout();
+  const revealLine = useRevealLine();
+  const targeting = useTargeting();
+  const pr = useTargetPr();
   const { data: threads } = useComments();
-  const head = state.checkout?.head ?? '';
-  const singleCommitInPr = pr !== null && state.targeting.commit !== null;
+  const head = checkout?.head ?? '';
+  const singleCommitInPr = pr !== null && targeting.commit !== null;
 
   const { doc, infos } = useMemo(() => buildDiffDoc(rows), [rows]);
-  const wrapCompartment = useMemo(() => new Compartment(), []);
+  const wrapLongLines = layout.wrapLongLines;
   const extensions = useMemo(
-    () => [...diffGutters(infos), diffLineDecorations(doc, infos), wrapCompartment.of([])],
-    [doc, infos, wrapCompartment],
+    () => [
+      ...diffGutters(infos),
+      diffLineDecorations(doc, infos),
+      wrapLongLines ? EditorView.lineWrapping : [],
+    ],
+    [doc, infos, wrapLongLines],
   );
   const { containerRef, view, comments, commentGutter } = useReadOnlyEditor(path, doc, extensions);
   const [draft, setDraft] = useState<{ docLine: number; side: DiffSide } | null>(null);
   const portals = useMemo(() => new CommentPortals(), []);
-
-  const wrapLongLines = state.layout.wrapLongLines;
-  useEffect(() => {
-    if (!view) return;
-    view.dispatch({
-      effects: wrapCompartment.reconfigure(wrapLongLines ? EditorView.lineWrapping : []),
-    });
-  }, [wrapLongLines, view, wrapCompartment, doc]);
 
   useEffect(() => {
     if (!view) return;
@@ -148,10 +154,10 @@ function DiffText({ path, rows }: { path: string; rows: DiffRow[] }): React.JSX.
   }, [threads, draft, pr, path, infos, head, view, comments, portals]);
 
   useEffect(() => {
-    if (!view || state.activeFile !== path || state.revealLine == null) return;
-    const docLine = findDiffDocLine(infos, state.revealLine.line, state.revealLine.side);
+    if (!view || activeFile !== path || revealLine == null) return;
+    const docLine = findDiffDocLine(infos, revealLine.line, revealLine.side);
     if (docLine != null) revealDocLine(view, docLine);
-  }, [view, path, infos, state.activeFile, state.revealLine]);
+  }, [view, path, infos, activeFile, revealLine]);
 
   return (
     <>

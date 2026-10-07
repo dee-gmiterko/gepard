@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import { Bookmark, Home, MessageSquare, X } from 'react-feather';
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
-import { useAppDispatch, useAppState } from '../../../state/AppContext';
+import { useAppDispatch } from '../../../state/AppContext';
+import { useActiveFile, useMainTab, usePinnedFiles, usePreviewFile } from '../../../state/hooks';
 import { openTabs } from '../../../state/selectors';
 import { basename } from '../../../helpers/paths';
 import { focusVisible } from '../../../components/controlStyles';
@@ -77,18 +79,21 @@ const Label = styled(Ellipsis)`
 
 export function FileTabs(): React.JSX.Element {
   const intl = useIntl();
-  const state = useAppState();
+  const activeFile = useActiveFile();
+  const mainTab = useMainTab();
+  const pinnedFiles = usePinnedFiles();
+  const previewFile = usePreviewFile();
   const dispatch = useAppDispatch();
-  const tabs = openTabs(state);
+  const tabs = useMemo(() => openTabs(pinnedFiles, previewFile), [pinnedFiles, previewFile]);
 
   return (
     <TabStrip role="tablist">
-      <TabItem $active={state.mainTab === 'overview'}>
+      <TabItem $active={mainTab === 'overview'}>
         <Tab
           type="button"
           role="tab"
-          aria-selected={state.mainTab === 'overview'}
-          $active={state.mainTab === 'overview'}
+          aria-selected={mainTab === 'overview'}
+          $active={mainTab === 'overview'}
           $preview={false}
           title={intl.formatMessage(messages.overview)}
           onClick={() => dispatch({ type: 'mainTab/set', tab: 'overview' })}
@@ -99,12 +104,12 @@ export function FileTabs(): React.JSX.Element {
           </Label>
         </Tab>
       </TabItem>
-      <TabItem $active={state.mainTab === 'comments'}>
+      <TabItem $active={mainTab === 'comments'}>
         <Tab
           type="button"
           role="tab"
-          aria-selected={state.mainTab === 'comments'}
-          $active={state.mainTab === 'comments'}
+          aria-selected={mainTab === 'comments'}
+          $active={mainTab === 'comments'}
           $preview={false}
           title={intl.formatMessage(messages.allComments)}
           onClick={() => dispatch({ type: 'mainTab/set', tab: 'comments' })}
@@ -116,8 +121,8 @@ export function FileTabs(): React.JSX.Element {
         </Tab>
       </TabItem>
       {tabs.map((path) => {
-        const isPinned = state.pinnedFiles.includes(path);
-        const isActive = state.mainTab === 'files' && state.activeFile === path;
+        const isPinned = pinnedFiles.includes(path);
+        const isActive = mainTab === 'files' && activeFile === path;
         return (
           <TabItem key={path} $active={isActive}>
             <Tab

@@ -1,10 +1,11 @@
-import { createElement, type Dispatch, type ReactNode } from 'react';
+import { createElement, type ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ChannelOutput } from '@gepard/common';
 import { afterEach, describe, expect, it } from 'vitest';
-import { AppDispatchContext, AppStateContext } from '../src/state/AppContext';
-import { appReducer, initialAppState, type AppAction, type AppState } from '../src/state/reducer';
+import { AppStoreContext } from '../src/state/AppContext';
+import { initialAppState, type AppAction, type AppState } from '../src/state/reducer';
+import { createAppStore, type AppStoreHandle } from '../src/state/store';
 import { useTargetActions, type TargetActions } from '../src/features/header/useTargetActions';
 import { useSync } from '../src/queries/comments';
 import { createFakeIpc, type FakeIpc, type Handlers } from './support/fakeIpc';
@@ -26,7 +27,7 @@ afterEach(() => {
 const BASE = 'a'.repeat(40);
 const HEAD = 'b'.repeat(40);
 
-function renderWith<T>(state: AppState, dispatch: Dispatch<AppAction>, use: () => T): T {
+function renderWith<T>(handle: AppStoreHandle, use: () => T): T {
   let captured: T | undefined;
   function Probe(): ReactNode {
     captured = use();
@@ -36,11 +37,7 @@ function renderWith<T>(state: AppState, dispatch: Dispatch<AppAction>, use: () =
     createElement(
       QueryClientProvider,
       { client: new QueryClient() },
-      createElement(
-        AppStateContext.Provider,
-        { value: state },
-        createElement(AppDispatchContext.Provider, { value: dispatch }, createElement(Probe)),
-      ),
+      createElement(AppStoreContext.Provider, { value: handle }, createElement(Probe)),
     ),
   );
   if (captured === undefined) throw new Error('hook did not render');
@@ -55,16 +52,12 @@ function startFrom(targeting: AppState['targeting']): {
   current: () => AppState;
 } {
   const ipc = installIpc({ 'projects.setTargeting': () => undefined });
-  let live: AppState = { ...initialAppState, projectId: 'p1', targeting };
-  const actions = renderWith(
-    live,
-    (a) => (live = appReducer(live, a)),
-    () => useTargetActions(),
-  );
+  const handle = createAppStore({ ...initialAppState, projectId: 'p1', targeting });
+  const actions = renderWith(handle, () => useTargetActions());
   return {
     actions,
     persisted: () => ipc.callsTo('projects.setTargeting').map((c) => c.targeting),
-    current: () => live,
+    current: () => handle.store.getState(),
   };
 }
 
@@ -117,20 +110,16 @@ describe('sync results', () => {
           resolveSync = resolve;
         }),
     });
-    let live: AppState = {
+    const handle = createAppStore({
       ...initialAppState,
       projectId: 'p1',
       targeting: { pr, commit: null, path: null },
-    };
-    const sync = renderWith(
-      live,
-      (a) => (live = appReducer(live, a)),
-      () => useSync(),
-    );
+    });
+    const sync = renderWith(handle, () => useSync());
     return {
       sync,
-      current: () => live,
-      set: (action) => (live = appReducer(live, action)),
+      current: () => handle.store.getState(),
+      set: (action) => handle.dispatch(action),
       resolve: (value) =>
         resolveSync({ ...value, syncedAt: '2026-01-01T00:00:00Z', droppedRemoteDeleted: 0 }),
     };

@@ -4,8 +4,9 @@ import { defineMessages, useIntl } from 'react-intl';
 import { Combobox } from '../../components/Combobox';
 import { IconField } from '../../components/IconField';
 import { IconButton } from '../../components/IconButton';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useTree } from '../../queries/files';
-import { useAppState } from '../../state/AppContext';
+import { useTargeting } from '../../state/hooks';
 import { useTargetActions } from './useTargetActions';
 import { foldersOf, isValidRepoPath } from '../../helpers/paths';
 
@@ -36,8 +37,8 @@ function PathTargetInput({
   onCommit,
 }: PathTargetInputProps): React.JSX.Element {
   const [text, setText] = useState(committed ?? '');
-  // Typing live-updates the committed target, so `committed` changes on every
-  // keystroke too; only resync from it when it changed for some other reason
+  // Typing updates the committed target after a short pause, so `committed`
+  // changes too; only resync from it when it changed for some other reason
   // (cleared elsewhere, restored on project open, ...).
   const lastOwnCommit = useRef(committed ?? '');
 
@@ -48,7 +49,21 @@ function PathTargetInput({
     setText(normalized);
   }, [committed]);
 
-  function handleTextChange(next: string): void {
+  const onCommitRef = useRef(onCommit);
+  useEffect(() => {
+    onCommitRef.current = onCommit;
+  });
+
+  const debouncedText = useDebouncedValue(text, 50);
+  useEffect(() => {
+    const trimmed = debouncedText.trim();
+    if (trimmed === lastOwnCommit.current) return;
+    lastOwnCommit.current = trimmed;
+    onCommitRef.current(debouncedText);
+  }, [debouncedText]);
+
+  function handleSelect(folder: string | null): void {
+    const next = folder ?? '';
     setText(next);
     lastOwnCommit.current = next.trim();
     onCommit(next);
@@ -62,15 +77,15 @@ function PathTargetInput({
       getLabel={(f) => f}
       loading={isFetching}
       placeholder={placeholder}
-      onSelect={(folder) => onCommit(folder ?? '')}
-      freeText={{ text, onTextChange: handleTextChange }}
+      onSelect={handleSelect}
+      freeText={{ text, onTextChange: setText }}
     />
   );
 }
 
 export function PathTarget(): React.JSX.Element {
   const intl = useIntl();
-  const state = useAppState();
+  const targeting = useTargeting();
   const { setPath } = useTargetActions();
   const tree = useTree();
 
@@ -85,13 +100,13 @@ export function PathTarget(): React.JSX.Element {
   return (
     <IconField icon={Folder}>
       <PathTargetInput
-        committed={state.targeting.path}
+        committed={targeting.path}
         folders={folders}
         isFetching={tree.isFetching}
         placeholder={intl.formatMessage(messages.placeholder)}
         onCommit={commit}
       />
-      {state.targeting.path !== null && (
+      {targeting.path !== null && (
         <IconButton
           icon={X}
           label={intl.formatMessage(messages.clear)}

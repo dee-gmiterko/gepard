@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
-import { useAppDispatch, useAppState } from '../../../state/AppContext';
+import { useAppDispatch } from '../../../state/AppContext';
+import { useActiveFile } from '../../../state/hooks';
 import { Caption } from '../../../components/Caption';
 import { Message } from '../../../components/Message';
 import type { ViewMode } from '../../../components/ViewModeToggle';
@@ -63,7 +64,7 @@ export function SearchResults({
   onLoadMore: () => void;
 }): React.JSX.Element {
   const intl = useIntl();
-  const state = useAppState();
+  const activeFile = useActiveFile();
   const dispatch = useAppDispatch();
   const { rowFor } = useRowData();
   const [defaultExpanded] = useState(initiallyExpanded);
@@ -144,7 +145,7 @@ export function SearchResults({
       );
     }
 
-    const selected = row.filePath === state.activeFile;
+    const selected = row.filePath === activeFile;
     return (
       <FileRow
         role="treeitem"

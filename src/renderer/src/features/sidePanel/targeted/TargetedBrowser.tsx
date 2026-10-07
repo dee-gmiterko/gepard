@@ -1,7 +1,13 @@
 import { useMemo, useState } from 'react';
 import { defineMessages, FormattedMessage } from 'react-intl';
-import { useAppDispatch, useAppState } from '../../../state/AppContext';
-import { isDiffView } from '../../../state/selectors';
+import { useAppDispatch } from '../../../state/AppContext';
+import {
+  useCheckout,
+  useIsDiffView,
+  useLayout,
+  useTargetPath,
+  useTargeting,
+} from '../../../state/hooks';
 import { useOpenedProject, useSetLayout } from '../../../queries/projects';
 import { useTargetedFiles, useTree } from '../../../queries/files';
 import { buildTree, buildFlatList, withRoot, type TreeNode } from '../../../helpers/tree';
@@ -50,14 +56,16 @@ const messages = defineMessages({
 });
 
 export function TargetedBrowser(): React.JSX.Element {
-  const state = useAppState();
+  const checkout = useCheckout();
+  const layout = useLayout();
+  const targeting = useTargeting();
   const dispatch = useAppDispatch();
   const setLayout = useSetLayout();
-  const path = state.targeting.path;
-  const hideViewed = state.layout.hideViewedFiles;
+  const path = useTargetPath();
+  const hideViewed = layout.hideViewedFiles;
   const [mode, setMode] = useState<ViewMode>('tree');
 
-  const hasCheckoutTarget = isDiffView(state);
+  const hasCheckoutTarget = useIsDiffView();
   const { diffMode, changedLoading, rowFor } = useRowData();
   const targetedFiles = useTargetedFiles();
   const fullTree = useTree();
@@ -79,7 +87,7 @@ export function TargetedBrowser(): React.JSX.Element {
 
   function setHideViewed(hide: boolean): void {
     dispatch({ type: 'layout/setHideViewedFiles', hide });
-    setLayout.mutate({ ...state.layout, hideViewedFiles: hide });
+    setLayout.mutate({ ...layout, hideViewedFiles: hide });
   }
 
   const isLoading = diffMode
@@ -94,7 +102,7 @@ export function TargetedBrowser(): React.JSX.Element {
         <FormattedMessage {...messages.noTarget} />
       </Message>
     );
-  if (hasCheckoutTarget && !state.checkout)
+  if (hasCheckoutTarget && !checkout)
     return (
       <Message>
         <FormattedMessage {...messages.checkingOut} />
@@ -125,7 +133,7 @@ export function TargetedBrowser(): React.JSX.Element {
     <div>
       <Toolbar>
         <Inline $gap={1}>
-          {state.targeting.pr !== null && (
+          {targeting.pr !== null && (
             <HideViewedToggle value={hideViewed} onChange={setHideViewed} />
           )}
           <ViewModeToggle value={mode} onChange={setMode} />

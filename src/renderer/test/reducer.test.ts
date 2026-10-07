@@ -314,3 +314,48 @@ describe('header status slice', () => {
     );
   });
 });
+
+describe('no-op transitions keep the same state', () => {
+  const same = (before: AppState, action: Parameters<typeof appReducer>[1]): void => {
+    expect(appReducer(before, action)).toBe(before);
+  };
+
+  it('returns the same state when nothing changes', () => {
+    same(state(), { type: 'mainTab/set', tab: 'overview' });
+    same(state(), { type: 'settings/setOpen', open: false });
+    same(state(), { type: 'sidePanel/setTab', tab: 'files' });
+    same(state(), {
+      type: 'layout/setSidePanelWidth',
+      width: initialAppState.layout.sidePanelWidth,
+    });
+    same(state(), { type: 'layout/setFileControlsPosition', position: null });
+    same(state(), { type: 'file/revert' });
+    same(state(), { type: 'toast/dismiss', id: 'missing' });
+    same(state(), { type: 'target/checkoutResult', checkout: null });
+    same(state(), { type: 'file/close', path: 'a.ts' });
+  });
+
+  it('returns the same state when a file is already open, focused or accepted', () => {
+    const open = appReducer(state(), { type: 'file/open', path: 'a.ts' });
+    same(open, { type: 'file/open', path: 'a.ts' });
+    same(open, { type: 'file/focus', path: 'a.ts' });
+    const accepted = appReducer(open, { type: 'file/accept', path: 'a.ts' });
+    same(accepted, { type: 'file/accept', path: 'a.ts' });
+  });
+
+  it('returns the same state for an equal checkout and an equal control position', () => {
+    const checkout = { base: 'b', head: 'h' };
+    const on = appReducer(state(), { type: 'target/checkoutResult', checkout });
+    same(on, { type: 'target/checkoutResult', checkout: { ...checkout } });
+    const moved = appReducer(state(), {
+      type: 'layout/setFileControlsPosition',
+      position: { x: 1, y: 2 },
+    });
+    same(moved, { type: 'layout/setFileControlsPosition', position: { x: 1, y: 2 } });
+  });
+
+  it('still changes state when the sidebar is asked to take focus', () => {
+    const next = appReducer(state(), { type: 'sidePanel/setTab', tab: 'files', focus: true });
+    expect(next.sidePanelFocusRequest).toBe(1);
+  });
+});

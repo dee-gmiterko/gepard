@@ -11,7 +11,8 @@ import { IconButton } from '../../components/IconButton';
 import { Ellipsis } from '../../components/Ellipsis';
 import { Inline } from '../../components/Layout';
 import { useIndexStatus, useSetLayout } from '../../queries/projects';
-import { useAppDispatch, useAppState } from '../../state/AppContext';
+import { useAppDispatch } from '../../state/AppContext';
+import { useActiveFile, useLayout, useTargeting } from '../../state/hooks';
 import { useRowData } from '../sidePanel/fileRows/rowData';
 import { aggregateRows } from '../../helpers/row';
 import { ProgressBar } from '../../components/ProgressBar';
@@ -74,10 +75,11 @@ export function Header(): React.JSX.Element {
   const intl = useIntl();
   const { pending } = useTargetingEffects();
   const dispatch = useAppDispatch();
-  const state = useAppState();
+  const layout = useLayout();
+  const targeting = useTargeting();
   const setLayout = useSetLayout();
   const { data: index } = useIndexStatus();
-  const path = state.activeFile;
+  const path = useActiveFile();
   const { changedFiles, rowFor } = useRowData();
   const progress = aggregateRows((changedFiles ?? []).map((f) => rowFor(f.path)));
   const isChangedFile = useIsCheckedOutChangedFile(path);
@@ -85,9 +87,9 @@ export function Header(): React.JSX.Element {
   const headerStatus = useHeaderStatus();
 
   function toggleFileComments(): void {
-    const open = !state.layout.fileCommentsPanelOpen;
+    const open = !layout.fileCommentsPanelOpen;
     dispatch({ type: 'layout/setFileCommentsPanelOpen', open });
-    setLayout.mutate({ ...state.layout, fileCommentsPanelOpen: open });
+    setLayout.mutate({ ...layout, fileCommentsPanelOpen: open });
   }
 
   return (
@@ -136,8 +138,8 @@ export function Header(): React.JSX.Element {
         )}
         <IconButton
           icon={Sidebar}
-          active={state.layout.fileCommentsPanelOpen}
-          disabled={path === null || (state.targeting.pr !== null && !isChangedFile)}
+          active={layout.fileCommentsPanelOpen}
+          disabled={path === null || (targeting.pr !== null && !isChangedFile)}
           label={intl.formatMessage(messages.fileDetails)}
           onClick={toggleFileComments}
         />

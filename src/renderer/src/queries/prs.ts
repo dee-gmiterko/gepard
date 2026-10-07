@@ -7,14 +7,19 @@ import {
 } from '@tanstack/react-query';
 import { invoke } from '../ipc/client';
 import { qk } from './keys';
-import { useAppState } from '../state/AppContext';
+import {
+  useProjectId,
+  useTargetCommit,
+  useTargetPath,
+  useTargetPr,
+  useTargeting,
+} from '../state/hooks';
 import type { ChannelInput, CheckoutResult, PrSummary, TargetRef } from '@gepard/common';
 
 export function usePrList(search?: string) {
-  const state = useAppState();
-  const projectId = state.projectId ?? '';
-  const commit = state.targeting.commit ?? undefined;
-  const path = state.targeting.path ?? undefined;
+  const projectId = useProjectId() ?? '';
+  const commit = useTargetCommit() ?? undefined;
+  const path = useTargetPath() ?? undefined;
   return useQuery({
     queryKey: qk.prs(projectId, search, commit, path),
     queryFn: () => invoke('pr.list', { projectId, search, commit, path }),
@@ -23,10 +28,9 @@ export function usePrList(search?: string) {
 }
 
 export function usePrCommits() {
-  const state = useAppState();
-  const projectId = state.projectId ?? '';
-  const pr = state.targeting.pr;
-  const path = state.targeting.path ?? undefined;
+  const projectId = useProjectId() ?? '';
+  const pr = useTargetPr();
+  const path = useTargetPath() ?? undefined;
   return useQuery({
     queryKey: qk.prCommits(projectId, pr ?? NaN, path),
     queryFn: pr === null ? skipToken : () => invoke('pr.commits', { projectId, pr, path }),
@@ -35,10 +39,10 @@ export function usePrCommits() {
 }
 
 export function useCommits(search?: string) {
-  const state = useAppState();
-  const projectId = state.projectId ?? '';
-  const path = state.targeting.path ?? undefined;
-  const usingPr = state.targeting.pr !== null;
+  const targeting = useTargeting();
+  const projectId = useProjectId() ?? '';
+  const path = useTargetPath() ?? undefined;
+  const usingPr = targeting.pr !== null;
   return useQuery({
     queryKey: qk.commits(projectId, search, path),
     queryFn: () => invoke('commits.list', { projectId, search, path }),
@@ -47,7 +51,7 @@ export function useCommits(search?: string) {
 }
 
 export function useBranches() {
-  const projectId = useAppState().projectId ?? '';
+  const projectId = useProjectId() ?? '';
   return useQuery({
     queryKey: qk.branches(projectId),
     queryFn: () => invoke('pr.branches', { projectId }),
@@ -56,7 +60,7 @@ export function useBranches() {
 }
 
 export function useCreatePr() {
-  const projectId = useAppState().projectId ?? '';
+  const projectId = useProjectId() ?? '';
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: Omit<ChannelInput<'pr.create'>, 'projectId'>) =>
@@ -71,7 +75,7 @@ export interface CheckoutTarget {
 }
 
 export function useCheckoutTarget(): CheckoutTarget {
-  const projectId = useAppState().projectId ?? '';
+  const projectId = useProjectId() ?? '';
   const qc = useQueryClient();
   const { mutateAsync: checkout } = useMutation({
     mutationKey: qk.checkout(projectId),
@@ -85,9 +89,8 @@ export function useCheckoutTarget(): CheckoutTarget {
 }
 
 export function useTargetedPr(): PrSummary | null {
-  const state = useAppState();
-  const projectId = state.projectId ?? '';
-  const pr = state.targeting.pr;
+  const projectId = useProjectId() ?? '';
+  const pr = useTargetPr();
   const { data } = useQuery({
     queryKey: qk.prSummary(projectId, pr ?? NaN),
     queryFn: pr === null ? skipToken : () => invoke('pr.view', { projectId, pr }),

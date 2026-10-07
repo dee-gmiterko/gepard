@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { defineMessages } from 'react-intl';
-import { useAppDispatch, useAppState } from '../state/AppContext';
-import type { QuickSearchMode, SidePanelTab } from '../state/reducer';
+import { useAppDispatch, useAppStore } from '../state/AppContext';
+import { useActiveFile } from '../state/hooks';
+import { canMarkViewed, type QuickSearchMode, type SidePanelTab } from '../state/reducer';
 import { useSetLayout } from '../queries/projects';
-import { useSetViewed, useViewed } from '../queries/comments';
-import { useChangedFiles, useTargetedFiles } from '../queries/files';
+import { useViewed } from '../queries/comments';
+import { useTargetedFiles } from '../queries/files';
 import { nextTargetedFile } from '../helpers/targetedFiles';
 
 const messages = defineMessages({
@@ -28,7 +29,6 @@ const messages = defineMessages({
 
 export interface Commands {
   toggleViewed: (path?: string | null) => boolean;
-  setViewedPaths: (paths: string[], viewed: boolean) => void;
   nextFile: () => boolean;
   prevFile: () => boolean;
   acceptNext: () => boolean;
@@ -40,7 +40,7 @@ export interface Commands {
 }
 
 export function useFileNavigation(): { canGoPrev: boolean; canGoNext: boolean } {
-  const activePath = useAppState().activeFile;
+  const activePath = useActiveFile();
   const { data: viewed } = useViewed();
   const targetedFiles = useTargetedFiles();
   return useMemo(() => {
@@ -53,70 +53,35 @@ export function useFileNavigation(): { canGoPrev: boolean; canGoNext: boolean } 
 }
 
 export function useCommands(): Commands {
-  const state = useAppState();
+  const store = useAppStore();
   const dispatch = useAppDispatch();
-  const pr = state.targeting.pr;
-  const hideViewed = state.layout.hideViewedFiles;
-
-  const { data: viewed } = useViewed();
-  const { mutate: setViewed } = useSetViewed();
   const { mutate: setLayout } = useSetLayout();
-  const layout = state.layout;
-  const { data: changedFiles } = useChangedFiles();
-  const activePath = state.activeFile;
-  const acceptedFiles = state.acceptedFiles;
-  const targetedFiles = useTargetedFiles();
 
-  return useMemo<Commands>(() => {
-    const viewedPaths = new Set(viewed?.filter((v) => v.viewed).map((v) => v.path));
-    const changedPaths = new Set<string>();
-    for (const f of changedFiles ?? []) {
-      changedPaths.add(f.path);
-      if (f.previousPath) changedPaths.add(f.previousPath);
-    }
-
-    function canMarkViewed(path: string | null): path is string {
-      return pr !== null && path !== null && changedPaths.has(path);
-    }
-
-    function move(direction: 1 | -1, skip: ReadonlySet<string> = viewedPaths): boolean {
-      const next = nextTargetedFile(targetedFiles, activePath, skip, direction);
-      if (next === null) return false;
-      dispatch({ type: 'file/open', path: next });
-      return true;
-    }
-
-    function setViewedPaths(paths: string[], isViewed: boolean): void {
-      setViewed({ paths, viewed: isViewed });
-      if (isViewed && hideViewed && activePath !== null && paths.includes(activePath)) {
-        move(1, new Set([...viewedPaths, ...paths]));
-      }
-    }
-
-    return {
-      toggleViewed: (path = activePath) => {
-        if (!canMarkViewed(path)) return false;
-        setViewedPaths([path], !viewedPaths.has(path));
+  return useMemo<Commands>(
+    () => ({
+      toggleViewed: (path = store.getState().activeFile) => {
+        if (!canMarkViewed(store.getState(), path)) return false;
+        dispatch({ type: 'viewed/toggle', path });
         return true;
       },
-      setViewedPaths,
-      nextFile: () => move(1),
-      prevFile: () => move(-1),
+      nextFile: () => {
+        const before = store.getState();
+        dispatch({ type: 'file/step', direction: 1 });
+        return store.getState() !== before;
+      },
+      prevFile: () => {
+        const before = store.getState();
+        dispatch({ type: 'file/step', direction: -1 });
+        return store.getState() !== before;
+      },
       acceptNext: () => {
-        if (activePath === null) return false;
-        if (canMarkViewed(activePath)) {
-          setViewed({ paths: [activePath], viewed: true });
-          dispatch({ type: 'file/accept', path: activePath });
-        }
-        if (!move(1)) dispatch({ type: 'file/close', path: activePath });
+        if (store.getState().activeFile === null) return false;
+        dispatch({ type: 'review/acceptNext' });
         return true;
       },
       revertPrev: () => {
-        const path = acceptedFiles.at(-1);
-        if (path === undefined) return false;
-        dispatch({ type: 'file/revert' });
-        if (pr !== null) setViewed({ paths: [path], viewed: false });
-        dispatch({ type: 'file/open', path });
+        if (store.getState().acceptedFiles.length === 0) return false;
+        dispatch({ type: 'review/revertPrev' });
         return true;
       },
       showSidePanelTab: (tab) => {
@@ -128,6 +93,7 @@ export function useCommands(): Commands {
         return true;
       },
       toggleWrapLines: () => {
+        const { layout } = store.getState();
         const wrap = !layout.wrapLongLines;
         dispatch({ type: 'layout/setWrapLongLines', wrap });
         setLayout({ ...layout, wrapLongLines: wrap });
@@ -138,6 +104,7 @@ export function useCommands(): Commands {
         return true;
       },
       toggleFullFileDiff: () => {
+        const { layout } = store.getState();
         const full = !layout.fullFileDiff;
         dispatch({ type: 'layout/setFullFileDiff', full });
         setLayout({ ...layout, fullFileDiff: full });
@@ -147,18 +114,7 @@ export function useCommands(): Commands {
         });
         return true;
       },
-    };
-  }, [
-    activePath,
-    acceptedFiles,
-    pr,
-    hideViewed,
-    layout,
-    setLayout,
-    viewed,
-    changedFiles,
-    setViewed,
-    dispatch,
-    targetedFiles,
-  ]);
+    }),
+    [store, dispatch, setLayout],
+  );
 }

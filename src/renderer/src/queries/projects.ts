@@ -8,7 +8,8 @@ import {
 import { reportQueryError } from '../errors/report';
 import { invoke, useIpcEvent } from '../ipc/client';
 import { qk } from './keys';
-import { useAppDispatch, useAppState } from '../state/AppContext';
+import { useAppDispatch } from '../state/AppContext';
+import { useCheckout, useProjectId } from '../state/hooks';
 import type { ChannelInput, OpenedProject } from '@gepard/common';
 
 export function useViewer() {
@@ -87,12 +88,12 @@ export function useLaunchingProjectIds(): (string | null)[] {
 }
 
 export function useOpenedProject() {
-  const projectId = useAppState().projectId ?? '';
+  const projectId = useProjectId() ?? '';
   return useQuery<OpenedProject>({ queryKey: qk.open(projectId), queryFn: skipToken });
 }
 
 export function useSetTargeting() {
-  const projectId = useAppState().projectId ?? '';
+  const projectId = useProjectId() ?? '';
   return useMutation({
     mutationFn: (targeting: ChannelInput<'projects.setTargeting'>['targeting']) =>
       invoke('projects.setTargeting', { projectId, targeting }),
@@ -100,7 +101,7 @@ export function useSetTargeting() {
 }
 
 export function useSetLayout() {
-  const projectId = useAppState().projectId ?? '';
+  const projectId = useProjectId() ?? '';
   return useMutation({
     mutationFn: (layout: ChannelInput<'projects.setLayout'>['layout']) =>
       invoke('projects.setLayout', { projectId, layout }),
@@ -135,7 +136,7 @@ export function useFetchProject() {
 }
 
 export function useIndexStatus() {
-  const projectId = useAppState().projectId ?? '';
+  const projectId = useProjectId() ?? '';
   const qc = useQueryClient();
   useIpcEvent('index.status', (payload) => {
     if (payload.projectId !== projectId) return;
@@ -157,7 +158,7 @@ export function useIndexStatus() {
 const LANGUAGE_SERVERS_POLL_MS = 2000;
 
 export function useLanguageServers() {
-  const projectId = useAppState().projectId ?? '';
+  const projectId = useProjectId() ?? '';
   return useQuery({
     queryKey: qk.languageServers(projectId),
     queryFn: () => invoke('index.languages', { projectId }),
@@ -168,7 +169,7 @@ export function useLanguageServers() {
 }
 
 export function useCurrentHead(): string | null {
-  const state = useAppState();
+  const checkout = useCheckout();
   const opened = useOpenedProject();
-  return state.checkout?.head ?? opened.data?.head ?? null;
+  return checkout?.head ?? opened.data?.head ?? null;
 }

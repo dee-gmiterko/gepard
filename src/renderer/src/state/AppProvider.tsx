@@ -1,7 +1,8 @@
-import { useReducer, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { OpenedProject } from '@gepard/common';
-import { AppDispatchContext, AppStateContext } from './AppContext';
+import { AppStoreContext } from './AppContext';
 import { appReducer, initialAppState, type AppState } from './reducer';
+import { createAppStore } from './store';
 import { useStartup } from '../queries/projects';
 
 function startupState(opened: OpenedProject | null | undefined): AppState {
@@ -15,22 +16,18 @@ function startupState(opened: OpenedProject | null | undefined): AppState {
 }
 
 function StateProvider({
-  initial,
+  opened,
   children,
 }: {
-  initial: AppState;
+  opened: OpenedProject | null | undefined;
   children: ReactNode;
 }): React.JSX.Element {
-  const [state, dispatch] = useReducer(appReducer, initial);
-  return (
-    <AppStateContext.Provider value={state}>
-      <AppDispatchContext.Provider value={dispatch}>{children}</AppDispatchContext.Provider>
-    </AppStateContext.Provider>
-  );
+  const [handle] = useState(() => createAppStore(startupState(opened)));
+  return <AppStoreContext.Provider value={handle}>{children}</AppStoreContext.Provider>;
 }
 
 export function AppProvider({ children }: { children: ReactNode }): React.JSX.Element | null {
   const startup = useStartup();
   if (startup.isPending) return null;
-  return <StateProvider initial={startupState(startup.data)}>{children}</StateProvider>;
+  return <StateProvider opened={startup.data}>{children}</StateProvider>;
 }

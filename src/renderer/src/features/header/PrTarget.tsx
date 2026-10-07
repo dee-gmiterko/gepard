@@ -8,7 +8,7 @@ import { Inline } from '../../components/Layout';
 import { usePrList } from '../../queries/prs';
 import { unionByKey } from '../../helpers/array';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
-import { useAppState } from '../../state/AppContext';
+import { useTargeting } from '../../state/hooks';
 import { useTargetActions } from './useTargetActions';
 import { NewPrModal } from '../pr/NewPrModal';
 import { prFilterText } from '../../helpers/github';
@@ -39,7 +39,7 @@ const messages = defineMessages({
 
 export function PrTarget(): React.JSX.Element {
   const intl = useIntl();
-  const state = useAppState();
+  const targeting = useTargeting();
   const { setPr } = useTargetActions();
 
   const { data: basePrs, isFetching: baseFetching } = usePrList();
@@ -70,16 +70,16 @@ export function PrTarget(): React.JSX.Element {
 
   const value = useMemo(
     () =>
-      state.targeting.pr === null
+      targeting.pr === null
         ? null
-        : (prs.find((pr) => pr.number === state.targeting.pr) ??
-          (picked?.number === state.targeting.pr ? picked : null)),
-    [state.targeting.pr, prs, picked],
+        : (prs.find((pr) => pr.number === targeting.pr) ??
+          (picked?.number === targeting.pr ? picked : null)),
+    [targeting.pr, prs, picked],
   );
 
   const unresolvedLabel =
-    value === null && state.targeting.pr !== null
-      ? intl.formatMessage(messages.unresolvedPrLabel, { number: state.targeting.pr })
+    value === null && targeting.pr !== null
+      ? intl.formatMessage(messages.unresolvedPrLabel, { number: targeting.pr })
       : undefined;
 
   return (

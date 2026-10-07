@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 import { queryOptions, useQuery } from '@tanstack/react-query';
 import { invoke } from '../ipc/client';
-import { useAppState } from '../state/AppContext';
-import { isDiffView } from '../state/selectors';
+import { useCheckout, useIsDiffView, useProjectId, useTargetPath } from '../state/hooks';
 import { useCurrentHead } from './projects';
 import { qk } from './keys';
 import { matchesTarget } from '@gepard/common';
@@ -11,7 +10,7 @@ import { buildTree, flattenLeafPaths } from '../helpers/tree';
 const immutable = { staleTime: Infinity, gcTime: 10 * 60 * 1000 } as const;
 
 export function useTree() {
-  const projectId = useAppState().projectId ?? '';
+  const projectId = useProjectId() ?? '';
   const sha = useCurrentHead() ?? '';
   return useQuery({
     queryKey: qk.tree(projectId, sha),
@@ -22,7 +21,7 @@ export function useTree() {
 }
 
 export function useFileContent(sha: string, path: string) {
-  const projectId = useAppState().projectId ?? '';
+  const projectId = useProjectId() ?? '';
   return useQuery({
     queryKey: qk.file(projectId, sha, path),
     queryFn: () => invoke('files.content', { projectId, sha, path }),
@@ -40,10 +39,10 @@ export function changedFilesQuery(projectId: string, base: string, head: string)
 }
 
 export function useChangedFiles() {
-  const state = useAppState();
-  const projectId = state.projectId ?? '';
-  const base = state.checkout?.base ?? '';
-  const head = state.checkout?.head ?? '';
+  const checkout = useCheckout();
+  const projectId = useProjectId() ?? '';
+  const base = checkout?.base ?? '';
+  const head = checkout?.head ?? '';
   return useQuery({
     ...changedFilesQuery(projectId, base, head),
     enabled: Boolean(projectId) && Boolean(base) && Boolean(head),
@@ -51,10 +50,10 @@ export function useChangedFiles() {
 }
 
 export function useFileDiff(path: string) {
-  const state = useAppState();
-  const projectId = state.projectId ?? '';
-  const base = state.checkout?.base ?? '';
-  const head = state.checkout?.head ?? '';
+  const checkout = useCheckout();
+  const projectId = useProjectId() ?? '';
+  const base = checkout?.base ?? '';
+  const head = checkout?.head ?? '';
   return useQuery({
     queryKey: qk.fileDiff(projectId, base, head, path),
     queryFn: () => invoke('files.diff', { projectId, base, head, path }),
@@ -64,9 +63,8 @@ export function useFileDiff(path: string) {
 }
 
 export function useTargetedFiles(): string[] {
-  const state = useAppState();
-  const path = state.targeting.path;
-  const diffMode = isDiffView(state);
+  const path = useTargetPath();
+  const diffMode = useIsDiffView();
   const { data: changed } = useChangedFiles();
   const tree = useTree();
 
