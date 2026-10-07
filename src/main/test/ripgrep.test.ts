@@ -290,3 +290,36 @@ describe('ripgrepSearchPage', () => {
     expect(wrapped.map((f) => f.path)).toEqual(ALL);
   });
 });
+
+describe('ripgrepSearch spans with multi-byte text (real spawn)', () => {
+  let dir: TmpDir;
+
+  beforeAll(async () => {
+    dir = await makeTmpDir('ripgrep-utf16');
+    await writeFile(join(dir.path, 'emoji.txt'), '\u{1F600}x\n');
+    await writeFile(join(dir.path, 'bmp.txt'), 'caf\u00e9 bar\n');
+    await writeFile(join(dir.path, 'ascii.txt'), 'plain bar\n');
+  });
+
+  afterAll(async () => {
+    await dir.cleanup();
+  });
+
+  const spans = async (file: string, pattern: string): Promise<unknown> => {
+    const results = await ripgrepSearch({ cwd: dir.path, pattern, fixedString: true });
+    return results.find((r) => r.path === file)?.matches[0].spans;
+  };
+
+  it('converts spans for ASCII and BMP multi-byte lines', async () => {
+    expect(await spans('ascii.txt', 'bar')).toEqual([[6, 9]]);
+    expect(await spans('bmp.txt', 'bar')).toEqual([[5, 8]]);
+  });
+
+  it('a match right after an emoji spans [2,3]', async () => {
+    expect(await spans('emoji.txt', 'x')).toEqual([[2, 3]]);
+  });
+
+  it('a match on the emoji itself spans [0,2]', async () => {
+    expect(await spans('emoji.txt', '\u{1F600}')).toEqual([[0, 2]]);
+  });
+});

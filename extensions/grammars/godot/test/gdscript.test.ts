@@ -86,4 +86,28 @@ describe('gdscript stream parser', () => {
     expect(strings).toContain('line"""');
     expect(classOf(tokens, 'line')).toBeUndefined();
   });
+
+  describe('modulo versus unique node references', () => {
+    const special = (src: string): string[] =>
+      tokenize(gdscript, src)
+        .filter(([, cls]) => cls === 'string.special')
+        .map(([text]) => text);
+
+    it('does not tag the right operand of a spaced modulo', () => {
+      expect(special('var x = i % count\n')).toEqual([]);
+      expect(special('var x = (i + 1) % size\n')).toEqual([]);
+      expect(special('x %= step\n')).toEqual([]);
+    });
+
+    it('does not tag an unspaced modulo operand', () => {
+      expect(special('var x = i%count\n')).toEqual([]);
+    });
+
+    it('still tags unique node references', () => {
+      expect(special('var a = %Label\n')).toEqual(['%Label']);
+      expect(special('var a = $%Label\n')).toEqual(['$%Label']);
+      expect(special('var a = %Label/Child\n')).toEqual(['%Label/Child']);
+      expect(special('var a = $Panel/Label\n')).toEqual(['$Panel/Label']);
+    });
+  });
 });
