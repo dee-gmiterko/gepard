@@ -1,0 +1,72 @@
+{
+  "name": "gepard-ext-cpp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Bundled C/C++ language extension for Gepard (clangd, downloaded on first use).",
+  "main": "dist/index.js",
+  "gepard": {
+    "type": "lsp",
+    "vendor": {
+      "version": "23.1.0",
+      "assets": {
+        "linux-x64": {
+          "url": "https://github.com/clangd/clangd/releases/download/23.1.0/clangd-linux-23.1.0.zip",
+          "sha256": "e53b1a96196095faedb7642cf64964f7fb9ad4a0c1f00dd2c172a3d9dcbafdfd",
+          "strip": "clangd_23.1.0/"
+        },
+        "darwin-x64": {
+          "url": "https://github.com/clangd/clangd/releases/download/23.1.0/clangd-mac-23.1.0.zip",
+          "sha256": "1082e6638223b785ca2daf0939f13afcd0bb95c84ee9a4bbaff4745365159253",
+          "strip": "clangd_23.1.0/"
+        },
+        "darwin-arm64": {
+          "url": "https://github.com/clangd/clangd/releases/download/23.1.0/clangd-mac-23.1.0.zip",
+          "sha256": "1082e6638223b785ca2daf0939f13afcd0bb95c84ee9a4bbaff4745365159253",
+          "strip": "clangd_23.1.0/"
+        },
+        "win32-x64": {
+          "url": "https://github.com/clangd/clangd/releases/download/23.1.0/clangd-windows-23.1.0.zip",
+          "sha256": "23412a240756a162e7b98a282f36aa2a23a88db5ce16a0cbc4fef7253768c810",
+          "strip": "clangd_23.1.0/"
+        },
+        "linux-arm64": {
+          "url": "https://files.pythonhosted.org/packages/ff/6e/bb87d4ebf958b63d0a1a1bc148c013d9b5471211eff75cc49681034b8842/clangd-22.1.1-py2.py3-none-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl",
+          "sha256": "672338afbbb5989b66cd0c1354eb2406f77fdc2a97d5b594ee8dd26c745b250f",
+          "strip": "clangd/data/"
+        },
+        "win32-arm64": {
+          "url": "https://files.pythonhosted.org/packages/38/14/1eb548ec58cddbb406c29c5a5b445d1e90131077c5ba99baa15c5a6b0765/clangd-22.1.1-py2.py3-none-win_arm64.whl",
+          "sha256": "52b1e39822f408a05a3a47557594698ba69e59777c204f9c481836c5955431ff",
+          "strip": "clangd/data/"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "esbuild index.ts --bundle --platform=node --format=esm --target=es2023 --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\" --outfile=dist/index.js --log-level=warning",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "vscode-jsonrpc": "^9.0.3",
+    "yauzl": "^3.4.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@gepard/common": "workspace:^",
+    "@gepard/eslint-config": "workspace:^",
+    "@types/node": "^26.6.4",
+    "@types/yauzl": "^3.4.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.9",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
+  }
+}
