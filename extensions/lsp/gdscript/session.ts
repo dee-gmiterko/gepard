@@ -27,6 +27,8 @@ import {
   type SourceMatch,
   type SourcePos,
   type SourceWorkspaceSymbol,
+  terminateChild,
+  trackChild,
 } from '@gepard/common';
 import { freePort } from './helpers/net';
 import { identifiersOn } from './helpers/identifier';
@@ -58,6 +60,7 @@ export class GodotSession implements LanguageSession {
   private restartAttempts = 0;
   private restartWindowStart = 0;
   private socket: net.Socket | null = null;
+  private connectAbort: AbortController | null = null;
   private port = 0;
   private symbolCache = new Map<string, Promise<SourceDocumentSymbol[]>>();
   private scriptFiles: Promise<string[]> | null = null;
@@ -65,7 +68,7 @@ export class GodotSession implements LanguageSession {
   private static readonly RESTART_WINDOW_MS = 60_000;
   private static readonly RESTART_BASE_DELAY_MS = 500;
   private static readonly RESTART_MAX_DELAY_MS = 30_000;
-  private static readonly DISPOSE_TIMEOUT_MS = 3_000;
+  private static readonly DISPOSE_TIMEOUT_MS = 1_000;
   private static readonly CONNECT_TIMEOUT_MS = 180_000;
   private static readonly CONNECT_RETRY_MS = 100;
 
@@ -83,16 +86,18 @@ export class GodotSession implements LanguageSession {
   private async launch(): Promise<void> {
     this.symbolCache.clear();
     this.closeTransport();
-    this.crashGate.reset();
+    const connectAbort = new AbortController();
+    this.connectAbort = connectAbort;
 
     const child = await this.spawnServer();
     this.child = child;
+    trackChild(child);
     let failLaunch: ((e: Error) => void) | null = null;
     let abandoned = false;
     const launchFailed = new Promise<never>((_, reject) => {
       failLaunch = reject;
     });
-    child.once('error', (err) => {
+    child.on('error', (err) => {
       if (abandoned) return;
       const message = `LSP process error: ${err.message}`;
       if (failLaunch) failLaunch(new Error(message));
@@ -107,17 +112,20 @@ export class GodotSession implements LanguageSession {
       else this.handleExit(code, signal);
     });
 
+    let conn: MessageConnection | undefined;
     try {
-      const conn = await Promise.race([this.connect(), launchFailed]);
-      this.conn = conn;
+      conn = await Promise.race([this.connect(connectAbort.signal), launchFailed]);
       this.wireClientObligations(conn);
       conn.listen();
       await Promise.race([conn.sendRequest('initialize', this.initializeParams()), launchFailed]);
       await Promise.race([conn.sendNotification('initialized', {}), launchFailed]);
+      this.conn = conn;
+      this.crashGate.reset();
     } catch (e) {
       abandoned = true;
+      conn?.dispose();
       this.closeTransport();
-      if (child.exitCode === null && child.signalCode === null) child.kill();
+      await terminateChild(child, GodotSession.DISPOSE_TIMEOUT_MS);
       throw e;
     } finally {
       failLaunch = null;
@@ -140,8 +148,12 @@ export class GodotSession implements LanguageSession {
     return child;
   }
 
-  private async connect(): Promise<MessageConnection> {
-    const socket = await this.connectSocket(this.port);
+  private async connect(signal: AbortSignal): Promise<MessageConnection> {
+    const socket = await this.connectSocket(this.port, signal);
+    if (signal.aborted) {
+      socket.destroy();
+      throw new Error('LSP connection attempt was abandoned');
+    }
     this.socket = socket;
     return createMessageConnection(
       new SocketMessageReader(socket),
@@ -149,31 +161,53 @@ export class GodotSession implements LanguageSession {
     );
   }
 
-  private async connectSocket(port: number): Promise<net.Socket> {
+  private async connectSocket(port: number, signal: AbortSignal): Promise<net.Socket> {
     const deadline = Date.now() + GodotSession.CONNECT_TIMEOUT_MS;
     for (;;) {
+      if (signal.aborted) throw new Error('LSP connection attempt was abandoned');
       try {
         return await new Promise<net.Socket>((resolve, reject) => {
           const socket = net.connect(port, '127.0.0.1');
+          const onAbort = (): void => {
+            socket.destroy();
+            reject(new Error('LSP connection attempt was abandoned'));
+          };
+          signal.addEventListener('abort', onAbort, { once: true });
           socket.once('connect', () => {
+            signal.removeEventListener('abort', onAbort);
             socket.removeListener('error', reject);
             resolve(socket);
           });
-          socket.once('error', reject);
+          socket.once('error', (err) => {
+            signal.removeEventListener('abort', onAbort);
+            reject(err);
+          });
         });
       } catch (e) {
+        if (signal.aborted) throw e;
         if (Date.now() > deadline) {
           throw new Error(
             `LSP server did not accept connections on port ${port}: ${errorMessage(e)}`,
             { cause: e },
           );
         }
-        await new Promise((r) => setTimeout(r, GodotSession.CONNECT_RETRY_MS));
+        await new Promise<void>((resolve) => {
+          const onAbort = (): void => {
+            clearTimeout(timer);
+            resolve();
+          };
+          const timer = setTimeout(() => {
+            signal.removeEventListener('abort', onAbort);
+            resolve();
+          }, GodotSession.CONNECT_RETRY_MS);
+          signal.addEventListener('abort', onAbort, { once: true });
+        });
       }
     }
   }
 
   private closeTransport(): void {
+    this.connectAbort?.abort();
     this.conn?.dispose();
     this.socket?.destroy();
   }
@@ -287,8 +321,9 @@ export class GodotSession implements LanguageSession {
   }
 
   private sendRequest<R>(method: string, params: unknown): Promise<R> {
-    const real = this.conn.sendRequest<R>(method, params);
-    return this.crashGate.guard(real);
+    return this.crashGate.guard(
+      Promise.resolve().then(() => this.conn.sendRequest<R>(method, params)),
+    );
   }
 
   private withOpenDocument<T>(filePath: string, fn: (text: string) => Promise<T>): Promise<T> {
@@ -296,15 +331,20 @@ export class GodotSession implements LanguageSession {
     const run = previous
       .catch(() => undefined)
       .then(async () => {
+        const conn = this.conn;
         const text = await fs.readFile(filePath, 'utf8');
         const uri = pathToFileURL(filePath).toString();
-        await this.conn.sendNotification('textDocument/didOpen', {
+        await conn.sendNotification('textDocument/didOpen', {
           textDocument: { uri, languageId: 'gdscript', version: 1, text },
         });
         try {
           return await fn(text);
         } finally {
-          await this.conn.sendNotification('textDocument/didClose', { textDocument: { uri } });
+          try {
+            await conn.sendNotification('textDocument/didClose', { textDocument: { uri } });
+          } catch {
+            // The connection may already be gone.
+          }
         }
       });
     this.docQueue.set(
@@ -483,23 +523,8 @@ export class GodotSession implements LanguageSession {
     }
   }
 
-  private async terminate(): Promise<void> {
-    if (this.child.exitCode !== null || this.child.signalCode !== null) return;
-    const exited = new Promise<void>((resolve) => this.child.once('exit', () => resolve()));
-    this.child.kill();
-    const timely = await Promise.race([
-      exited.then(() => true),
-      new Promise<boolean>((resolve) =>
-        setTimeout(() => resolve(false), GodotSession.DISPOSE_TIMEOUT_MS),
-      ),
-    ]);
-    if (!timely) {
-      this.child.kill('SIGKILL');
-      await Promise.race([
-        exited,
-        new Promise<void>((resolve) => setTimeout(resolve, GodotSession.DISPOSE_TIMEOUT_MS)),
-      ]);
-    }
+  private terminate(): Promise<void> {
+    return terminateChild(this.child, GodotSession.DISPOSE_TIMEOUT_MS);
   }
 
   async dispose(): Promise<void> {

@@ -87,6 +87,7 @@ class LineIndexWorkerHandle implements LineIndexHandle {
     if (!this.alive) return;
     // `terminate()` fires the worker's own 'exit' event.
     this.alive = false;
+    for (const resolve of this.pending.values()) resolve([]);
     this.pending.clear();
     await this.worker.terminate();
   }
