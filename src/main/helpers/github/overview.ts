@@ -63,7 +63,7 @@ const TimelineNode = z.object({
   author: Author.optional(),
 });
 
-const PrNode = z.object({
+const PrNode = ForkFields.extend({
   number: z.int().positive(),
   title: z.string(),
   state: PrState,
@@ -76,7 +76,6 @@ const PrNode = z.object({
   reviewDecision: z.enum(['APPROVED', 'CHANGES_REQUESTED', 'REVIEW_REQUIRED']).nullable(),
   headRefName: z.string(),
   baseRefName: z.string(),
-  ...ForkFields,
   author: Author,
   comments: z.object({ totalCount: z.int().nonnegative() }),
   latestOpinionatedReviews: z.object({ totalCount: z.int().nonnegative() }),

@@ -7,7 +7,7 @@ export type ReviewDecision = z.infer<typeof ReviewDecision>;
 export const PrState = z.enum(['OPEN', 'CLOSED', 'MERGED']);
 export type PrState = z.infer<typeof PrState>;
 
-export const OverviewPr = z.object({
+export const OverviewPr = ForkFields.extend({
   number: z.int().positive(),
   title: z.string(),
   author: Login.nullable(),
@@ -16,7 +16,6 @@ export const OverviewPr = z.object({
   reviewed: z.boolean(),
   headRefName: z.string(),
   baseRefName: z.string(),
-  ...ForkFields,
   createdAt: IsoDate,
   updatedAt: IsoDate,
   additions: z.int().nonnegative(),
