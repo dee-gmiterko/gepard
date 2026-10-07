@@ -2,22 +2,15 @@ import { GutterMarker } from '@codemirror/view';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Plus } from 'react-feather';
-import { defineMessages } from 'react-intl';
-import { getIntl } from '../i18n/intl';
-
-const messages = defineMessages({
-  addComment: {
-    id: 'codeEditor.addComment',
-    defaultMessage: 'Add comment',
-  },
-});
-
 // CodeMirror gutter markers are plain DOM outside the React tree.
 let plusIconMarkup: string | null = null;
 
 export class AffordanceMarker extends GutterMarker {
+  constructor(private readonly label: string) {
+    super();
+  }
   eq(other: AffordanceMarker): boolean {
-    return other instanceof AffordanceMarker;
+    return other instanceof AffordanceMarker && other.label === this.label;
   }
   toDOM(): HTMLElement {
     plusIconMarkup ??= renderToStaticMarkup(createElement(Plus, { size: 12 }));
@@ -26,7 +19,7 @@ export class AffordanceMarker extends GutterMarker {
     button.type = 'button';
     button.className = 'cm-comment-affordance';
     button.innerHTML = plusIconMarkup;
-    button.setAttribute('aria-label', getIntl().formatMessage(messages.addComment));
+    button.setAttribute('aria-label', this.label);
     return button;
   }
 }

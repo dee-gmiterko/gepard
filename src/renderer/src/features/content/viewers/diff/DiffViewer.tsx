@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { EditorView } from '@codemirror/view';
 import type { DiffRow, DiffSide } from '@gepard/common';
-import { defineMessages, FormattedMessage } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import {
   useActiveFile,
   useCheckoutHead,
@@ -96,6 +96,7 @@ export function DiffViewer({ path }: { path: string }): React.JSX.Element {
 }
 
 function DiffText({ path, rows }: { path: string; rows: DiffRow[] }): React.JSX.Element {
+  const intl = useIntl();
   const activeFile = useActiveFile();
   const checkoutHead = useCheckoutHead();
   const layout = useLayout();
@@ -125,6 +126,7 @@ function DiffText({ path, rows }: { path: string; rows: DiffRow[] }): React.JSX.
     view.dispatch({
       effects: commentGutter.reconfigure(
         commentAffordanceGutter(
+          intl,
           (docLine) => {
             const kind = infos[docLine - 1]?.kind;
             if (kind === undefined || kind === 'hunk') return false;
@@ -137,7 +139,7 @@ function DiffText({ path, rows }: { path: string; rows: DiffRow[] }): React.JSX.
         ),
       ),
     });
-  }, [infos, singleCommitInPr, view, commentGutter]);
+  }, [infos, singleCommitInPr, view, commentGutter, intl]);
 
   useEffect(() => {
     if (!view) return;

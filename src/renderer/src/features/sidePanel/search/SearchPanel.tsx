@@ -13,7 +13,7 @@ import { ViewModeToggle, type ViewMode } from '../../../components/ViewModeToggl
 import { Caption } from '../../../components/Caption';
 import { Inline } from '../../../components/Layout';
 import { Message } from '../../../components/Message';
-import { localizedErrorMessage } from '../../../errors/errorMessage';
+import { describeError, formatErrorText } from '../../../errors/errorMessage';
 import { reportQueryError } from '../../../errors/report';
 import { SearchResults } from './SearchResults';
 import { SearchInput } from './SearchInput';
@@ -204,7 +204,7 @@ export function SearchPanel(): React.JSX.Element {
       )}
       {active && search.isError && (
         <Results>
-          <Message>{localizedErrorMessage(search.error).message}</Message>
+          <Message>{formatErrorText(intl, describeError(search.error).message)}</Message>
         </Results>
       )}
       {active && !search.isError && !search.isSuccess && (

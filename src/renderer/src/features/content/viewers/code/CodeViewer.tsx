@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Compartment } from '@codemirror/state';
 import { closeHoverTooltips, EditorView, lineNumbers } from '@codemirror/view';
-import { defineMessages, FormattedMessage } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import type { DiffRow } from '@gepard/common';
-import { useAppDispatch } from '../../../../state/AppContext';
+import { useUiDispatch } from '../../../../state/UiContext';
 import { useActiveFile, useLayout, useRevealLine, useTargeting } from '../../../../state/hooks';
 import { useCurrentHead } from '../../../../queries/projects';
 import { useFileContent } from '../../../../queries/files';
@@ -20,8 +20,8 @@ import {
 import { lineContextMenu } from '../../../../components/lineContextMenu';
 import { SymbolPortals } from '../../../../components/SymbolPortals';
 import { CommentPortals } from '../../../../components/CommentPortals';
-import { codeViewCommentEntries, deletedLineDocLines } from '../../../../helpers/comment';
-import { fullFileDiffMarks } from '../../../../helpers/diff';
+import { codeViewCommentEntries } from '../../../../helpers/comment';
+import { deletedLineDocLines, fullFileDiffMarks } from '../../../../helpers/diff';
 import { EditorHost } from '../../../../components/EditorHost';
 import { Message } from '../../../../components/Message';
 import { CommentPortalHost } from '../CommentPortalHost';
@@ -81,11 +81,12 @@ function CodeText({
   text: string;
   diffRows: readonly DiffRow[] | null;
 }): React.JSX.Element {
+  const intl = useIntl();
   const activeFile = useActiveFile();
   const layout = useLayout();
   const revealLine = useRevealLine();
   const targeting = useTargeting();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const unassigned = targeting.pr === null;
   const { data: threads } = useComments();
   const head = useCurrentHead() ?? '';
@@ -135,9 +136,9 @@ function CodeText({
   useEffect(() => {
     if (!view) return;
     view.dispatch({
-      effects: commentGutter.reconfigure(commentAffordanceGutter(() => true, setDraft)),
+      effects: commentGutter.reconfigure(commentAffordanceGutter(intl, () => true, setDraft)),
     });
-  }, [view, commentGutter]);
+  }, [view, commentGutter, intl]);
 
   useEffect(() => {
     if (!view) return;

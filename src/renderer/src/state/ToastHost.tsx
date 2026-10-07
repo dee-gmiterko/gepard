@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { useAppDispatch } from './AppContext';
+import { useIntl } from 'react-intl';
+import { useUiDispatch } from './UiContext';
 import { useToasts } from './hooks';
+import { formatErrorText } from '../errors/errorMessage';
 import { onReportedError } from '../errors/report';
 import { ToastViewport } from '../components/Toast';
 
@@ -8,7 +10,8 @@ const AUTO_DISMISS_MS = 8000;
 
 export function ToastHost(): React.JSX.Element {
   const toasts = useToasts();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
+  const intl = useIntl();
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
   useEffect(
@@ -19,12 +22,12 @@ export function ToastHost(): React.JSX.Element {
           toast: {
             id: crypto.randomUUID(),
             tone: error.tone ?? 'danger',
-            message: error.message,
+            message: formatErrorText(intl, error.message),
             detail: error.detail,
           },
         });
       }),
-    [dispatch],
+    [dispatch, intl],
   );
 
   useEffect(() => {
