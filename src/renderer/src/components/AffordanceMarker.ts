@@ -3,7 +3,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Plus } from 'react-feather';
 import { defineMessages } from 'react-intl';
-import { intl } from '../i18n/intl';
+import { getIntl } from '../i18n/intl';
 
 const messages = defineMessages({
   addComment: {
@@ -26,7 +26,7 @@ export class AffordanceMarker extends GutterMarker {
     button.type = 'button';
     button.className = 'cm-comment-affordance';
     button.innerHTML = plusIconMarkup;
-    button.setAttribute('aria-label', intl.formatMessage(messages.addComment));
+    button.setAttribute('aria-label', getIntl().formatMessage(messages.addComment));
     return button;
   }
 }
