@@ -1,11 +1,11 @@
 import { access, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import type { HandlerMap } from '../registry';
 import { withLatestWins } from '../cancellation';
 import { ripgrepSearch, ripgrepSearchPage } from '../../helpers/process/ripgrep';
 import { applyPage, EMPTY_PAGE, type PageSourceFile } from '../../helpers/search/paging';
 import { pageOptions, searchRunKey, toResult } from '../../helpers/search/query';
 import { identifierAt } from '../../helpers/string';
+import { resolveInRepo } from '../../helpers/repoPath';
 import { indexer } from '../../lsp';
 import {
   type ChannelOutput,
@@ -35,7 +35,7 @@ function requireCurrentSha(projectId: string, sha: string): void {
 async function findSession(projectId: string, filePath: string): Promise<LanguageSession | null> {
   const session = indexer.session(projectId, filePath);
   if (!session) return null;
-  const onDisk = await access(join(projectRepoDir(projectId), filePath)).then(
+  const onDisk = await access(resolveInRepo(projectRepoDir(projectId), filePath)).then(
     () => true,
     () => false,
   );
@@ -141,7 +141,7 @@ export function definitionAt(
       const repoRoot = projectRepoDir(input.projectId);
       let symbol: string;
       try {
-        const text = await readFile(join(repoRoot, input.path), 'utf8');
+        const text = await readFile(resolveInRepo(repoRoot, input.path), 'utf8');
         const lineText = text.split('\n')[input.pos.line - 1] ?? '';
         symbol = identifierAt(lineText, input.pos.col);
       } catch {

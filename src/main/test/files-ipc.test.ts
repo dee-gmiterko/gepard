@@ -71,7 +71,17 @@ describe('files.content over the real IPC contract and handler (integration)', (
     });
   });
 
-  it.each(['../a', 'src/../../a', '/etc/passwd', ''])('rejects %j at the contract', (p) => {
-    expect(validate(p).success).toBe(false);
+  it.each(['../a', 'src/../../a', '/etc/passwd', ''])('rejects %j', async (p) => {
+    const parsed = validate(p);
+    if (!parsed.success) return;
+    /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+    const ctx = { event: Object.create(null), window: null };
+    await expect(handlers['files.content'](parsed.data, ctx)).rejects.toMatchObject({
+      code: 'INVALID_PATH',
+    });
+  });
+
+  it('accepts a file name containing a backslash and a newline', () => {
+    expect(validate('we\\ird\nname.txt').success).toBe(true);
   });
 });
