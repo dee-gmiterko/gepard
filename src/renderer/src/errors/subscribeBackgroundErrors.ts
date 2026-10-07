@@ -1,5 +1,5 @@
 import { defineMessages, type MessageDescriptor } from 'react-intl';
-import { intl } from '../i18n/intl';
+import { getIntl } from '../i18n/intl';
 import { subscribe } from '../ipc/client';
 import { reportError } from './report';
 
@@ -36,7 +36,7 @@ export function subscribeBackgroundErrors(): void {
   subscribe('app.error', ({ scope, message }) => {
     reportError({
       scope,
-      message: intl.formatMessage(appErrorHeadline(scope)),
+      message: getIntl().formatMessage(appErrorHeadline(scope)),
       detail: message,
       loggedByMain: true,
     });
@@ -46,7 +46,7 @@ export function subscribeBackgroundErrors(): void {
     if (payload.phase !== 'error') return;
     reportError({
       scope: `clone:${payload.projectId}`,
-      message: intl.formatMessage(messages.cloneFailed),
+      message: getIntl().formatMessage(messages.cloneFailed),
       detail: payload.message,
       loggedByMain: true,
     });
@@ -55,7 +55,7 @@ export function subscribeBackgroundErrors(): void {
     if (status.state !== 'error') return;
     reportError({
       scope: `index:${projectId}`,
-      message: intl.formatMessage(messages.indexFailed),
+      message: getIntl().formatMessage(messages.indexFailed),
       detail: status.message,
       loggedByMain: true,
     });
