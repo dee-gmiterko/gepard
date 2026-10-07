@@ -1,4 +1,10 @@
-import type { CommentReference, DiffSide, DraftAnchor, ReviewThread } from '@gepard/common';
+import type {
+  CommentReference,
+  DiffRow,
+  DiffSide,
+  DraftAnchor,
+  ReviewThread,
+} from '@gepard/common';
 
 export interface LineCommentEntry {
   docLine: number;
@@ -16,25 +22,49 @@ function isCurrent(thread: ReviewThread, head: string | null): boolean {
   return !thread.isOutdated && (head === null || thread.anchor.commitOid === head);
 }
 
+export function deletedLineDocLines(rows: readonly DiffRow[]): Map<number, number> {
+  const docLines = new Map<number, number>();
+  let pending: number[] = [];
+  let lastNew: number | null = null;
+
+  function flush(anchor: number): void {
+    for (const oldLine of pending) docLines.set(oldLine, Math.max(anchor - 1, 1));
+    pending = [];
+  }
+
+  for (const row of rows) {
+    if (row.kind === 'hunk') {
+      flush((lastNew ?? 0) + 1);
+      lastNew = null;
+    } else if (row.kind === 'delete') {
+      if (row.oldLine !== null) pending.push(row.oldLine);
+    } else if (row.newLine !== null) {
+      flush(row.newLine);
+      lastNew = row.newLine;
+    }
+  }
+  flush((lastNew ?? 0) + 1);
+  return docLines;
+}
+
 export function codeViewCommentEntries(
   threads: readonly ReviewThread[],
   path: string,
   draftLine: number | null,
   head: string | null,
+  diffRows: readonly DiffRow[] | null = null,
 ): LineCommentEntry[] {
+  const deletedDocLines = diffRows ? deletedLineDocLines(diffRows) : null;
   const byLine = new Map<number, ReviewThread[]>();
   for (const t of threads) {
-    if (
-      t.anchor.path !== path ||
-      t.anchor.subjectType !== 'LINE' ||
-      t.anchor.side !== 'RIGHT' ||
-      t.anchor.line == null
-    )
+    if (t.anchor.path !== path || t.anchor.subjectType !== 'LINE' || t.anchor.line == null)
       continue;
     if (!isCurrent(t, head)) continue;
-    const list = byLine.get(t.anchor.line) ?? [];
+    const docLine = t.anchor.side === 'RIGHT' ? t.anchor.line : deletedDocLines?.get(t.anchor.line);
+    if (docLine == null) continue;
+    const list = byLine.get(docLine) ?? [];
     list.push(t);
-    byLine.set(t.anchor.line, list);
+    byLine.set(docLine, list);
   }
 
   const entries: LineCommentEntry[] = [...byLine.entries()].map(([docLine, lineThreads]) => ({

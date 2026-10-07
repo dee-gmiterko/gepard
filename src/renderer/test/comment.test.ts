@@ -328,7 +328,7 @@ describe('codeViewCommentEntries in a full-file diff', () => {
   it('shows a thread on a deleted line inline', () => {
     const left = onSide('l', 'LEFT', 2);
     expect(fullFileDiffMarks(rows).deletedBefore.get(2)).toEqual(['gone']);
-    const entries = codeViewCommentEntries([left], 'a.ts', null, HEAD);
-    expect(entries.flatMap((e) => e.threads)).toEqual([left]);
+    const entries = codeViewCommentEntries([left], 'a.ts', null, HEAD, rows);
+    expect(entries).toEqual([{ docLine: 1, threads: [left], draft: null }]);
   });
 });

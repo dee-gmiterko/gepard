@@ -19,7 +19,7 @@ import {
 import { lineContextMenu } from '../../../../components/lineContextMenu';
 import { SymbolPortals } from '../../../../components/SymbolPortals';
 import { CommentPortals } from '../../../../components/CommentPortals';
-import { codeViewCommentEntries } from '../../../../helpers/comment';
+import { codeViewCommentEntries, deletedLineDocLines } from '../../../../helpers/comment';
 import { fullFileDiffMarks } from '../../../../helpers/diff';
 import { EditorHost } from '../../../../components/EditorHost';
 import { Message } from '../../../../components/Message';
@@ -147,16 +147,24 @@ function CodeText({
 
   useEffect(() => {
     if (!view) return;
-    const entries = codeViewCommentEntries(threads ?? [], path, draft, unassigned ? null : head);
+    const entries = codeViewCommentEntries(
+      threads ?? [],
+      path,
+      draft,
+      unassigned ? null : head,
+      diffRows,
+    );
     view.dispatch({
       effects: comments.reconfigure(commentBlockDecorations(view.state.doc, entries, portals)),
     });
-  }, [threads, draft, unassigned, path, head, view, comments, portals]);
+  }, [threads, draft, unassigned, path, head, diffRows, view, comments, portals]);
 
   useEffect(() => {
     if (!view || state.activeFile !== path || state.revealLine == null) return;
-    revealDocLine(view, state.revealLine.line);
-  }, [view, path, state.activeFile, state.revealLine]);
+    const { line, side } = state.revealLine;
+    const docLine = side === 'LEFT' && diffRows ? deletedLineDocLines(diffRows).get(line) : line;
+    if (docLine != null) revealDocLine(view, docLine);
+  }, [view, path, state.activeFile, state.revealLine, diffRows]);
 
   return (
     <>
