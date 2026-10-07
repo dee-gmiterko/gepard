@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { FileText, Layers, Search, Settings } from 'react-feather';
 import { defineMessages, useIntl, type IntlShape, type MessageDescriptor } from 'react-intl';
-import { useAppDispatch } from '../../state/AppContext';
+import { useUiDispatch } from '../../state/UiContext';
 import { useLayout, useSidePanelFocusRequest, useSidePanelTab } from '../../state/hooks';
 import type { SidePanelTab } from '../../state/reducer';
 import { useSetLayout } from '../../queries/projects';
@@ -104,7 +104,7 @@ export function SidePanel(): React.JSX.Element {
   const layout = useLayout();
   const sidePanelFocusRequest = useSidePanelFocusRequest();
   const sidePanelTab = useSidePanelTab();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const setLayout = useSetLayout();
 
   const searchPanelRef = useRef<HTMLDivElement>(null);

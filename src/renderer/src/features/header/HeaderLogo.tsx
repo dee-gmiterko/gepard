@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { defineMessages, useIntl } from 'react-intl';
 import { disabledControl, focusVisible } from '../../components/controlStyles';
 import { useLaunchingProjectIds, useOpenProject } from '../../queries/projects';
-import { useAppDispatch } from '../../state/AppContext';
+import { useUiDispatch } from '../../state/UiContext';
 import logo from '../../../../app/resources/logo.svg';
 
 const messages = defineMessages({
@@ -46,7 +46,7 @@ const Image = styled.img`
 
 export function HeaderLogo(): React.JSX.Element {
   const intl = useIntl();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const { mutate: openProject } = useOpenProject();
   const launching = useLaunchingProjectIds().includes(null);
   const label = intl.formatMessage(launching ? messages.launching : messages.projects);

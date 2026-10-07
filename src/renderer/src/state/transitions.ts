@@ -1,11 +1,8 @@
 import type { DiffSide } from '@gepard/common';
 import { nextTargetedFile } from '../helpers/targetedFiles';
-import type { AppState, Layout, Targeting } from './reducer';
+import type { UiState, Layout, Targeting } from './reducer';
 
-export function sameCheckoutHead(
-  a: AppState['checkoutHead'],
-  b: AppState['checkoutHead'],
-): boolean {
+export function sameCheckoutHead(a: UiState['checkoutHead'], b: UiState['checkoutHead']): boolean {
   if (a === null || b === null) return a === b;
   return a.base === b.base && a.head === b.head;
 }
@@ -18,7 +15,7 @@ function samePosition(
   return a.x === b.x && a.y === b.y;
 }
 
-export function withLayout(state: AppState, layout: Layout): AppState {
+export function withLayout(state: UiState, layout: Layout): UiState {
   const prev = state.layout;
   const same =
     prev.sidePanelWidth === layout.sidePanelWidth &&
@@ -32,7 +29,7 @@ export function withLayout(state: AppState, layout: Layout): AppState {
   return same ? state : { ...state, layout };
 }
 
-export function withTarget(state: AppState, targeting: Targeting, set: boolean): AppState {
+export function withTarget(state: UiState, targeting: Targeting, set: boolean): UiState {
   return {
     ...state,
     targeting,
@@ -42,11 +39,11 @@ export function withTarget(state: AppState, targeting: Targeting, set: boolean):
 }
 
 export function openFile(
-  state: AppState,
+  state: UiState,
   path: string,
   line?: number | null,
   side?: DiffSide,
-): AppState {
+): UiState {
   const revealLine = line != null ? { line, side: side ?? ('RIGHT' as const) } : null;
   if (
     state.activeFile === path &&
@@ -62,7 +59,7 @@ export function openFile(
     : { ...state, previewFile: path, activeFile: path, mainTab: 'files', revealLine };
 }
 
-export function closeFile(state: AppState, path: string): AppState {
+export function closeFile(state: UiState, path: string): UiState {
   if (
     !state.pinnedFiles.includes(path) &&
     state.previewFile !== path &&
@@ -78,7 +75,7 @@ export function closeFile(state: AppState, path: string): AppState {
   return { ...state, pinnedFiles, previewFile, activeFile, revealLine: null };
 }
 
-export function acceptFile(state: AppState, path: string): AppState {
+export function acceptFile(state: UiState, path: string): UiState {
   if (state.acceptedFiles.at(-1) === path) return state;
   return {
     ...state,
@@ -87,11 +84,11 @@ export function acceptFile(state: AppState, path: string): AppState {
 }
 
 export function stepFile(
-  state: AppState,
+  state: UiState,
   targeted: readonly string[],
   skip: ReadonlySet<string>,
   direction: 1 | -1,
-): AppState {
+): UiState {
   const next = nextTargetedFile(targeted, state.activeFile, skip, direction);
   return next === null ? state : openFile(state, next);
 }

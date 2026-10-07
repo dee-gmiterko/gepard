@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { defineMessages } from 'react-intl';
-import { useAppDispatch, useUiStore } from '../state/AppContext';
+import { useUiDispatch, useUiStore } from '../state/UiContext';
 import { useActiveFile } from '../state/hooks';
 import type { QuickSearchMode, SidePanelTab } from '../state/reducer';
 import { useSetLayout } from '../queries/projects';
@@ -56,7 +56,7 @@ export function useFileNavigation(): { canGoPrev: boolean; canGoNext: boolean } 
 
 export function useCommands(): Commands {
   const store = useUiStore();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const { mutate: setLayout } = useSetLayout();
   const review = useReviewActions();
 

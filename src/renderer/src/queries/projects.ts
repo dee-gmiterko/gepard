@@ -8,7 +8,7 @@ import {
 import { reportQueryError } from '../errors/report';
 import { invoke, useIpcEvent } from '../ipc/client';
 import { qk } from './keys';
-import { useAppDispatch } from '../state/AppContext';
+import { useUiDispatch } from '../state/UiContext';
 import { useCheckoutHead, useProjectId } from '../state/hooks';
 import type { ChannelInput, OpenedProject } from '@gepard/common';
 
@@ -61,7 +61,7 @@ function isLaunchInput(input: unknown): input is LaunchInput {
 
 export function useOpenProject() {
   const qc = useQueryClient();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   return useMutation({
     mutationKey: qk.launch(),
     mutationFn: (input: LaunchInput) => invoke('app.launch', input),

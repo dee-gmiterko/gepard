@@ -3,7 +3,7 @@ import { ArrowUp } from 'react-feather';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import { countComments } from '@gepard/common';
 import { useComments } from '../../../queries/comments';
-import { useAppDispatch } from '../../../state/AppContext';
+import { useUiDispatch } from '../../../state/UiContext';
 import { Button } from '../../../components/Button';
 import { ComposeIssueModal } from './ComposeIssueModal';
 
@@ -23,7 +23,7 @@ const messages = defineMessages({
 });
 
 export function ComposeIssueButton({ block = false }: { block?: boolean }): React.JSX.Element {
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const { data: threads = [] } = useComments();
   const [open, setOpen] = useState(false);
   const count = countComments(threads);

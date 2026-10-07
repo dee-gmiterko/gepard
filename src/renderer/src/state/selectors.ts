@@ -1,4 +1,4 @@
-import type { AppState, Targeting } from './reducer';
+import type { UiState, Targeting } from './reducer';
 import type { TargetRef } from '@gepard/common';
 
 export function activeTargetRef({
@@ -11,7 +11,7 @@ export function activeTargetRef({
   return null;
 }
 
-export function isDiffView(state: Pick<AppState, 'targeting'>): boolean {
+export function isDiffView(state: Pick<UiState, 'targeting'>): boolean {
   return activeTargetRef(state.targeting) !== null;
 }
 

@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 import { Copy, X } from 'react-feather';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
-import { useAppDispatch } from '../../../state/AppContext';
+import { useUiDispatch } from '../../../state/UiContext';
 import { useActiveFile, useLayout, useTargeting } from '../../../state/hooks';
 import { useSetLayout } from '../../../queries/projects';
 import { useIsCheckedOutChangedFile } from '../../../queries/review';
@@ -100,7 +100,7 @@ export function FileDetailPanel(): React.JSX.Element | null {
   const intl = useIntl();
   const layout = useLayout();
   const targeting = useTargeting();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const setLayout = useSetLayout();
   const path = useActiveFile();
   const isChangedFile = useIsCheckedOutChangedFile(path);

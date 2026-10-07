@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Bookmark, Home, MessageSquare, X } from 'react-feather';
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
-import { useAppDispatch } from '../../../state/AppContext';
+import { useUiDispatch } from '../../../state/UiContext';
 import { useActiveFile, useMainTab, usePinnedFiles, usePreviewFile } from '../../../state/hooks';
 import { openTabs } from '../../../state/selectors';
 import { basename } from '../../../helpers/paths';
@@ -83,7 +83,7 @@ export function FileTabs(): React.JSX.Element {
   const mainTab = useMainTab();
   const pinnedFiles = usePinnedFiles();
   const previewFile = usePreviewFile();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const tabs = useMemo(() => openTabs(pinnedFiles, previewFile), [pinnedFiles, previewFile]);
 
   return (

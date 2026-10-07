@@ -18,7 +18,7 @@ import {
   Sidebar,
 } from 'react-feather';
 import { defineMessages, useIntl } from 'react-intl';
-import { useAppDispatch } from '../../../state/AppContext';
+import { useUiDispatch } from '../../../state/UiContext';
 import { useAcceptedFiles, useActiveFile, useLayout, useTargetPr } from '../../../state/hooks';
 import { invoke } from '../../../ipc/client';
 import { reportQueryError } from '../../../errors/report';
@@ -309,7 +309,7 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
   const intl = useIntl();
   const acceptedFiles = useAcceptedFiles();
   const layout = useLayout();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const setLayout = useSetLayout();
   const pr = useTargetPr();
   const path = useActiveFile();

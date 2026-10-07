@@ -5,7 +5,7 @@ import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { ErrorBoundary } from '../../src/errors/ErrorBoundary';
 import { IntlRoot } from '../../src/i18n/IntlRoot';
 import { createQueryClient } from '../../src/queries/createQueryClient';
-import { AppProvider } from '../../src/state/AppProvider';
+import { UiProvider } from '../../src/state/UiProvider';
 import { ToastHost } from '../../src/state/ToastHost';
 import { AppThemeProvider } from '../../src/theme/ThemeProvider';
 import { createFakeIpc, type FakeIpc, type Handlers } from './fakeIpc';
@@ -27,10 +27,10 @@ export function renderWithProviders(
     <QueryClientProvider client={queryClient}>
       <IntlRoot>
         <AppThemeProvider>
-          <AppProvider>
+          <UiProvider>
             <ToastHost />
             <ErrorBoundary>{ui}</ErrorBoundary>
-          </AppProvider>
+          </UiProvider>
         </AppThemeProvider>
       </IntlRoot>
     </QueryClientProvider>

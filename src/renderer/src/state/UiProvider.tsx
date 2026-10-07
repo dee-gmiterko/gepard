@@ -1,13 +1,13 @@
 import { useState, type ReactNode } from 'react';
 import type { OpenedProject } from '@gepard/common';
-import { UiStoreContext } from './AppContext';
-import { appReducer, initialAppState, type AppState } from './reducer';
+import { UiStoreContext } from './UiContext';
+import { uiReducer, initialUiState, type UiState } from './reducer';
 import { createUiStore } from './uiStore';
 import { useStartup } from '../queries/projects';
 
-function startupState(opened: OpenedProject | null | undefined): AppState {
-  if (!opened) return initialAppState;
-  return appReducer(initialAppState, {
+function startupState(opened: OpenedProject | null | undefined): UiState {
+  if (!opened) return initialUiState;
+  return uiReducer(initialUiState, {
     type: 'project/open',
     projectId: opened.project.id,
     targeting: opened.targeting,
@@ -26,7 +26,7 @@ function StateProvider({
   return <UiStoreContext.Provider value={handle}>{children}</UiStoreContext.Provider>;
 }
 
-export function AppProvider({ children }: { children: ReactNode }): React.JSX.Element | null {
+export function UiProvider({ children }: { children: ReactNode }): React.JSX.Element | null {
   const startup = useStartup();
   if (startup.isPending) return null;
   return <StateProvider opened={startup.data}>{children}</StateProvider>;

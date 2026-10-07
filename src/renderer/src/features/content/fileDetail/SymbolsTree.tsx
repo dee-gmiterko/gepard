@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl';
-import { useAppDispatch } from '../../../state/AppContext';
+import { useUiDispatch } from '../../../state/UiContext';
 import { useCurrentHead } from '../../../queries/projects';
 import { useDocumentSymbols } from '../../../queries/search';
 import { Tree } from '../../../components/Tree';
@@ -88,7 +88,7 @@ const TreeBody = styled.div`
 
 export function SymbolsTree({ path }: { path: string }): React.JSX.Element {
   const intl = useIntl();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const sha = useCurrentHead() ?? '';
   const { data, isLoading, isFetching } = useDocumentSymbols(sha, path);
 

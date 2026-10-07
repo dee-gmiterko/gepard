@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import type { ReviewThread } from '@gepard/common';
-import { useAppDispatch } from '../../../state/AppContext';
+import { useUiDispatch } from '../../../state/UiContext';
 import { useTargetPr } from '../../../state/hooks';
 import { useComments } from '../../../queries/comments';
 import { Message } from '../../../components/Message';
@@ -63,7 +63,7 @@ const messages = defineMessages({
 });
 
 export function CommentsTab(): React.JSX.Element {
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const pr = useTargetPr();
 
   const { data: threads = [], isLoading } = useComments();

@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { useAppDispatch } from './state/AppContext';
+import { useUiDispatch } from './state/UiContext';
 import { useProjectId, useSettingsOpen } from './state/hooks';
 import { useGlobalKeys } from './keyboard/useGlobalKeys';
 import { useWindowTitle } from './hooks/useWindowTitle';
@@ -29,7 +29,7 @@ function App(): React.JSX.Element {
   useContextMenuLabels();
   const projectId = useProjectId();
   const settingsOpen = useSettingsOpen();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
 
   const closeSettings = (): void => dispatch({ type: 'settings/setOpen', open: false });
 

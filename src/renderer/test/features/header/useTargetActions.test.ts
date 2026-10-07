@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { initialAppState, type AppState } from '../../../src/state/reducer';
+import { initialUiState, type UiState } from '../../../src/state/reducer';
 import { createUiStore } from '../../../src/state/uiStore';
 import {
   useTargetActions,
@@ -7,13 +7,13 @@ import {
 } from '../../../src/features/header/useTargetActions';
 import { flush, installIpc, renderWith } from '../../support/hookHarness';
 
-function startFrom(targeting: AppState['targeting']): {
+function startFrom(targeting: UiState['targeting']): {
   actions: TargetActions;
   persisted: () => unknown[];
-  current: () => AppState;
+  current: () => UiState;
 } {
   const ipc = installIpc({ 'projects.setTargeting': () => undefined });
-  const handle = createUiStore({ ...initialAppState, projectId: 'p1', targeting });
+  const handle = createUiStore({ ...initialUiState, projectId: 'p1', targeting });
   const actions = renderWith(handle, () => useTargetActions());
   return {
     actions,

@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useAppDispatch, useUiStore } from '../../../../state/AppContext';
+import { useUiDispatch, useUiStore } from '../../../../state/UiContext';
 import { activeTargetRef } from '../../../../state/selectors';
 import type { Targeting } from '../../../../state/reducer';
 import { useCheckoutTarget } from '../../../../queries/prs';
@@ -9,7 +9,7 @@ import { firstFileToReview } from '../../../../helpers/targetedFiles';
 
 export function useOpenReview(): (targeting: Targeting) => void {
   const store = useUiStore();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const qc = useQueryClient();
   const { checkout } = useCheckoutTarget();
 

@@ -1,6 +1,6 @@
 import type { ChannelOutput } from '@gepard/common';
 import { describe, expect, it } from 'vitest';
-import { initialAppState, type AppAction, type AppState } from '../../src/state/reducer';
+import { initialUiState, type UiAction, type UiState } from '../../src/state/reducer';
 import { createUiStore } from '../../src/state/uiStore';
 import { useSync } from '../../src/queries/comments';
 import { flush, installIpc, renderWith } from '../support/hookHarness';
@@ -11,8 +11,8 @@ const HEAD = 'b'.repeat(40);
 describe('sync results', () => {
   function startSync(pr: number): {
     sync: ReturnType<typeof useSync>;
-    current: () => AppState;
-    set: (action: AppAction) => void;
+    current: () => UiState;
+    set: (action: UiAction) => void;
     resolve: (value: { base: string; head: string }) => void;
   } {
     let resolveSync: (v: ChannelOutput<'sync.run'>) => void = () => {};
@@ -23,7 +23,7 @@ describe('sync results', () => {
         }),
     });
     const handle = createUiStore({
-      ...initialAppState,
+      ...initialUiState,
       projectId: 'p1',
       targeting: { pr, commit: null, path: null },
     });

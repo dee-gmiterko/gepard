@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useAppDispatch } from '../../state/AppContext';
+import { useUiDispatch } from '../../state/UiContext';
 import { useProjectId, useTargeting } from '../../state/hooks';
 import { useCheckoutTarget } from '../../queries/prs';
 import { useSync } from '../../queries/comments';
@@ -12,7 +12,7 @@ interface TargetingEffectsStatus {
 
 export function useTargetingEffects(): TargetingEffectsStatus {
   const targeting = useTargeting();
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const projectId = useProjectId();
   const { pr, commit } = targeting;
 

@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
-import { useAppDispatch } from '../../state/AppContext';
+import { useUiDispatch } from '../../state/UiContext';
 import { useHeaderStatusState } from '../../state/hooks';
 import type { HeaderStatus } from '../../state/reducer';
 
 const HEADER_STATUS_MS = 3000;
 
 export function useHeaderStatus(): HeaderStatus | null {
-  const dispatch = useAppDispatch();
+  const dispatch = useUiDispatch();
   const headerStatus = useHeaderStatusState();
   const headerStatusId = headerStatus?.id;
 

@@ -2,7 +2,7 @@ import { createElement, type ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach } from 'vitest';
-import { UiStoreContext } from '../../src/state/AppContext';
+import { UiStoreContext } from '../../src/state/UiContext';
 import type { UiStoreHandle } from '../../src/state/uiStore';
 import { createFakeIpc, type FakeIpc, type Handlers } from './fakeIpc';
 

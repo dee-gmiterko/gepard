@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
-import { AppProvider } from './state/AppProvider';
+import { UiProvider } from './state/UiProvider';
 import { ToastHost } from './state/ToastHost';
 import { AppThemeProvider } from './theme/ThemeProvider';
 import { ErrorBoundary } from './errors/ErrorBoundary';
@@ -24,12 +24,12 @@ createRoot(rootElement).render(
     <QueryClientProvider client={queryClient}>
       <IntlRoot>
         <AppThemeProvider>
-          <AppProvider>
+          <UiProvider>
             <ToastHost />
             <ErrorBoundary>
               <App />
             </ErrorBoundary>
-          </AppProvider>
+          </UiProvider>
         </AppThemeProvider>
       </IntlRoot>
     </QueryClientProvider>
