@@ -29,8 +29,6 @@ const cacheKey = (projectId: string, pr: number | null): string =>
 
 export const UNASSIGNED_PR_ID = 'unassigned';
 
-// Serializes read-modify-write cycles among callers in this process and among
-// app instances sharing the user data directory.
 export function withReviewLock<T>(
   projectId: string,
   pr: number | null,

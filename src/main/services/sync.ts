@@ -355,7 +355,6 @@ export class SyncService {
     }
 
     const viewedFetch = this.gh.fetchViewedFiles(ctx.owner, ctx.repo, pr);
-    // A pull sync has nothing to push, so everything is fetched in parallel.
     const pullFetch =
       mode === 'full'
         ? null

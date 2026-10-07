@@ -29,7 +29,6 @@ describe('ProjectLocks (real files, sockets and processes)', () => {
       () => false,
     );
 
-  // A real separate process that acquires the lock and prints "held" (or "blocked").
   async function spawnHolder(projectId: string, linger = true): Promise<ChildProcess> {
     const script = `
       const { ProjectLocks } = await import(${JSON.stringify(LOCK_MODULE)});

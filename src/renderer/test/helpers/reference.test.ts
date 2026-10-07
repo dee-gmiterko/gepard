@@ -219,7 +219,6 @@ describe('editing a comment with saved references', () => {
     { path: 'c.ts', line: 4, kind: 'pattern' },
   ];
 
-  // The editor opens with initialReferenceChoices(saved) and derives references for refAnchor.
   function editorReferences(anchor: Anchor, co: typeof checkoutHead | null): CommentReference[] {
     const choices = initialReferenceChoices(saved);
     const refAnchor = refAnchorFromThread(anchor, co);

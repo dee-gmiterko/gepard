@@ -74,7 +74,6 @@ export function useTargetedFiles(): string[] {
   }, [diffMode, changed, path, tree.data]);
 }
 
-/** Scopes `paths` to the path target and orders them as the targeted file tree lists them. */
 export function targetedFilePaths(paths: readonly string[], path: string | null): string[] {
   const scoped = path ? paths.filter((p) => matchesTarget(p, path)) : paths;
   return flattenLeafPaths(buildTree(scoped));

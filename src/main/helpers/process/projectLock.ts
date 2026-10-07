@@ -66,7 +66,6 @@ export class ProjectLocks {
     }
   }
 
-  // Returns the pid of a live process other than this one that holds the lock.
   async ownerOf(projectId: string): Promise<number | null> {
     if (this.held.has(projectId)) return null;
     const pid = await this.readOwner(projectId);
@@ -118,7 +117,6 @@ export class ProjectLocks {
     });
   }
 
-  // Best effort: asks the owner of the project to bring its window to the front.
   requestFocus(projectId: string): Promise<boolean> {
     return new Promise((resolve) => {
       const socket = createConnection(this.socketPath(projectId));

@@ -43,8 +43,6 @@ function fuzzyLineMatch(text: string, query: string): TextMatch | null {
   return best && { from: best.from, to: best.to };
 }
 
-// Exact-case and whole-word occurrences rank first, nearest after the anchor (wrapping) among
-// equals; with no occurrence at all, the best fuzzy line match wins.
 export function findBestMatch(
   text: string,
   query: string,
