@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import styled, { keyframes } from 'styled-components';
 import { Download, Folder, RefreshCw, Settings, Trash2 } from 'react-feather';
@@ -27,7 +27,7 @@ import {
 } from '../../queries/projects';
 import { useAppDispatch } from '../../state/AppContext';
 import { RepoUrlCombobox } from './RepoUrlCombobox';
-import type { EventPayload } from '@gepard/common';
+import type { EventPayload, Project } from '@gepard/common';
 
 type CloneProgress = EventPayload<'clone.progress'>;
 
@@ -205,7 +205,7 @@ const ProjectsList = styled(List)`
   margin-top: ${({ theme }) => theme.space[4]};
 `;
 
-const ProjectRow = styled(ListRow)`
+const ProjectListRow = styled(ListRow)`
   padding: ${({ theme }) => theme.space[4]} ${({ theme }) => theme.space[4]};
 `;
 
@@ -259,31 +259,27 @@ const SpinningFetchIcon = styled(RefreshCw)`
   animation: ${spin} 0.8s linear infinite;
 `;
 
-export function Launchpad(): React.JSX.Element {
+interface ProjectItemProps {
+  project: Project;
+  autoClone: boolean;
+}
+
+function ProjectItem({ project, autoClone }: ProjectItemProps): React.JSX.Element {
   const intl = useIntl();
-  const dispatch = useAppDispatch();
   const qc = useQueryClient();
-  const { data: viewer } = useViewer();
-  const { data: viewerRepos, isFetching: viewerReposLoading } = useViewerRepos();
-  const { data: projects, isLoading } = useProjects();
-  const addProject = useAddProject();
   const removeProject = useRemoveProject();
   const cloneStart = useCloneStart();
   const fetchProject = useFetchProject();
   const launchingIds = useLaunchingProjectIds();
   const { mutate: openProject } = useOpenProject();
 
-  const [url, setUrl] = useState('');
-  const [urlTouched, setUrlTouched] = useState(false);
-  const [progressById, setProgressById] = useState<Record<string, CloneProgress>>({});
-  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
-  const [fetchingId, setFetchingId] = useState<string | null>(null);
-
-  const prefill = viewer ? `https://github.com/${viewer.login}/` : '';
-  const urlValue = urlTouched ? url : prefill;
+  const [progress, setProgress] = useState<CloneProgress | undefined>(undefined);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [fetching, setFetching] = useState(false);
 
   useIpcEvent('clone.progress', (payload) => {
-    setProgressById((prev) => ({ ...prev, [payload.projectId]: payload }));
+    if (payload.projectId !== project.id) return;
+    setProgress(payload);
     if (payload.phase === 'done' || payload.phase === 'error') {
       qc.invalidateQueries({ queryKey: qk.projects() }).catch((error: unknown) =>
         reportQueryError('clone.progress', error),
@@ -291,21 +287,143 @@ export function Launchpad(): React.JSX.Element {
     }
   });
 
-  function startClone(projectId: string): void {
-    setProgressById((prev) => ({
-      ...prev,
-      [projectId]: { projectId, phase: 'counting', percent: 0 },
-    }));
-    cloneStart.mutate(projectId, {
-      onError: () =>
-        setProgressById((prev) => {
-          if (!(projectId in prev)) return prev;
-          const next = { ...prev };
-          delete next[projectId];
-          return next;
-        }),
-    });
+  function startClone(): void {
+    setProgress({ projectId: project.id, phase: 'counting', percent: 0 });
+    cloneStart.mutate(project.id, { onError: () => setProgress(undefined) });
   }
+
+  const autoCloneStarted = useRef(false);
+  useEffect(() => {
+    if (!autoClone || project.cloned || autoCloneStarted.current) return;
+    autoCloneStarted.current = true;
+    setProgress({ projectId: project.id, phase: 'counting', percent: 0 });
+    cloneStart.mutate(project.id, { onError: () => setProgress(undefined) });
+  }, [autoClone, project.cloned, project.id, cloneStart]);
+
+  function handleOpen(e: MouseEvent): void {
+    openProject({ projectId: project.id, detached: e.ctrlKey || e.metaKey });
+  }
+
+  function handleRemove(): void {
+    removeProject.mutate(project.id);
+    setConfirmRemove(false);
+    setProgress(undefined);
+  }
+
+  function handleFetch(): void {
+    setFetching(true);
+    fetchProject.mutate(project.id, { onSettled: () => setFetching(false) });
+  }
+
+  const activeProgress = isActiveClone(progress) ? progress : undefined;
+  const cloning = activeProgress !== undefined;
+  const launching = launchingIds.includes(project.id);
+  const openable = project.cloned && !launching;
+  return (
+    <ProjectListRow
+      $clickable={openable}
+      $disabled={launching}
+      aria-disabled={launching || undefined}
+      onClick={openable ? (e) => handleOpen(e) : undefined}
+    >
+      <RowMain>
+        <RowTitle>
+          <FormattedMessage
+            {...messages.projectSlug}
+            values={{ owner: project.owner, repo: project.repo }}
+          />
+        </RowTitle>
+        <RowUrl>{project.url}</RowUrl>
+        {launching && (
+          <ProgressLabel>
+            <FormattedMessage {...messages.launching} />
+          </ProgressLabel>
+        )}
+        {cloning && (
+          <ProgressBar>
+            <ProgressFill style={{ width: `${progress?.percent ?? 0}%` }} />
+          </ProgressBar>
+        )}
+        {activeProgress &&
+          (() => {
+            const phase = activeProgress.phase;
+            const detail = activeProgress.message;
+            return detail ? (
+              <ProgressLabel>
+                <FormattedMessage {...phaseDetailLabel(phase)} values={{ detail }} />
+              </ProgressLabel>
+            ) : (
+              <ProgressLabel>{intl.formatMessage(phaseLabel(phase))}</ProgressLabel>
+            );
+          })()}
+      </RowMain>
+      <Inline $gap={1} onClick={(e) => e.stopPropagation()}>
+        {project.cloned ? (
+          <IconButton
+            icon={Folder}
+            label={intl.formatMessage(messages.open)}
+            disabled={launching}
+            onClick={(e) => handleOpen(e)}
+          />
+        ) : (
+          <IconButton
+            icon={Download}
+            label={intl.formatMessage(messages.clone)}
+            disabled={cloning}
+            onClick={() => startClone()}
+          />
+        )}
+        {project.cloned && !confirmRemove && (
+          <IconButton
+            icon={fetching ? SpinningFetchIcon : RefreshCw}
+            label={intl.formatMessage(messages.fetch)}
+            disabled={cloning || launching || fetching}
+            onClick={() => handleFetch()}
+          />
+        )}
+        {confirmRemove ? (
+          <>
+            <Caption>
+              <FormattedMessage {...messages.confirmRemoveQuestion} />
+            </Caption>
+            <Button
+              variant="danger"
+              disabled={cloning || removeProject.isPending}
+              onClick={() => handleRemove()}
+            >
+              <FormattedMessage {...messages.remove} />
+            </Button>
+            <Button onClick={() => setConfirmRemove(false)}>
+              <FormattedMessage {...messages.cancelRemove} />
+            </Button>
+          </>
+        ) : (
+          <IconButton
+            icon={Trash2}
+            label={intl.formatMessage(messages.remove)}
+            disabled={cloning || launching}
+            onClick={() => setConfirmRemove(true)}
+          />
+        )}
+      </Inline>
+    </ProjectListRow>
+  );
+}
+
+export function Launchpad(): React.JSX.Element {
+  const intl = useIntl();
+  const dispatch = useAppDispatch();
+  const { data: viewer } = useViewer();
+  const { data: viewerRepos, isFetching: viewerReposLoading } = useViewerRepos();
+  const { data: projects, isLoading } = useProjects();
+  const addProject = useAddProject();
+
+  const [url, setUrl] = useState('');
+  const [urlTouched, setUrlTouched] = useState(false);
+  const [autoCloneId, setAutoCloneId] = useState<string | null>(null);
+
+  const prefill = viewer ? `https://github.com/${viewer.login}/` : '';
+  const urlValue = urlTouched ? url : prefill;
 
   function handleAdd(e: FormEvent): void {
     e.preventDefault();
@@ -316,32 +434,10 @@ export function Launchpad(): React.JSX.Element {
         onSuccess: (project) => {
           setUrl('');
           setUrlTouched(false);
-          if (!project.cloned) startClone(project.id);
+          if (!project.cloned) setAutoCloneId(project.id);
         },
       },
     );
-  }
-
-  function handleOpen(projectId: string, e: MouseEvent): void {
-    openProject({ projectId, detached: e.ctrlKey || e.metaKey });
-  }
-
-  function handleRemove(projectId: string): void {
-    removeProject.mutate(projectId);
-    setConfirmRemoveId(null);
-    setProgressById((prev) => {
-      if (!(projectId in prev)) return prev;
-      const next = { ...prev };
-      delete next[projectId];
-      return next;
-    });
-  }
-
-  function handleFetch(projectId: string): void {
-    setFetchingId(projectId);
-    fetchProject.mutate(projectId, {
-      onSettled: () => setFetchingId((current) => (current === projectId ? null : current)),
-    });
   }
 
   return (
@@ -404,103 +500,9 @@ export function Launchpad(): React.JSX.Element {
             </Message>
           </ListRow>
         )}
-        {projects?.map((project) => {
-          const progress = progressById[project.id];
-          const activeProgress = isActiveClone(progress) ? progress : undefined;
-          const cloning = activeProgress !== undefined;
-          const launching = launchingIds.includes(project.id);
-          const openable = project.cloned && !launching;
-          return (
-            <ProjectRow
-              key={project.id}
-              $clickable={openable}
-              $disabled={launching}
-              aria-disabled={launching || undefined}
-              onClick={openable ? (e) => handleOpen(project.id, e) : undefined}
-            >
-              <RowMain>
-                <RowTitle>
-                  <FormattedMessage
-                    {...messages.projectSlug}
-                    values={{ owner: project.owner, repo: project.repo }}
-                  />
-                </RowTitle>
-                <RowUrl>{project.url}</RowUrl>
-                {launching && (
-                  <ProgressLabel>
-                    <FormattedMessage {...messages.launching} />
-                  </ProgressLabel>
-                )}
-                {cloning && (
-                  <ProgressBar>
-                    <ProgressFill style={{ width: `${progress?.percent ?? 0}%` }} />
-                  </ProgressBar>
-                )}
-                {activeProgress &&
-                  (() => {
-                    const phase = activeProgress.phase;
-                    const detail = activeProgress.message;
-                    return detail ? (
-                      <ProgressLabel>
-                        <FormattedMessage {...phaseDetailLabel(phase)} values={{ detail }} />
-                      </ProgressLabel>
-                    ) : (
-                      <ProgressLabel>{intl.formatMessage(phaseLabel(phase))}</ProgressLabel>
-                    );
-                  })()}
-              </RowMain>
-              <Inline $gap={1} onClick={(e) => e.stopPropagation()}>
-                {project.cloned ? (
-                  <IconButton
-                    icon={Folder}
-                    label={intl.formatMessage(messages.open)}
-                    disabled={launching}
-                    onClick={(e) => handleOpen(project.id, e)}
-                  />
-                ) : (
-                  <IconButton
-                    icon={Download}
-                    label={intl.formatMessage(messages.clone)}
-                    disabled={cloning}
-                    onClick={() => startClone(project.id)}
-                  />
-                )}
-                {project.cloned && confirmRemoveId !== project.id && (
-                  <IconButton
-                    icon={fetchingId === project.id ? SpinningFetchIcon : RefreshCw}
-                    label={intl.formatMessage(messages.fetch)}
-                    disabled={cloning || launching || fetchingId === project.id}
-                    onClick={() => handleFetch(project.id)}
-                  />
-                )}
-                {confirmRemoveId === project.id ? (
-                  <>
-                    <Caption>
-                      <FormattedMessage {...messages.confirmRemoveQuestion} />
-                    </Caption>
-                    <Button
-                      variant="danger"
-                      disabled={cloning || removeProject.isPending}
-                      onClick={() => handleRemove(project.id)}
-                    >
-                      <FormattedMessage {...messages.remove} />
-                    </Button>
-                    <Button onClick={() => setConfirmRemoveId(null)}>
-                      <FormattedMessage {...messages.cancelRemove} />
-                    </Button>
-                  </>
-                ) : (
-                  <IconButton
-                    icon={Trash2}
-                    label={intl.formatMessage(messages.remove)}
-                    disabled={cloning || launching}
-                    onClick={() => setConfirmRemoveId(project.id)}
-                  />
-                )}
-              </Inline>
-            </ProjectRow>
-          );
-        })}
+        {projects?.map((project) => (
+          <ProjectItem key={project.id} project={project} autoClone={project.id === autoCloneId} />
+        ))}
       </ProjectsList>
     </Page>
   );
