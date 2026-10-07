@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  ForkFields,
   IsoDate,
   PrState,
   ReviewState,
@@ -13,6 +14,9 @@ export const PROJECT_OVERVIEW_QUERY = `
 fragment PrFields on PullRequest {
   number title state isDraft createdAt updatedAt additions deletions changedFiles reviewDecision
   headRefName baseRefName
+  isCrossRepository
+  headRepository { name }
+  headRepositoryOwner { login }
   author { login }
   comments { totalCount }
   latestOpinionatedReviews(first:1) { totalCount }
@@ -72,6 +76,7 @@ const PrNode = z.object({
   reviewDecision: z.enum(['APPROVED', 'CHANGES_REQUESTED', 'REVIEW_REQUIRED']).nullable(),
   headRefName: z.string(),
   baseRefName: z.string(),
+  ...ForkFields,
   author: Author,
   comments: z.object({ totalCount: z.int().nonnegative() }),
   latestOpinionatedReviews: z.object({ totalCount: z.int().nonnegative() }),
@@ -157,6 +162,9 @@ function toOverviewPr(node: z.infer<typeof PrNode>): OverviewPr {
     reviewed: isReviewed(node),
     headRefName: node.headRefName,
     baseRefName: node.baseRefName,
+    isCrossRepository: node.isCrossRepository,
+    headRepository: node.headRepository,
+    headRepositoryOwner: node.headRepositoryOwner,
     createdAt: node.createdAt,
     updatedAt: node.updatedAt,
     additions: node.additions,

@@ -5,6 +5,7 @@ import type {
   Commit,
   PersistedLayout,
   PersistedTargeting,
+  OverviewPr,
   PrListItem,
   ReviewThread,
 } from '@gepard/common';
@@ -40,10 +41,53 @@ export function pr(number: number, title: string): PrListItem {
     headRefName: `feature-${number}`,
     baseRefName: 'main',
     headRefOid: HEAD,
+    isCrossRepository: false,
+    headRepository: null,
+    headRepositoryOwner: null,
     createdAt: NOW,
     changedFiles: 1,
     labels: [],
     url: `https://github.com/acme/widgets/pull/${number}`,
+  };
+}
+
+export function forkOf(base: PrListItem, owner: string): PrListItem {
+  return {
+    ...base,
+    isCrossRepository: true,
+    headRepository: { name: 'widgets' },
+    headRepositoryOwner: { login: owner },
+  };
+}
+
+export function overviewPr(
+  number: number,
+  title: string,
+  overrides: Partial<OverviewPr> = {},
+): OverviewPr {
+  return {
+    number,
+    title,
+    author: 'alice',
+    state: 'OPEN',
+    isDraft: false,
+    reviewed: false,
+    headRefName: `feature-${number}`,
+    baseRefName: 'main',
+    isCrossRepository: false,
+    headRepository: null,
+    headRepositoryOwner: null,
+    createdAt: NOW,
+    updatedAt: NOW,
+    additions: 1,
+    deletions: 0,
+    changedFiles: 1,
+    comments: 0,
+    unresolvedThreads: 0,
+    reviewDecision: null,
+    viewedFiles: 0,
+    countedFiles: 1,
+    ...overrides,
   };
 }
 
@@ -107,6 +151,7 @@ export interface WorldOptions {
   searchableCommits?: Commit[];
   prs?: PrListItem[];
   searchablePrs?: PrListItem[];
+  overviewPrs?: OverviewPr[];
   threads?: ReviewThread[];
   diffRows?: Record<string, DiffRow[]>;
 }
@@ -182,7 +227,7 @@ export function createWorld(options: WorldOptions = {}): World {
     }),
     'sync.pendingCount': () => 0,
     'viewed.list': () => [],
-    'overview.project': () => ({ prs: [], closedPrs: [], activity: [] }),
+    'overview.project': () => ({ prs: options.overviewPrs ?? [], closedPrs: [], activity: [] }),
     'overview.owners': () => null,
     'files.changed': () => paths.map(changedFile),
     'trees.get': () => paths,

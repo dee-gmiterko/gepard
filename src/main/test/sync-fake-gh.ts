@@ -23,6 +23,9 @@ const pr = state.pr;
 if (args[0] === 'pr' && args[1] === 'view') {
   out({ number: 1, id: pr.id, title: 't', author: { login: 'me' }, headRefName: 'feature',
     baseRefName: 'main', headRefOid: pr.headRefOid, baseRefOid: pr.baseRefOid,
+    isCrossRepository: Boolean(pr.fork),
+    headRepository: pr.fork && pr.fork !== 'deleted' ? { id: 'R_1', name: pr.fork.name } : null,
+    headRepositoryOwner: pr.fork && pr.fork !== 'deleted' ? { id: 'U_1', login: pr.fork.owner, name: null } : null,
     createdAt: '2024-01-01T00:00:00Z', changedFiles: 1, labels: [], url: 'https://github.com/acme/widgets/pull/1' });
 } else if (args[0] === 'api' && args[1] === 'graphql') {
   const { query, variables } = JSON.parse(fs.readFileSync(0, 'utf8'));
@@ -61,6 +64,7 @@ export interface RemotePr {
   id: string;
   headRefOid: string;
   baseRefOid: string;
+  fork?: { owner: string; name: string } | 'deleted';
 }
 
 interface FakeGhState {
@@ -119,7 +123,11 @@ export interface SyncRepo {
 
 // A bare origin with main advanced past the point where feature branched off,
 // cloned as `projectId` by the real GitService. Requires __setUserDataDir first.
-export async function createSyncRepo(projectId: string, svc: GitService): Promise<SyncRepo> {
+export async function createSyncRepo(
+  projectId: string,
+  svc: GitService,
+  opts: { fork?: boolean } = {},
+): Promise<SyncRepo> {
   const work: TmpDir = await makeTmpDir('sync-work');
   const bare: TmpDir = await makeTmpDir('sync-bare');
   const w = work.path;
@@ -143,6 +151,11 @@ export async function createSyncRepo(projectId: string, svc: GitService): Promis
   await git(w, ['commit', '-am', 'main advances']);
   const baseTip = await git(w, ['rev-parse', 'HEAD']);
   await git(bare.path, ['clone', '--bare', w, '.']);
+  if (opts.fork) {
+    // A fork PR head exists on the base repo only as refs/pull/N/head.
+    await git(bare.path, ['update-ref', 'refs/pull/1/head', headOid]);
+    await git(bare.path, ['branch', '-D', 'feature']);
+  }
   await svc.cloneProject(projectId, `file://${bare.path}`);
   return {
     headOid,

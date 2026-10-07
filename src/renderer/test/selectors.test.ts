@@ -7,7 +7,11 @@ describe('activeTargetRef', () => {
   });
 
   it('falls back to the PR when the commit is cleared', () => {
-    expect(activeTargetRef({ pr: 7, commit: 'abc' })).toEqual({ kind: 'commit', sha: 'abc' });
+    expect(activeTargetRef({ pr: 7, commit: 'abc' })).toEqual({
+      kind: 'commit',
+      sha: 'abc',
+      pr: 7,
+    });
     expect(activeTargetRef({ pr: 7, commit: null })).toEqual({ kind: 'pr', pr: 7 });
   });
 });

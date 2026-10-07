@@ -35,7 +35,31 @@ export type SubjectType = z.infer<typeof SubjectType>;
 export const SyncMode = z.enum(['full', 'pull']);
 export type SyncMode = z.infer<typeof SyncMode>;
 
-export const RepoPath = z.string().regex(/^(?!\/)(?!.*\\)(?!.*(^|\/)\.\.(\/|$)).+/);
+export const RepoPath = z.string().min(1);
+
+// gh reports a deleted fork as null or an empty object, so both collapse to null.
+export const HeadRepository = z.preprocess(
+  (value) => {
+    if (typeof value !== 'object' || value === null) return null;
+    const name: unknown = Reflect.get(value, 'name');
+    return typeof name === 'string' && name !== '' ? { name } : null;
+  },
+  z.object({ name: z.string() }).nullable(),
+);
+export const HeadRepositoryOwner = z.preprocess(
+  (value) => {
+    if (typeof value !== 'object' || value === null) return null;
+    const login: unknown = Reflect.get(value, 'login');
+    return typeof login === 'string' && login !== '' ? { login } : null;
+  },
+  z.object({ login: Login }).nullable(),
+);
+
+export const ForkFields = {
+  isCrossRepository: z.boolean().default(false),
+  headRepository: HeadRepository,
+  headRepositoryOwner: HeadRepositoryOwner,
+};
 
 export const PrListItem = z.object({
   number: z.int().positive(),
@@ -50,6 +74,7 @@ export const PrListItem = z.object({
   headRefName: z.string(),
   baseRefName: z.string(),
   headRefOid: Sha,
+  ...ForkFields,
   createdAt: IsoDate,
   changedFiles: z.int().nonnegative(),
   labels: z.array(z.object({ name: z.string(), color: z.string() })),
@@ -84,7 +109,7 @@ export type Commit = z.infer<typeof Commit>;
 
 export const TargetRef = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('pr'), pr: z.int().positive() }),
-  z.object({ kind: z.literal('commit'), sha: Sha }),
+  z.object({ kind: z.literal('commit'), sha: Sha, pr: z.int().positive().optional() }),
   z.object({ kind: z.literal('default') }),
 ]);
 export type TargetRef = z.infer<typeof TargetRef>;

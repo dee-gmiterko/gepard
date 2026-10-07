@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { IsoDate, Login, ReviewState } from './pr';
+import { ForkFields, IsoDate, Login, ReviewState } from './pr';
 
 export const ReviewDecision = z.enum(['APPROVED', 'CHANGES_REQUESTED', 'REVIEW_REQUIRED']);
 export type ReviewDecision = z.infer<typeof ReviewDecision>;
@@ -16,6 +16,7 @@ export const OverviewPr = z.object({
   reviewed: z.boolean(),
   headRefName: z.string(),
   baseRefName: z.string(),
+  ...ForkFields,
   createdAt: IsoDate,
   updatedAt: IsoDate,
   additions: z.int().nonnegative(),

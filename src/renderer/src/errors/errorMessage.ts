@@ -1,5 +1,5 @@
 import { defineMessages } from 'react-intl';
-import { intl } from '../i18n/intl';
+import { getIntl } from '../i18n/intl';
 import { errorMessage, IpcError } from '@gepard/common';
 
 const codeMessages = defineMessages({
@@ -65,6 +65,15 @@ const codeMessages = defineMessages({
     id: 'errors.code.projectNotFound',
     defaultMessage: 'This project could not be found.',
   },
+  PR_HEAD_CHANGED: {
+    id: 'errors.code.prHeadChanged',
+    defaultMessage:
+      'This pull request was updated by its author. Reload it to see the new version.',
+  },
+  PR_HEAD_UNAVAILABLE: {
+    id: 'errors.code.prHeadUnavailable',
+    defaultMessage: "This pull request's code could not be fetched from GitHub.",
+  },
   SCHEMA_MISMATCH: {
     id: 'errors.code.schemaMismatch',
     defaultMessage: 'Unexpected response from a command-line tool.',
@@ -95,7 +104,7 @@ export interface LocalizedError {
 export function localizedErrorMessage(error: unknown): LocalizedError {
   if (error instanceof IpcError) {
     if (isKnownCode(error.code)) {
-      return { message: intl.formatMessage(codeMessages[error.code]), detail: error.message };
+      return { message: getIntl().formatMessage(codeMessages[error.code]), detail: error.message };
     }
   }
   return { message: errorMessage(error) };
