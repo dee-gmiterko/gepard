@@ -53,6 +53,10 @@ const codeMessages = defineMessages({
   },
   NOT_EDITABLE: { id: 'errors.code.notEditable', defaultMessage: "This comment can't be edited." },
   NOT_FOUND: { id: 'errors.code.notFound', defaultMessage: 'Not found.' },
+  PROJECT_LOCKED: {
+    id: 'errors.code.projectLocked',
+    defaultMessage: 'This project is already open in another window.',
+  },
   PROJECT_NOT_CLONED: {
     id: 'errors.code.projectNotCloned',
     defaultMessage: "This project hasn't been cloned yet.",
