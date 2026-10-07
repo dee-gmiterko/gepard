@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { __setUserDataDir } from './support/electron';
 import { makeTmpDir, type TmpDir } from './support/tmp';
 import * as review from '../store/review';
+import * as projects from '../store/projects';
 
 describe('store/review', () => {
   let userData: TmpDir;
@@ -386,5 +387,71 @@ describe('store/review', () => {
 
     await review.deleteLocalComment('proj-g', null, line.id);
     expect(await review.listThreads('proj-g', null)).toEqual([]);
+  });
+});
+
+describe('store/review and project lifecycle', () => {
+  let userData: TmpDir;
+
+  beforeAll(async () => {
+    userData = await makeTmpDir('review-lifecycle');
+    __setUserDataDir(userData.path);
+  });
+
+  afterAll(async () => {
+    await userData.cleanup();
+  });
+
+  const ctx = { prId: 'PR_1', commitOid: '1'.repeat(40) };
+  const draft = (body: string): review.CommentDraftInput => ({
+    id: null,
+    threadId: null,
+    anchor: {
+      path: 'a.ts',
+      subjectType: 'LINE' as const,
+      side: 'RIGHT' as const,
+      line: 1,
+      startLine: null,
+      startSide: null,
+    },
+    general: false,
+    body,
+    references: [],
+  });
+
+  it('serves persisted threads and viewed state while the project exists', async () => {
+    const p = await projects.addProject('https://github.com/o/keep');
+    await review.upsertLocalComment(p.id, 5, ctx, draft('kept'));
+    await review.setLocalViewed(p.id, 5, 'PR_5', ['a.ts'], true);
+    expect((await review.loadReview(p.id, 5)).threads).toHaveLength(1);
+    expect(await review.listViewed(p.id, 5)).toHaveLength(1);
+  });
+
+  it('does not serve old threads after the project is removed and re-added', async () => {
+    const p = await projects.addProject('https://github.com/o/r');
+    await review.upsertLocalComment(p.id, 5, ctx, draft('old'));
+    expect((await review.loadReview(p.id, 5)).threads).toHaveLength(1);
+
+    await projects.removeProject(p.id);
+    await projects.addProject('https://github.com/o/r');
+
+    expect((await review.loadReview(p.id, 5)).threads).toHaveLength(0);
+  });
+
+  it('does not serve old viewed state after the project is removed and re-added', async () => {
+    const p = await projects.addProject('https://github.com/o/r2');
+    await review.setLocalViewed(p.id, 7, 'PR_7', ['a.ts'], true);
+    await projects.removeProject(p.id);
+    await projects.addProject('https://github.com/o/r2');
+    expect(await review.listViewed(p.id, 7)).toEqual([]);
+  });
+
+  it('removing one project leaves another project review untouched', async () => {
+    const a = await projects.addProject('https://github.com/o/ra');
+    const b = await projects.addProject('https://github.com/o/rb');
+    await review.upsertLocalComment(a.id, 1, ctx, draft('a'));
+    await review.upsertLocalComment(b.id, 1, ctx, draft('b'));
+    await projects.removeProject(a.id);
+    expect((await review.loadReview(b.id, 1)).threads).toHaveLength(1);
   });
 });

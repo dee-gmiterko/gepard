@@ -4,6 +4,7 @@ import {
   derivePatternViews,
   exactDisabledReason,
   initialReferenceChoices,
+  isPatternOpen,
   isSymbolDisabled,
   lineTextOf,
   referencesFromResult,
@@ -11,7 +12,8 @@ import {
   targetedPatternsOf,
   toggleRefIn,
 } from '../src/helpers/reference';
-import type { CommentReference, GroupedResult } from '@gepard/common';
+import { refAnchorFromThread } from '../src/helpers/anchor';
+import type { Anchor, CommentReference, GroupedResult } from '@gepard/common';
 
 const sym: CommentReference = { path: 'a.ts', line: 1, kind: 'symbol' };
 const exact: CommentReference = { path: 'a.ts', line: 1, kind: 'exact' };
@@ -195,5 +197,57 @@ describe('combineReferences', () => {
     expect(combineReferences({ ...choices, exactOpen: false }, result('e', 2, 'x'), [])).toEqual([
       sym,
     ]);
+  });
+});
+
+describe('editing a comment with saved references', () => {
+  const checkout = { base: 'b'.repeat(40), head: 'h'.repeat(40) };
+  const baseAnchor = {
+    path: 'a.ts',
+    subjectType: 'LINE' as const,
+    side: 'RIGHT' as const,
+    line: 3,
+    startLine: null,
+    startSide: null,
+    originalLine: 3,
+    originalStartLine: null,
+    commitOid: checkout.head,
+    originalCommitOid: checkout.head,
+  };
+  const saved: CommentReference[] = [
+    { path: 'b.ts', line: 2, kind: 'exact' },
+    { path: 'c.ts', line: 4, kind: 'pattern' },
+  ];
+
+  // The editor opens with initialReferenceChoices(saved) and derives references for refAnchor.
+  function editorReferences(anchor: Anchor, co: typeof checkout | null): CommentReference[] {
+    const choices = initialReferenceChoices(saved);
+    const refAnchor = refAnchorFromThread(anchor, co);
+    if (!refAnchor) return combineReferences(choices, undefined, []);
+    const exactResult = result('b.ts', 2, 'x');
+    return combineReferences(choices, exactResult, [saved[1]]);
+  }
+
+  it('keeps saved exact and pattern references when the anchor resolves (sibling)', () => {
+    expect(editorReferences(baseAnchor, checkout)).toEqual(saved);
+  });
+
+  it('keeps saved exact and pattern references when there is no checkout', () => {
+    expect(editorReferences(baseAnchor, null)).toEqual(saved);
+  });
+
+  it('keeps saved exact and pattern references when the thread is on another commit', () => {
+    expect(editorReferences({ ...baseAnchor, commitOid: 'z'.repeat(40) }, checkout)).toEqual(saved);
+  });
+
+  it('opens no pattern group when no pattern reference was saved (sibling)', () => {
+    const choices = initialReferenceChoices([saved[0]]);
+    expect(isPatternOpen(choices, 'any-group')).toBe(false);
+  });
+
+  it('does not open every pattern group when a pattern reference was saved', () => {
+    const choices = initialReferenceChoices(saved);
+    const open = ['group-a', 'group-b', 'group-c'].filter((id) => isPatternOpen(choices, id));
+    expect(open.length).toBeLessThan(3);
   });
 });

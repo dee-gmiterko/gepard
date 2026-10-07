@@ -82,3 +82,35 @@ describe('foldCase', () => {
     expect(foldCase('İx')).toBe('İx');
   });
 });
+
+describe('case-insensitive matching', () => {
+  const lower = 'foo bar foo';
+  const mixed = 'Foo bar FOO';
+
+  it('nextMatch finds a lowercase query in mixed-case text', () => {
+    expect(nextMatch(mixed, 'foo', { from: 0, to: 3 }, 1)).toEqual({ from: 8, to: 11 });
+  });
+
+  it('nextMatch finds a capitalised query in lowercase text', () => {
+    expect(nextMatch(lower, 'Foo', { from: 0, to: 3 }, 1)).toEqual({ from: 8, to: 11 });
+  });
+
+  it('nextMatch finds an uppercase query in lowercase text going backwards', () => {
+    expect(nextMatch(lower, 'FOO', { from: 8, to: 11 }, -1)).toEqual({ from: 0, to: 3 });
+  });
+
+  it('findBestMatch finds a capitalised query in lowercase text instead of falling back to fuzzy', () => {
+    expect(findBestMatch('xx foo yy', 'Foo', 0)).toEqual({ from: 3, to: 6 });
+  });
+
+  it('findBestMatch finds a lowercase query in mixed-case text', () => {
+    expect(findBestMatch('xx Foo yy', 'foo', 0)).toEqual({ from: 3, to: 6 });
+  });
+
+  it('still matches an exact-case query in text whose lower-casing changes length (sibling)', () => {
+    const text = 'a İ foo';
+    expect(foldCase(text)).toBe(text);
+    expect(findBestMatch(text, 'foo', 0)).toEqual({ from: 4, to: 7 });
+    expect(nextMatch('foo İ foo', 'foo', { from: 0, to: 3 }, 1)).toEqual({ from: 6, to: 9 });
+  });
+});

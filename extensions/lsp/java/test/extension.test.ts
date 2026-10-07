@@ -55,4 +55,14 @@ describe('language server on fixtures', () => {
     expect(iface?.kind).toBe('interface');
     expect(iface?.children.map((c) => c.name)).toEqual(['load()']);
   });
+
+  it('resolves a project symbol to an in-project definition', async () => {
+    const defs = await session.definition('Store.java', { line: 10, col: 20 });
+    expect(defs.map((d) => [d.location.path, d.external])).toContainEqual(['Store.java', false]);
+  });
+
+  it('finds references to a project symbol', async () => {
+    const refs = await session.references('Store.java', { line: 7, col: 33 });
+    expect(refs.some((r) => r.path === 'Store.java')).toBe(true);
+  });
 });

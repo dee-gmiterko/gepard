@@ -6,7 +6,8 @@ import {
   prThreadsReferencingFile,
   sortThreadsChronologically,
 } from '../src/helpers/comment';
-import type { Anchor, Comment, ReviewThread } from '@gepard/common';
+import { fullFileDiffMarks } from '../src/helpers/diff';
+import type { Anchor, Comment, DiffRow, ReviewThread } from '@gepard/common';
 
 const HEAD = '1111111111111111111111111111111111111111';
 const OTHER = '2222222222222222222222222222222222222222';
@@ -302,5 +303,32 @@ describe('prThreadsReferencingFile', () => {
     expect(
       prThreadsReferencingFile([local, synced, other, prefixOnly, lineThread], 'a.ts'),
     ).toEqual([local, synced]);
+  });
+});
+
+describe('codeViewCommentEntries in a full-file diff', () => {
+  const rows: DiffRow[] = [
+    { kind: 'context', oldLine: 1, newLine: 1, text: 'one' },
+    { kind: 'delete', oldLine: 2, newLine: null, text: 'gone' },
+    { kind: 'add', oldLine: null, newLine: 2, text: 'new' },
+    { kind: 'context', oldLine: 3, newLine: 3, text: 'three' },
+  ];
+
+  function onSide(id: string, side: 'LEFT' | 'RIGHT', line: number): ReviewThread {
+    return thread({ id, anchor: { ...thread({ id }).anchor, side, line, originalLine: line } });
+  }
+
+  it('shows a thread on an added line (sibling)', () => {
+    const right = onSide('r', 'RIGHT', 2);
+    const entries = codeViewCommentEntries([right], 'a.ts', null, HEAD);
+    expect(fullFileDiffMarks(rows).addedLines.has(2)).toBe(true);
+    expect(entries.flatMap((e) => e.threads)).toEqual([right]);
+  });
+
+  it('shows a thread on a deleted line inline', () => {
+    const left = onSide('l', 'LEFT', 2);
+    expect(fullFileDiffMarks(rows).deletedBefore.get(2)).toEqual(['gone']);
+    const entries = codeViewCommentEntries([left], 'a.ts', null, HEAD);
+    expect(entries.flatMap((e) => e.threads)).toEqual([left]);
   });
 });
