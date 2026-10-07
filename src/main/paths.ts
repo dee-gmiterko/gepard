@@ -15,6 +15,10 @@ export function projectsDir(): string {
   return join(userDataDir(), 'projects');
 }
 
+export function projectLocksDir(): string {
+  return join(userDataDir(), 'locks');
+}
+
 export function projectId(owner: string, repo: string): string {
   return `${owner}__${repo}`.toLowerCase();
 }

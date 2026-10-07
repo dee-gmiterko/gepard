@@ -227,6 +227,7 @@
   "errors.code.notDeletable": "This comment can't be deleted.",
   "errors.code.notEditable": "This comment can't be edited.",
   "errors.code.notFound": "Not found.",
+  "errors.code.projectLocked": "This project is already open in another window.",
   "errors.code.projectNotCloned": "This project hasn't been cloned yet.",
   "errors.code.projectNotFound": "This project could not be found.",
   "errors.code.schemaMismatch": "Unexpected response from a command-line tool.",
