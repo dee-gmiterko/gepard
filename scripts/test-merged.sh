@@ -28,6 +28,7 @@ for pr in "${prs[@]}"; do
   fi
 done
 
+yarn install --immutable
 yarn build:linux
 
 version="$(jq -r .version src/app/package.json)"
