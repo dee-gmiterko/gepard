@@ -1,4 +1,4 @@
-import type { PrListItem, ViewerRepo } from '@gepard/common';
+import { prHeadLabel, type PrListItem, type ViewerRepo } from '@gepard/common';
 
 const GITHUB_URL_PREFIX_RE = /^https?:\/\/(www\.)?github\.com\//i;
 
@@ -19,7 +19,7 @@ export function prFilterText(pr: PrListItem): string {
     `#${pr.number}`,
     pr.title,
     pr.author.login,
-    pr.headRefName,
+    prHeadLabel(pr),
     ...pr.labels.map((l) => l.name),
   ].join(' ');
 }

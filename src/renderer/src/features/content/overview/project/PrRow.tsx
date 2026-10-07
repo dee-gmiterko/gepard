@@ -1,5 +1,5 @@
 import { defineMessages, FormattedMessage } from 'react-intl';
-import type { OverviewPr } from '@gepard/common';
+import { prHeadLabel, type OverviewPr } from '@gepard/common';
 import styled from 'styled-components';
 import { Badge } from '../../../../components/Badge';
 import { Button } from '../../../../components/Button';
@@ -8,6 +8,7 @@ import { useOverviewActions } from '../shared/useOverviewActions';
 import { DecisionBadge } from '../shared/DecisionBadge';
 import { FileCount } from '../shared/FileCount';
 import { Lines } from '../shared/Lines';
+import { ForkBadge } from '../shared/ForkBadge';
 import { PrLabel } from '../shared/PrLabel';
 import { ProgressBar } from '../../../../components/ProgressBar';
 import { RelativeTime } from '../shared/RelativeTime';
@@ -58,6 +59,7 @@ export function PrRow({ pr }: { pr: OverviewPr }): React.JSX.Element {
               <FormattedMessage {...messages.closed} />
             </Badge>
           )}
+          {pr.isCrossRepository && <ForkBadge head={prHeadLabel(pr)} />}
           <DecisionBadge decision={pr.reviewDecision} />
         </TitleLine>
         <Muted>

@@ -42,7 +42,7 @@ export function createPrsHandlers(
       const commits = await gh.viewPrCommits(owner, repo, pr);
       if (!path) return commits;
       const oids = commits.map((c) => c.oid);
-      await git.ensurePrCommitsFetched(projectId, oids);
+      await git.ensurePrCommitsFetched(projectId, pr, oids);
       const touching = await git.commitsTouchingPath(projectId, oids, path);
       return commits.filter((c) => touching.has(c.oid));
     },

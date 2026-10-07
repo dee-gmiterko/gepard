@@ -3,6 +3,7 @@ import { dirname } from 'node:path';
 import { run, runBuffer, type RunResult } from '../helpers/process/exec';
 import { looksBinary } from '../helpers/binary';
 import { mimeForPath } from '../helpers/mime';
+import { assertInRepo } from '../helpers/repoPath';
 import {
   GIT_LOG_FORMAT,
   changeTypeFromLetter,
@@ -51,12 +52,13 @@ const GH_CREDENTIAL_ARGS = [
 
 const DEFAULT_LOG_LIMIT = 200;
 const DEFAULT_BRANCH_REF = 'refs/remotes/origin/HEAD';
+const PR_HEAD_REF_PREFIX = 'refs/gepard/pr/';
 const GLOB_OVERFETCH_FACTOR = 5;
 const GLOB_OVERFETCH_MAX = 20000;
 
 export type CheckoutTarget =
   | { kind: 'pr'; pr: number; headRefOid: string; baseRefOid: string }
-  | { kind: 'commit'; sha: string }
+  | { kind: 'commit'; sha: string; pr?: number }
   | { kind: 'default' };
 
 export interface BranchesInfo {
@@ -234,10 +236,44 @@ export class GitService {
     }
   }
 
-  private async ensureCommit(repoRoot: string, sha: string): Promise<void> {
+  private pullHeadLocalRef(pr: number): string {
+    return `${PR_HEAD_REF_PREFIX}${pr}`;
+  }
+
+  // GitHub publishes every pull request head, fork or not, as refs/pull/N/head on
+  // the base repository, and keeps it after the fork is deleted or made private.
+  private async fetchPullHead(repoRoot: string, sha: string, pr: number): Promise<void> {
+    const localRef = this.pullHeadLocalRef(pr);
+    try {
+      await this.gitRun(repoRoot, ['fetch', 'origin', `+refs/pull/${pr}/head:${localRef}`]);
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : String(e);
+      throw new AppError(
+        'PR_HEAD_UNAVAILABLE',
+        `commit ${sha} is not on origin and refs/pull/${pr}/head could not be fetched: ${detail}`,
+      );
+    }
     if (await this.hasCommit(repoRoot, sha)) return;
+    const { stdout } = await this.gitRun(repoRoot, ['rev-parse', '--verify', localRef]);
+    throw new AppError(
+      'PR_HEAD_CHANGED',
+      `commit ${sha} is no longer part of pull request #${pr}: refs/pull/${pr}/head now points to ${stdout.trim()}`,
+    );
+  }
+
+  private async ensureCommit(
+    repoRoot: string,
+    sha: string,
+    opts: { pr?: number; baseRefOid?: string } = {},
+  ): Promise<void> {
+    const haveBase =
+      opts.baseRefOid === undefined || (await this.hasCommit(repoRoot, opts.baseRefOid));
+    if ((await this.hasCommit(repoRoot, sha)) && haveBase) return;
     await this.gitRun(repoRoot, ['fetch', 'origin', '--prune']);
-    if (!(await this.hasCommit(repoRoot, sha))) throw new Error(`commit ${sha} is not on origin`);
+    if (!(await this.hasCommit(repoRoot, sha))) {
+      if (opts.pr !== undefined) await this.fetchPullHead(repoRoot, sha, opts.pr);
+      else throw new AppError('NOT_FOUND', `commit ${sha} is not on origin`);
+    }
   }
 
   private async checkoutDetached(repoRoot: string, ref: string): Promise<void> {
@@ -284,7 +320,10 @@ export class GitService {
 
       let result: { base: string; head: string };
       if (target.kind === 'pr') {
-        await this.ensureCommit(repoRoot, target.headRefOid);
+        await this.ensureCommit(repoRoot, target.headRefOid, {
+          pr: target.pr,
+          baseRefOid: target.baseRefOid,
+        });
         await this.checkoutDetached(repoRoot, target.headRefOid);
         const { stdout } = await this.gitRun(repoRoot, [
           'merge-base',
@@ -293,6 +332,7 @@ export class GitService {
         ]);
         result = { base: stdout.trim(), head: target.headRefOid };
       } else if (target.kind === 'commit') {
+        await this.ensureCommit(repoRoot, target.sha, { pr: target.pr });
         await this.checkoutDetached(repoRoot, target.sha);
         result = await this.commitRange(projectId, target.sha);
       } else {
@@ -336,7 +376,7 @@ export class GitService {
         '-n',
         String(count),
       ];
-      if (opts.search) args.push('-i', `--grep=${opts.search}`);
+      if (opts.search) args.push('-i', '--fixed-strings', `--grep=${opts.search}`);
       args.push(rev);
       if (pathspec) args.push('--', pathspec);
       const { stdout } = await this.gitRun(repoRoot, args);
@@ -370,12 +410,12 @@ export class GitService {
     });
   }
 
-  ensurePrCommitsFetched(projectId: string, oids: string[]): Promise<void> {
+  ensurePrCommitsFetched(projectId: string, pr: number, oids: string[]): Promise<void> {
     return this.enqueue(projectId, async () => {
       if (oids.length === 0) return;
       const repoRoot = projectRepoDir(projectId);
       const newest = oids[oids.length - 1];
-      await this.ensureCommit(repoRoot, newest);
+      await this.ensureCommit(repoRoot, newest, { pr });
     });
   }
 
@@ -385,7 +425,7 @@ export class GitService {
     const repoRoot = projectRepoDir(projectId);
     const { stdout } = await run(
       'git',
-      ['diff-tree', '--stdin', '-r', '--name-only', '-z', '--format=%H'],
+      ['diff-tree', '--stdin', '-r', '--root', '-c', '--name-only', '-z', '--format=%H'],
       {
         cwd: repoRoot,
         env: GIT_ENV,
@@ -437,8 +477,8 @@ export class GitService {
 
   private async blobExists(repoRoot: string, ref: string): Promise<boolean> {
     try {
-      await this.gitRun(repoRoot, ['cat-file', '-e', ref]);
-      return true;
+      const { stdout } = await this.gitRun(repoRoot, ['cat-file', '-t', ref]);
+      return stdout.trim() === 'blob';
     } catch {
       return false;
     }
@@ -446,6 +486,7 @@ export class GitService {
 
   async fileContentAt(projectId: string, sha: string, path: string): Promise<FileContent> {
     const repoRoot = projectRepoDir(projectId);
+    assertInRepo(repoRoot, path);
     const ref = `${sha}:${path}`;
     if (!(await this.blobExists(repoRoot, ref))) return { kind: 'missing', path, sha };
     const buf = await this.readBlobBuffer(repoRoot, ref);
@@ -497,6 +538,7 @@ export class GitService {
 
   async fileDiff(projectId: string, base: string, head: string, path: string): Promise<FileDiff> {
     const repoRoot = projectRepoDir(projectId);
+    assertInRepo(repoRoot, path);
     const status = await this.statusEntryFor(repoRoot, base, head, path);
     const previousPath = status?.previousPath ?? null;
     const oldPath = previousPath ?? path;

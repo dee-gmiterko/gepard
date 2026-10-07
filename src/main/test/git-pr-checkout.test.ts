@@ -106,4 +106,76 @@ describe('GitService.checkoutTarget for pull requests (integration)', () => {
     });
     expect(result).toEqual({ base: rootSha, head: forkSha });
   });
+
+  describe('fork PR head handling', () => {
+    let n = 0;
+    async function freshClone(): Promise<string> {
+      const id = `acme__fork${n++}`;
+      await svc.cloneProject(id, `file://${bare.path}`);
+      return id;
+    }
+
+    it('reports PR_HEAD_UNAVAILABLE when refs/pull/N/head does not exist', async () => {
+      const id = await freshClone();
+      await expect(
+        svc.checkoutTarget(id, {
+          kind: 'pr',
+          pr: 99,
+          headRefOid: 'd'.repeat(40),
+          baseRefOid: mainTip,
+        }),
+      ).rejects.toMatchObject({ code: 'PR_HEAD_UNAVAILABLE' });
+    });
+
+    it('reports PR_HEAD_CHANGED when the PR head moved past the requested sha', async () => {
+      const id = await freshClone();
+      await git(bare.path, ['update-ref', 'refs/pull/2/head', forkSha]);
+      const error = await svc
+        .checkoutTarget(id, {
+          kind: 'pr',
+          pr: 2,
+          headRefOid: 'e'.repeat(40),
+          baseRefOid: mainTip,
+        })
+        .catch((e: unknown) => e);
+      expect(error).toMatchObject({ code: 'PR_HEAD_CHANGED' });
+      expect(String(error)).toContain(forkSha);
+    });
+
+    it('fetches the moved base tip when the head is already local', async () => {
+      const id = await freshClone();
+      await writeFile(join(origin.path, 'later.txt'), 'later\n');
+      await git(origin.path, ['add', '.']);
+      await git(origin.path, ['commit', '-m', 'main moves again']);
+      const newTip = await git(origin.path, ['rev-parse', 'HEAD']);
+      await git(origin.path, ['push', bare.path, 'main']);
+      const result = await svc.checkoutTarget(id, {
+        kind: 'pr',
+        pr: 1,
+        headRefOid: featureSha,
+        baseRefOid: newTip,
+      });
+      expect(result).toEqual({ base: rootSha, head: featureSha });
+    });
+
+    it('lists the commits of a fork PR touching a path', async () => {
+      const id = await freshClone();
+      await svc.ensurePrCommitsFetched(id, 1, [forkSha]);
+      const touching = await svc.commitsTouchingPath(id, [forkSha], 'fork.txt');
+      expect([...touching]).toEqual([forkSha]);
+    });
+
+    it('checks out a fork PR commit that is not local when told the PR', async () => {
+      const id = await freshClone();
+      const result = await svc.checkoutTarget(id, { kind: 'commit', sha: forkSha, pr: 1 });
+      expect(result).toEqual({ base: rootSha, head: forkSha });
+    });
+
+    it('rejects a non-local commit without a PR', async () => {
+      const id = await freshClone();
+      await expect(svc.checkoutTarget(id, { kind: 'commit', sha: forkSha })).rejects.toThrow(
+        /not on origin/,
+      );
+    });
+  });
 });

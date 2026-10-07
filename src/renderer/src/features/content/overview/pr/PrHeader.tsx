@@ -1,12 +1,13 @@
 import { defineMessages, FormattedMessage } from 'react-intl';
 import styled from 'styled-components';
 import { ArrowLeft } from 'react-feather';
-import type { PrOverviewDetails, PrSummary } from '@gepard/common';
+import { prHeadLabel, type PrOverviewDetails, type PrSummary } from '@gepard/common';
 import { Badge } from '../../../../components/Badge';
 import { Button } from '../../../../components/Button';
 import { Inline, Stack } from '../../../../components/Layout';
 import { SyncButton } from '../../sync/SyncButton';
 import { DecisionBadge } from '../shared/DecisionBadge';
+import { ForkBadge } from '../shared/ForkBadge';
 import { PrLabel } from '../shared/PrLabel';
 import { QueryState } from '../shared/QueryState';
 import { RelativeTime } from '../shared/RelativeTime';
@@ -75,6 +76,7 @@ export function PrHeader({
         <Badge>
           <FormattedMessage {...messages[stateMessage(details)]} />
         </Badge>
+        {pr.isCrossRepository && <ForkBadge head={prHeadLabel(pr)} />}
         <DecisionBadge decision={details?.reviewDecision ?? null} />
         <Button variant="primary" onClick={actions.openFiles}>
           <FormattedMessage {...messages.review} />
@@ -85,7 +87,7 @@ export function PrHeader({
         <Muted>
           <FormattedMessage
             {...messages.byline}
-            values={{ author: pr.author.login, head: pr.headRefName, base: pr.baseRefName }}
+            values={{ author: pr.author.login, head: prHeadLabel(pr), base: pr.baseRefName }}
           />
         </Muted>
         {details && <RelativeTime value={details.updatedAt} />}

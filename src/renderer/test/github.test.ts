@@ -39,6 +39,9 @@ describe('prFilterText', () => {
       headRefName: 'fix/it',
       baseRefName: 'main',
       headRefOid: 'a'.repeat(40),
+      isCrossRepository: false,
+      headRepository: null,
+      headRepositoryOwner: null,
       createdAt: '2026-01-01T00:00:00Z',
       changedFiles: 1,
       labels: [

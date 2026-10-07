@@ -12,7 +12,7 @@ import { useAppState } from '../../state/AppContext';
 import { useTargetActions } from './useTargetActions';
 import { NewPrModal } from '../pr/NewPrModal';
 import { prFilterText } from '../../helpers/github';
-import type { PrListItem } from '@gepard/common';
+import { prHeadLabel, type PrListItem } from '@gepard/common';
 
 const messages = defineMessages({
   placeholder: {
@@ -27,6 +27,10 @@ const messages = defineMessages({
     id: 'header.prTarget.prLabel',
     defaultMessage: '#{number} {title}',
   },
+  forkPrLabel: {
+    id: 'header.prTarget.forkPrLabel',
+    defaultMessage: '#{number} {title} (fork: {head})',
+  },
   unresolvedPrLabel: {
     id: 'header.prTarget.unresolvedLabel',
     defaultMessage: '#{number}',
@@ -40,6 +44,7 @@ export function PrTarget(): React.JSX.Element {
 
   const { data: basePrs, isFetching: baseFetching } = usePrList();
 
+  const [picked, setPicked] = useState<PrListItem | null>(null);
   const [queryText, setQueryText] = useState('');
   const debouncedQuery = useDebouncedValue(queryText);
   const { data: searchPrs, isFetching: searchFetching } = usePrList(debouncedQuery || undefined);
@@ -53,7 +58,13 @@ export function PrTarget(): React.JSX.Element {
 
   const getPrLabel = useCallback(
     (pr: PrListItem) =>
-      intl.formatMessage(messages.prLabel, { number: pr.number, title: pr.title }),
+      pr.isCrossRepository
+        ? intl.formatMessage(messages.forkPrLabel, {
+            number: pr.number,
+            title: pr.title,
+            head: prHeadLabel(pr),
+          })
+        : intl.formatMessage(messages.prLabel, { number: pr.number, title: pr.title }),
     [intl],
   );
 
@@ -61,8 +72,9 @@ export function PrTarget(): React.JSX.Element {
     () =>
       state.targeting.pr === null
         ? null
-        : (prs.find((pr) => pr.number === state.targeting.pr) ?? null),
-    [state.targeting.pr, prs],
+        : (prs.find((pr) => pr.number === state.targeting.pr) ??
+          (picked?.number === state.targeting.pr ? picked : null)),
+    [state.targeting.pr, prs, picked],
   );
 
   const unresolvedLabel =
@@ -83,7 +95,10 @@ export function PrTarget(): React.JSX.Element {
           placeholder={intl.formatMessage(messages.placeholder)}
           unresolvedLabel={unresolvedLabel}
           onQueryChange={setQueryText}
-          onSelect={(pr) => setPr(pr?.number ?? null)}
+          onSelect={(pr) => {
+            setPicked(pr);
+            setPr(pr?.number ?? null);
+          }}
         />
       </IconField>
       <IconButton

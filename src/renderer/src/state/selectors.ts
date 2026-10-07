@@ -5,7 +5,8 @@ export function activeTargetRef({
   pr,
   commit,
 }: Pick<Targeting, 'pr' | 'commit'>): TargetRef | null {
-  if (commit !== null) return { kind: 'commit', sha: commit };
+  if (commit !== null)
+    return pr === null ? { kind: 'commit', sha: commit } : { kind: 'commit', sha: commit, pr };
   if (pr !== null) return { kind: 'pr', pr };
   return null;
 }

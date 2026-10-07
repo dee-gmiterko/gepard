@@ -344,30 +344,33 @@ export class SyncService {
       checkout =
         currentHead === commit
           ? await this.git.commitRange(projectId, commit)
-          : await this.git.checkoutTarget(projectId, { kind: 'commit', sha: commit });
-    } else if (currentHead !== headRefOid) {
+          : await this.git.checkoutTarget(projectId, { kind: 'commit', sha: commit, pr });
+    } else {
       checkout = await this.git.checkoutTarget(projectId, {
         kind: 'pr',
         pr,
         headRefOid,
         baseRefOid,
       });
-    } else {
-      checkout = { base: baseRefOid, head: currentHead };
     }
 
-    const [threadsResult, generalResult, viewedResult] = await Promise.all([
-      this.gh.fetchReviewThreads(ctx.owner, ctx.repo, pr),
-      this.gh.fetchGeneralComments(ctx.owner, ctx.repo, pr),
-      this.gh.fetchViewedFiles(ctx.owner, ctx.repo, pr),
-    ]);
+    const viewedFetch = this.gh.fetchViewedFiles(ctx.owner, ctx.repo, pr);
+    // A pull sync has nothing to push, so everything is fetched in parallel.
+    const pullFetch =
+      mode === 'full'
+        ? null
+        : Promise.all([
+            this.gh.fetchReviewThreads(ctx.owner, ctx.repo, pr),
+            this.gh.fetchGeneralComments(ctx.owner, ctx.repo, pr),
+          ]);
 
     let pushedViewed = 0;
     let pushedComments = 0;
     let goneRemotely = 0;
     if (mode === 'full') {
+      const viewedForPush = await viewedFetch;
       try {
-        const prPaths = new Set(viewedResult.files.map((f) => f.path));
+        const prPaths = new Set(viewedForPush.files.map((f) => f.path));
         pushedViewed = await this.pushViewed(store, prId, prPaths);
         const commentsOutcome = await this.pushComments(
           projectId,
@@ -392,6 +395,15 @@ export class SyncService {
         );
       }
     }
+    // Fetched after pushing so the merge sees the pushed comments and deletions.
+    const [[threadsResult, generalResult], viewedResult] = await Promise.all([
+      pullFetch ??
+        Promise.all([
+          this.gh.fetchReviewThreads(ctx.owner, ctx.repo, pr),
+          this.gh.fetchGeneralComments(ctx.owner, ctx.repo, pr),
+        ]),
+      viewedFetch,
+    ]);
     const remoteThreads = [
       ...threadsResult.threads.map((t) => mapThread(t, threadsResult.prId)),
       ...generalResult.comments.map((c) => mapGeneralComment(c, generalResult.prId)),

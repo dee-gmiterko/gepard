@@ -5,12 +5,13 @@ import {
   type IssueRef,
   type PrListItem,
   matchesTarget,
+  prHeadLabel,
   AppError,
   ExecError,
 } from '@gepard/common';
 
 const PR_LIST_FIELDS =
-  'number,id,title,author,headRefName,baseRefName,headRefOid,createdAt,changedFiles,labels,url';
+  'number,id,title,author,headRefName,baseRefName,headRefOid,isCrossRepository,headRepository,headRepositoryOwner,createdAt,changedFiles,labels,url';
 
 // `gh pr list --limit N` fetches 100 PRs per request and stops at the first
 // short page.
@@ -123,7 +124,7 @@ export function matchesPrSearch(pr: PrListItem, search: string): boolean {
     String(pr.number).includes(q) ||
     pr.title.toLowerCase().includes(q) ||
     pr.author.login.toLowerCase().includes(q) ||
-    pr.headRefName.toLowerCase().includes(q) ||
+    prHeadLabel(pr).toLowerCase().includes(q) ||
     pr.labels.some((l) => l.name.toLowerCase().includes(q))
   );
 }
