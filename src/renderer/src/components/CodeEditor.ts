@@ -597,10 +597,6 @@ export function useReadOnlyEditor(
 ): ReadOnlyEditor {
   const theme = useTheme();
   const commands = useCommands();
-  const commandsRef = useRef(commands);
-  useLayoutEffect(() => {
-    commandsRef.current = commands;
-  });
   const intl = useIntl();
   const intlRef = useRef(intl);
   useLayoutEffect(() => {
@@ -636,7 +632,7 @@ export function useReadOnlyEditor(
           compartments.language.of([]),
           compartments.comments.of([]),
           compartments.commentGutter.of([]),
-          keymapBridge(() => commandsRef.current),
+          keymapBridge(() => commands),
         ],
       }),
       parent: el,
@@ -648,20 +644,26 @@ export function useReadOnlyEditor(
       newView.destroy();
       setView(null);
     };
-  }, [compartments]);
+  }, [compartments, commands]);
 
   useEffect(() => {
     if (!view) return;
-
-    view.dispatch({
-      changes: { from: 0, to: view.state.doc.length, insert: doc },
-      effects: [
-        compartments.extensions.reconfigure(extensions),
-        compartments.theme.reconfigure(editorTheme(theme)),
-      ],
-    });
+    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: doc } });
     activeEditor.set(view);
+  }, [view, doc]);
 
+  useEffect(() => {
+    if (!view) return;
+    view.dispatch({ effects: compartments.extensions.reconfigure(extensions) });
+  }, [view, compartments, extensions]);
+
+  useEffect(() => {
+    if (!view) return;
+    view.dispatch({ effects: compartments.theme.reconfigure(editorTheme(theme)) });
+  }, [view, compartments, theme]);
+
+  useEffect(() => {
+    if (!view) return;
     let cancelled = false;
     const desc = LanguageDescription.matchFilename(languages, path);
     if (desc) {
@@ -680,11 +682,10 @@ export function useReadOnlyEditor(
     } else {
       view.dispatch({ effects: compartments.language.reconfigure([]) });
     }
-
     return () => {
       cancelled = true;
     };
-  }, [path, doc, extensions, theme, view, compartments, languages]);
+  }, [view, compartments, languages, path]);
 
   return {
     containerRef,

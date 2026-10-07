@@ -35,6 +35,7 @@ export interface VirtualListProps {
   onNearEnd?: () => void;
   overscan?: number;
   role?: string;
+  scrollTo?: { key: string; index: number };
 }
 
 export function VirtualList({
@@ -45,9 +46,10 @@ export function VirtualList({
   onNearEnd,
   overscan = 8,
   role,
+  scrollTo,
 }: VirtualListProps): React.JSX.Element {
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const [viewport, setViewport] = useState({ top: 0, height: 0 });
+  const [viewport, setViewport] = useState({ scrollRow: 0, height: 0 });
   const nearEndRef = useRef(onNearEnd);
 
   useEffect(() => {
@@ -57,22 +59,39 @@ export function VirtualList({
   useLayoutEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
-    const measure = (): void => setViewport({ top: el.scrollTop, height: el.clientHeight });
+    const measure = (): void =>
+      setViewport({ scrollRow: Math.floor(el.scrollTop / rowHeight), height: el.clientHeight });
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [rowHeight]);
 
-  const first = Math.max(0, Math.floor(viewport.top / rowHeight) - overscan);
+  const first = Math.max(0, viewport.scrollRow - overscan);
   const last = Math.min(
     rowCount - 1,
-    Math.ceil((viewport.top + viewport.height) / rowHeight) + overscan,
+    viewport.scrollRow + Math.ceil(viewport.height / rowHeight) + overscan,
   );
 
   useEffect(() => {
     if (viewport.height > 0 && last >= rowCount - NEAR_END_ROWS) nearEndRef.current?.();
   }, [last, rowCount, viewport.height]);
+
+  const appliedScrollKey = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    const el = scrollerRef.current;
+    if (!scrollTo) {
+      appliedScrollKey.current = null;
+      return;
+    }
+    if (!el || viewport.height === 0 || scrollTo.index < 0 || scrollTo.index >= rowCount) return;
+    if (appliedScrollKey.current === scrollTo.key) return;
+    appliedScrollKey.current = scrollTo.key;
+    const top = scrollTo.index * rowHeight;
+    if (top < el.scrollTop || top + rowHeight > el.scrollTop + el.clientHeight) {
+      el.scrollTop = top - Math.max(0, (el.clientHeight - rowHeight) / 2);
+    }
+  }, [scrollTo, rowCount, rowHeight, viewport.height]);
 
   const rows: ReactNode[] = [];
   for (let i = first; i <= last; i++) {
@@ -88,8 +107,8 @@ export function VirtualList({
       ref={scrollerRef}
       role={role}
       onScroll={(e) => {
-        const top = e.currentTarget.scrollTop;
-        setViewport((v) => (v.top === top ? v : { ...v, top }));
+        const scrollRow = Math.floor(e.currentTarget.scrollTop / rowHeight);
+        setViewport((v) => (v.scrollRow === scrollRow ? v : { ...v, scrollRow }));
       }}
     >
       <Spacer style={{ height: rowCount * rowHeight }}>{rows}</Spacer>
