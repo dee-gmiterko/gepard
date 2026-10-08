@@ -5512,6 +5512,27 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"gepard-ext-php@workspace:extensions/lsp/php":
+  version: 0.0.0-use.local
+  resolution: "gepard-ext-php@workspace:extensions/lsp/php"
+  dependencies:
+    "@gepard/common": "workspace:^"
+    "@gepard/eslint-config": "workspace:^"
+    "@types/node": "npm:^26.6.4"
+    "@types/yauzl": "npm:^3.4.0"
+    esbuild: "npm:^0.28.2"
+    eslint: "npm:^10.11.0"
+    prettier: "npm:^3.9.9"
+    tsx: "npm:^4.23.15"
+    typescript: "npm:^7.0.2"
+    vite: "npm:^8.3.2"
+    vitest: "npm:^5.0.3"
+    vscode-jsonrpc: "npm:^9.0.3"
+    yauzl: "npm:^3.4.0"
+    zod: "npm:^4.6.5"
+  languageName: unknown
+  linkType: soft
+
 "gepard-ext-python@workspace:extensions/lsp/python":
   version: 0.0.0-use.local
   resolution: "gepard-ext-python@workspace:extensions/lsp/python"
