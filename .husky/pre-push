@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/main)
+      echo "You can't push directly to main branch. Please use a feature branch."
+      exit 1
+      ;;
+    refs/heads/testing-merged)
+      echo "You can't push the testing-merged branch, it is a local throwaway built by scripts/test-merged.sh."
+      exit 1
+      ;;
+  esac
+done
