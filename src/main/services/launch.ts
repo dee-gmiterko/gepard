@@ -13,7 +13,7 @@ import { ProjectLocks } from '../helpers/process/projectLock';
 import { formatCaughtError } from '../helpers/error';
 import { cli } from '../cli';
 import * as store from '../store/projects';
-import { indexer } from '../lsp';
+import { indexer } from '../lsp/indexer';
 import { projectLocksDir, projectRepoDir } from '../paths';
 import { emit } from '../ipc/registry';
 import { notifyMainFailure } from '../notify';

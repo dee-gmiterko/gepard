@@ -1,4 +1,5 @@
 export * from './comment';
+export * from './contextMenu';
 export * from './extensions';
 export * from './grammar';
 export * from './locale';
@@ -10,4 +11,3 @@ export * from './project';
 export * from './refs';
 export * from './search';
 export * from './theme';
-export * from './contextMenu';

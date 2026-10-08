@@ -8,7 +8,7 @@ import { markRendererReady, notifyMainFailure } from './notify';
 import { formatCaughtError } from './helpers/error';
 import { startPortalThemeSync } from './helpers/portalTheme';
 import { launchService } from './services/launch';
-import { indexer } from './lsp';
+import { indexer } from './lsp/indexer';
 
 const QUIT_CLOSE_TIMEOUT_MS = 1_000;
 
