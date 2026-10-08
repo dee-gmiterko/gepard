@@ -10,6 +10,7 @@ import {
 } from '@gepard/common';
 import { RoslynSession } from './session';
 
+const TARGET = `${process.platform}-${process.arch}`;
 const SERVER_DLL = path.join('lib', 'Microsoft.CodeAnalysis.LanguageServer.dll');
 
 export async function open(
@@ -22,9 +23,11 @@ export async function open(
       vendorDir: path.join(
         await packageRoot(path.dirname(fileURLToPath(import.meta.url))),
         'vendor',
+        TARGET,
       ),
-      label: 'Roslyn language server payload',
+      label: `Roslyn language server payload for ${TARGET}`,
       probe: SERVER_DLL,
+      installName: (version) => `${version}-${TARGET}`,
     },
     host.dataDir,
   );

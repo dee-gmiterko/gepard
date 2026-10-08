@@ -8,13 +8,40 @@
   "gepard": {
     "type": "lsp",
     "vendor": {
-      "package": "microsoft.codeanalysis.languageserver.neutral",
-      "version": "5.0.0-1.25277.114"
+      "package": "roslyn-language-server",
+      "version": "5.12.0-1.26475.2",
+      "assets": {
+        "linux-x64": {
+          "rid": "linux-x64",
+          "sha512": "KiXHqOOItzD5WD8AKLUeoy2ND0o5X5StmNmMB428IeFIPA6gIUNkbRFWcW432VBkklqgfmCEonAiKfJ+pS+bvg=="
+        },
+        "linux-arm64": {
+          "rid": "linux-arm64",
+          "sha512": "9bt2QoOsiOsaKPfur3Gw3J3QwG1PmcArsPrkJQdgHn6x7iemNVhU+wdDh1Vae8dk6GEwdHxQTjxueTKa02z7wA=="
+        },
+        "darwin-x64": {
+          "rid": "osx-x64",
+          "sha512": "JqwerZUk87mWVOexcQ6hNw0l90URq+qjWBi5ZxPTdTVfMwDgg2QJU96KoesJ5VSwApzyWuXsZgrHq7kecNWflA=="
+        },
+        "darwin-arm64": {
+          "rid": "osx-arm64",
+          "sha512": "NH91bgilgYq2mMfagKCn6uBsTWVkSO7sLD+PomIm0Fp+s7HqASKZZiY4uE9yaFJ5AnJEJguZd7iZgShVQMDZqQ=="
+        },
+        "win32-x64": {
+          "rid": "win-x64",
+          "sha512": "BTuCo+sIfXQ9+0ocb18CS6WLqVAzG4DqViQ1L6suxiweGzTwpTU8T5Zf/aAscWhOVebInJleMRVq0Q8dxZb6bA=="
+        },
+        "win32-arm64": {
+          "rid": "win-arm64",
+          "sha512": "gnd9XCouH5vpVBp7diOdj+9zn7zrW4ewvNvB1Kv7wdXWSIqYhFT5UzCKEFi6PklE9snlUtDhFi/6jcfEG0g97A=="
+        }
+      }
     }
   },
   "scripts": {
     "build": "esbuild index.ts --bundle --platform=node --format=esm --target=es2023 --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\" --outfile=dist/index.js --log-level=warning",
     "vendor": "tsx scripts/vendor.ts",
+    "upgrade": "tsx scripts/upgrade.ts",
     "postinstall": "tsx scripts/vendor.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
