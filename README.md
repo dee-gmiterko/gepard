@@ -26,6 +26,10 @@ for quick navigation and full context, with LSP support.
   Switching to a PR also refreshes its remote state; nothing is pushed until
   you sync.
 
+<p align="center">
+  <img src="docs/screenshot.png" alt="Desktop application screenshot" style="max-width: 60%" />
+</p>
+
 ## Usage
 
 Download the build for your platform from the
