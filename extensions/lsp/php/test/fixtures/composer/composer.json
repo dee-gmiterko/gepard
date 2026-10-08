@@ -1,0 +1,8 @@
+{
+  "name": "gepard/fixture",
+  "autoload": {
+    "psr-4": {
+      "Shop\\": "src/"
+    }
+  }
+}

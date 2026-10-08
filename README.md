@@ -50,6 +50,7 @@ bundled; more are installed from Settings without a restart.
   - [Java](extensions/lsp/java/README.md)
   - [C#](extensions/lsp/csharp/README.md)
   - [C/C++](extensions/lsp/cpp/README.md)
+  - [PHP](extensions/lsp/php/README.md)
   - [GDScript](extensions/lsp/gdscript/README.md)
 - Grammars
   - [Godot](extensions/grammars/godot/README.md)
