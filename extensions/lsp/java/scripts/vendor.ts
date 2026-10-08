@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,19 +10,23 @@ const extensionDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..
 const vendorRoot = path.join(extensionDir, 'vendor');
 
 interface Manifest {
-  gepard: { vendor: { url: string; version: string } };
+  gepard: { vendor: { url: string; version: string; sha256: string } };
 }
 
 const manifest = JSON.parse(
   await readFile(path.join(extensionDir, 'package.json'), 'utf8'),
 ) as Manifest;
-const { url: TARBALL_URL, version: VERSION } = manifest.gepard.vendor;
+const { url: TARBALL_URL, version: VERSION, sha256: SHA256 } = manifest.gepard.vendor;
 
 async function vendorJdtls(): Promise<void> {
   const res = await fetch(TARBALL_URL);
   if (!res.ok)
     throw new Error(`failed to download ${TARBALL_URL}: ${res.status} ${res.statusText}`);
   const tarball = Buffer.from(await res.arrayBuffer());
+  const actual = createHash('sha256').update(tarball).digest('hex');
+  if (actual !== SHA256) {
+    throw new Error(`checksum mismatch for ${TARBALL_URL}: expected ${SHA256}, got ${actual}`);
+  }
 
   const tmp = path.join(vendorRoot, `.tmp-${process.pid}`);
   await mkdir(tmp, { recursive: true });

@@ -12,8 +12,8 @@ jars are platform-independent, but a JVM to run them is not vendored.
 ## Vendoring
 
 `yarn vendor` (also run automatically on `install` via `postinstall`)
-downloads the jdt.ls release tarball at the pinned version in
-`package.json`'s `gepard.vendor` field, and packs `plugins/`, `features/`,
+downloads the jdt.ls milestone tarball pinned in `package.json`'s
+`gepard.vendor` field, verifies it against the recorded sha256, and packs `plugins/`, `features/`,
 and the per-platform `config_*` directories into `vendor/`. This must be run
 before the extension can resolve a launch plan.
 
