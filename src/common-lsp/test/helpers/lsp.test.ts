@@ -7,7 +7,7 @@ import {
   toLocations,
   toLspPosition,
   toRange,
-} from '@gepard/common-lsp';
+} from '../../helpers/lsp';
 
 const lspRange = { start: { line: 0, character: 0 }, end: { line: 1, character: 4 } };
 

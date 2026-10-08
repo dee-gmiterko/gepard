@@ -4,7 +4,7 @@ import {
   emptyLegend,
   mapSemanticTokenType,
   semanticTokensSupportOf,
-} from '@gepard/common-lsp';
+} from '../../helpers/semanticToken';
 
 describe('emptyLegend', () => {
   it('returns a fresh legend with no entries', () => {

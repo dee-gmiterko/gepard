@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { navigationSymbols, type DocumentSymbol } from '@gepard/common';
+import { navigationSymbols } from '../../helpers/symbol';
+import type { DocumentSymbol } from '../../ipc/schemas/lsp';
 
 function sym(
   name: string,

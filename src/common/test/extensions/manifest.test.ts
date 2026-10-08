@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { packageManifestSchema } from '@gepard/common';
+import { packageManifestSchema } from '../../extensions/manifest';
 
 describe('packageManifestSchema', () => {
   it('rejects non-objects', () => {
