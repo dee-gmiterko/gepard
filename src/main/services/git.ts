@@ -20,7 +20,7 @@ import {
   parseBranchNames,
 } from '../helpers/git/gitParsing';
 import { emit } from '../ipc/registry';
-import { indexer as defaultIndexer } from '../lsp';
+import { indexer as defaultIndexer } from '../lsp/indexer';
 import { nohooksDir, projectCloneTmpDir, projectRepoDir } from '../paths';
 import { isCloned } from '../store/projects';
 import { log } from '../log';

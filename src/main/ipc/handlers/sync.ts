@@ -3,7 +3,7 @@ import type { GhService } from '../../services/gh';
 import type { SyncService } from '../../services/sync';
 import { countPendingChanges } from '../../helpers/github/reviewMapping';
 import * as review from '../../store/review';
-import { indexer } from '../../lsp';
+import { indexer } from '../../lsp/indexer';
 
 export function createSyncHandlers(
   gh: GhService,

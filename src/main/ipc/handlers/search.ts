@@ -6,7 +6,7 @@ import { applyPage, EMPTY_PAGE, type PageSourceFile } from '../../helpers/search
 import { pageOptions, searchRunKey, toResult } from '../../helpers/search/query';
 import { identifierAt } from '../../helpers/string';
 import { resolveInRepo } from '../../helpers/repoPath';
-import { indexer } from '../../lsp';
+import { indexer } from '../../lsp/indexer';
 import {
   type ChannelOutput,
   type ChannelParsedInput,

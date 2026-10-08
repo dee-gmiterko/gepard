@@ -3,7 +3,7 @@ import type { HandlerMap } from '../registry';
 import * as store from '../../store/projects';
 import type { GhService } from '../../services/gh';
 import type { GitService } from '../../services/git';
-import { indexer } from '../../lsp';
+import { indexer } from '../../lsp/indexer';
 
 export function createProjectsHandlers(
   gh: GhService,
