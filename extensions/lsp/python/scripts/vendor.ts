@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { collectFiles, packPayload, type PayloadEntry } from '@gepard/common';
+import { collectFiles, packPayload, type PayloadEntry } from '@gepard/common-lsp';
 
 const require = createRequire(import.meta.url);
 const vendorRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'vendor');

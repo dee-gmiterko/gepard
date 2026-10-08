@@ -15,6 +15,7 @@ Yarn workspaces + Turborepo.
 | `src/preload` | `@gepard/preload` | preload bridge |
 | `src/renderer` | `@gepard/renderer` | React UI |
 | `src/common` | `@gepard/common` | IPC contract, schemas, models |
+| `src/common-lsp` | `@gepard/common-lsp` | shared code for the LSP extensions |
 | `tools/eslint-config` | `@gepard/eslint-config` | shared ESLint configs |
 | `extensions/*` | see [Extensions](#extensions) | |
 

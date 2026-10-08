@@ -6,16 +6,14 @@ Java language extension for Gepard. Wraps the
 
 ## Requirements
 
-`java` must be on `PATH`. No JRE is bundled with this extension - jdt.ls's
-jars are platform-independent, but a JVM to run them is not vendored.
+`java` on `PATH`. No JRE is bundled.
 
 ## Vendoring
 
-`yarn vendor` (also run automatically on `install` via `postinstall`)
-downloads the jdt.ls milestone tarball pinned in `package.json`'s
-`gepard.vendor` field, verifies it against the recorded sha256, and packs `plugins/`, `features/`,
-and the per-platform `config_*` directories into `vendor/`. This must be run
-before the extension can resolve a launch plan.
+- `yarn vendor`, also run on `postinstall`, downloads the jdt.ls milestone
+  tarball pinned in `package.json` under `gepard.vendor`, checks its sha256,
+  and packs `plugins/`, `features/` and `config_*` into `vendor/`.
+- `yarn upgrade` pins the latest jdt.ls milestone.
 
 ## License
 

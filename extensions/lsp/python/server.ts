@@ -1,12 +1,7 @@
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  type ExtensionEvents,
-  type ExtensionHost,
-  type LanguageSession,
-  materializePayload,
-  packageRoot,
-} from '@gepard/common';
+import type { ExtensionEvents, ExtensionHost, LanguageSession } from '@gepard/common';
+import { materializePayload, packageRoot } from '@gepard/common-lsp';
 import { PyrightSession } from './session';
 
 const SERVER_ENTRY = path.join('dist', 'pyright-langserver.js');

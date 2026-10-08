@@ -4,7 +4,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
-import { collectFiles, packPayload, type PayloadEntry } from '@gepard/common';
+import { collectFiles, packPayload, type PayloadEntry } from '@gepard/common-lsp';
 
 const extensionDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const vendorRoot = path.join(extensionDir, 'vendor');

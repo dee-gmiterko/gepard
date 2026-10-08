@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@gepard/common": "workspace:^",
+    "@gepard/common-lsp": "workspace:^",
     "@gepard/eslint-config": "workspace:^",
     "@types/node": "^26.6.4",
     "esbuild": "^0.28.2",

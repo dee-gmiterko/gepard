@@ -1,6 +1,6 @@
 import { configDefaults, defineConfig } from 'vitest/config';
 
-// extension.test.ts launches the real language server binary, which CI does not install
+// extension.test.ts downloads the PHPantom binary from GitHub releases
 const exclude = process.env.CI
   ? [...configDefaults.exclude, 'test/extension.test.ts']
   : configDefaults.exclude;

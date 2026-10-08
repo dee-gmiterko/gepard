@@ -56,4 +56,12 @@ describe('language server on fixtures', () => {
       { name: 'make_store', kind: 'function' },
     ]);
   });
+
+  it('derives line symbols from definitions', async () => {
+    const symbols = await session.lineSymbols('store.py', 5);
+    expect(symbols.find((s) => s.name === 'add')).toMatchObject({
+      kind: 'method',
+      modifiers: ['declaration'],
+    });
+  });
 });

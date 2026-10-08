@@ -1,13 +1,4 @@
 {
   "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
-  "include": [
-    "index.ts",
-    "extensions",
-    "helpers",
-    "ipc",
-    "lsp",
-    "model",
-    "test",
-    "vitest.config.ts"
-  ]
+  "include": ["index.ts", "extensions", "helpers", "ipc", "model", "test", "vitest.config.ts"]
 }

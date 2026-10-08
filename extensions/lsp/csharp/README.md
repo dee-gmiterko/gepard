@@ -6,20 +6,17 @@ run via `dotnet Microsoft.CodeAnalysis.LanguageServer.dll --stdio`.
 
 ## Requirements
 
-A `dotnet` runtime compatible with the vendored server's target framework
-(currently .NET 10) must be on `PATH`. The server is vendored
-framework-dependent, not self-contained, so it is not bundled with this
-extension.
+.NET 10 runtime with `dotnet` on `PATH`.
 
 ## Vendoring
 
-`yarn vendor` (also run automatically on `install` via `postinstall`)
-downloads the `roslyn-language-server.<rid>` nuget package for each target at
-the version pinned in `package.json`'s `gepard.vendor` field, verifies it
-against the recorded sha512, and packs its `tools/<framework>/<rid>` output
-into `vendor/<target>/`. Targets default to the current platform and can be
-set with `GEPARD_VENDOR_TARGETS`. This must be run before the extension can
-resolve a launch plan.
+- `yarn vendor`, also run on `postinstall`, downloads
+  `roslyn-language-server.<rid>` from nuget.org at the version pinned in
+  `package.json` under `gepard.vendor`, checks its sha512, and packs
+  `tools/<framework>/<rid>` into `vendor/<target>/`.
+- Targets are the current platform, or the comma-separated list in
+  `GEPARD_VENDOR_TARGETS`.
+- `yarn upgrade` pins the latest version on nuget.org.
 
 ## License
 

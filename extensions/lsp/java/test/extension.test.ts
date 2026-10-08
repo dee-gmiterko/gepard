@@ -61,6 +61,11 @@ describe('language server on fixtures', () => {
     expect(defs.map((d) => [d.location.path, d.external])).toContainEqual(['Store.java', false]);
   });
 
+  it('reports line symbols from semantic tokens', async () => {
+    const symbols = await session.lineSymbols('Store.java', 9);
+    expect(symbols.map((s) => s.name)).toContain('add');
+  });
+
   it('finds references to a project symbol', async () => {
     const refs = await session.references('Store.java', { line: 7, col: 33 });
     expect(refs.some((r) => r.path === 'Store.java')).toBe(true);
