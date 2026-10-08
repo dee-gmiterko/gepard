@@ -7,7 +7,7 @@ import {
   makeTargetMatcher,
   matchesTarget,
   staticPrefixOf,
-} from '@gepard/common';
+} from '../../helpers/target';
 
 describe('globToRegExp', () => {
   it('matches wildcards within and across segments', () => {

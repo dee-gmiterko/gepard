@@ -4,10 +4,8 @@ import {
   composeIssueDescription,
   countComments,
   generalCommentAnchor,
-  type Anchor,
-  type CommentReference,
-  type ReviewThread,
-} from '@gepard/common';
+} from '../../helpers/comment';
+import type { Anchor, CommentReference, ReviewThread } from '../../ipc/schemas/comment';
 
 describe('generalCommentAnchor', () => {
   it('anchors to the PR with no path or lines', () => {

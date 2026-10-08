@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { errorMessage, isErrnoException } from '@gepard/common';
+import { errorMessage, isErrnoException } from '../../helpers/error';
 
 describe('errorMessage', () => {
   it('uses the message of an Error and stringifies anything else', () => {

@@ -4,7 +4,7 @@ import {
   isLanguageExtension,
   isLocaleExtension,
   languageIdOf,
-} from '@gepard/common';
+} from '../../helpers/extension';
 
 const languages = [
   { name: 'typescript', extensions: ['ts', 'mts'] },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toRepoLocation } from '@gepard/common-lsp';
+import { toRepoLocation } from '../../helpers/repoLocation';
 
 describe('toRepoLocation', () => {
   const root = '/work/repo';

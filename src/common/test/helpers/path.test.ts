@@ -1,6 +1,6 @@
 import * as path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { comparePaths, toPosix } from '@gepard/common';
+import { comparePaths, toPosix } from '../../helpers/path';
 
 describe('toPosix', () => {
   it('joins platform segments with forward slashes', () => {

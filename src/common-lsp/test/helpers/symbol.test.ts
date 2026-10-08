@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SourceDocumentSymbol } from '@gepard/common';
-import { findSymbolAt } from '@gepard/common-lsp';
+import { findSymbolAt } from '../../helpers/symbol';
 
 const sym = (
   name: string,

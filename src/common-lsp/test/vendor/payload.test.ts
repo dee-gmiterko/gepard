@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { packPayload, unpackPayload } from '@gepard/common-lsp';
+import { packPayload, unpackPayload } from '../../vendor/payload';
 
 describe('payload', () => {
   let dir: string;

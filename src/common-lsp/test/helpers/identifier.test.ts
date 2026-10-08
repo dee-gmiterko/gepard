@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { identifiersOn, type IdentifierSyntax } from '@gepard/common-lsp';
+import { identifiersOn, type IdentifierSyntax } from '../../helpers/identifier';
 
 const syntax: IdentifierSyntax = { keywords: new Set(['def', 'return']), lineComment: '#' };
 
