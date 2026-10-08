@@ -1,5 +1,5 @@
-import type { SourceDocumentSymbol, SourcePos, SourceSymbolKind } from '@gepard/common';
-import { mapLspSymbolKind } from './lsp';
+import type { SourceDocumentSymbol, SourceSymbolKind } from '@gepard/common';
+import { mapLspSymbolKind } from '@gepard/common-lsp';
 
 // Godot reports signals as LSP Event symbols.
 export function symbolKind(k: number): SourceSymbolKind {
@@ -11,17 +11,4 @@ export function unwrapFileSymbol(tree: SourceDocumentSymbol[]): SourceDocumentSy
     return tree[0].children;
   }
   return tree;
-}
-
-export function findSymbolAt(
-  symbols: SourceDocumentSymbol[],
-  pos: SourcePos,
-): SourceDocumentSymbol | null {
-  for (const s of symbols) {
-    if (s.selectionRange.start.line === pos.line && s.selectionRange.start.col === pos.col)
-      return s;
-    const inner = findSymbolAt(s.children, pos);
-    if (inner) return inner;
-  }
-  return null;
 }

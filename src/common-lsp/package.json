@@ -1,0 +1,34 @@
+{
+  "name": "@gepard/common-lsp",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@gepard/common": "workspace:^",
+    "vscode-jsonrpc": "^9.0.3",
+    "yauzl": "^3.4.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@electron-toolkit/tsconfig": "^2.0.0",
+    "@gepard/eslint-config": "workspace:^",
+    "@types/node": "^26.6.4",
+    "@types/yauzl": "^3.4.0",
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.9",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
+  }
+}

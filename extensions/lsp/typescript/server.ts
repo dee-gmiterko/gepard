@@ -1,13 +1,12 @@
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  type ExtensionEvents,
-  type ExtensionHost,
-  type ExtensionLanguage,
-  type LanguageSession,
-  materializePayload,
-  packageRoot,
+import type {
+  ExtensionEvents,
+  ExtensionHost,
+  ExtensionLanguage,
+  LanguageSession,
 } from '@gepard/common';
+import { materializePayload, packageRoot } from '@gepard/common-lsp';
 import { TypeScriptSession } from './session';
 
 const TARGET = `${process.platform}-${process.arch}`;

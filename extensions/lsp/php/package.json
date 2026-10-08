@@ -48,14 +48,13 @@
   },
   "dependencies": {
     "vscode-jsonrpc": "^9.0.3",
-    "yauzl": "^3.4.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@gepard/common": "workspace:^",
+    "@gepard/common-lsp": "workspace:^",
     "@gepard/eslint-config": "workspace:^",
     "@types/node": "^26.6.4",
-    "@types/yauzl": "^3.4.0",
     "esbuild": "^0.28.2",
     "eslint": "^10.11.0",
     "prettier": "^3.9.9",

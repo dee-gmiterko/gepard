@@ -1,27 +1,29 @@
 # Gepard PHP extension
 
 PHP language extension for Gepard. Wraps
-[PHPantom](https://github.com/PHPantom-dev/phpantom_lsp), a PHP language
-server written in Rust, run via `phpantom_lsp --stdio`.
+[PHPantom](https://github.com/PHPantom-dev/phpantom_lsp), run via
+`phpantom_lsp --stdio`.
 
 ## Requirements
 
-None on the machine. The pinned PHPantom build for the current platform is
-downloaded into Gepard's extension data directory the first time a project
-with PHP files is opened, verified against the sha256 recorded in
-`package.json`, and reused afterwards. The first open therefore needs network
-access. No PHP runtime is required; the server embeds its own stubs.
+No PHP runtime is needed.
 
-Platforms: Linux x64 and arm64, macOS x64 and arm64, Windows x64 and arm64.
+## Server binary
+
+- Opening a PHP project downloads the PHPantom build pinned in `package.json`
+  under `gepard.vendor` into the extension data directory and checks its
+  sha256. The first open needs network access.
+- Platforms: Linux, macOS and Windows, each x64 and arm64.
+- `yarn upgrade` pins the latest PHPantom release.
 
 ## Behaviour
 
-- The server indexes the project in the background and resolves classes
-  through Composer's autoload configuration when a `composer.json` is
-  present.
-- Line symbols are decoded from `semanticTokens/full`.
+- Semantic tokens run in `full` mode, set by a `.phpantom.toml` in the
+  extension data directory. Nothing is written to the project.
+- A session opens once PHPantom finishes its initial index, or after 60
+  seconds.
+- Classes resolve through Composer autoload when `composer.json` is present.
 
 ## License
 
-This extension's own code is MIT (see `LICENSE`). PHPantom is licensed under
-the MIT License.
+This extension's own code is MIT (see `LICENSE`). PHPantom is MIT licensed.

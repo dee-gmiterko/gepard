@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SourceDocumentSymbol } from '@gepard/common';
-import { findSymbolAt, symbolKind, unwrapFileSymbol } from '../../helpers/symbol';
+import { symbolKind, unwrapFileSymbol } from '../../helpers/symbol';
 
 const sym = (
   name: string,
@@ -31,20 +31,5 @@ describe('unwrapFileSymbol', () => {
     expect(unwrapFileSymbol(tree)).toBe(tree);
     const two = [sym('a', 'class', 1), sym('b', 'class', 5)];
     expect(unwrapFileSymbol(two)).toBe(two);
-  });
-});
-
-describe('findSymbolAt', () => {
-  const inner = sym('inner', 'method', 4);
-  const tree = [sym('outer', 'class', 1, [inner])];
-
-  it('finds top-level and nested symbols by selection start', () => {
-    expect(findSymbolAt(tree, { line: 1, col: 1 })?.name).toBe('outer');
-    expect(findSymbolAt(tree, { line: 4, col: 1 })).toBe(inner);
-  });
-
-  it('returns null when nothing starts at the position', () => {
-    expect(findSymbolAt(tree, { line: 9, col: 1 })).toBeNull();
-    expect(findSymbolAt(tree, { line: 1, col: 2 })).toBeNull();
   });
 });

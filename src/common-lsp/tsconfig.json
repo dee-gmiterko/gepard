@@ -1,0 +1,4 @@
+{
+  "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
+  "include": ["index.ts", "helpers", "session", "vendor", "test", "vitest.config.ts"]
+}
