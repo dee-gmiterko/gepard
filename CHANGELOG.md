@@ -2,6 +2,7 @@
 
 ## [0.1.2](https://github.com/dee-gmiterko/gepard/compare/v0.1.1...v0.1.2) (2026-10-09)
 
+Greater project variety support, performance improvements.
 
 ### Features
 
