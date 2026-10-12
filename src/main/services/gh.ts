@@ -21,6 +21,7 @@ import {
   CommitAnnotationsResponse,
   parseCommitAnnotations,
 } from '../helpers/github/checks';
+import { withFileReference } from '../helpers/github/reviewMapping';
 import {
   GhPrOverview,
   normalizePrOverview,
@@ -965,27 +966,29 @@ export class GhService {
     pullRequestReviewId: string,
     path: string,
     body: string,
-  ): Promise<NewThreadResult> {
+  ): Promise<NewThreadResult | null> {
     const res = await this.gh.graphql(AddThreadResponse, ADD_THREAD_FILE_QUERY, {
       reviewId: pullRequestReviewId,
       path,
       body,
     });
+    if (!res.data.addPullRequestReviewThread?.thread) return null;
     const { thread, root } = this.firstComment(res);
     return { thread, rootComment: root, isFile: true };
   }
 
   // GitHub rejects a LINE-anchored review comment on a line outside the diff
   // either with a 422 "must be part of the diff" error or with a null thread.
-  async addReviewThread(input: NewThreadInput): Promise<NewThreadResult> {
+  // A null result means the file is not in the diff, so the caller posts a general comment.
+  async addReviewThread(input: NewThreadInput): Promise<NewThreadResult | null> {
     if (input.line === null)
       return this.addThreadAsFile(input.pullRequestReviewId, input.path, input.body);
     const line = input.line;
-    const fallbackToFile = (): Promise<NewThreadResult> =>
+    const fallbackToFile = (): Promise<NewThreadResult | null> =>
       this.addThreadAsFile(
         input.pullRequestReviewId,
         input.path,
-        `${input.path}:${line}\n\n${input.body}`,
+        withFileReference(input.path, line, input.body),
       );
     let res: AddThreadResponseType;
     try {
