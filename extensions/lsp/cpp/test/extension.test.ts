@@ -1,7 +1,7 @@
 import { mkdir, readdir, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import extension from '../index';
 import type { LanguageSession } from '@gepard/common';
 
@@ -45,10 +45,17 @@ describe('language server on fixtures', () => {
   });
 
   it('resolves a definition across files', async () => {
-    const defs = await session.definition('main.cpp', { line: 5, col: 9 });
-    expect(defs.map((d) => d.location.path)).toEqual(['store.cpp']);
+    // clangd answers with the header declaration until its background index has seen store.cpp
+    const defs = await vi.waitFor(
+      async () => {
+        const found = await session.definition('main.cpp', { line: 5, col: 9 });
+        expect(found.map((d) => d.location.path)).toEqual(['store.cpp']);
+        return found;
+      },
+      { timeout: 30_000, interval: 250 },
+    );
     expect(defs[0].external).toBe(false);
-  });
+  }, 40_000);
 
   it('reports line symbols from semantic tokens', async () => {
     const symbols = await session.lineSymbols('main.cpp', 4);
