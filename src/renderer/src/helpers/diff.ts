@@ -36,6 +36,20 @@ export function newLineOfDocLine(
   return infos[docLine - 1]?.newLine ?? null;
 }
 
+export interface DiffRange {
+  base: string;
+  head: string;
+}
+
+export function diffRange(
+  full: DiffRange,
+  incremental: boolean,
+  viewedSha: string | null | undefined,
+): DiffRange {
+  if (!incremental || !viewedSha) return full;
+  return { base: viewedSha, head: full.head };
+}
+
 export function deletedLineDocLines(rows: readonly DiffRow[]): Map<number, number> {
   const docLines = new Map<number, number>();
   let pending: number[] = [];

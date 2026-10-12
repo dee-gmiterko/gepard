@@ -26,7 +26,8 @@ export function withLayout(state: UiState, layout: Layout): UiState {
     samePosition(prev.fileControlsPosition, layout.fileControlsPosition) &&
     prev.wrapLongLines === layout.wrapLongLines &&
     prev.fullFileDiff === layout.fullFileDiff &&
-    prev.randomizeOrder === layout.randomizeOrder;
+    prev.randomizeOrder === layout.randomizeOrder &&
+    prev.incrementalDiff === layout.incrementalDiff;
   return same ? state : { ...state, layout };
 }
 

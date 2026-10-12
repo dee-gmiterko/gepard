@@ -23,6 +23,7 @@ const labels: ContextMenuLabels = {
   wrapLongLines: 'Wrap long lines',
   fullFile: 'Full file',
   randomizeOrder: 'Randomize order',
+  incrementalDiff: 'Show incremental',
 };
 
 const flags = {
@@ -124,7 +125,7 @@ describe('buildContextMenuTemplate', () => {
 describe('buildFileViewMenuTemplate', () => {
   it('offers every toggle as a checkbox reflecting the current state', () => {
     const t = buildFileViewMenuTemplate(
-      { wrapLongLines: true, fullFileDiff: false, randomizeOrder: true },
+      { wrapLongLines: true, fullFileDiff: false, randomizeOrder: true, incrementalDiff: false },
       labels,
       vi.fn(),
     );
@@ -132,21 +133,24 @@ describe('buildFileViewMenuTemplate', () => {
       ['Wrap long lines', 'checkbox', true],
       ['Full file', 'checkbox', false],
       ['Randomize order', 'checkbox', true],
+      ['Show incremental', 'checkbox', false],
     ]);
   });
 
   it('reports which toggle was picked', () => {
     const onPick = vi.fn();
     const t = buildFileViewMenuTemplate(
-      { wrapLongLines: false, fullFileDiff: false, randomizeOrder: false },
+      { wrapLongLines: false, fullFileDiff: false, randomizeOrder: false, incrementalDiff: false },
       labels,
       onPick,
     );
     clickItem(t, 0);
     clickItem(t, 1);
     clickItem(t, 2);
+    clickItem(t, 3);
     expect(onPick).toHaveBeenNthCalledWith(1, 'wrapLongLines');
     expect(onPick).toHaveBeenNthCalledWith(2, 'fullFile');
     expect(onPick).toHaveBeenNthCalledWith(3, 'randomizeOrder');
+    expect(onPick).toHaveBeenNthCalledWith(4, 'incrementalDiff');
   });
 });

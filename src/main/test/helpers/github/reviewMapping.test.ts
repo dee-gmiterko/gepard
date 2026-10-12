@@ -135,6 +135,7 @@ describe('isViewedDirty', () => {
     remote: null,
     localUpdatedAt: null,
     remoteFetchedAt: null,
+    viewedSha: null,
     ...patch,
   });
 
@@ -513,6 +514,7 @@ describe('mergeViewed', () => {
       remote: 'DISMISSED',
       localUpdatedAt: null,
       remoteFetchedAt: row.remoteFetchedAt,
+      viewedSha: null,
     });
   });
 
@@ -525,6 +527,7 @@ describe('mergeViewed', () => {
         remote: null,
         localUpdatedAt: null,
         remoteFetchedAt: null,
+        viewedSha: null,
       },
     ];
     const [row] = mergeViewed(local, [remoteFile('b.ts', 'VIEWED')], 'PR_1', null);
@@ -541,6 +544,7 @@ describe('mergeViewed', () => {
         remote: null,
         localUpdatedAt: '2024-01-01T00:00:00Z',
         remoteFetchedAt: null,
+        viewedSha: null,
       },
     ];
     const [row] = mergeViewed(local, [remoteFile('c.ts', 'UNVIEWED')], 'PR_1', null);
@@ -558,6 +562,7 @@ describe('mergeViewed', () => {
         remote: 'VIEWED',
         localUpdatedAt: '2024-01-01T00:00:00Z',
         remoteFetchedAt: '2024-01-01T00:00:00Z',
+        viewedSha: null,
       },
     ];
     const [row] = mergeViewed(
@@ -568,6 +573,28 @@ describe('mergeViewed', () => {
     );
     expect(row.viewed).toBe(false);
     expect(row.remote).toBe('DISMISSED');
+  });
+
+  it('keeps the last viewed commit when the remote clears the viewed flag', () => {
+    const local: LocalViewedState[] = [
+      {
+        prId: 'PR_1',
+        path: 'e.ts',
+        viewed: true,
+        remote: 'VIEWED',
+        localUpdatedAt: '2024-01-01T00:00:00Z',
+        remoteFetchedAt: '2024-01-01T00:00:00Z',
+        viewedSha: 'a'.repeat(40),
+      },
+    ];
+    const [row] = mergeViewed(
+      local,
+      [remoteFile('e.ts', 'UNVIEWED')],
+      'PR_1',
+      '2024-01-02T00:00:00Z',
+    );
+    expect(row.viewed).toBe(false);
+    expect(row.viewedSha).toBe('a'.repeat(40));
   });
 });
 
@@ -676,6 +703,7 @@ describe('countPendingChanges', () => {
       remote: null,
       localUpdatedAt: null,
       remoteFetchedAt: null,
+      viewedSha: null,
       ...overrides,
     };
   }

@@ -264,6 +264,7 @@ async function setLocalViewedLocked(
   prId: string,
   paths: string[],
   viewed: boolean,
+  sha: string | null,
 ): Promise<LocalViewedState[]> {
   const store = await loadReview(projectId, pr);
   const now = new Date().toISOString();
@@ -272,6 +273,7 @@ async function setLocalViewedLocked(
     if (row) {
       row.viewed = viewed;
       row.localUpdatedAt = now;
+      if (viewed && sha !== null) row.viewedSha = sha;
     } else {
       store.viewed.push({
         prId,
@@ -280,6 +282,7 @@ async function setLocalViewedLocked(
         remote: null,
         localUpdatedAt: now,
         remoteFetchedAt: null,
+        viewedSha: viewed ? sha : null,
       });
     }
   }
@@ -293,8 +296,9 @@ export function setLocalViewed(
   prId: string,
   paths: string[],
   viewed: boolean,
+  sha: string | null = null,
 ): Promise<LocalViewedState[]> {
   return withReviewLock(projectId, pr, () =>
-    setLocalViewedLocked(projectId, pr, prId, paths, viewed),
+    setLocalViewedLocked(projectId, pr, prId, paths, viewed, sha),
   );
 }

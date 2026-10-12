@@ -1,8 +1,16 @@
 import { useMemo } from 'react';
 import { queryOptions, useQuery } from '@tanstack/react-query';
 import { invoke } from '../ipc/client';
-import { useCheckoutHead, useIsDiffView, useProjectId, useTargetPath } from '../state/hooks';
+import {
+  useCheckoutHead,
+  useIsDiffView,
+  useLayout,
+  useProjectId,
+  useTargetPath,
+} from '../state/hooks';
 import { useCurrentHead } from './projects';
+import { useViewed } from './comments';
+import { diffRange } from '../helpers/diff';
 import { qk } from './keys';
 import { matchesTarget } from '@gepard/common';
 import { buildTree, flattenLeafPaths } from '../helpers/tree';
@@ -52,8 +60,13 @@ export function useChangedFiles() {
 export function useFileDiff(path: string) {
   const checkoutHead = useCheckoutHead();
   const projectId = useProjectId() ?? '';
-  const base = checkoutHead?.base ?? '';
-  const head = checkoutHead?.head ?? '';
+  const { incrementalDiff } = useLayout();
+  const { data: viewed } = useViewed();
+  const { base, head } = diffRange(
+    { base: checkoutHead?.base ?? '', head: checkoutHead?.head ?? '' },
+    incrementalDiff,
+    viewed?.find((v) => v.path === path)?.viewedSha,
+  );
   return useQuery({
     queryKey: qk.fileDiff(projectId, base, head, path),
     queryFn: () => invoke('files.diff', { projectId, base, head, path }),

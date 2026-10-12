@@ -142,6 +142,7 @@ export function mergeViewed(
         remote: file.viewerViewedState,
         localUpdatedAt: null,
         remoteFetchedAt: now,
+        viewedSha: null,
       });
       continue;
     }

@@ -34,6 +34,14 @@ const messages = defineMessages({
     id: 'keyboard.randomizeOrderOff',
     defaultMessage: 'Randomize order: off',
   },
+  incrementalOn: {
+    id: 'keyboard.incrementalDiffOn',
+    defaultMessage: 'Show incremental: on',
+  },
+  incrementalOff: {
+    id: 'keyboard.incrementalDiffOff',
+    defaultMessage: 'Show incremental: off',
+  },
 });
 
 export interface Commands {
@@ -48,6 +56,7 @@ export interface Commands {
   toggleWrapLines: () => boolean;
   toggleFullFileDiff: () => boolean;
   toggleRandomizeOrder: () => boolean;
+  toggleIncrementalDiff: () => boolean;
 }
 
 export function useFileNavigation(): { canGoPrev: boolean; canGoNext: boolean } {
@@ -115,6 +124,17 @@ export function useCommands(): Commands {
         dispatch({
           type: 'headerStatus/publish',
           message: randomize ? messages.randomizeOn : messages.randomizeOff,
+        });
+        return true;
+      },
+      toggleIncrementalDiff: () => {
+        const { layout } = store.getState();
+        const incremental = !layout.incrementalDiff;
+        dispatch({ type: 'layout/setIncrementalDiff', incremental });
+        setLayout({ ...layout, incrementalDiff: incremental });
+        dispatch({
+          type: 'headerStatus/publish',
+          message: incremental ? messages.incrementalOn : messages.incrementalOff,
         });
         return true;
       },

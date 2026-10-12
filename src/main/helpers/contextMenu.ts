@@ -103,13 +103,14 @@ export function buildContextMenuTemplate(
 
 type FileViewMenuState = Pick<
   FileViewMenuRequest,
-  'wrapLongLines' | 'fullFileDiff' | 'randomizeOrder'
+  'wrapLongLines' | 'fullFileDiff' | 'randomizeOrder' | 'incrementalDiff'
 >;
 
 const FILE_VIEW_STATE: Record<FileViewMenuPick, keyof FileViewMenuState> = {
   wrapLongLines: 'wrapLongLines',
   fullFile: 'fullFileDiff',
   randomizeOrder: 'randomizeOrder',
+  incrementalDiff: 'incrementalDiff',
 };
 
 export function buildFileViewMenuTemplate(
