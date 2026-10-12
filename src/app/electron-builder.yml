@@ -25,10 +25,12 @@ files:
 # Electron cannot execute binaries from inside an asar archive.
 asarUnpack:
   - '**/@vscode/ripgrep-*/bin/**'
+# LSP extensions are released on their own (docs/releases.md) and installed from Settings.
 extraResources:
   - from: ../../extensions
     to: extensions
     filter:
+      - '!lsp/**'
       - '*/*/dist/**'
       - '*/*/vendor/**'
       - '*/*/package.json'

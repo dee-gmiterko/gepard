@@ -45,12 +45,35 @@ After a release is created, a matrix (Ubuntu, Windows, macOS) builds with `turbo
 
 `release-please-config.json` bumps the root `package.json` and, via `extra-files`, the version of every app workspace, so `src/app/package.json` (used for artifact names and `scripts/install-linux.sh`) matches the tag. `.release-please-manifest.json` starts at `0.1.0`.
 
+## Extension releases (issue #25)
+
+Language server extensions carry vendored servers that are too large to ship with every app download, so they are released and versioned separately from the app and installed on demand.
+
+### Versioning
+
+Each `extensions/lsp/<name>` directory is its own release-please package with `component` set to its package name (`gepard-ext-<name>`) and `include-component-in-tag` on, so tags look like `gepard-ext-csharp-v0.1.1`; the app keeps plain `vX.Y.Z` tags. `separate-pull-requests` gives every package its own release PR, and the root package lists `extensions/lsp` in `exclude-paths` so extension-only commits no longer bump the app. `.release-please-manifest.json` tracks every package's version. Each extension package also bumps its entry in `extensions/catalog.json` through an `extra-files` JSON update (root-relative path with a leading `/`), so the official list on `main` always names the latest released version.
+
+### Build pipeline
+
+`release.yml` keeps the app build as is and adds two jobs. `extensions-matrix` runs `scripts/extension-release-matrix.ts` (plain Node, no install) over release-please's `paths_released` and per-path `<path>--tag_name` outputs, expanding each released extension by its `gepard.platforms` (`any` when absent) into a job matrix. `build-extensions` checks out the extension's tag, installs, re-vendors the matrix platform's payload with `GEPARD_VENDOR_TARGETS` (so an archive carries exactly one platform), builds the workspace with turbo, packs it with `scripts/pack-extension.ts` and uploads `<name>-v<version>-<platform>.tar.gz` and its `.sha256` to the extension's release with `gh release upload --clobber`. All extension builds run on Ubuntu: the vendor scripts download prebuilt servers for any target.
+
+The app no longer bundles `extensions/lsp/*` (`!lsp/**` in the `extraResources` filter), so the installers shrink to the app itself plus grammars, themes and locales.
+
+### Install and update
+
+`extensions/catalog.json` is the official list. The app fetches it from `https://raw.githubusercontent.com/dee-gmiterko/gepard/main/extensions/catalog.json` with a 10 s timeout and falls back to the copy compiled into the main process. Settings shows installed vs latest version per entry and offers install or update; the main process downloads the archive and sidecar through `gh release download`, verifies the sha256, extracts the tarball with the in-process extractor (`src/main/helpers/tar.ts`, which rejects links and paths outside the destination), validates `package.json` and installs it with the existing registry install path as `<name>-<version>`, removing any older directory of the same package first. A new directory per version sidesteps Node's module cache so the updated code loads without a restart.
+
+Install from a GitHub repository reuses the same path: the app lists the repository's releases through `gh api`, optionally narrows them to the package named by `<path>/package.json`, picks the newest non-draft, non-prerelease release that has a `-<platform>.tar.gz` or `-any.tar.gz` asset and installs it. Installing from a folder on disk is unchanged.
+
 ## Files
 
 - `.github/workflows/validate.yml`
 - `.github/workflows/release.yml`
 - `release-please-config.json`
 - `.release-please-manifest.json`
+- `extensions/catalog.json`
+- `scripts/extension-release-matrix.ts`
+- `scripts/pack-extension.ts`
 
 ## Manual setup required
 

@@ -85,6 +85,7 @@ describe('ExtensionRegistry', () => {
           kind: 'lsp',
           source: 'builtin',
           enabled: true,
+          packageName: 'builtin-lang',
         },
         {
           id: 'builtin-light',
@@ -92,6 +93,7 @@ describe('ExtensionRegistry', () => {
           kind: 'theme',
           source: 'builtin',
           enabled: true,
+          packageName: 'builtin-light',
         },
         {
           id: 'builtin-dark',
@@ -99,6 +101,7 @@ describe('ExtensionRegistry', () => {
           kind: 'theme',
           source: 'builtin',
           enabled: true,
+          packageName: 'builtin-dark',
         },
         {
           id: 'builtin-en',
@@ -106,6 +109,7 @@ describe('ExtensionRegistry', () => {
           kind: 'locale',
           source: 'builtin',
           enabled: true,
+          packageName: 'builtin-en',
         },
         {
           id: 'builtin-grammar',
@@ -113,6 +117,7 @@ describe('ExtensionRegistry', () => {
           kind: 'grammar',
           source: 'builtin',
           enabled: true,
+          packageName: 'builtin-grammar',
         },
       ]),
     );
@@ -146,6 +151,7 @@ describe('ExtensionRegistry', () => {
       kind: 'theme',
       source: 'builtin',
       enabled: false,
+      packageName: 'builtin-dark',
     });
 
     const reopened = new ExtensionRegistry(extRoot, builtinRoot);
@@ -170,6 +176,7 @@ describe('ExtensionRegistry', () => {
           kind: 'lsp',
           source: 'external',
           enabled: true,
+          packageName: 'demo',
         },
         {
           id: 'demo-theme',
@@ -177,6 +184,7 @@ describe('ExtensionRegistry', () => {
           kind: 'theme',
           source: 'external',
           enabled: true,
+          packageName: 'demo-theme',
         },
       ]),
     );
@@ -224,6 +232,7 @@ describe('ExtensionRegistry', () => {
             kind: 'lsp',
             source: 'external',
             enabled: true,
+            packageName: 'demo',
           },
         ]),
       );
@@ -236,6 +245,7 @@ describe('ExtensionRegistry', () => {
             kind: 'theme',
             source: 'external',
             enabled: true,
+            packageName: 'demo-theme',
           },
         ]),
       );
@@ -252,6 +262,7 @@ describe('ExtensionRegistry', () => {
             kind: 'grammar',
             source: 'external',
             enabled: true,
+            packageName: 'demo-grammar',
           },
         ]),
       );

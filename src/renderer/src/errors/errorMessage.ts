@@ -24,13 +24,49 @@ const codeMessages = defineMessages({
     id: 'errors.code.execTooLarge',
     defaultMessage: 'A command produced too much output.',
   },
+  CATALOG_INVALID: {
+    id: 'errors.code.catalogInvalid',
+    defaultMessage: 'The extension list could not be read.',
+  },
+  CATALOG_UNAVAILABLE: {
+    id: 'errors.code.catalogUnavailable',
+    defaultMessage: 'The extension list could not be downloaded.',
+  },
   EXTENSION_ALREADY_EXISTS: {
     id: 'errors.code.extensionAlreadyExists',
     defaultMessage: 'This extension is already installed.',
   },
+  EXTENSION_CHECKSUM_MISMATCH: {
+    id: 'errors.code.extensionChecksumMismatch',
+    defaultMessage: 'The downloaded extension failed its checksum verification.',
+  },
+  EXTENSION_IN_USE: {
+    id: 'errors.code.extensionInUse',
+    defaultMessage: 'The installed extension could not be replaced. Restart Gepard and try again.',
+  },
+  EXTENSION_INVALID_ARCHIVE: {
+    id: 'errors.code.extensionInvalidArchive',
+    defaultMessage: "The downloaded file isn't a valid extension archive.",
+  },
   EXTENSION_INVALID_FILE: {
     id: 'errors.code.extensionInvalidFile',
     defaultMessage: "That file isn't a valid extension.",
+  },
+  EXTENSION_INVALID_PACKAGE: {
+    id: 'errors.code.extensionInvalidPackage',
+    defaultMessage: "That package isn't a valid extension.",
+  },
+  EXTENSION_NOT_IN_CATALOG: {
+    id: 'errors.code.extensionNotInCatalog',
+    defaultMessage: "This extension isn't in the extension list.",
+  },
+  EXTENSION_RELEASE_NOT_FOUND: {
+    id: 'errors.code.extensionReleaseNotFound',
+    defaultMessage: 'No extension release was found for this platform.',
+  },
+  EXTENSION_UNSUPPORTED_PLATFORM: {
+    id: 'errors.code.extensionUnsupportedPlatform',
+    defaultMessage: "This extension isn't available for this platform.",
   },
   FORBIDDEN: { id: 'errors.code.forbidden', defaultMessage: "This action isn't allowed." },
   GH_PARSE_ERROR: {

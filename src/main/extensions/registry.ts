@@ -17,7 +17,7 @@ import {
 } from '@gepard/common';
 import { type ExtensionKindDir } from '../paths';
 import * as settingsStore from '../store/settings';
-import { KindRegistry, type KindSpec } from '../helpers/kindRegistry';
+import { KindRegistry, type InstallOptions, type KindSpec } from '../helpers/kindRegistry';
 import { readManifest } from './scanner';
 
 const LSP_SPEC: KindSpec<LanguageExtension> = {
@@ -88,7 +88,7 @@ export class ExtensionRegistry {
     return this.list();
   }
 
-  async install(srcDir: string): Promise<ExtensionInfo[]> {
+  async install(srcDir: string, options: InstallOptions = {}): Promise<ExtensionInfo[]> {
     const name = path.basename(srcDir);
     let manifest: PackageManifest;
     try {
@@ -101,13 +101,13 @@ export class ExtensionRegistry {
     }
     const type = manifest.gepard?.type;
     if (type === LSP_SPEC.kind) {
-      await this.lsp.install(srcDir);
+      await this.lsp.install(srcDir, options);
     } else if (type === GRAMMAR_SPEC.kind) {
-      await this.grammar.install(srcDir);
+      await this.grammar.install(srcDir, options);
     } else if (type === THEME_SPEC.kind) {
-      await this.theme.install(srcDir);
+      await this.theme.install(srcDir, options);
     } else if (type === LOCALE_SPEC.kind) {
-      await this.locale.install(srcDir);
+      await this.locale.install(srcDir, options);
     } else {
       throw new AppError(
         'EXTENSION_INVALID_PACKAGE',

@@ -9,12 +9,111 @@
   "packages": {
     ".": {
       "extra-files": [
-        { "type": "json", "path": "src/app/package.json", "jsonpath": "$.version" },
-        { "type": "json", "path": "src/common/package.json", "jsonpath": "$.version" },
-        { "type": "json", "path": "src/main/package.json", "jsonpath": "$.version" },
-        { "type": "json", "path": "src/preload/package.json", "jsonpath": "$.version" },
-        { "type": "json", "path": "src/renderer/package.json", "jsonpath": "$.version" }
+        {
+          "type": "json",
+          "path": "src/app/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "src/common/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "src/main/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "src/preload/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "src/renderer/package.json",
+          "jsonpath": "$.version"
+        }
+      ],
+      "exclude-paths": ["extensions/lsp"]
+    },
+    "extensions/lsp/typescript": {
+      "component": "gepard-ext-typescript",
+      "include-component-in-tag": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/extensions/catalog.json",
+          "jsonpath": "$.extensions['gepard-ext-typescript'].version"
+        }
+      ]
+    },
+    "extensions/lsp/python": {
+      "component": "gepard-ext-python",
+      "include-component-in-tag": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/extensions/catalog.json",
+          "jsonpath": "$.extensions['gepard-ext-python'].version"
+        }
+      ]
+    },
+    "extensions/lsp/java": {
+      "component": "gepard-ext-java",
+      "include-component-in-tag": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/extensions/catalog.json",
+          "jsonpath": "$.extensions['gepard-ext-java'].version"
+        }
+      ]
+    },
+    "extensions/lsp/csharp": {
+      "component": "gepard-ext-csharp",
+      "include-component-in-tag": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/extensions/catalog.json",
+          "jsonpath": "$.extensions['gepard-ext-csharp'].version"
+        }
+      ]
+    },
+    "extensions/lsp/cpp": {
+      "component": "gepard-ext-cpp",
+      "include-component-in-tag": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/extensions/catalog.json",
+          "jsonpath": "$.extensions['gepard-ext-cpp'].version"
+        }
+      ]
+    },
+    "extensions/lsp/php": {
+      "component": "gepard-ext-php",
+      "include-component-in-tag": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/extensions/catalog.json",
+          "jsonpath": "$.extensions['gepard-ext-php'].version"
+        }
+      ]
+    },
+    "extensions/lsp/gdscript": {
+      "component": "gepard-ext-gdscript",
+      "include-component-in-tag": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/extensions/catalog.json",
+          "jsonpath": "$.extensions['gepard-ext-gdscript'].version"
+        }
       ]
     }
-  }
+  },
+  "separate-pull-requests": true
 }
