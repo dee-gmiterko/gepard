@@ -47,6 +47,7 @@ export interface Layout {
   fileControlsPosition: { x: number; y: number } | null;
   wrapLongLines: boolean;
   fullFileDiff: boolean;
+  randomizeOrder: boolean;
 }
 
 export const defaultLayout: Layout = {
@@ -58,6 +59,7 @@ export const defaultLayout: Layout = {
   fileControlsPosition: null,
   wrapLongLines: false,
   fullFileDiff: false,
+  randomizeOrder: false,
 };
 
 export interface UiState {
@@ -118,6 +120,7 @@ export type UiAction =
   | { type: 'layout/setFileControlsPosition'; position: { x: number; y: number } | null }
   | { type: 'layout/setWrapLongLines'; wrap: boolean }
   | { type: 'layout/setFullFileDiff'; full: boolean }
+  | { type: 'layout/setRandomizeOrder'; randomize: boolean }
   | { type: 'file/open'; path: string; line?: number | null; side?: DiffSide }
   | { type: 'file/focus'; path: string }
   | { type: 'file/pin'; path: string }
@@ -214,6 +217,8 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
       return withLayout(state, { ...state.layout, wrapLongLines: action.wrap });
     case 'layout/setFullFileDiff':
       return withLayout(state, { ...state.layout, fullFileDiff: action.full });
+    case 'layout/setRandomizeOrder':
+      return withLayout(state, { ...state.layout, randomizeOrder: action.randomize });
     case 'file/open':
       return openFile(state, action.path, action.line, action.side);
     case 'file/focus':

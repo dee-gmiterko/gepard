@@ -335,10 +335,12 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
       y: rect.bottom,
       wrapLongLines: layout.wrapLongLines,
       fullFileDiff: layout.fullFileDiff,
+      randomizeOrder: layout.randomizeOrder,
     })
       .then((pick) => {
         if (pick === 'wrapLongLines') commands.toggleWrapLines();
         if (pick === 'fullFile') commands.toggleFullFileDiff();
+        if (pick === 'randomizeOrder') commands.toggleRandomizeOrder();
       })
       .catch((error: unknown) => reportQueryError('contextMenu.showFileView', error));
   }

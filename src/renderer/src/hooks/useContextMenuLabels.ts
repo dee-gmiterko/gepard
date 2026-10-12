@@ -19,6 +19,7 @@ const messages = defineMessages({
   },
   wrapLongLines: { id: 'contextMenu.wrapLongLines', defaultMessage: 'Wrap long lines' },
   fullFile: { id: 'contextMenu.fullFile', defaultMessage: 'Full file' },
+  randomizeOrder: { id: 'contextMenu.randomizeOrder', defaultMessage: 'Randomize order' },
 }) satisfies Record<ContextMenuLabelKey, MessageDescriptor>;
 
 export function useContextMenuLabels(): (key: ContextMenuLabelKey) => string {

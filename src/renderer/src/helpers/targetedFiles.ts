@@ -16,6 +16,42 @@ export function nextTargetedFile(
   return null;
 }
 
+export function pathSeed(path: string): number {
+  let fnv = 0x811c9dc5;
+  for (let i = 0; i < path.length; i++) {
+    fnv = Math.imul(fnv ^ path.charCodeAt(i), 0x01000193);
+  }
+  return fnv >>> 0;
+}
+
+export function nextRandomizedFile(
+  files: readonly string[],
+  activePath: string | null,
+  viewedPaths: ReadonlySet<string>,
+  direction: 1 | -1,
+): string | null {
+  if (activePath === null || !files.includes(activePath)) {
+    return nextTargetedFile(files, activePath, viewedPaths, direction);
+  }
+  const unviewed = files.filter((f) => f !== activePath && !viewedPaths.has(f));
+  const n = unviewed.length;
+  if (n === 0) return null;
+  const offset = pathSeed(activePath) % n;
+  return unviewed[direction === 1 ? offset : n - 1 - offset];
+}
+
+export function nextReviewFile(
+  files: readonly string[],
+  activePath: string | null,
+  viewedPaths: ReadonlySet<string>,
+  direction: 1 | -1,
+  randomize: boolean,
+): string | null {
+  return randomize
+    ? nextRandomizedFile(files, activePath, viewedPaths, direction)
+    : nextTargetedFile(files, activePath, viewedPaths, direction);
+}
+
 export function firstFileToReview(
   files: readonly string[],
   viewedPaths: ReadonlySet<string>,
