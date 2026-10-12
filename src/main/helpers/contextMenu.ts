@@ -101,11 +101,15 @@ export function buildContextMenuTemplate(
   );
 }
 
-type FileViewMenuState = Pick<FileViewMenuRequest, 'wrapLongLines' | 'fullFileDiff'>;
+type FileViewMenuState = Pick<
+  FileViewMenuRequest,
+  'wrapLongLines' | 'fullFileDiff' | 'randomizeOrder'
+>;
 
 const FILE_VIEW_STATE: Record<FileViewMenuPick, keyof FileViewMenuState> = {
   wrapLongLines: 'wrapLongLines',
   fullFile: 'fullFileDiff',
+  randomizeOrder: 'randomizeOrder',
 };
 
 export function buildFileViewMenuTemplate(

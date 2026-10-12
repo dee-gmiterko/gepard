@@ -53,6 +53,7 @@ export const PersistedLayout = z.object({
   fileControlsPosition: z.object({ x: z.number(), y: z.number() }).nullable().default(null),
   wrapLongLines: z.boolean().default(false),
   fullFileDiff: z.boolean().default(false),
+  randomizeOrder: z.boolean().default(false),
 });
 export type PersistedLayout = z.infer<typeof PersistedLayout>;
 

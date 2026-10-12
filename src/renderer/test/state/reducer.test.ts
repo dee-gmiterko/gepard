@@ -187,6 +187,25 @@ describe('layout', () => {
     );
   });
 
+  it('toggles randomized order via layout/setRandomizeOrder and defaults to off', () => {
+    expect(initialUiState.layout.randomizeOrder).toBe(false);
+    const on = uiReducer(state(), { type: 'layout/setRandomizeOrder', randomize: true });
+    expect(on.layout.randomizeOrder).toBe(true);
+    expect(
+      uiReducer(on, { type: 'layout/setRandomizeOrder', randomize: false }).layout.randomizeOrder,
+    ).toBe(false);
+  });
+
+  it('steps through files in the seeded order while randomized', () => {
+    const review = { targeted: ['a.ts', 'b.ts', 'c.ts', 'd.ts', 'e.ts'], changed: [], viewed: [] };
+    const base = state({ activeFile: 'a.ts', previewFile: 'a.ts', mainTab: 'files' });
+    expect(uiReducer(base, { type: 'file/step', direction: 1, review }).activeFile).toBe('b.ts');
+    const randomized = uiReducer(base, { type: 'layout/setRandomizeOrder', randomize: true });
+    expect(uiReducer(randomized, { type: 'file/step', direction: 1, review }).activeFile).toBe(
+      'e.ts',
+    );
+  });
+
   it('toggles hiding viewed files via layout/setHideViewedFiles', () => {
     const hidden = uiReducer(state(), { type: 'layout/setHideViewedFiles', hide: true });
     expect(hidden.layout.hideViewedFiles).toBe(true);

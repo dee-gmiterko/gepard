@@ -12,6 +12,7 @@ export const ContextMenuLabelKey = z.enum([
   'copyLineReference',
   'wrapLongLines',
   'fullFile',
+  'randomizeOrder',
 ]);
 export type ContextMenuLabelKey = z.infer<typeof ContextMenuLabelKey>;
 
@@ -29,8 +30,9 @@ export const FileViewMenuRequest = z.object({
   y: z.number(),
   wrapLongLines: z.boolean(),
   fullFileDiff: z.boolean(),
+  randomizeOrder: z.boolean(),
 });
 export type FileViewMenuRequest = z.infer<typeof FileViewMenuRequest>;
 
-export const FileViewMenuPick = z.enum(['wrapLongLines', 'fullFile']);
+export const FileViewMenuPick = z.enum(['wrapLongLines', 'fullFile', 'randomizeOrder']);
 export type FileViewMenuPick = z.infer<typeof FileViewMenuPick>;

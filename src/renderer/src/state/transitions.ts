@@ -1,5 +1,5 @@
 import type { DiffSide } from '@gepard/common';
-import { nextTargetedFile } from '../helpers/targetedFiles';
+import { nextReviewFile } from '../helpers/targetedFiles';
 import type { UiState, Layout, Targeting } from './reducer';
 
 export function sameCheckoutHead(a: UiState['checkoutHead'], b: UiState['checkoutHead']): boolean {
@@ -25,7 +25,8 @@ export function withLayout(state: UiState, layout: Layout): UiState {
     prev.fileControlsDocked === layout.fileControlsDocked &&
     samePosition(prev.fileControlsPosition, layout.fileControlsPosition) &&
     prev.wrapLongLines === layout.wrapLongLines &&
-    prev.fullFileDiff === layout.fullFileDiff;
+    prev.fullFileDiff === layout.fullFileDiff &&
+    prev.randomizeOrder === layout.randomizeOrder;
   return same ? state : { ...state, layout };
 }
 
@@ -89,6 +90,12 @@ export function stepFile(
   skip: ReadonlySet<string>,
   direction: 1 | -1,
 ): UiState {
-  const next = nextTargetedFile(targeted, state.activeFile, skip, direction);
+  const next = nextReviewFile(
+    targeted,
+    state.activeFile,
+    skip,
+    direction,
+    state.layout.randomizeOrder,
+  );
   return next === null ? state : openFile(state, next);
 }

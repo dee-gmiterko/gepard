@@ -1,13 +1,13 @@
 import { useMemo } from 'react';
 import { defineMessages } from 'react-intl';
 import { useUiDispatch, useUiStore } from '../state/UiContext';
-import { useActiveFile } from '../state/hooks';
+import { useActiveFile, useLayout } from '../state/hooks';
 import type { QuickSearchMode, SidePanelTab } from '../state/reducer';
 import { useSetLayout } from '../queries/projects';
 import { useViewed } from '../queries/comments';
 import { useTargetedFiles } from '../queries/files';
 import { useReviewActions } from '../queries/review';
-import { nextTargetedFile } from '../helpers/targetedFiles';
+import { nextReviewFile } from '../helpers/targetedFiles';
 
 const messages = defineMessages({
   wrapOn: {
@@ -26,6 +26,14 @@ const messages = defineMessages({
     id: 'keyboard.fullFileDiffOff',
     defaultMessage: 'Full file: off',
   },
+  randomizeOn: {
+    id: 'keyboard.randomizeOrderOn',
+    defaultMessage: 'Randomize order: on',
+  },
+  randomizeOff: {
+    id: 'keyboard.randomizeOrderOff',
+    defaultMessage: 'Randomize order: off',
+  },
 });
 
 export interface Commands {
@@ -39,19 +47,20 @@ export interface Commands {
   openQuickSearch: (mode: QuickSearchMode) => boolean;
   toggleWrapLines: () => boolean;
   toggleFullFileDiff: () => boolean;
+  toggleRandomizeOrder: () => boolean;
 }
 
 export function useFileNavigation(): { canGoPrev: boolean; canGoNext: boolean } {
   const activePath = useActiveFile();
   const { data: viewed } = useViewed();
   const targetedFiles = useTargetedFiles();
+  const { randomizeOrder } = useLayout();
   return useMemo(() => {
     const viewedPaths = new Set(viewed?.filter((v) => v.viewed).map((v) => v.path));
-    return {
-      canGoPrev: nextTargetedFile(targetedFiles, activePath, viewedPaths, -1) !== null,
-      canGoNext: nextTargetedFile(targetedFiles, activePath, viewedPaths, 1) !== null,
-    };
-  }, [viewed, targetedFiles, activePath]);
+    const next = (direction: 1 | -1): string | null =>
+      nextReviewFile(targetedFiles, activePath, viewedPaths, direction, randomizeOrder);
+    return { canGoPrev: next(-1) !== null, canGoNext: next(1) !== null };
+  }, [viewed, targetedFiles, activePath, randomizeOrder]);
 }
 
 export function useCommands(): Commands {
@@ -95,6 +104,17 @@ export function useCommands(): Commands {
         dispatch({
           type: 'headerStatus/publish',
           message: full ? messages.fullFileOn : messages.fullFileOff,
+        });
+        return true;
+      },
+      toggleRandomizeOrder: () => {
+        const { layout } = store.getState();
+        const randomize = !layout.randomizeOrder;
+        dispatch({ type: 'layout/setRandomizeOrder', randomize });
+        setLayout({ ...layout, randomizeOrder: randomize });
+        dispatch({
+          type: 'headerStatus/publish',
+          message: randomize ? messages.randomizeOn : messages.randomizeOff,
         });
         return true;
       },
