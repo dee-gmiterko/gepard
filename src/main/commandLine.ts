@@ -10,8 +10,13 @@ const LINUX_OVERRIDES: SwitchOverride[] = [
   // symbol clash unless launched with --gtk-version=3.
   { switches: [{ name: 'gtk-version', value: '3' }] },
   // Mutter only speaks text-input-v3; without Chromium's IME context it never raises the OSK.
+  // With GTK loaded Chromium prefers its GTK IM context over the Wayland one, so GTK IME is disabled.
   {
-    switches: [{ name: 'enable-wayland-ime' }, { name: 'wayland-text-input-version', value: '3' }],
+    switches: [
+      { name: 'enable-wayland-ime' },
+      { name: 'wayland-text-input-version', value: '3' },
+      { name: 'disable-gtk-ime' },
+    ],
     unlessGiven: ['enable-wayland-ime', 'disable-wayland-ime'],
   },
 ];

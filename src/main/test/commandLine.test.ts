@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { commandLineSwitches } from '../commandLine';
 
 describe('commandLineSwitches', () => {
-  it('forces GTK 3 and the Wayland text-input-v3 IME on Linux', () => {
+  it('forces GTK 3, the Wayland text-input-v3 IME and no GTK IME on Linux', () => {
     expect(commandLineSwitches('linux', ['/usr/bin/gepard'])).toEqual([
       { name: 'gtk-version', value: '3' },
       { name: 'enable-wayland-ime' },
       { name: 'wayland-text-input-version', value: '3' },
+      { name: 'disable-gtk-ime' },
     ]);
   });
 
