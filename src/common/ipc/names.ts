@@ -39,6 +39,7 @@ export const ChannelNameList = z.enum([
   'viewed.set',
   'sync.run',
   'sync.pendingCount',
+  'connectivity.get',
   'index.get',
   'index.languages',
   'log.write',
@@ -68,5 +69,6 @@ export const EventNameList = z.enum([
   'index.status',
   'systemPreference.changed',
   'app.error',
+  'connectivity.changed',
 ]);
 export type EventNameList = z.infer<typeof EventNameList>;

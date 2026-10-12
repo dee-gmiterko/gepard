@@ -8,6 +8,7 @@ import {
   type EventName,
   type EventPayload,
   type IpcBridge,
+  IpcError,
 } from '@gepard/common';
 
 type Handler<C extends ChannelName> = (
@@ -40,6 +41,9 @@ async function dispatch<C extends ChannelName>(
     const value = await handler(parsed);
     return { ok: true, value: channels[channel].output.parse(value) as ChannelOutput<C> };
   } catch (error) {
+    if (error instanceof IpcError) {
+      return { ok: false, error: { code: error.code, message: error.message } };
+    }
     console.error(`fake ipc ${channel} failed`, error);
     return {
       ok: false,

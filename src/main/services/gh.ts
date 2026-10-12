@@ -1,12 +1,11 @@
 import { z } from 'zod';
-import { run, runJson } from '../helpers/process/exec';
 import { chunk } from '../helpers/array';
 import { mapWithConcurrency, withBatches } from '../helpers/async';
 import { getProject as defaultGetProject } from '../store/projects';
+import { ghClient, type GhClient } from '../clients/gh';
 import {
   buildPrListArgs,
   buildPrsFilesQuery,
-  checkGqlErrors,
   filterPrsByPath,
   isLineNotInDiffError,
   matchesPrSearch,
@@ -49,25 +48,7 @@ import {
   AppError,
 } from '@gepard/common';
 
-const GH_ENV: NodeJS.ProcessEnv = {
-  ...process.env,
-  GH_PROMPT_DISABLED: '1',
-  GH_NO_UPDATE_NOTIFIER: '1',
-  GH_PAGER: 'cat',
-  NO_COLOR: '1',
-  CLICOLOR: '0',
-};
-
-const DEFAULT_TIMEOUT_MS = 30_000;
 const VIEWED_MUTATION_CHUNK_SIZE = 50;
-
-function ghOpts(extra: { stdin?: string } = {}): {
-  env: NodeJS.ProcessEnv;
-  timeoutMs: number;
-  stdin?: string;
-} {
-  return { timeoutMs: DEFAULT_TIMEOUT_MS, env: GH_ENV, ...extra };
-}
 
 export interface RepoRef {
   owner: string;
@@ -562,15 +543,18 @@ mutation($threadId:ID!, $body:String!, $reviewId:ID) {
   }
 }`;
 
-interface ProjectStore {
-  getProject: typeof defaultGetProject;
+interface GhServiceDeps {
+  getProject?: typeof defaultGetProject;
+  client?: GhClient;
 }
 
 export class GhService {
   private readonly getProject: typeof defaultGetProject;
+  private readonly gh: GhClient;
 
-  constructor(deps: ProjectStore = { getProject: defaultGetProject }) {
-    this.getProject = deps.getProject;
+  constructor(deps: GhServiceDeps = {}) {
+    this.getProject = deps.getProject ?? defaultGetProject;
+    this.gh = deps.client ?? ghClient;
   }
 
   async repoRefFor(projectId: string): Promise<RepoRef> {
@@ -580,20 +564,23 @@ export class GhService {
   }
 
   async listPrs(owner: string, repo: string, search?: string): Promise<PrListItem[]> {
-    return runJson(z.array(PrListItem), 'gh', buildPrListArgs(owner, repo, search), ghOpts());
+    return this.gh.json(z.array(PrListItem), buildPrListArgs(owner, repo, search));
   }
 
   async viewPr(owner: string, repo: string, number: number): Promise<PrSummary> {
-    return runJson(
-      PrSummary,
-      'gh',
-      ['pr', 'view', String(number), '-R', `${owner}/${repo}`, '--json', PR_SUMMARY_FIELDS],
-      ghOpts(),
-    );
+    return this.gh.json(PrSummary, [
+      'pr',
+      'view',
+      String(number),
+      '-R',
+      `${owner}/${repo}`,
+      '--json',
+      PR_SUMMARY_FIELDS,
+    ]);
   }
 
   async projectOverview(owner: string, repo: string): Promise<ProjectOverview> {
-    const res = await this.graphql(ProjectOverviewResponse, PROJECT_OVERVIEW_QUERY, {
+    const res = await this.gh.graphql(ProjectOverviewResponse, PROJECT_OVERVIEW_QUERY, {
       owner,
       name: repo,
     });
@@ -605,23 +592,29 @@ export class GhService {
     repo: string,
     number: number,
   ): Promise<ReturnType<typeof normalizePrOverview>> {
-    const raw = await runJson(
-      GhPrOverview,
-      'gh',
-      ['pr', 'view', String(number), '-R', `${owner}/${repo}`, '--json', PR_OVERVIEW_FIELDS],
-      ghOpts(),
-    );
+    const raw = await this.gh.json(GhPrOverview, [
+      'pr',
+      'view',
+      String(number),
+      '-R',
+      `${owner}/${repo}`,
+      '--json',
+      PR_OVERVIEW_FIELDS,
+    ]);
     return normalizePrOverview(raw);
   }
 
   // gh returns a PR's commits in topological order, oldest first.
   async viewPrCommits(owner: string, repo: string, number: number): Promise<Commit[]> {
-    const { commits } = await runJson(
-      PrCommitsResponse,
-      'gh',
-      ['pr', 'view', String(number), '-R', `${owner}/${repo}`, '--json', 'commits'],
-      ghOpts(),
-    );
+    const { commits } = await this.gh.json(PrCommitsResponse, [
+      'pr',
+      'view',
+      String(number),
+      '-R',
+      `${owner}/${repo}`,
+      '--json',
+      'commits',
+    ]);
     return commits;
   }
 
@@ -630,17 +623,19 @@ export class GhService {
     repo: string,
     number: number,
   ): Promise<{ headRefOid: string; baseRefOid: string }> {
-    return runJson(
-      PrHeadBase,
-      'gh',
-      ['pr', 'view', String(number), '-R', `${owner}/${repo}`, '--json', 'headRefOid,baseRefOid'],
-      ghOpts(),
-    );
+    return this.gh.json(PrHeadBase, [
+      'pr',
+      'view',
+      String(number),
+      '-R',
+      `${owner}/${repo}`,
+      '--json',
+      'headRefOid,baseRefOid',
+    ]);
   }
 
   async createPr(owner: string, repo: string, input: CreatePrInput): Promise<PrSummary> {
-    const { stdout } = await run(
-      'gh',
+    const { stdout } = await this.gh.run(
       [
         'pr',
         'create',
@@ -657,29 +652,27 @@ export class GhService {
         '--body-file',
         '-',
       ],
-      ghOpts({ stdin: input.body }),
+      { stdin: input.body },
     );
     const number = parsePrCreateUrl(stdout);
     return this.viewPr(owner, repo, number);
   }
 
   async createIssue(owner: string, repo: string, input: CreateIssueInput): Promise<IssueRef> {
-    const { stdout } = await run(
-      'gh',
+    const { stdout } = await this.gh.run(
       ['issue', 'create', '-R', `${owner}/${repo}`, '--title', input.title, '--body-file', '-'],
-      ghOpts({ stdin: input.body }),
+      { stdin: input.body },
     );
     return parseIssueCreateUrl(stdout);
   }
 
   // `gh api --paginate` concatenates REST pages into one JSON array.
   async listPrsForCommit(owner: string, repo: string, sha: string): Promise<number[]> {
-    const items = await runJson(
-      z.array(CommitPrRaw),
-      'gh',
-      ['api', `repos/${owner}/${repo}/commits/${sha}/pulls`, '--paginate'],
-      ghOpts(),
-    );
+    const items = await this.gh.json(z.array(CommitPrRaw), [
+      'api',
+      `repos/${owner}/${repo}/commits/${sha}/pulls`,
+      '--paginate',
+    ]);
     return items.map((i) => i.number);
   }
 
@@ -692,7 +685,7 @@ export class GhService {
     const out: string[] = [];
     let cursor: string | null = after;
     for (;;) {
-      const page: z.output<typeof PrFilesPageResponse> = await this.graphql(
+      const page: z.output<typeof PrFilesPageResponse> = await this.gh.graphql(
         PrFilesPageResponse,
         PR_FILES_PAGE_QUERY,
         {
@@ -720,7 +713,11 @@ export class GhService {
     const map = new Map<number, string[]>();
     for (const batch of chunk(numbers, PRS_FILES_CHUNK_SIZE)) {
       const { query, variables } = buildPrsFilesQuery(batch);
-      const res = await this.graphql(PrsFilesResponse, query, { owner, name: repo, ...variables });
+      const res = await this.gh.graphql(PrsFilesResponse, query, {
+        owner,
+        name: repo,
+        ...variables,
+      });
       for (const [number, files] of parsePrsFilesResponse(res.data.repository)) {
         map.set(number, files);
       }
@@ -759,16 +756,17 @@ export class GhService {
   }
 
   private async fetchUser(): Promise<z.infer<typeof GhUser>> {
-    return runJson(GhUser, 'gh', ['api', 'user'], ghOpts());
+    return this.gh.json(GhUser, ['api', 'user']);
   }
 
   private async hasActiveAuth(): Promise<boolean> {
-    const status = await runJson(
-      GhAuthStatus,
-      'gh',
-      ['auth', 'status', '--active', '--json', 'hosts'],
-      ghOpts(),
-    );
+    const status = await this.gh.json(GhAuthStatus, [
+      'auth',
+      'status',
+      '--active',
+      '--json',
+      'hosts',
+    ]);
     return Object.values(status.hosts)
       .flat()
       .some((h) => h.active && h.state === 'success');
@@ -790,7 +788,7 @@ export class GhService {
     const repos: ViewerRepo[] = [];
     let cursor: string | null = null;
     for (;;) {
-      const page: z.output<typeof ViewerReposResponse> = await this.graphql(
+      const page: z.output<typeof ViewerReposResponse> = await this.gh.graphql(
         ViewerReposResponse,
         VIEWER_REPOS_QUERY,
         {
@@ -805,21 +803,6 @@ export class GhService {
     return repos;
   }
 
-  // `gh api --paginate` hangs on GraphQL queries whose cursor variable is not
-  // named exactly `$endCursor`.
-  private async graphql<T extends { errors?: GqlError[] }>(
-    schema: z.ZodType<T>,
-    query: string,
-    variables: Record<string, unknown>,
-  ): Promise<T> {
-    const result = await runJson(schema, 'gh', ['api', 'graphql', '--input', '-'], {
-      ...ghOpts(),
-      stdin: JSON.stringify({ query, variables }),
-    });
-    checkGqlErrors(result.errors);
-    return result;
-  }
-
   private async fetchRemainingThreadComments(
     threadId: string,
     after: string | null,
@@ -827,7 +810,7 @@ export class GhService {
     const out: GqlReviewCommentRaw[] = [];
     let cursor = after;
     for (;;) {
-      const page = await this.graphql(ThreadCommentsPage, THREAD_COMMENTS_QUERY, {
+      const page = await this.gh.graphql(ThreadCommentsPage, THREAD_COMMENTS_QUERY, {
         threadId,
         endCursor: cursor,
       });
@@ -851,7 +834,7 @@ export class GhService {
     let baseRefOid: string;
     let cursor: string | null = null;
     for (;;) {
-      const page: z.output<typeof GqlReviewThreadsPage> = await this.graphql(
+      const page: z.output<typeof GqlReviewThreadsPage> = await this.gh.graphql(
         GqlReviewThreadsPage,
         REVIEW_THREADS_QUERY,
         {
@@ -887,7 +870,7 @@ export class GhService {
     let headRefOid: string;
     let cursor: string | null = null;
     for (;;) {
-      const page: z.output<typeof FilesViewedPage> = await this.graphql(
+      const page: z.output<typeof FilesViewedPage> = await this.gh.graphql(
         FilesViewedPage,
         FILES_VIEWED_QUERY,
         {
@@ -923,7 +906,7 @@ export class GhService {
         );
       });
       const query = `mutation(${varDecls.join(', ')}) {\n${fields.join('\n')}\n}`;
-      await this.graphql(BatchMutationResponse, query, variables);
+      await this.gh.graphql(BatchMutationResponse, query, variables);
     });
   }
 
@@ -932,7 +915,7 @@ export class GhService {
     repo: string,
     number: number,
   ): Promise<{ id: string } | null> {
-    const page = await this.graphql(PendingReviewResponse, PENDING_REVIEW_QUERY, {
+    const page = await this.gh.graphql(PendingReviewResponse, PENDING_REVIEW_QUERY, {
       owner,
       name: repo,
       number,
@@ -943,7 +926,7 @@ export class GhService {
 
   // GitHub allows only one pending review per user per PR.
   async createPendingReview(pullRequestId: string, commitOid: string): Promise<string> {
-    const res = await this.graphql(CreateReviewResponse, CREATE_REVIEW_QUERY, {
+    const res = await this.gh.graphql(CreateReviewResponse, CREATE_REVIEW_QUERY, {
       pr: pullRequestId,
       oid: commitOid,
     });
@@ -968,7 +951,7 @@ export class GhService {
     path: string,
     body: string,
   ): Promise<NewThreadResult> {
-    const res = await this.graphql(AddThreadResponse, ADD_THREAD_FILE_QUERY, {
+    const res = await this.gh.graphql(AddThreadResponse, ADD_THREAD_FILE_QUERY, {
       reviewId: pullRequestReviewId,
       path,
       body,
@@ -991,7 +974,7 @@ export class GhService {
       );
     let res: AddThreadResponseType;
     try {
-      res = await this.graphql(AddThreadResponse, ADD_THREAD_LINE_QUERY, {
+      res = await this.gh.graphql(AddThreadResponse, ADD_THREAD_LINE_QUERY, {
         reviewId: input.pullRequestReviewId,
         path: input.path,
         body: input.body,
@@ -1016,7 +999,7 @@ export class GhService {
     body: string,
     reviewId?: string | null,
   ): Promise<z.infer<typeof ReplyComment>> {
-    const res = await this.graphql(AddReplyResponse, ADD_REPLY_QUERY, {
+    const res = await this.gh.graphql(AddReplyResponse, ADD_REPLY_QUERY, {
       threadId,
       body,
       reviewId: reviewId ?? null,
@@ -1025,11 +1008,11 @@ export class GhService {
   }
 
   async deleteReviewComment(commentId: string): Promise<void> {
-    await this.graphql(DeleteCommentResponse, DELETE_COMMENT_QUERY, { id: commentId });
+    await this.gh.graphql(DeleteCommentResponse, DELETE_COMMENT_QUERY, { id: commentId });
   }
 
   async updateReviewComment(commentId: string, body: string): Promise<UpdatedComment> {
-    const res = await this.graphql(UpdateCommentResponse, UPDATE_COMMENT_QUERY, {
+    const res = await this.gh.graphql(UpdateCommentResponse, UPDATE_COMMENT_QUERY, {
       id: commentId,
       body,
     });
@@ -1038,7 +1021,10 @@ export class GhService {
   }
 
   async submitReview(reviewId: string, body?: string): Promise<void> {
-    await this.graphql(SubmitReviewResponse, SUBMIT_REVIEW_QUERY, { reviewId, body: body ?? null });
+    await this.gh.graphql(SubmitReviewResponse, SUBMIT_REVIEW_QUERY, {
+      reviewId,
+      body: body ?? null,
+    });
   }
 
   // General PR comments (IssueComments) are a separate connection from
@@ -1052,7 +1038,7 @@ export class GhService {
     let prId: string;
     let cursor: string | null = null;
     for (;;) {
-      const page: z.output<typeof GeneralCommentsPage> = await this.graphql(
+      const page: z.output<typeof GeneralCommentsPage> = await this.gh.graphql(
         GeneralCommentsPage,
         GENERAL_COMMENTS_QUERY,
         {
@@ -1072,7 +1058,7 @@ export class GhService {
   }
 
   async addGeneralComment(prId: string, body: string): Promise<GqlIssueCommentRaw> {
-    const res = await this.graphql(AddGeneralCommentResponse, ADD_GENERAL_COMMENT_QUERY, {
+    const res = await this.gh.graphql(AddGeneralCommentResponse, ADD_GENERAL_COMMENT_QUERY, {
       subjectId: prId,
       body,
     });
@@ -1082,7 +1068,7 @@ export class GhService {
   }
 
   async updateGeneralComment(commentId: string, body: string): Promise<UpdatedComment> {
-    const res = await this.graphql(UpdateGeneralCommentResponse, UPDATE_GENERAL_COMMENT_QUERY, {
+    const res = await this.gh.graphql(UpdateGeneralCommentResponse, UPDATE_GENERAL_COMMENT_QUERY, {
       id: commentId,
       body,
     });
@@ -1091,7 +1077,7 @@ export class GhService {
   }
 
   async deleteGeneralComment(commentId: string): Promise<void> {
-    await this.graphql(DeleteGeneralCommentResponse, DELETE_GENERAL_COMMENT_QUERY, {
+    await this.gh.graphql(DeleteGeneralCommentResponse, DELETE_GENERAL_COMMENT_QUERY, {
       id: commentId,
     });
   }

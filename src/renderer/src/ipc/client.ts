@@ -16,6 +16,10 @@ export function isStaleShaError(error: unknown): boolean {
   return error instanceof IpcError && error.code === 'STALE_SHA';
 }
 
+export function isConnectionError(error: unknown): boolean {
+  return error instanceof IpcError && error.code === 'CONNECTION_FAILED';
+}
+
 export async function invoke<C extends ChannelName>(
   channel: C,
   ...args: InvokeArgs<C>

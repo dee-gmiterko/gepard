@@ -227,6 +227,7 @@ export function createWorld(options: WorldOptions = {}): World {
       droppedRemoteDeleted: 0,
     }),
     'sync.pendingCount': () => 0,
+    'connectivity.get': () => ({ offline: false }),
     'viewed.list': () => [],
     'overview.project': () => ({ prs: options.overviewPrs ?? [], closedPrs: [], activity: [] }),
     'overview.owners': () => null,
