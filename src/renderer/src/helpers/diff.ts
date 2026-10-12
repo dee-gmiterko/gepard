@@ -1,5 +1,23 @@
+import { Text } from '@codemirror/state';
 import type { DiffRow, DiffSide, LineSymbol } from '@gepard/common';
 import { escapeRegExp } from './string';
+
+export interface DiffLineInfo {
+  kind: DiffRow['kind'];
+  oldLine: number | null;
+  newLine: number | null;
+}
+
+export function buildDiffDoc(rows: readonly DiffRow[]): { doc: Text; infos: DiffLineInfo[] } {
+  const lines = rows.length > 0 ? rows.map((r) => r.text) : [''];
+  const doc = Text.of(lines);
+  const infos: DiffLineInfo[] = rows.map((r) => ({
+    kind: r.kind,
+    oldLine: r.oldLine,
+    newLine: r.newLine,
+  }));
+  return { doc, infos };
+}
 
 export function findDiffDocLine(
   infos: readonly { oldLine: number | null; newLine: number | null }[],

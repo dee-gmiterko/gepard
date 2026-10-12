@@ -12,6 +12,7 @@ import { LanguageDescription, bracketMatching } from '@codemirror/language';
 import { reportError } from '../errors/report';
 import { useCommands } from '../keyboard/useCommands';
 import { useGrammars } from '../queries/grammars';
+import { useKeybindingOverrides } from '../queries/keybindings';
 import { activeEditor } from './activeEditor';
 import { allLanguageDescriptions } from './grammar';
 import { keymapBridge } from './keymapBridge';
@@ -56,6 +57,12 @@ export function useReadOnlyEditor(
     intlRef.current = intl;
   });
 
+  const { data: keybindingOverrides } = useKeybindingOverrides();
+  const overridesRef = useRef(keybindingOverrides);
+  useLayoutEffect(() => {
+    overridesRef.current = keybindingOverrides;
+  });
+
   const { data: grammars } = useGrammars();
   const languages = useMemo(() => allLanguageDescriptions(grammars ?? []), [grammars]);
 
@@ -85,7 +92,10 @@ export function useReadOnlyEditor(
           compartments.language.of([]),
           compartments.comments.of([]),
           compartments.commentGutter.of([]),
-          keymapBridge(() => commands),
+          keymapBridge(
+            () => commands,
+            () => overridesRef.current,
+          ),
         ],
       }),
       parent: el,
