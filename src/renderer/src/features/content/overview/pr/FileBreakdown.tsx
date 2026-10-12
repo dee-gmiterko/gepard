@@ -65,6 +65,9 @@ export function FileBreakdown(): React.JSX.Element {
           label={(key) =>
             key === NO_EXTENSION ? <FormattedMessage {...messages.noExtension} /> : key
           }
+          onOpen={(key) => {
+            if (key !== NO_EXTENSION) actions.openExtension(key);
+          }}
         />
       </Panel>
       {owners && (
