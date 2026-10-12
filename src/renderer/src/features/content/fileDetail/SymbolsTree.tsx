@@ -42,6 +42,7 @@ const messages = defineMessages({
   kindVariable: { id: 'content.symbolsTree.kind.variable', defaultMessage: 'variable' },
   kindParameter: { id: 'content.symbolsTree.kind.parameter', defaultMessage: 'parameter' },
   kindConstant: { id: 'content.symbolsTree.kind.constant', defaultMessage: 'constant' },
+  kindImport: { id: 'content.symbolsTree.kind.import', defaultMessage: 'import' },
   kindUnknown: { id: 'content.symbolsTree.kind.unknown', defaultMessage: 'unknown' },
 });
 
@@ -59,6 +60,7 @@ const kindMessages: Record<SymbolKind, MessageDescriptor> = {
   variable: messages.kindVariable,
   parameter: messages.kindParameter,
   constant: messages.kindConstant,
+  import: messages.kindImport,
   unknown: messages.kindUnknown,
 };
 

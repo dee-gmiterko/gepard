@@ -122,6 +122,7 @@ export const indexer: {
   closeAll(): Promise<void>;
   status(projectId: string): IndexStatus;
   session(projectId: string, filePath: string): LanguageSession | null;
+  extension(projectId: string, filePath: string): LanguageExtension | null;
   sessions(projectId: string): LanguageSession[];
   languages(projectId: string): LanguageServerStatus[] | null;
   lineIndex(projectId: string): LineIndexHandle | null;
@@ -280,6 +281,13 @@ export const indexer: {
     return (
       projects.get(projectId)?.sessions.find((entry) => isClaimedBy(entry.extension, filePath))
         ?.session ?? null
+    );
+  },
+
+  extension(projectId: string, filePath: string): LanguageExtension | null {
+    return (
+      projects.get(projectId)?.sessions.find((entry) => isClaimedBy(entry.extension, filePath))
+        ?.extension ?? null
     );
   },
 

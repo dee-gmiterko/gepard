@@ -59,6 +59,9 @@ export const DefinitionResult = z.object({
 });
 export type DefinitionResult = z.infer<typeof DefinitionResult>;
 
+export const ImportTargetResult = z.object({ path: RepoPath.nullable() });
+export type ImportTargetResult = z.infer<typeof ImportTargetResult>;
+
 export const IndexPhase = z.enum(['files', 'language']);
 export type IndexPhase = z.infer<typeof IndexPhase>;
 

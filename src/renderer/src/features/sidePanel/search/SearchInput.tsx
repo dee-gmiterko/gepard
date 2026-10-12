@@ -36,6 +36,7 @@ const messages = defineMessages({
   symbolKindVariable: { id: 'sidePanel.search.symbolKind.variable', defaultMessage: 'variable' },
   symbolKindParameter: { id: 'sidePanel.search.symbolKind.parameter', defaultMessage: 'parameter' },
   symbolKindConstant: { id: 'sidePanel.search.symbolKind.constant', defaultMessage: 'constant' },
+  symbolKindImport: { id: 'sidePanel.search.symbolKind.import', defaultMessage: 'import' },
   symbolKindUnknown: { id: 'sidePanel.search.symbolKind.unknown', defaultMessage: 'unknown' },
 });
 
@@ -53,6 +54,7 @@ const symbolKindMessages: Record<SymbolKind, MessageDescriptor> = {
   variable: messages.symbolKindVariable,
   parameter: messages.symbolKindParameter,
   constant: messages.symbolKindConstant,
+  import: messages.symbolKindImport,
   unknown: messages.symbolKindUnknown,
 };
 

@@ -3,10 +3,9 @@ import type { Extension } from '@codemirror/state';
 import { closeHoverTooltips, type EditorView } from '@codemirror/view';
 import { SymbolPortals } from '../../../codeEditor/SymbolPortals';
 import { useUiDispatch } from '../../../state/UiContext';
-import { useDefinitionLookup } from '../../../queries/search';
-import { useTree } from '../../../queries/files';
+import { useDefinitionLookup, useImportResolver } from '../../../queries/search';
+import { useCurrentHead } from '../../../queries/projects';
 import { GotoTarget, gotoDefinition } from '../../../codeEditor/gotoDefinition';
-import { resolveImportPath } from '../../../helpers/importPath';
 
 export function useSymbolPortals(sha: string, path: string): SymbolPortals {
   const lookupDefinition = useDefinitionLookup(sha, path);
@@ -39,8 +38,7 @@ export function useGotoDefinition(
   fileLineOf: (docLine: number) => number | null = (docLine) => docLine,
 ): Extension {
   const dispatch = useUiDispatch();
-  const { data: tree } = useTree();
-  const files = useMemo(() => new Set(tree ?? []), [tree]);
+  const resolveImport = useImportResolver(useCurrentHead() ?? '', path);
   const target = useMemo(() => new GotoTarget(), []);
   useLayoutEffect(() => {
     const open = (view: EditorView, to: string, line: number | null): void => {
@@ -48,7 +46,7 @@ export function useGotoDefinition(
       dispatch({ type: 'file/open', path: to, line });
     };
     target.set({
-      resolveImport: (spec) => resolveImportPath(path, spec, files),
+      resolveImport,
       openFile: (to, view) => open(view, to, null),
       openSymbol: (symbol, view) => {
         const line = fileLineOf(symbol.line);
@@ -59,6 +57,6 @@ export function useGotoDefinition(
         });
       },
     });
-  }, [target, dispatch, path, files, portals, fileLineOf]);
+  }, [target, dispatch, resolveImport, portals, fileLineOf]);
   return useMemo(() => gotoDefinition(target), [target]);
 }

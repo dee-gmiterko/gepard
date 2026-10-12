@@ -30,6 +30,7 @@ export const SourceSymbolKind = z.enum([
   'variable',
   'parameter',
   'constant',
+  'import',
   'unknown',
 ]);
 export type SourceSymbolKind = z.infer<typeof SourceSymbolKind>;
@@ -140,10 +141,17 @@ export interface LanguageSession {
   dispose(): Promise<void>;
 }
 
+export interface ImportResolution {
+  extensions: string[];
+  indexFiles: string[];
+  emittedExtensions: string[];
+}
+
 export interface LanguageExtension {
   id: string;
   displayName: string;
   languages: ExtensionLanguage[];
+  importResolution?: ImportResolution;
   warmupFile?(files: string[]): string | undefined;
   open(
     project: { root: string },

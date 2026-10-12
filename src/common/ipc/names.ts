@@ -31,6 +31,7 @@ export const ChannelNameList = z.enum([
   'search.run',
   'symbols.line',
   'symbols.definition',
+  'symbols.import',
   'symbols.workspace',
   'symbols.document',
   'comments.list',

@@ -3,7 +3,7 @@ import { EditorView } from '@codemirror/view';
 import { hoveredSymbol, type HoveredSymbol } from './symbols';
 
 export interface GotoHandlers {
-  resolveImport: (spec: string) => string | null;
+  resolveImport: (spec: string) => Promise<string | null>;
   openFile: (path: string, view: EditorView) => void;
   openSymbol: (symbol: HoveredSymbol, view: EditorView) => void;
 }
@@ -41,16 +41,22 @@ export function gotoDefinition(target: GotoTarget): Extension {
       if (!handlers) return false;
       const line = view.state.doc.lineAt(pos);
       const spec = quotedAt(line.text, pos - line.from);
-      const file = spec === null ? null : handlers.resolveImport(spec);
-      if (file !== null) {
-        e.preventDefault();
-        handlers.openFile(file, view);
+      const symbol = hoveredSymbol(view.state, pos, 1) ?? hoveredSymbol(view.state, pos, -1);
+      if (spec === null && !symbol) return false;
+      e.preventDefault();
+      if (spec === null) {
+        if (symbol) handlers.openSymbol(symbol, view);
         return true;
       }
-      const symbol = hoveredSymbol(view.state, pos, 1) ?? hoveredSymbol(view.state, pos, -1);
-      if (!symbol) return false;
-      e.preventDefault();
-      handlers.openSymbol(symbol, view);
+      void handlers.resolveImport(spec).then(
+        (file) => {
+          if (file !== null) handlers.openFile(file, view);
+          else if (symbol) handlers.openSymbol(symbol, view);
+        },
+        () => {
+          if (symbol) handlers.openSymbol(symbol, view);
+        },
+      );
       return true;
     },
   });
