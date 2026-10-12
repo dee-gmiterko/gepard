@@ -42,6 +42,8 @@ export const qk = {
     [...qk.project(p), 'diff', base, head, 'files'] as const,
   fileDiff: (p: string, base: string, head: string, path: string) =>
     [...qk.project(p), 'diff', base, head, 'file', path] as const,
+  fileAnnotations: (p: string, sha: string, path: string) =>
+    [...qk.commit(p, sha), 'annotations', path] as const,
   search: (p: string, sha: string, query: string, opts?: unknown) =>
     [...qk.commit(p, sha), 'search', query, opts] as const,
   searchPages: (p: string, sha: string, query: string, opts?: unknown) =>

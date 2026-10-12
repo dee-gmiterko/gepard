@@ -1,7 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { ReferencesPanel } from './ReferencesPanel';
-import { initialReferenceChoices, type ReferenceChoices } from '../../helpers/reference';
+import {
+  initialReferenceChoices,
+  pipelineRefsOf,
+  type ReferenceChoices,
+} from '../../helpers/reference';
+import { useFileAnnotations } from '../../queries/checks';
 import { useDerivedReferences } from './useDerivedReferences';
 import { useUpsertComment, type CommentDraftBody } from '../../queries/comments';
 import { Button } from '../../components/Button';
@@ -59,8 +64,23 @@ export function CommentEditor({
 }: CommentEditorProps): React.JSX.Element {
   const intl = useIntl();
   const [body, setBody] = useState(target.kind === 'edit' ? target.initialBody : '');
+  const { data: annotations } = useFileAnnotations(
+    target.kind === 'thread' && target.anchor.side === 'RIGHT' ? target.anchor.path : '',
+  );
+  const pipelineRefs = useMemo(() => {
+    if (target.kind === 'edit')
+      return target.initialReferences.filter((r) => r.kind === 'pipeline');
+    if (target.kind !== 'thread' || target.anchor.line === null) return [];
+    return pipelineRefsOf(annotations ?? [], target.anchor.path, target.anchor.line);
+  }, [target, annotations]);
   const [choices, setChoices] = useState<ReferenceChoices>(() =>
-    initialReferenceChoices(target.kind === 'edit' ? target.initialReferences : []),
+    initialReferenceChoices(
+      target.kind === 'edit'
+        ? target.initialReferences
+        : target.kind === 'thread'
+          ? pipelineRefs
+          : [],
+    ),
   );
   const derivedReferences = useDerivedReferences(choices, refAnchor);
   const upsert = useUpsertComment();
@@ -113,6 +133,7 @@ export function CommentEditor({
         exactData={derivedReferences.exactData}
         exactFetching={derivedReferences.exactFetching}
         patterns={derivedReferences.patterns}
+        pipelineRefs={pipelineRefs}
       />
       <ActionRow>
         {onCancel && (

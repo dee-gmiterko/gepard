@@ -12,11 +12,13 @@ import {
 } from '../../../../state/hooks';
 import { useFileDiff } from '../../../../queries/files';
 import { useComments } from '../../../../queries/comments';
+import { useFileAnnotations } from '../../../../queries/checks';
 import {
   buildDiffDoc,
   commentAffordanceGutter,
   commentBlockDecorations,
   diffGutters,
+  pipelineGutter,
   diffLineDecorations,
   revealDocLine,
   useReadOnlyEditor,
@@ -118,13 +120,22 @@ function DiffText({ path, rows }: { path: string; rows: DiffRow[] }): React.JSX.
     [doc, infos, wrapLongLines],
   );
   const { containerRef, view, comments, commentGutter } = useReadOnlyEditor(path, doc, extensions);
+  const { data: annotations } = useFileAnnotations(path);
   const [draft, setDraft] = useState<{ docLine: number; side: DiffSide } | null>(null);
   const portals = useMemo(() => new CommentPortals(), []);
 
   useEffect(() => {
     if (!view) return;
     view.dispatch({
-      effects: commentGutter.reconfigure(
+      effects: commentGutter.reconfigure([
+        pipelineGutter(
+          annotations ?? [],
+          (line) => {
+            const index = infos.findIndex((i) => i.kind !== 'delete' && i.newLine === line);
+            return index === -1 ? null : index + 1;
+          },
+          (docLine) => setDraft({ docLine, side: 'RIGHT' }),
+        ),
         commentAffordanceGutter(
           intl,
           (docLine) => {
@@ -137,9 +148,9 @@ function DiffText({ path, rows }: { path: string; rows: DiffRow[] }): React.JSX.
             setDraft({ docLine, side: kind === 'delete' ? 'LEFT' : 'RIGHT' });
           },
         ),
-      ),
+      ]),
     });
-  }, [infos, singleCommitInPr, view, commentGutter, intl]);
+  }, [infos, singleCommitInPr, view, commentGutter, intl, annotations]);
 
   useEffect(() => {
     if (!view) return;

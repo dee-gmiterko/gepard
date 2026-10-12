@@ -23,6 +23,7 @@ export const ChannelNameList = z.enum([
   'overview.project',
   'overview.pr',
   'overview.owners',
+  'checks.annotations',
   'files.changed',
   'files.diff',
   'files.content',

@@ -20,6 +20,7 @@
   "commentEditor.prCommentComposer.unassignedPlaceholder": "Leave a general comment…",
   "commentEditor.referencesPanel.alsoIn": "Also in",
   "commentEditor.referencesPanel.noMatches": "No matches — nothing will be included.",
+  "commentEditor.referencesPanel.pipelineFailure": "Pipeline failure",
   "commentEditor.referencesPanel.samePatternIn": "Same pattern <small>{pattern}</small> in:",
   "commentEditor.referencesPanel.searching": "Searching…",
   "commentEditor.referencesPanel.truncated": "Too many matches: only the first ones are shown and included.",

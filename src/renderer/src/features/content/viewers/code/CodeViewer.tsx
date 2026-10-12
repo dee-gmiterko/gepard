@@ -4,15 +4,23 @@ import { closeHoverTooltips, EditorView, lineNumbers } from '@codemirror/view';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import type { DiffRow } from '@gepard/common';
 import { useUiDispatch } from '../../../../state/UiContext';
-import { useActiveFile, useLayout, useRevealLine, useTargeting } from '../../../../state/hooks';
+import {
+  useActiveFile,
+  useCheckoutHead,
+  useLayout,
+  useRevealLine,
+  useTargeting,
+} from '../../../../state/hooks';
 import { useCurrentHead } from '../../../../queries/projects';
 import { useFileContent } from '../../../../queries/files';
 import { useComments } from '../../../../queries/comments';
+import { useFileAnnotations } from '../../../../queries/checks';
 import { useDefinitionLookup } from '../../../../queries/search';
 import {
   commentAffordanceGutter,
   commentBlockDecorations,
   fullFileDiffDecorations,
+  pipelineGutter,
   revealDocLine,
   symbolTooltip,
   useReadOnlyEditor,
@@ -90,6 +98,12 @@ function CodeText({
   const unassigned = targeting.pr === null;
   const { data: threads } = useComments();
   const head = useCurrentHead() ?? '';
+  const checkoutHead = useCheckoutHead();
+  const { data: fileAnnotations } = useFileAnnotations(path);
+  const annotations = useMemo(
+    () => (checkoutHead?.head === head ? (fileAnnotations ?? []) : []),
+    [checkoutHead, head, fileAnnotations],
+  );
   const lookupDefinition = useDefinitionLookup(head, path);
   const symbolPortals = useMemo(() => new SymbolPortals(), []);
   useLayoutEffect(() => {
@@ -136,9 +150,12 @@ function CodeText({
   useEffect(() => {
     if (!view) return;
     view.dispatch({
-      effects: commentGutter.reconfigure(commentAffordanceGutter(intl, () => true, setDraft)),
+      effects: commentGutter.reconfigure([
+        pipelineGutter(annotations, (line) => line, setDraft),
+        commentAffordanceGutter(intl, () => true, setDraft),
+      ]),
     });
-  }, [view, commentGutter, intl]);
+  }, [view, commentGutter, intl, annotations]);
 
   useEffect(() => {
     if (!view) return;

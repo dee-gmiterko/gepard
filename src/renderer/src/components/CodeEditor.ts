@@ -49,6 +49,8 @@ import { styleTags, tags } from '@lezer/highlight';
 import { LRParser } from '@lezer/lr';
 import {
   isGrammarExtension,
+  type Annotation,
+  type AnnotationLevel,
   type DefinitionResult,
   type DiffRow,
   type GrammarApi,
@@ -63,6 +65,7 @@ import { useGrammars } from '../queries/grammars';
 import type { Theme } from '../theme/tokens';
 import type { FullFileDiffMarks } from '../helpers/diff';
 import { AddedLineGutterMarker } from './AddedLineGutterMarker';
+import { PipelineMarker } from './PipelineMarker';
 import { AffordanceMarker } from './AffordanceMarker';
 import { DeletedLinesWidget } from './DeletedLinesWidget';
 import type { CommentPortals } from './CommentPortals';
@@ -146,6 +149,37 @@ export function commentAffordanceGutter(
       click: (view, line) => {
         const docLine = view.state.doc.lineAt(line.from).number;
         if (!isCommentable(docLine)) return false;
+        onClick(docLine);
+        return true;
+      },
+    },
+  });
+}
+
+const LEVEL_RANK: Record<AnnotationLevel, number> = { failure: 0, warning: 1, notice: 2 };
+
+export function pipelineGutter(
+  annotations: readonly Annotation[],
+  docLineOf: (annotationLine: number) => number | null,
+  onClick: (docLine: number) => void,
+): Extension {
+  const worst = new Map<number, Annotation>();
+  for (const a of annotations) {
+    const docLine = docLineOf(a.line);
+    if (docLine === null) continue;
+    const current = worst.get(docLine);
+    if (!current || LEVEL_RANK[a.level] < LEVEL_RANK[current.level]) worst.set(docLine, a);
+  }
+  return gutter({
+    class: 'cm-pipeline-gutter',
+    lineMarker: (view, line) => {
+      const a = worst.get(view.state.doc.lineAt(line.from).number);
+      return a ? new PipelineMarker(a.level, `${a.checkName}: ${a.message}`) : null;
+    },
+    domEventHandlers: {
+      click: (view, line) => {
+        const docLine = view.state.doc.lineAt(line.from).number;
+        if (!worst.has(docLine)) return false;
         onClick(docLine);
         return true;
       },
@@ -537,6 +571,20 @@ export function editorTheme(theme: Theme): Extension {
         padding: '0 6px',
         textAlign: 'right',
       },
+      '.cm-pipeline-gutter': {
+        width: '1.4em',
+      },
+      '.cm-pipeline-marker': {
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+        height: '100%',
+        cursor: 'pointer',
+      },
+      '.cm-pipeline-failure': { color: c.danger },
+      '.cm-pipeline-warning': { color: c.warning },
+      '.cm-pipeline-notice': { color: c.accent },
       '.cm-comment-gutter': {
         width: '1.4em',
       },
