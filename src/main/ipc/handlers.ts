@@ -13,6 +13,7 @@ import { createSyncHandlers } from './handlers/sync';
 import { logHandlers } from './handlers/log';
 import { extensionsHandlers } from './handlers/extensions';
 import { grammarsHandlers } from './handlers/grammars';
+import { systemPreferenceHandlers } from './handlers/systemPreference';
 import { themeHandlers } from './handlers/theme';
 import { localesHandlers } from './handlers/locales';
 import { keybindingsHandlers } from './handlers/keybindings';
@@ -29,6 +30,7 @@ export const handlers: HandlerMap = {
   ...logHandlers,
   ...extensionsHandlers,
   ...grammarsHandlers,
+  ...systemPreferenceHandlers,
   ...themeHandlers,
   ...localesHandlers,
   ...keybindingsHandlers,

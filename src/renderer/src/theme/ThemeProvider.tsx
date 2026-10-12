@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ThemeProvider as StyledThemeProvider, createGlobalStyle } from 'styled-components';
-import type { SystemThemePreference } from '@gepard/common';
+import type { SystemPreference, ThemeContrast } from '@gepard/common';
 import { invoke, useIpcEvent } from '../ipc/client';
 import { useThemeTemplateId, useThemes } from '../queries/theme';
 import { buildTheme } from './tokens';
@@ -13,12 +13,12 @@ function mediaMatches(query: string): boolean {
   return window.matchMedia(query).matches;
 }
 
-function getMediaHighContrast(): boolean {
-  return HIGH_CONTRAST_QUERIES.some(mediaMatches);
+function mediaContrast(): ThemeContrast {
+  return HIGH_CONTRAST_QUERIES.some(mediaMatches) ? 'high' : 'normal';
 }
 
-function getSystemPreferenceSnapshot(): SystemThemePreference {
-  return { dark: mediaMatches(DARK_QUERY), highContrast: getMediaHighContrast() };
+function mediaSystemPreference(): SystemPreference {
+  return { mode: mediaMatches(DARK_QUERY) ? 'dark' : 'light', contrast: mediaContrast() };
 }
 
 const GlobalStyle = createGlobalStyle`
@@ -52,22 +52,22 @@ const GlobalStyle = createGlobalStyle`
 `;
 
 export function AppThemeProvider({ children }: { children: ReactNode }): React.JSX.Element {
-  const [systemPreference, setSystemPreference] = useState(getSystemPreferenceSnapshot);
-  const [mediaHighContrast, setMediaHighContrast] = useState(getMediaHighContrast);
+  const [systemPreference, setSystemPreference] = useState(mediaSystemPreference);
+  const [contrast, setContrast] = useState(mediaContrast);
 
   // The main process is authoritative: its portal sync overrides themeSource, which matchMedia may not reflect.
   useEffect(() => {
-    invoke('theme.getSystemPreference')
+    invoke('systemPreference.get')
       .then(setSystemPreference)
       .catch(() => {});
   }, []);
 
-  useIpcEvent('theme.changed', setSystemPreference);
+  useIpcEvent('systemPreference.changed', setSystemPreference);
 
   // Chromium reports the OS contrast setting on Windows and macOS; main covers Linux.
   useEffect(() => {
     const lists = HIGH_CONTRAST_QUERIES.map((query) => window.matchMedia(query));
-    const update = (): void => setMediaHighContrast(lists.some((list) => list.matches));
+    const update = (): void => setContrast(mediaContrast());
     for (const list of lists) list.addEventListener('change', update);
     return () => {
       for (const list of lists) list.removeEventListener('change', update);
@@ -78,12 +78,12 @@ export function AppThemeProvider({ children }: { children: ReactNode }): React.J
   const resolvedTemplateId = templateId ?? null;
   const { data: templates } = useThemes();
   const theme = useMemo(() => {
-    const system = {
-      dark: systemPreference.dark,
-      highContrast: systemPreference.highContrast || mediaHighContrast,
+    const resolved: SystemPreference = {
+      mode: systemPreference.mode,
+      contrast: systemPreference.contrast === 'high' || contrast === 'high' ? 'high' : 'normal',
     };
-    return buildTheme(resolveTemplate(resolvedTemplateId, system, templates ?? []));
-  }, [resolvedTemplateId, systemPreference, mediaHighContrast, templates]);
+    return buildTheme(resolveTemplate(resolvedTemplateId, resolved, templates ?? []));
+  }, [resolvedTemplateId, systemPreference, contrast, templates]);
 
   return (
     <StyledThemeProvider theme={theme}>

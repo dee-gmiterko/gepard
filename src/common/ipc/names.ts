@@ -48,7 +48,7 @@ export const ChannelNameList = z.enum([
   'extensions.install',
   'extensions.dir',
   'grammars.list',
-  'theme.getSystemPreference',
+  'systemPreference.get',
   'theme.getTemplateId',
   'theme.setTemplateId',
   'themes.list',
@@ -66,7 +66,7 @@ export type ChannelNameList = z.infer<typeof ChannelNameList>;
 export const EventNameList = z.enum([
   'clone.progress',
   'index.status',
-  'theme.changed',
+  'systemPreference.changed',
   'app.error',
 ]);
 export type EventNameList = z.infer<typeof EventNameList>;

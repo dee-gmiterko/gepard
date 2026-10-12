@@ -49,8 +49,8 @@ export type ThemeMode = z.infer<typeof ThemeMode>;
 export const ThemeContrast = z.enum(['normal', 'high']);
 export type ThemeContrast = z.infer<typeof ThemeContrast>;
 
-export const SystemThemePreference = z.object({ dark: z.boolean(), highContrast: z.boolean() });
-export type SystemThemePreference = z.infer<typeof SystemThemePreference>;
+export const SystemPreference = z.object({ mode: ThemeMode, contrast: ThemeContrast });
+export type SystemPreference = z.infer<typeof SystemPreference>;
 
 export const ThemeTemplateData = z.object({
   id: z.string().min(1),
