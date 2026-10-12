@@ -203,7 +203,7 @@ export function createWorld(options: WorldOptions = {}): World {
       layout: { ...defaultLayout, ...options.layout },
     }),
     'app.viewer': () => null,
-    'theme.getSystemPrefersDark': () => false,
+    'theme.getSystemPreference': () => ({ dark: false, highContrast: false }),
     'theme.getTemplateId': () => null,
     'themes.list': () => [],
     'locale.getLocaleId': () => null,

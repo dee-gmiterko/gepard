@@ -5650,9 +5650,35 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"gepard-theme-dark-high-contrast@workspace:extensions/themes/dark-high-contrast":
+  version: 0.0.0-use.local
+  resolution: "gepard-theme-dark-high-contrast@workspace:extensions/themes/dark-high-contrast"
+  dependencies:
+    "@gepard/common": "workspace:^"
+    "@gepard/eslint-config": "workspace:^"
+    "@types/node": "npm:^26.6.4"
+    eslint: "npm:^10.11.0"
+    prettier: "npm:^3.9.9"
+    typescript: "npm:^7.0.2"
+  languageName: unknown
+  linkType: soft
+
 "gepard-theme-dark@workspace:extensions/themes/dark":
   version: 0.0.0-use.local
   resolution: "gepard-theme-dark@workspace:extensions/themes/dark"
+  dependencies:
+    "@gepard/common": "workspace:^"
+    "@gepard/eslint-config": "workspace:^"
+    "@types/node": "npm:^26.6.4"
+    eslint: "npm:^10.11.0"
+    prettier: "npm:^3.9.9"
+    typescript: "npm:^7.0.2"
+  languageName: unknown
+  linkType: soft
+
+"gepard-theme-light-high-contrast@workspace:extensions/themes/light-high-contrast":
+  version: 0.0.0-use.local
+  resolution: "gepard-theme-light-high-contrast@workspace:extensions/themes/light-high-contrast"
   dependencies:
     "@gepard/common": "workspace:^"
     "@gepard/eslint-config": "workspace:^"

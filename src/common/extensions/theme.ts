@@ -46,10 +46,14 @@ const syntaxSchema = z.object({
 export const ExtensionThemeMode = z.enum(['light', 'dark']);
 export type ExtensionThemeMode = z.infer<typeof ExtensionThemeMode>;
 
+export const ExtensionThemeContrast = z.enum(['normal', 'high']);
+export type ExtensionThemeContrast = z.infer<typeof ExtensionThemeContrast>;
+
 export const themeExtensionSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   mode: ExtensionThemeMode,
+  contrast: ExtensionThemeContrast.optional(),
   shadow: shadowSchema,
   colors: colorsSchema,
   syntax: syntaxSchema,

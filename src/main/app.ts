@@ -7,6 +7,7 @@ import { log } from './log';
 import { markRendererReady, notifyMainFailure } from './notify';
 import { formatCaughtError } from './helpers/error';
 import { startPortalThemeSync } from './helpers/portalTheme';
+import { systemThemePreference } from './helpers/systemTheme';
 import { launchService } from './services/launch';
 import { indexer } from './lsp/indexer';
 
@@ -48,12 +49,11 @@ export function bootstrap(): void {
 
       registerHandlers(handlers);
 
-      const stopPortalThemeSync = startPortalThemeSync();
+      const emitThemeChanged = (): void => emit('theme.changed', systemThemePreference());
+      const stopPortalThemeSync = startPortalThemeSync(emitThemeChanged);
       app.on('will-quit', stopPortalThemeSync);
 
-      nativeTheme.on('updated', () => {
-        emit('theme.changed', { dark: nativeTheme.shouldUseDarkColors });
-      });
+      nativeTheme.on('updated', emitThemeChanged);
 
       void launchService.startup();
       createMainWindow();

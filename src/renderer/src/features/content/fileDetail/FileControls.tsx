@@ -157,6 +157,10 @@ const Ring = styled.span`
   background: ${({ theme }) => theme.colors.success};
   pointer-events: none;
   animation: ${ring} 0.6s ease-out forwards;
+
+  @media (prefers-reduced-motion: reduce) {
+    display: none;
+  }
 `;
 
 const ViewedInput = styled.input`

@@ -48,7 +48,7 @@ export const ChannelNameList = z.enum([
   'extensions.install',
   'extensions.dir',
   'grammars.list',
-  'theme.getSystemPrefersDark',
+  'theme.getSystemPreference',
   'theme.getTemplateId',
   'theme.setTemplateId',
   'themes.list',

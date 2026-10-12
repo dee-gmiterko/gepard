@@ -1,14 +1,24 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ThemeProvider as StyledThemeProvider, createGlobalStyle } from 'styled-components';
+import type { SystemThemePreference } from '@gepard/common';
 import { invoke, useIpcEvent } from '../ipc/client';
 import { useThemeTemplateId, useThemes } from '../queries/theme';
 import { buildTheme } from './tokens';
 import { resolveTemplate } from '../helpers/theme';
 
 const DARK_QUERY = '(prefers-color-scheme: dark)';
+const HIGH_CONTRAST_QUERIES = ['(prefers-contrast: more)', '(forced-colors: active)'];
 
-function getSystemThemeSnapshot(): boolean {
-  return window.matchMedia(DARK_QUERY).matches;
+function mediaMatches(query: string): boolean {
+  return window.matchMedia(query).matches;
+}
+
+function getMediaHighContrast(): boolean {
+  return HIGH_CONTRAST_QUERIES.some(mediaMatches);
+}
+
+function getSystemPreferenceSnapshot(): SystemThemePreference {
+  return { dark: mediaMatches(DARK_QUERY), highContrast: getMediaHighContrast() };
 }
 
 const GlobalStyle = createGlobalStyle`
@@ -42,24 +52,38 @@ const GlobalStyle = createGlobalStyle`
 `;
 
 export function AppThemeProvider({ children }: { children: ReactNode }): React.JSX.Element {
-  const [systemPrefersDark, setSystemPrefersDark] = useState(getSystemThemeSnapshot);
+  const [systemPreference, setSystemPreference] = useState(getSystemPreferenceSnapshot);
+  const [mediaHighContrast, setMediaHighContrast] = useState(getMediaHighContrast);
 
   // The main process is authoritative: its portal sync overrides themeSource, which matchMedia may not reflect.
   useEffect(() => {
-    invoke('theme.getSystemPrefersDark')
-      .then(setSystemPrefersDark)
+    invoke('theme.getSystemPreference')
+      .then(setSystemPreference)
       .catch(() => {});
   }, []);
 
-  useIpcEvent('theme.changed', (payload) => setSystemPrefersDark(payload.dark));
+  useIpcEvent('theme.changed', setSystemPreference);
+
+  // Chromium reports the OS contrast setting on Windows and macOS; main covers Linux.
+  useEffect(() => {
+    const lists = HIGH_CONTRAST_QUERIES.map((query) => window.matchMedia(query));
+    const update = (): void => setMediaHighContrast(lists.some((list) => list.matches));
+    for (const list of lists) list.addEventListener('change', update);
+    return () => {
+      for (const list of lists) list.removeEventListener('change', update);
+    };
+  }, []);
 
   const { data: templateId } = useThemeTemplateId();
   const resolvedTemplateId = templateId ?? null;
   const { data: templates } = useThemes();
-  const theme = useMemo(
-    () => buildTheme(resolveTemplate(resolvedTemplateId, systemPrefersDark, templates ?? [])),
-    [resolvedTemplateId, systemPrefersDark, templates],
-  );
+  const theme = useMemo(() => {
+    const system = {
+      dark: systemPreference.dark,
+      highContrast: systemPreference.highContrast || mediaHighContrast,
+    };
+    return buildTheme(resolveTemplate(resolvedTemplateId, system, templates ?? []));
+  }, [resolvedTemplateId, systemPreference, mediaHighContrast, templates]);
 
   return (
     <StyledThemeProvider theme={theme}>

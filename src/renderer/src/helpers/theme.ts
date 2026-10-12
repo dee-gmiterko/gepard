@@ -1,4 +1,4 @@
-import type { ThemeTemplateData } from '@gepard/common';
+import type { SystemThemePreference, ThemeTemplateData } from '@gepard/common';
 
 export const FALLBACK_TEMPLATE: ThemeTemplateData = {
   id: '__fallback__',
@@ -48,16 +48,17 @@ export const FALLBACK_TEMPLATE: ThemeTemplateData = {
 
 export function resolveTemplate(
   selectedId: string | null,
-  systemPrefersDark: boolean,
+  system: SystemThemePreference,
   templates: readonly ThemeTemplateData[],
 ): ThemeTemplateData {
   if (selectedId !== null) {
     const selected = templates.find((template) => template.id === selectedId);
     if (selected) return selected;
   }
-  const systemMode = systemPrefersDark ? 'dark' : 'light';
-  const byMode = templates.find((template) => template.mode === systemMode);
-  if (byMode) return byMode;
+  const systemMode = system.dark ? 'dark' : 'light';
+  const systemContrast = system.highContrast ? 'high' : 'normal';
+  const byMode = templates.filter((template) => template.mode === systemMode);
+  const byContrast = byMode.find((template) => (template.contrast ?? 'normal') === systemContrast);
 
-  return templates[0] ?? FALLBACK_TEMPLATE;
+  return byContrast ?? byMode[0] ?? templates[0] ?? FALLBACK_TEMPLATE;
 }
