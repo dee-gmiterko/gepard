@@ -1,3 +1,10 @@
 {
-  ".": "0.1.2"
+  ".": "0.1.2",
+  "extensions/lsp/typescript": "0.1.0",
+  "extensions/lsp/python": "0.1.0",
+  "extensions/lsp/java": "0.1.0",
+  "extensions/lsp/csharp": "0.1.0",
+  "extensions/lsp/cpp": "0.1.0",
+  "extensions/lsp/php": "0.1.0",
+  "extensions/lsp/gdscript": "0.1.0"
 }

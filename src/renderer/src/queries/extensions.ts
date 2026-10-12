@@ -20,6 +20,41 @@ export function useSetExtensionEnabled() {
   });
 }
 
+function invalidateInstalled(qc: ReturnType<typeof useQueryClient>): Promise<unknown> {
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: qk.extensions() }),
+    qc.invalidateQueries({ queryKey: qk.extensionCatalog() }),
+    qc.invalidateQueries({ queryKey: qk.grammars() }),
+  ]);
+}
+
+export function useExtensionCatalog() {
+  return useQuery({
+    queryKey: qk.extensionCatalog(),
+    queryFn: () => invoke('extensions.catalog'),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useInstallFromCatalog() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { name: string }) => invoke('extensions.installFromCatalog', input),
+    onSuccess: (extensions) => qc.setQueryData(qk.extensions(), extensions),
+    onSettled: () => invalidateInstalled(qc),
+  });
+}
+
+export function useInstallFromRepo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { repository: string; path: string | null }) =>
+      invoke('extensions.installFromRepo', input),
+    onSuccess: (extensions) => qc.setQueryData(qk.extensions(), extensions),
+    onSettled: () => invalidateInstalled(qc),
+  });
+}
+
 export function useExtensionsDir() {
   return useQuery({ queryKey: qk.extensionsDir(), queryFn: () => invoke('extensions.dir') });
 }

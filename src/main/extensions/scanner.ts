@@ -23,6 +23,7 @@ export async function readManifest(pkgDir: string): Promise<PackageManifest> {
 export interface LoadedExtensionPackage<T> {
   extension: T;
   dir: string;
+  manifest: PackageManifest;
 }
 
 export interface FailedExtensionPackage {
@@ -39,7 +40,9 @@ export interface DisabledExtensionPackage {
 export type Sourced<T> = T & { source: ExtensionSource };
 
 export type ScanEntry<T> =
-  { extension: T } | { error: string } | { disabled: extensionsStore.KnownFile };
+  | { extension: T; manifest: PackageManifest }
+  | { error: string }
+  | { disabled: extensionsStore.KnownFile };
 
 export type ScanCache<T> = Map<string, ScanEntry<T>>;
 
@@ -82,7 +85,7 @@ export async function loadExtensionPackages<T>(
     const prior = previous.get(pkgDir);
     if (prior && 'extension' in prior) {
       cache.set(pkgDir, prior);
-      loaded.push({ extension: prior.extension, dir: pkgDir });
+      loaded.push({ extension: prior.extension, dir: pkgDir, manifest: prior.manifest });
       continue;
     }
     if (prior && 'error' in prior) {
@@ -120,9 +123,9 @@ export async function loadExtensionPackages<T>(
         failed.push({ dir: pkgDir, error: entry.error });
         continue;
       }
-      const entry: ScanEntry<T> = { extension: candidate };
+      const entry: ScanEntry<T> = { extension: candidate, manifest };
       cache.set(pkgDir, entry);
-      loaded.push({ extension: candidate, dir: pkgDir });
+      loaded.push({ extension: candidate, dir: pkgDir, manifest });
     } catch (e) {
       const entry: ScanEntry<T> = { error: errorMessage(e) };
       cache.set(pkgDir, entry);

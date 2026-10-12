@@ -1,3 +1,4 @@
+export * from './catalog';
 export * from './grammar';
 export * from './importResolution';
 export * from './language';

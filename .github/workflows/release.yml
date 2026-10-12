@@ -19,6 +19,8 @@ jobs:
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
+      releases_created: ${{ steps.release.outputs.releases_created }}
+      all_outputs: ${{ toJSON(steps.release.outputs) }}
     steps:
       - id: release
         uses: googleapis/release-please-action@v5
@@ -61,3 +63,53 @@ jobs:
           shopt -s nullglob
           files=(src/app/dist/*.AppImage src/app/dist/*-setup.exe src/app/dist/*.dmg)
           gh release upload "$TAG" "${files[@]}" --clobber
+
+  extensions-matrix:
+    needs: release-please
+    if: needs.release-please.outputs.releases_created == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      count: ${{ steps.matrix.outputs.count }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - id: matrix
+        env:
+          RELEASE_OUTPUTS: ${{ needs.release-please.outputs.all_outputs }}
+        run: node scripts/extension-release-matrix.ts
+
+  build-extensions:
+    needs: [release-please, extensions-matrix]
+    if: needs.extensions-matrix.outputs.count != '0'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.extensions-matrix.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ matrix.tag }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: yarn install --immutable
+      - name: Vendor the platform payload
+        if: matrix.platform != 'any'
+        env:
+          GEPARD_VENDOR_TARGETS: ${{ matrix.platform }}
+        run: |
+          rm -rf "${{ matrix.path }}/vendor"
+          yarn workspace "${{ matrix.name }}" run vendor
+      - run: yarn turbo run build --filter="${{ matrix.name }}"
+      - name: Pack
+        id: pack
+        run: echo "archive=$(node scripts/pack-extension.ts "${{ matrix.path }}" "${{ matrix.platform }}" dist-release)" >> "$GITHUB_OUTPUT"
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ matrix.tag }}" "${{ steps.pack.outputs.archive }}" "${{ steps.pack.outputs.archive }}.sha256" --clobber

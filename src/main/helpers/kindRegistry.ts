@@ -1,6 +1,7 @@
 import * as path from 'node:path';
-import { cp, mkdir } from 'node:fs/promises';
+import { cp, mkdir, readdir, rm } from 'node:fs/promises';
 import {
+  errorMessage,
   isErrnoException,
   type ExtensionInfo,
   type ExtensionKind,
@@ -12,6 +13,7 @@ import * as extensionsStore from '../store/extensions';
 import * as settingsStore from '../store/settings';
 import {
   loadExtensionPackages,
+  readManifest,
   type DisabledExtensionPackage,
   type FailedExtensionPackage,
   type LoadedExtensionPackage,
@@ -30,6 +32,13 @@ export interface KindSpec<T> {
 interface KnownExtension<T> {
   extension: T;
   source: ExtensionSource;
+  packageName?: string;
+  version?: string;
+}
+
+export interface InstallOptions {
+  dirName?: string;
+  replacePackage?: string;
 }
 
 export class KindRegistry<T> {
@@ -110,25 +119,31 @@ export class KindRegistry<T> {
   }
 
   private known(): KnownExtension<T>[] {
-    return [
-      ...this.builtin.map(({ extension }): KnownExtension<T> => ({ extension, source: 'builtin' })),
-      ...this.external.map(({ extension }): KnownExtension<T> => ({
+    const describe =
+      (source: ExtensionSource) =>
+      ({ extension, manifest }: LoadedExtensionPackage<T>): KnownExtension<T> => ({
         extension,
-        source: 'external',
-      })),
-    ];
+        source,
+        packageName: manifest.name,
+        version: manifest.version,
+      });
+    return [...this.builtin.map(describe('builtin')), ...this.external.map(describe('external'))];
   }
 
   async list(): Promise<ExtensionInfo[]> {
     const enabledMap = await settingsStore.getEnabledMap();
     await this.rescan(enabledMap);
-    const known = this.known().map(({ extension, source }): ExtensionInfo => ({
-      id: this.spec.getId(extension),
-      displayName: this.spec.getDisplayName(extension),
-      kind: this.spec.kind,
-      source,
-      enabled: enabledMap[this.spec.getId(extension)] ?? true,
-    }));
+    const known = this.known().map(
+      ({ extension, source, packageName, version }): ExtensionInfo => ({
+        id: this.spec.getId(extension),
+        displayName: this.spec.getDisplayName(extension),
+        kind: this.spec.kind,
+        source,
+        enabled: enabledMap[this.spec.getId(extension)] ?? true,
+        packageName,
+        version,
+      }),
+    );
     const broken = this.failed.map(({ dir, error, source }): ExtensionInfo => ({
       id: dir,
       displayName: path.basename(dir),
@@ -137,19 +152,61 @@ export class KindRegistry<T> {
       enabled: false,
       error,
     }));
-    const disabled = this.allDisabled.map(({ id, displayName, source }): ExtensionInfo => ({
-      id,
-      displayName,
-      kind: this.spec.kind,
-      source,
-      enabled: false,
-    }));
+    const disabled = await Promise.all(
+      this.allDisabled.map(async ({ id, displayName, source, dir }): Promise<ExtensionInfo> => {
+        const manifest = await readManifest(dir).catch(() => undefined);
+        return {
+          id,
+          displayName,
+          kind: this.spec.kind,
+          source,
+          enabled: false,
+          packageName: manifest?.name,
+          version: manifest?.version,
+        };
+      }),
+    );
     return [...known, ...broken, ...disabled];
   }
 
-  async install(srcDir: string): Promise<void> {
-    const name = path.basename(srcDir);
+  private async removeExternalPackage(packageName: string): Promise<void> {
+    let names: string[];
+    try {
+      names = (await readdir(this.userDir, { withFileTypes: true }))
+        .filter((e) => e.isDirectory())
+        .map((e) => e.name);
+    } catch (e) {
+      if (isErrnoException(e) && e.code === 'ENOENT') return;
+      throw e;
+    }
+    for (const name of names) {
+      const dir = path.join(this.userDir, name);
+      let installedName: string | undefined;
+      try {
+        installedName = (await readManifest(dir)).name;
+      } catch {
+        continue;
+      }
+      if (installedName !== packageName) continue;
+      try {
+        await rm(dir, { recursive: true, force: true });
+      } catch (e) {
+        throw new AppError(
+          'EXTENSION_IN_USE',
+          `"${name}" could not be removed (${errorMessage(e)}); restart Gepard and try again.`,
+        );
+      }
+      this.externalScanCache.delete(dir);
+    }
+  }
+
+  async install(srcDir: string, options: InstallOptions = {}): Promise<void> {
+    const name = options.dirName ?? path.basename(srcDir);
     await mkdir(this.userDir, { recursive: true });
+    if (options.replacePackage !== undefined) {
+      await this.removeExternalPackage(options.replacePackage);
+      await rm(path.join(this.userDir, name), { recursive: true, force: true });
+    }
     try {
       await cp(srcDir, path.join(this.userDir, name), {
         recursive: true,

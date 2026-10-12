@@ -7,6 +7,7 @@ export const qk = {
   projects: () => [...qk.all, 'projects'] as const,
   extensions: () => [...qk.all, 'extensions'] as const,
   extensionsDir: () => [...qk.all, 'extensionsDir'] as const,
+  extensionCatalog: () => [...qk.all, 'extensionCatalog'] as const,
   grammars: () => [...qk.all, 'grammars'] as const,
   logPath: () => [...qk.all, 'logPath'] as const,
   connectivity: () => [...qk.all, 'connectivity'] as const,

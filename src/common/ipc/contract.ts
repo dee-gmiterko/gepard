@@ -38,7 +38,7 @@ import {
 } from './schemas/lsp';
 import { LogLevel } from './schemas/log';
 import { ChangedFileOwners, PrOverviewDetails, ProjectOverview } from './schemas/overview';
-import { ExtensionInfo } from './schemas/extensions';
+import { ExtensionCatalogStatus, ExtensionInfo } from './schemas/extensions';
 import { GrammarModule } from './schemas/grammar';
 import { SystemPreference, ThemeTemplateData } from './schemas/theme';
 import { LocaleData } from './schemas/locale';
@@ -226,6 +226,15 @@ export const channels = {
     output: z.array(ExtensionInfo),
   },
   'extensions.dir': { input: z.void(), output: z.string() },
+  'extensions.catalog': { input: z.void(), output: ExtensionCatalogStatus },
+  'extensions.installFromCatalog': {
+    input: z.object({ name: z.string().min(1) }),
+    output: z.array(ExtensionInfo),
+  },
+  'extensions.installFromRepo': {
+    input: z.object({ repository: z.string().min(1), path: z.string().nullable() }),
+    output: z.array(ExtensionInfo),
+  },
 
   'grammars.list': { input: z.void(), output: z.array(GrammarModule) },
 

@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "repository": "dee-gmiterko/gepard",
+  "extensions": {
+    "gepard-ext-typescript": {
+      "displayName": "TypeScript and JavaScript",
+      "kind": "lsp",
+      "description": "Code intelligence for TypeScript and JavaScript projects (native TypeScript language server).",
+      "path": "extensions/lsp/typescript",
+      "version": "0.1.0",
+      "platforms": [
+        "linux-x64",
+        "linux-arm64",
+        "darwin-x64",
+        "darwin-arm64",
+        "win32-x64",
+        "win32-arm64"
+      ]
+    },
+    "gepard-ext-python": {
+      "displayName": "Python",
+      "kind": "lsp",
+      "description": "Code intelligence for Python projects (Pyright).",
+      "path": "extensions/lsp/python",
+      "version": "0.1.0",
+      "platforms": ["any"]
+    },
+    "gepard-ext-java": {
+      "displayName": "Java",
+      "kind": "lsp",
+      "description": "Code intelligence for Java projects (Eclipse JDT Language Server).",
+      "path": "extensions/lsp/java",
+      "version": "0.1.0",
+      "platforms": ["any"]
+    },
+    "gepard-ext-csharp": {
+      "displayName": "C#",
+      "kind": "lsp",
+      "description": "Code intelligence for C# projects (Roslyn language server).",
+      "path": "extensions/lsp/csharp",
+      "version": "0.1.0",
+      "platforms": [
+        "linux-x64",
+        "linux-arm64",
+        "darwin-x64",
+        "darwin-arm64",
+        "win32-x64",
+        "win32-arm64"
+      ]
+    },
+    "gepard-ext-cpp": {
+      "displayName": "C/C++",
+      "kind": "lsp",
+      "description": "Code intelligence for C and C++ projects (clangd, downloaded on first use).",
+      "path": "extensions/lsp/cpp",
+      "version": "0.1.0",
+      "platforms": ["any"]
+    },
+    "gepard-ext-php": {
+      "displayName": "PHP",
+      "kind": "lsp",
+      "description": "Code intelligence for PHP projects (PHPantom, downloaded on first use).",
+      "path": "extensions/lsp/php",
+      "version": "0.1.0",
+      "platforms": ["any"]
+    },
+    "gepard-ext-gdscript": {
+      "displayName": "GDScript",
+      "kind": "lsp",
+      "description": "Code intelligence for Godot projects (headless Godot editor language server).",
+      "path": "extensions/lsp/gdscript",
+      "version": "0.1.0",
+      "platforms": ["any"]
+    }
+  }
+}

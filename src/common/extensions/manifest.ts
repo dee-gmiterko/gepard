@@ -4,6 +4,8 @@ import { extensionLanguageSchema } from './language';
 const functionSchema = z.custom<(...args: never[]) => unknown>((v) => typeof v === 'function');
 
 export const packageManifestSchema = z.looseObject({
+  name: z.string().optional(),
+  version: z.string().optional(),
   main: z.string().optional(),
   gepard: z.looseObject({ type: z.string().optional() }).optional(),
 });
