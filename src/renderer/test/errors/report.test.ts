@@ -30,7 +30,7 @@ const connectionFailure = (): AppError =>
   );
 
 describe('reportQueryError with a connection failure', () => {
-  it('reports a dedicated localized message for an explicit action', () => {
+  it('reports a minimal warning without details for an explicit action', () => {
     const reported = capture(() =>
       reportQueryError('mutation:sync', connectionFailure(), { explicit: true }),
     );
@@ -38,10 +38,9 @@ describe('reportQueryError with a connection failure', () => {
     expect(reported[0]).toMatchObject({
       scope: 'mutation:sync',
       message: { id: 'errors.code.connectionFailed' },
+      tone: 'warning',
     });
-    expect(reported[0].detail).toContain('error connecting to api.github.com');
-    expect(reported[0].detail).toContain('channel=sync.run code=CONNECTION_FAILED');
-    expect(reported[0].detail).toContain('details={"cmd":"gh"}');
+    expect(reported[0].detail).toBeUndefined();
   });
 
   it('stays silent for a background query', () => {

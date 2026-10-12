@@ -46,8 +46,11 @@ export function reportQueryError(
   { explicit = false }: ReportQueryErrorOptions = {},
 ): void {
   if (error instanceof AbortError || error instanceof StaleShaError) return;
-  if (error instanceof ConnectionError && !explicit) return;
   const { message, detail } = describeError(error);
+  if (error instanceof ConnectionError) {
+    if (explicit) reportError({ scope, message, tone: 'warning' });
+    return;
+  }
   reportError({ scope, message, detail: mergeDetail(detail, errorDetail(error)) });
 }
 

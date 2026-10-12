@@ -267,6 +267,16 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
       if (state.mainTab === action.tab) return state;
       return { ...state, mainTab: action.tab };
     case 'toast/push':
+      if (
+        state.toasts.some(
+          (t) =>
+            t.tone === action.toast.tone &&
+            t.message === action.toast.message &&
+            t.detail === action.toast.detail,
+        )
+      ) {
+        return state;
+      }
       return { ...state, toasts: [...state.toasts, action.toast] };
     case 'toast/dismiss':
       if (!state.toasts.some((t) => t.id === action.id)) return state;
