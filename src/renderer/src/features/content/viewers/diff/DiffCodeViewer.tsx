@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { EditorView } from '@codemirror/view';
 import { useIntl } from 'react-intl';
 import type { DiffRow, DiffSide } from '@gepard/common';
@@ -24,7 +24,7 @@ import { diffViewCommentEntries } from '../../../../helpers/comment';
 import { buildDiffDoc, findDiffDocLine, newLineOfDocLine } from '../../../../helpers/diff';
 import { EditorHost } from '../../../../components/EditorHost';
 import { CommentPortalHost } from '../CommentPortalHost';
-import { useOpenLocation, useSymbolPortals } from '../useSymbolNavigation';
+import { useGotoDefinition, useOpenLocation, useSymbolPortals } from '../useSymbolNavigation';
 import { useViewerAnnotations } from '../useViewerAnnotations';
 import { SymbolPopupHost } from '../code/SymbolPopup';
 
@@ -50,6 +50,11 @@ export function DiffCodeViewer({
   const symbolPortals = useSymbolPortals(head, path);
 
   const { doc, infos } = useMemo(() => buildDiffDoc(rows), [rows]);
+  const gotoLine = useCallback(
+    (docLine: number): number | null => (newSideIsHead ? newLineOfDocLine(infos, docLine) : null),
+    [infos, newSideIsHead],
+  );
+  const goto = useGotoDefinition(path, symbolPortals, gotoLine);
   const wrapLongLines = layout.wrapLongLines;
   const extensions = useMemo(() => {
     const fileLineOf = (docLine: number): number | null => newLineOfDocLine(infos, docLine);
@@ -57,10 +62,11 @@ export function DiffCodeViewer({
       ...diffGutters(infos),
       diffLineDecorations(doc, infos),
       symbolTooltip(symbolPortals, newSideIsHead ? fileLineOf : () => null),
+      goto,
       lineContextMenu(path, fileLineOf),
       wrapLongLines ? EditorView.lineWrapping : [],
     ];
-  }, [doc, infos, symbolPortals, newSideIsHead, path, wrapLongLines]);
+  }, [doc, infos, symbolPortals, goto, newSideIsHead, path, wrapLongLines]);
   const { containerRef, view, comments, commentGutter } = useReadOnlyEditor(path, doc, extensions);
   const [draft, setDraft] = useState<{ docLine: number; side: DiffSide } | null>(null);
   const portals = useMemo(() => new CommentPortals(), []);
