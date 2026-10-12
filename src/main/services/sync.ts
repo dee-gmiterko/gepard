@@ -1,4 +1,4 @@
-import { AppError, RemoteNotFoundError } from '@gepard/common';
+import { AppError, generalCommentAnchor, RemoteNotFoundError } from '@gepard/common';
 import type { SyncMode } from '@gepard/common';
 import { log } from '../log';
 import { GhService, ghService as defaultGhService } from './gh';
@@ -15,6 +15,7 @@ import {
   mergeThreads,
   mergeViewed,
   type PendingGroup,
+  withFileReference,
 } from '../helpers/github/reviewMapping';
 
 interface PushOutcome {
@@ -190,6 +191,35 @@ export class SyncService {
     return pushedCount;
   }
 
+  // Files outside the diff cannot hold review threads, so the comment goes global with a file:line reference.
+  private async pushThreadAsGeneralComment(
+    projectId: string,
+    pr: number,
+    store: ReviewStoreFile,
+    prId: string,
+    thread: ReviewStoreFile['threads'][number],
+    root: ReviewStoreFile['threads'][number]['comments'][number],
+    body: string,
+  ): Promise<void> {
+    const text = withFileReference(thread.anchor.path, thread.anchor.line, body);
+    const result = await this.gh.addGeneralComment(prId, text);
+    const oldThreadId = thread.id;
+    thread.id = result.id;
+    thread.anchor = generalCommentAnchor();
+    thread.isResolved = false;
+    thread.local = undefined;
+    root.id = result.id;
+    root.threadId = thread.id;
+    root.createdAt = result.createdAt;
+    root.updatedAt = result.updatedAt;
+    root.body = text;
+    root.local = undefined;
+    for (const c of thread.comments) {
+      if (c.threadId === oldThreadId) c.threadId = thread.id;
+    }
+    await review.saveReview(projectId, pr, store);
+  }
+
   private async ensureOwnPendingReview(
     projectId: string,
     pr: number,
@@ -249,6 +279,11 @@ export class SyncService {
         startLine: thread.anchor.startLine,
         startSide: thread.anchor.startSide,
       });
+      if (!result) {
+        await this.pushThreadAsGeneralComment(projectId, pr, store, prId, thread, root, body);
+        pushedCount++;
+        continue;
+      }
       const oldThreadId = thread.id;
       const oldRootId = root.id;
       thread.id = result.thread.id;

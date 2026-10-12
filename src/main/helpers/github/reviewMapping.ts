@@ -165,6 +165,10 @@ export function isViewedDirty(v: LocalViewedState): boolean {
   );
 }
 
+export function withFileReference(path: string, line: number | null, body: string): string {
+  return `${line === null ? path : `${path}:${line}`}\n\n${body}`;
+}
+
 export function composeBody(comment: Comment): string {
   const refs = comment.local?.references ?? [];
   if (refs.length === 0) return comment.body;

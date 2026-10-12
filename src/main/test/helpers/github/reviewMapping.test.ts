@@ -10,6 +10,7 @@ import {
   mapThread,
   mergeThreads,
   mergeViewed,
+  withFileReference,
 } from '../../../helpers/github/reviewMapping';
 import {
   type Comment,
@@ -850,5 +851,15 @@ describe('countPendingChanges', () => {
         lastSuccessfulSyncAt: null,
       }),
     ).toBe(3);
+  });
+});
+
+describe('withFileReference', () => {
+  it('prefixes the body with path:line for a comment on a file outside the diff', () => {
+    expect(withFileReference('src/a.ts', 12, 'note')).toBe('src/a.ts:12\n\nnote');
+  });
+
+  it('uses the bare path when there is no line', () => {
+    expect(withFileReference('src/a.ts', null, 'note')).toBe('src/a.ts\n\nnote');
   });
 });
