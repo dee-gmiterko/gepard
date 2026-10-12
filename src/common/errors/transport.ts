@@ -22,7 +22,6 @@ const kinds = new Map<string, Rebuild>(
   }),
 );
 
-// Node's own AbortError (an aborted child process) is not an AppError.
 export function toIpcErrorShape(error: unknown): IpcErrorShape {
   if (error instanceof AppError)
     return { kind: error.name, code: error.code, message: error.message, details: error.details };
