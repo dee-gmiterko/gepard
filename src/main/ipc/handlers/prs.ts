@@ -73,9 +73,9 @@ export function createPrsHandlers(
       return issue;
     },
 
-    'checks.annotations': async ({ projectId, sha, path }) => {
+    'checks.annotations': async ({ projectId, sha }) => {
       const { owner, repo } = await gh.repoRefFor(projectId);
-      return gh.fileAnnotations(owner, repo, sha, path);
+      return gh.commitAnnotations(owner, repo, sha);
     },
 
     'overview.project': async ({ projectId }) => {

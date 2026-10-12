@@ -40,6 +40,8 @@ export const CommentReference = z.object({
   line: z.int(),
   kind: ReferenceKind,
   detail: z.string().optional(),
+  runId: z.int().optional(),
+  url: z.string().optional(),
 });
 export type CommentReference = z.infer<typeof CommentReference>;
 

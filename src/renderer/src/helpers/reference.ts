@@ -33,6 +33,8 @@ export function pipelineRefsOf(
       line,
       kind: 'pipeline',
       detail: `${a.checkName}: ${a.title ? `${a.title} — ` : ''}${a.message}`,
+      runId: a.runId,
+      url: a.url,
     }));
 }
 

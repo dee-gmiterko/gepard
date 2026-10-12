@@ -78,7 +78,7 @@ export function FileComments({ path }: FileCommentsProps): React.JSX.Element {
   const [openId, setOpenId] = useState<string | null>(null);
   const [addingNew, setAddingNew] = useState(false);
 
-  // Must stay in sync with the inline gutter filter in components/CodeEditor.ts.
+  // Must stay in sync with the inline gutter filter in codeEditor/commentAffordance.ts.
   const fileThreads = useMemo(
     () =>
       threads

@@ -8,11 +8,11 @@ import { MatchLine } from '../../components/MatchLine';
 import { Message } from '../../components/Message';
 import { ScopeToggle } from '../../components/ScopeToggle';
 import type { SearchScope } from '@gepard/common';
+import { PipelineFailureSection } from './PipelineFailureSection';
 import { SymbolDefinitionSection, type LineSymbol } from './SymbolDefinitionSection';
 import {
   isPatternOpen,
   patternScopeOf,
-  sameRef,
   toggleRefIn,
   type ReferenceChoices,
 } from '../../helpers/reference';
@@ -36,10 +36,6 @@ const messages = defineMessages({
   samePatternIn: {
     id: 'commentEditor.referencesPanel.samePatternIn',
     defaultMessage: 'Same pattern <small>{pattern}</small> in:',
-  },
-  pipelineFailure: {
-    id: 'commentEditor.referencesPanel.pipelineFailure',
-    defaultMessage: 'Pipeline failure',
   },
   truncated: {
     id: 'commentEditor.referencesPanel.truncated',
@@ -189,34 +185,21 @@ export function ReferencesPanel({
     onChoicesChange((prev) => ({ ...prev, pipeline: toggleRefIn(prev.pipeline, pipelineRef) }));
   }
 
-  const pipelineSections = pipelineRefs.map((r) => {
-    const checked = choices.pipeline.some((c) => sameRef(c, r));
-    return (
-      <Accordion
-        key={r.detail}
-        open={checked}
-        onToggle={() => togglePipelineRef(r)}
-        leading={
-          <Checkbox
-            checked={checked}
-            ariaLabel={intl.formatMessage(messages.pipelineFailure)}
-            onChange={() => togglePipelineRef(r)}
-          />
-        }
-        title={<FormattedMessage {...messages.pipelineFailure} />}
-      >
-        <Message layout="inline">{r.detail}</Message>
-      </Accordion>
-    );
-  });
+  const pipelineSection = (
+    <PipelineFailureSection
+      refs={pipelineRefs}
+      selected={choices.pipeline}
+      onToggleRef={togglePipelineRef}
+    />
+  );
 
   if (!refAnchor) {
-    return pipelineSections.length > 0 ? <Stack>{pipelineSections}</Stack> : null;
+    return pipelineRefs.length > 0 ? pipelineSection : null;
   }
 
   return (
     <Stack>
-      {pipelineSections}
+      {pipelineRefs.length > 0 && pipelineSection}
       {!symbolDisabled && (
         <SymbolDefinitionSection
           refAnchor={refAnchor}
