@@ -21,8 +21,10 @@ export function MassActions({ path }: { path: string }): React.JSX.Element | nul
   if (same.length === 0 && similar.length === 0) return null;
   return (
     <Stack>
-      {same.length > 0 && <MassActionRow message={messages.same} paths={same} />}
-      {similar.length > 0 && <MassActionRow message={messages.similar} paths={similar} />}
+      {same.length > 0 && <MassActionRow message={messages.same} paths={[path, ...same]} />}
+      {similar.length > 0 && (
+        <MassActionRow message={messages.similar} paths={[path, ...similar]} />
+      )}
     </Stack>
   );
 }

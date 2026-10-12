@@ -60,10 +60,10 @@ export function MassActionRow({
     <Stack $gap={1}>
       <Inline>
         <Title>
-          <FormattedMessage {...message} values={{ count: paths.length }} />
+          <FormattedMessage {...message} values={{ count: paths.length - 1 }} />
         </Title>
         <Button
-          variant={applied ? 'primary' : 'secondary'}
+          variant={applied ? 'secondary' : 'primary'}
           aria-pressed={applied}
           onClick={() => setViewed.mutate({ paths, viewed: !applied })}
         >
