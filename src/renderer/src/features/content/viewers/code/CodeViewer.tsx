@@ -21,7 +21,7 @@ import { deletedLineDocLines, fullFileDiffMarks } from '../../../../helpers/diff
 import { EditorHost } from '../../../../components/EditorHost';
 import { Message } from '../../../../components/Message';
 import { CommentPortalHost } from '../CommentPortalHost';
-import { useOpenLocation, useSymbolPortals } from '../useSymbolNavigation';
+import { useGotoDefinition, useOpenLocation, useSymbolPortals } from '../useSymbolNavigation';
 import { useViewerAnnotations } from '../useViewerAnnotations';
 import { ImageViewer } from '../image/ImageViewer';
 import { MissingViewer } from '../missing/MissingViewer';
@@ -90,16 +90,18 @@ function CodeText({
   const annotations = useViewerAnnotations(path);
   const symbolPortals = useSymbolPortals(head, path);
   const wrapLongLines = layout.wrapLongLines;
+  const goto = useGotoDefinition(path, symbolPortals);
   const diffCompartment = useMemo(() => new Compartment(), []);
   const extensions = useMemo(
     () => [
       lineNumbers(),
       symbolTooltip(symbolPortals),
+      goto,
       lineContextMenu(path),
       wrapLongLines ? EditorView.lineWrapping : [],
       diffCompartment.of([]),
     ],
-    [symbolPortals, path, wrapLongLines, diffCompartment],
+    [symbolPortals, goto, path, wrapLongLines, diffCompartment],
   );
   const { containerRef, view, comments, commentGutter } = useReadOnlyEditor(path, text, extensions);
   const [draft, setDraft] = useState<number | null>(null);
