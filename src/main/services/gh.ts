@@ -600,11 +600,13 @@ export class GhService {
     const key = `${owner}/${repo}@${sha}`;
     let entry = this.annotationCache.get(key);
     if (!entry || Date.now() - entry.at > ANNOTATIONS_TTL_MS) {
-      const load = this.graphql(CommitAnnotationsResponse, COMMIT_ANNOTATIONS_QUERY, {
-        owner,
-        name: repo,
-        sha,
-      }).then(parseCommitAnnotations);
+      const load = this.gh
+        .graphql(CommitAnnotationsResponse, COMMIT_ANNOTATIONS_QUERY, {
+          owner,
+          name: repo,
+          sha,
+        })
+        .then(parseCommitAnnotations);
       entry = { at: Date.now(), load };
       this.annotationCache.set(key, entry);
       load.catch(() => this.annotationCache.delete(key));
