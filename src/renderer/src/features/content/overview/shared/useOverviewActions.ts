@@ -11,6 +11,7 @@ export interface OverviewActions {
   openFiles: () => void;
   openFile: (path: string) => void;
   openFolder: (path: string) => void;
+  openExtension: (extension: string) => void;
   openCommit: (sha: string) => void;
 }
 
@@ -35,6 +36,10 @@ export function useOverviewActions(): OverviewActions {
     openFile: (path) => dispatch({ type: 'file/open', path }),
     openFolder: (path) => {
       setPath(path);
+      dispatch({ type: 'mainTab/set', tab: 'files' });
+    },
+    openExtension: (extension) => {
+      setPath(`**/*${extension}`);
       dispatch({ type: 'mainTab/set', tab: 'files' });
     },
     openCommit: (sha) => {
