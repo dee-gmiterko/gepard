@@ -44,15 +44,22 @@ describe('language server on fixtures', () => {
 
   it('parses a class and reports its members', async () => {
     const symbols = await session.documentSymbols('Store.cs');
-    expect(symbols.map((s) => s.name)).toEqual(['Store']);
-    expect(symbols[0].kind).toBe('class');
-    expect(symbols[0].children.map((c) => c.name).sort()).toEqual(['Add', 'Items']);
+    expect(symbols.map((s) => s.name)).toEqual(['Gepard.Fixtures']);
+    const store = symbols[0].children[0];
+    expect(store.name).toBe('Store');
+    expect(store.kind).toBe('class');
+    expect(store.children.map((c) => c.name).sort()).toEqual([
+      'Add(string) : void',
+      'Items : List<string>',
+    ]);
   });
 
   it('parses an interface and reports its members', async () => {
     const symbols = await session.documentSymbols('IRepository.cs');
-    expect(symbols.map((s) => s.name)).toEqual(['IRepository']);
-    expect(symbols[0].kind).toBe('interface');
-    expect(symbols[0].children.map((c) => c.name)).toEqual(['Load']);
+    expect(symbols.map((s) => s.name)).toEqual(['Gepard.Fixtures']);
+    const repository = symbols[0].children[0];
+    expect(repository.name).toBe('IRepository');
+    expect(repository.kind).toBe('interface');
+    expect(repository.children.map((c) => c.name)).toEqual(['Load() : Store']);
   });
 });
