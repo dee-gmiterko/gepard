@@ -18,10 +18,10 @@ const lightHc = tpl('l-hc', 'light', 'high');
 const darkHc = tpl('d-hc', 'dark', 'high');
 const all = [darkHc, lightHc, dark, light];
 
-const normal: SystemPreference = { mode: 'light', contrast: 'normal' };
-const darkNormal: SystemPreference = { mode: 'dark', contrast: 'normal' };
-const lightHigh: SystemPreference = { mode: 'light', contrast: 'high' };
-const darkHigh: SystemPreference = { mode: 'dark', contrast: 'high' };
+const normal: SystemPreference = { mode: 'light', contrast: 'normal', reducedMotion: false };
+const darkNormal: SystemPreference = { mode: 'dark', contrast: 'normal', reducedMotion: false };
+const lightHigh: SystemPreference = { mode: 'light', contrast: 'high', reducedMotion: false };
+const darkHigh: SystemPreference = { mode: 'dark', contrast: 'high', reducedMotion: false };
 
 describe('resolveTemplate', () => {
   it('uses the selected template when it exists', () => {

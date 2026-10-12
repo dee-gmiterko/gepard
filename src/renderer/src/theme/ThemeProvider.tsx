@@ -7,6 +7,7 @@ import { buildTheme } from './tokens';
 import { resolveTemplate } from '../helpers/theme';
 
 const DARK_QUERY = '(prefers-color-scheme: dark)';
+const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 const HIGH_CONTRAST_QUERIES = ['(prefers-contrast: more)', '(forced-colors: active)'];
 
 function mediaMatches(query: string): boolean {
@@ -18,7 +19,11 @@ function mediaContrast(): ThemeContrast {
 }
 
 function mediaSystemPreference(): SystemPreference {
-  return { mode: mediaMatches(DARK_QUERY) ? 'dark' : 'light', contrast: mediaContrast() };
+  return {
+    mode: mediaMatches(DARK_QUERY) ? 'dark' : 'light',
+    contrast: mediaContrast(),
+    reducedMotion: mediaMatches(REDUCED_MOTION_QUERY),
+  };
 }
 
 const GlobalStyle = createGlobalStyle`
@@ -74,12 +79,16 @@ export function AppThemeProvider({ children }: { children: ReactNode }): React.J
     };
   }, []);
 
+  useEffect(() => {
+    document.documentElement.dataset.motion = systemPreference.reducedMotion ? 'reduced' : 'normal';
+  }, [systemPreference.reducedMotion]);
+
   const { data: templateId } = useThemeTemplateId();
   const resolvedTemplateId = templateId ?? null;
   const { data: templates } = useThemes();
   const theme = useMemo(() => {
     const resolved: SystemPreference = {
-      mode: systemPreference.mode,
+      ...systemPreference,
       contrast: systemPreference.contrast === 'high' || contrast === 'high' ? 'high' : 'normal',
     };
     return buildTheme(resolveTemplate(resolvedTemplateId, resolved, templates ?? []));
