@@ -30,7 +30,6 @@
     "locales:refresh": "tsx scripts/refresh-locales.ts",
     "locales:check": "tsx scripts/refresh-locales.ts --check",
     "media:refresh": "tsx scripts/refresh-media.ts",
-    "theme:contrast": "tsx scripts/theme-contrast.ts",
     "validate": "turbo run typecheck lint format:check typecheck:scripts lint:scripts format:check:scripts && yarn locales:check",
     "prepare": "husky"
   },

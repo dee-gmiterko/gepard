@@ -8,16 +8,16 @@ packaging, and writing extensions. For what the app does, see `README.md`
 
 Yarn workspaces + Turborepo.
 
-| Path                  | Package                       | Role                                                  |
-| --------------------- | ----------------------------- | ----------------------------------------------------- |
-| `src/app`             | `gepard`                      | electron-vite / electron-builder config, build assets |
-| `src/main`            | `@gepard/main`                | Electron main process                                 |
-| `src/preload`         | `@gepard/preload`             | preload bridge                                        |
-| `src/renderer`        | `@gepard/renderer`            | React UI                                              |
-| `src/common`          | `@gepard/common`              | IPC contract, schemas, models                         |
-| `src/common-lsp`      | `@gepard/common-lsp`          | shared code for the LSP extensions                    |
-| `tools/eslint-config` | `@gepard/eslint-config`       | shared ESLint configs                                 |
-| `extensions/*`        | see [Extensions](#extensions) |                                                       |
+| Path | Package | Role |
+| --- | --- | --- |
+| `src/app` | `gepard` | electron-vite / electron-builder config, build assets |
+| `src/main` | `@gepard/main` | Electron main process |
+| `src/preload` | `@gepard/preload` | preload bridge |
+| `src/renderer` | `@gepard/renderer` | React UI |
+| `src/common` | `@gepard/common` | IPC contract, schemas, models |
+| `src/common-lsp` | `@gepard/common-lsp` | shared code for the LSP extensions |
+| `tools/eslint-config` | `@gepard/eslint-config` | shared ESLint configs |
+| `extensions/*` | see [Extensions](#extensions) | |
 
 ## Project setup
 
@@ -106,10 +106,8 @@ CodeMirror itself. Interface: `src/common/extensions/grammar.ts`; example:
 ### Theme
 
 Pure data: a colour theme declaring its mode (light or dark), optionally its
-contrast (normal or high; `Follow system` picks a high contrast theme when the
-OS asks for one) and a complete set of UI colour values. `yarn theme:contrast`
-reports the WCAG contrast of every colour pair the renderer uses for each
-bundled theme. It contains no code to run. Interface:
+contrast (normal or high) and a complete set of UI colour values. It contains
+no code to run. Interface:
 `src/common/extensions/theme.ts`, backed by `src/common/ipc/schemas/theme.ts`.
 
 ### Locale
