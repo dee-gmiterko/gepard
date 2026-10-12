@@ -27,10 +27,11 @@
     "format:check": "turbo run format:check format:check:scripts",
     "format:check:scripts": "prettier --check scripts",
     "barrels:refresh": "bash scripts/refresh-barrels.sh",
+    "barrels:check": "bash scripts/refresh-barrels.sh --check",
     "locales:refresh": "tsx scripts/refresh-locales.ts",
     "locales:check": "tsx scripts/refresh-locales.ts --check",
     "media:refresh": "tsx scripts/refresh-media.ts",
-    "validate": "turbo run typecheck lint format:check typecheck:scripts lint:scripts format:check:scripts && yarn locales:check",
+    "validate": "turbo run validate",
     "prepare": "husky"
   },
   "devDependencies": {
