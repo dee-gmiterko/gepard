@@ -124,3 +124,9 @@
 - icons from a feathericons react
 - minimalist interface like similar software
 
+### On-screen keyboard
+- Every text field is a real `<input>`/`<textarea>`, so focusing one tells Chromium's IME layer about an editable; Chromium only asks the OS for a keyboard once the page has had any user gesture, which holds after the first tap.
+- Linux Wayland (GNOME, KDE, wlroots): the compositor raises its keyboard from the `zwp_text_input_v3` focus it receives, and mutter speaks no other version. Main appends `--enable-wayland-ime --wayland-text-input-version=3` (`src/main/helpers/onScreenKeyboard.ts`); Electron >= 38 picks native Wayland in a Wayland session, and Chromium's `WaylandTextInputV3` default is not relied on. An explicit `--enable-wayland-ime`/`--disable-wayland-ime` on the command line is left as given.
+- Linux X11 (and XWayland): Chromium hands text focus to the GTK 3 IM module (IBus/Fcitx via `GTK_IM_MODULE`), which is what GNOME uses to raise the keyboard for X11 clients; no switch applies.
+- Windows: Chromium shows the touch keyboard itself (`InputPane`), but only when the field was focused by touch or pen, matching native apps; no switch needed. `navigator.virtualKeyboard` (`virtualkeyboardpolicy="manual"`) exists only here and is not used, so mouse focus never pops a keyboard on a desktop.
+- macOS: no app-side API; the Accessibility Keyboard is a user setting and stays visible on its own.

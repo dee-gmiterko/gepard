@@ -9,6 +9,7 @@ import { formatCaughtError } from './helpers/error';
 import { startPortalThemeSync } from './helpers/portalTheme';
 import { launchService } from './services/launch';
 import { indexer } from './lsp/indexer';
+import { onScreenKeyboardSwitches } from './helpers/onScreenKeyboard';
 
 const QUIT_CLOSE_TIMEOUT_MS = 1_000;
 
@@ -28,6 +29,9 @@ export function bootstrap(): void {
   // symbol clash unless launched with --gtk-version=3.
   if (process.platform === 'linux') {
     app.commandLine.appendSwitch('gtk-version', '3');
+  }
+  for (const { name, value } of onScreenKeyboardSwitches(process.platform, process.argv)) {
+    app.commandLine.appendSwitch(name, value);
   }
 
   app
