@@ -1,48 +1,24 @@
 import { Prec, type Extension } from '@codemirror/state';
-import { keymap } from '@codemirror/view';
+import { EditorView } from '@codemirror/view';
+import { keyBindings } from '../keyboard/bindings';
 import type { Commands } from '../keyboard/useCommands';
+import { effectiveKey, keyChord, type KeybindingOverrides } from '../helpers/key';
 
 // CodeMirror handles keys in its contentEditable before they reach a window
 // keydown listener.
 
-export function keymapBridge(getCommands: () => Commands): Extension {
+export function keymapBridge(
+  getCommands: () => Commands,
+  getOverrides: () => KeybindingOverrides | undefined,
+): Extension {
   return Prec.high(
-    keymap.of([
-      {
-        key: 'Space',
-        run: () => {
-          getCommands().toggleViewed();
-          return true;
-        },
+    EditorView.domEventHandlers({
+      keydown: (e) => {
+        if (e.isComposing) return false;
+        const chord = keyChord(e);
+        const binding = keyBindings.find((b) => effectiveKey(b, getOverrides()) === chord);
+        return binding ? binding.run(getCommands()) : false;
       },
-      {
-        key: 'PageUp',
-        run: () => {
-          getCommands().prevFile();
-          return true;
-        },
-      },
-      {
-        key: 'PageDown',
-        run: () => {
-          getCommands().nextFile();
-          return true;
-        },
-      },
-      {
-        key: 'End',
-        run: () => {
-          getCommands().acceptNext();
-          return true;
-        },
-      },
-      {
-        key: 'Home',
-        run: () => {
-          getCommands().revertPrev();
-          return true;
-        },
-      },
-    ]),
+    }),
   );
 }

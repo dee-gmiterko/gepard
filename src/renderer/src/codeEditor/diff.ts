@@ -1,24 +1,8 @@
-import { RangeSetBuilder, Text, type Extension } from '@codemirror/state';
+import { RangeSetBuilder, type Text, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, gutter } from '@codemirror/view';
 import type { DiffRow } from '@gepard/common';
+import type { DiffLineInfo } from '../helpers/diff';
 import { DiffLineNumberMarker } from './DiffLineNumberMarker';
-
-export interface DiffLineInfo {
-  kind: DiffRow['kind'];
-  oldLine: number | null;
-  newLine: number | null;
-}
-
-export function buildDiffDoc(rows: readonly DiffRow[]): { doc: Text; infos: DiffLineInfo[] } {
-  const lines = rows.length > 0 ? rows.map((r) => r.text) : [''];
-  const doc = Text.of(lines);
-  const infos: DiffLineInfo[] = rows.map((r) => ({
-    kind: r.kind,
-    oldLine: r.oldLine,
-    newLine: r.newLine,
-  }));
-  return { doc, infos };
-}
 
 const lineClass: Record<DiffRow['kind'], string | null> = {
   context: null,

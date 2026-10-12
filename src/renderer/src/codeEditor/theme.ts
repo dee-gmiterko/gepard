@@ -52,8 +52,13 @@ export function editorTheme(theme: Theme): Extension {
       '.cm-cursor, .cm-dropCursor': {
         borderLeftColor: c.fg,
       },
+      '.cm-selectionLayer': {
+        zIndex: '150 !important',
+        pointerEvents: 'none',
+      },
       '.cm-selectionBackground, ::selection': {
         backgroundColor: `${c.bgSelected} !important`,
+        opacity: '0.6',
       },
       '&.cm-focused .cm-selectionBackground, &.cm-focused ::selection': {
         backgroundColor: `${c.bgSelected} !important`,

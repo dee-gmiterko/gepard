@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffRow } from '@gepard/common';
 import {
+  buildDiffDoc,
   changeLines,
   changeSignature,
   findDiffDocLine,
@@ -120,5 +121,26 @@ describe('fullFileDiffMarks', () => {
     ]);
     expect(marks.deletedBefore.get(2)).toEqual(['x']);
     expect(marks.deletedBefore.get(9)).toEqual(['z']);
+  });
+});
+
+describe('buildDiffDoc', () => {
+  it('builds one doc line and one info per row', () => {
+    const rows: DiffRow[] = [
+      { kind: 'hunk', text: '@@', oldLine: null, newLine: null },
+      { kind: 'add', text: 'a', oldLine: null, newLine: 1 },
+    ];
+    const { doc, infos } = buildDiffDoc(rows);
+    expect(doc.toString()).toBe('@@\na');
+    expect(infos).toEqual([
+      { kind: 'hunk', oldLine: null, newLine: null },
+      { kind: 'add', oldLine: null, newLine: 1 },
+    ]);
+  });
+
+  it('yields a single empty line for no rows', () => {
+    const { doc, infos } = buildDiffDoc([]);
+    expect(doc.lines).toBe(1);
+    expect(infos).toEqual([]);
   });
 });
