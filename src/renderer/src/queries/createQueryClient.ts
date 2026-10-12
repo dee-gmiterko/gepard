@@ -17,7 +17,7 @@ export function createQueryClient(): QueryClient {
     }),
     mutationCache: new MutationCache({
       onError: (error, _variables, _onMutateResult, mutation) =>
-        reportQueryError(mutationScope(mutation), error),
+        reportQueryError(mutationScope(mutation), error, { explicit: true }),
     }),
     defaultOptions: {
       queries: {

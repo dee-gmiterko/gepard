@@ -10,6 +10,7 @@ import { createFilesHandlers } from './handlers/files';
 import { searchHandlers } from './handlers/search';
 import { createCommentsHandlers } from './handlers/comments';
 import { createSyncHandlers } from './handlers/sync';
+import { connectivityHandlers } from './handlers/connectivity';
 import { logHandlers } from './handlers/log';
 import { extensionsHandlers } from './handlers/extensions';
 import { grammarsHandlers } from './handlers/grammars';
@@ -26,6 +27,7 @@ export const handlers: HandlerMap = {
   ...searchHandlers,
   ...createCommentsHandlers(gitService),
   ...createSyncHandlers(ghService, syncService),
+  ...connectivityHandlers,
   ...logHandlers,
   ...extensionsHandlers,
   ...grammarsHandlers,

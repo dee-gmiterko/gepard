@@ -9,6 +9,7 @@ export const qk = {
   extensionsDir: () => [...qk.all, 'extensionsDir'] as const,
   grammars: () => [...qk.all, 'grammars'] as const,
   logPath: () => [...qk.all, 'logPath'] as const,
+  connectivity: () => [...qk.all, 'connectivity'] as const,
   themeTemplate: () => [...qk.all, 'themeTemplate'] as const,
   themes: () => [...qk.all, 'themes'] as const,
   locales: () => [...qk.all, 'locales'] as const,

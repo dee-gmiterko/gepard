@@ -1,6 +1,6 @@
 import { mkdir, rename, rm } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { run, runBuffer, type RunResult } from '../helpers/process/exec';
+import { gitClient, type GitClient } from '../clients/git';
 import { looksBinary } from '../helpers/binary';
 import { mimeForPath } from '../helpers/mime';
 import { assertInRepo } from '../helpers/repoPath';
@@ -23,6 +23,7 @@ import { emit } from '../ipc/registry';
 import { indexer as defaultIndexer } from '../lsp/indexer';
 import { nohooksDir, projectCloneTmpDir, projectRepoDir } from '../paths';
 import { isCloned } from '../store/projects';
+import { ConnectionError } from '../helpers/process/connection';
 import { log } from '../log';
 import {
   type ChangedFile,
@@ -38,17 +39,6 @@ import {
 } from '@gepard/common';
 
 const EMPTY_TREE_SHA = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
-
-// `GIT_TERMINAL_PROMPT=0` makes git fail instead of prompting for credentials.
-const GIT_ENV: NodeJS.ProcessEnv = { ...process.env, GIT_TERMINAL_PROMPT: '0' };
-const GIT_TIMEOUT_MS = 2 * 60_000;
-
-const GH_CREDENTIAL_ARGS = [
-  '-c',
-  'credential.helper=',
-  '-c',
-  'credential.helper=!gh auth git-credential',
-];
 
 const DEFAULT_LOG_LIMIT = 200;
 const DEFAULT_BRANCH_REF = 'refs/remotes/origin/HEAD';
@@ -74,7 +64,10 @@ export class GitService {
   private readonly checkoutQueues = new Map<string, Promise<unknown>>();
   private statusCache: { key: string; entries: Promise<NameStatusEntry[]> } | null = null;
 
-  constructor(private readonly indexer: Indexer = defaultIndexer) {}
+  constructor(
+    private readonly indexer: Indexer = defaultIndexer,
+    private readonly git: GitClient = gitClient,
+  ) {}
 
   private enqueue<T>(projectId: string, fn: () => Promise<T>): Promise<T> {
     const settledPrior = (this.checkoutQueues.get(projectId) ?? Promise.resolve()).then(
@@ -90,14 +83,6 @@ export class GitService {
       ),
     );
     return result;
-  }
-
-  private gitRun(repoRoot: string, args: string[]): Promise<RunResult> {
-    return run('git', [...GH_CREDENTIAL_ARGS, ...args], {
-      cwd: repoRoot,
-      env: GIT_ENV,
-      timeoutMs: GIT_TIMEOUT_MS,
-    });
   }
 
   cloneProject(projectId: string, url: string): Promise<void> {
@@ -117,33 +102,13 @@ export class GitService {
       await mkdir(dirname(repoDir), { recursive: true });
       await rm(tmpDir, { recursive: true, force: true });
 
-      await run(
-        'git',
-        [
-          ...GH_CREDENTIAL_ARGS,
-          '-c',
-          `core.hooksPath=${nohooks}`,
-          '-c',
-          'core.fsmonitor=false',
-          '-c',
-          'advice.detachedHead=false',
-          'clone',
-          '--progress',
-          '--config',
-          `core.hooksPath=${nohooks}`,
-          '--config',
-          'core.fsmonitor=false',
-          url,
-          tmpDir,
-        ],
-        {
-          env: GIT_ENV,
-          onStderrLine: (line) => {
-            const progress = parseCloneProgressLine(line);
-            if (progress) emit('clone.progress', { projectId, ...progress, message: line });
-          },
+      await this.git.clone(url, tmpDir, {
+        hooksPath: nohooks,
+        onStderrLine: (line) => {
+          const progress = parseCloneProgressLine(line);
+          if (progress) emit('clone.progress', { projectId, ...progress, message: line });
         },
-      );
+      });
       await rename(tmpDir, repoDir);
       emit('clone.progress', { projectId, phase: 'done', percent: 100 });
     } catch (e) {
@@ -162,7 +127,7 @@ export class GitService {
 
   private async currentHeadSha(repoRoot: string): Promise<string> {
     try {
-      const { stdout } = await this.gitRun(repoRoot, ['rev-parse', 'HEAD']);
+      const { stdout } = await this.git.run(repoRoot, ['rev-parse', 'HEAD']);
       return stdout.trim();
     } catch {
       return EMPTY_TREE_SHA; // `git rev-parse HEAD` fails before the first commit
@@ -170,7 +135,7 @@ export class GitService {
   }
 
   private async trackedFiles(repoRoot: string): Promise<string[]> {
-    const { stdout } = await this.gitRun(repoRoot, ['ls-files', '-z']);
+    const { stdout } = await this.git.run(repoRoot, ['ls-files', '-z']);
     return parseZTokens(stdout);
   }
 
@@ -192,7 +157,7 @@ export class GitService {
     newSha: string,
   ): Promise<FileChange[]> {
     if (oldSha === newSha) return [];
-    const { stdout } = await this.gitRun(repoRoot, [
+    const { stdout } = await this.git.run(repoRoot, [
       'diff',
       '--name-status',
       '-z',
@@ -220,7 +185,7 @@ export class GitService {
 
   private async hasRef(repoRoot: string, ref: string): Promise<boolean> {
     try {
-      await this.gitRun(repoRoot, ['rev-parse', '--verify', '--quiet', ref]);
+      await this.git.run(repoRoot, ['rev-parse', '--verify', '--quiet', ref]);
       return true;
     } catch {
       return false;
@@ -229,7 +194,7 @@ export class GitService {
 
   private async hasCommit(repoRoot: string, sha: string): Promise<boolean> {
     try {
-      await this.gitRun(repoRoot, ['cat-file', '-e', `${sha}^{commit}`]);
+      await this.git.run(repoRoot, ['cat-file', '-e', `${sha}^{commit}`]);
       return true;
     } catch {
       return false;
@@ -245,8 +210,9 @@ export class GitService {
   private async fetchPullHead(repoRoot: string, sha: string, pr: number): Promise<void> {
     const localRef = this.pullHeadLocalRef(pr);
     try {
-      await this.gitRun(repoRoot, ['fetch', 'origin', `+refs/pull/${pr}/head:${localRef}`]);
+      await this.git.run(repoRoot, ['fetch', 'origin', `+refs/pull/${pr}/head:${localRef}`]);
     } catch (e) {
+      if (e instanceof ConnectionError) throw e;
       const detail = e instanceof Error ? e.message : String(e);
       throw new AppError(
         'PR_HEAD_UNAVAILABLE',
@@ -254,7 +220,7 @@ export class GitService {
       );
     }
     if (await this.hasCommit(repoRoot, sha)) return;
-    const { stdout } = await this.gitRun(repoRoot, ['rev-parse', '--verify', localRef]);
+    const { stdout } = await this.git.run(repoRoot, ['rev-parse', '--verify', localRef]);
     throw new AppError(
       'PR_HEAD_CHANGED',
       `commit ${sha} is no longer part of pull request #${pr}: refs/pull/${pr}/head now points to ${stdout.trim()}`,
@@ -269,7 +235,7 @@ export class GitService {
     const haveBase =
       opts.baseRefOid === undefined || (await this.hasCommit(repoRoot, opts.baseRefOid));
     if ((await this.hasCommit(repoRoot, sha)) && haveBase) return;
-    await this.gitRun(repoRoot, ['fetch', 'origin', '--prune']);
+    await this.git.run(repoRoot, ['fetch', 'origin', '--prune']);
     if (!(await this.hasCommit(repoRoot, sha))) {
       if (opts.pr !== undefined) await this.fetchPullHead(repoRoot, sha, opts.pr);
       else throw new AppError('NOT_FOUND', `commit ${sha} is not on origin`);
@@ -277,12 +243,12 @@ export class GitService {
   }
 
   private async checkoutDetached(repoRoot: string, ref: string): Promise<void> {
-    await this.gitRun(repoRoot, ['-c', 'advice.detachedHead=false', 'checkout', '--detach', ref]);
+    await this.git.run(repoRoot, ['-c', 'advice.detachedHead=false', 'checkout', '--detach', ref]);
   }
 
   private async parentOrEmptyTree(repoRoot: string, sha: string): Promise<string> {
     try {
-      const { stdout } = await this.gitRun(repoRoot, [
+      const { stdout } = await this.git.run(repoRoot, [
         'rev-parse',
         '--verify',
         '--quiet',
@@ -325,7 +291,7 @@ export class GitService {
           baseRefOid: target.baseRefOid,
         });
         await this.checkoutDetached(repoRoot, target.headRefOid);
-        const { stdout } = await this.gitRun(repoRoot, [
+        const { stdout } = await this.git.run(repoRoot, [
           'merge-base',
           target.baseRefOid,
           target.headRefOid,
@@ -377,7 +343,7 @@ export class GitService {
       if (opts.search) args.push('-i', '--fixed-strings', `--grep=${opts.search}`);
       args.push(rev);
       if (pathspec) args.push('--', pathspec);
-      const { stdout } = await this.gitRun(repoRoot, args);
+      const { stdout } = await this.git.run(repoRoot, args);
       return parseGitLog(stdout);
     };
 
@@ -404,7 +370,7 @@ export class GitService {
   fetchOrigin(projectId: string): Promise<void> {
     return this.enqueue(projectId, async () => {
       const repoRoot = projectRepoDir(projectId);
-      await this.gitRun(repoRoot, ['fetch', 'origin', '--prune']);
+      await this.git.run(repoRoot, ['fetch', 'origin', '--prune']);
     });
   }
 
@@ -421,15 +387,10 @@ export class GitService {
   async filesTouchedByCommits(projectId: string, oids: string[]): Promise<Map<string, string[]>> {
     if (oids.length === 0) return new Map();
     const repoRoot = projectRepoDir(projectId);
-    const { stdout } = await run(
-      'git',
+    const { stdout } = await this.git.run(
+      repoRoot,
       ['diff-tree', '--stdin', '-r', '--root', '-c', '--name-only', '-z', '--format=%H'],
-      {
-        cwd: repoRoot,
-        env: GIT_ENV,
-        timeoutMs: GIT_TIMEOUT_MS,
-        stdin: oids.join('\n') + '\n',
-      },
+      { stdin: oids.join('\n') + '\n' },
     );
     return parseDiffTreeStdinFiles(stdout, oids);
   }
@@ -447,8 +408,8 @@ export class GitService {
   async changedFiles(projectId: string, base: string, head: string): Promise<ChangedFile[]> {
     const repoRoot = projectRepoDir(projectId);
     const [nameStatusRes, numstatRes] = await Promise.all([
-      this.gitRun(repoRoot, ['diff', '--name-status', '-M', '-C', '-z', base, head]),
-      this.gitRun(repoRoot, ['diff', '--numstat', '-M', '-C', '-z', base, head]),
+      this.git.run(repoRoot, ['diff', '--name-status', '-M', '-C', '-z', base, head]),
+      this.git.run(repoRoot, ['diff', '--numstat', '-M', '-C', '-z', base, head]),
     ]);
     const statuses = parseNameStatus(parseZTokens(nameStatusRes.stdout));
     const nums = parseNumstat(parseZTokens(numstatRes.stdout));
@@ -465,17 +426,13 @@ export class GitService {
   }
 
   private async readBlobBuffer(repoRoot: string, ref: string): Promise<Buffer> {
-    const { stdout } = await runBuffer('git', ['cat-file', 'blob', ref], {
-      cwd: repoRoot,
-      env: GIT_ENV,
-      timeoutMs: GIT_TIMEOUT_MS,
-    });
+    const { stdout } = await this.git.buffer(repoRoot, ['cat-file', 'blob', ref]);
     return stdout;
   }
 
   private async blobExists(repoRoot: string, ref: string): Promise<boolean> {
     try {
-      const { stdout } = await this.gitRun(repoRoot, ['cat-file', '-t', ref]);
+      const { stdout } = await this.git.run(repoRoot, ['cat-file', '-t', ref]);
       return stdout.trim() === 'blob';
     } catch {
       return false;
@@ -514,7 +471,8 @@ export class GitService {
   ): Promise<NameStatusEntry[]> {
     const key = `${repoRoot}\0${base}\0${head}`;
     if (this.statusCache?.key === key) return this.statusCache.entries;
-    const entries = this.gitRun(repoRoot, ['diff', '--name-status', '-M', '-C', '-z', base, head])
+    const entries = this.git
+      .run(repoRoot, ['diff', '--name-status', '-M', '-C', '-z', base, head])
       .then(({ stdout }) => parseNameStatus(parseZTokens(stdout)))
       .catch((e) => {
         if (this.statusCache?.key === key) this.statusCache = null;
@@ -565,14 +523,14 @@ export class GitService {
     const diffArgs = ['diff', '-U3', '--no-color'];
     if (previousPath) diffArgs.push('-M', '-C', base, head, '--', oldPath, path);
     else diffArgs.push(base, head, '--', path);
-    const { stdout } = await this.gitRun(repoRoot, diffArgs);
+    const { stdout } = await this.git.run(repoRoot, diffArgs);
     const section: string = previousPath ? selectDiffSection(stdout, oldPath, path) : stdout;
     return { kind: 'text', path, previousPath, rows: parseUnifiedDiff(section) };
   }
 
   async listTree(projectId: string, sha: string): Promise<string[]> {
     const repoRoot = projectRepoDir(projectId);
-    const { stdout } = await this.gitRun(repoRoot, ['ls-tree', '-r', '--name-only', '-z', sha]);
+    const { stdout } = await this.git.run(repoRoot, ['ls-tree', '-r', '--name-only', '-z', sha]);
     return parseZTokens(stdout);
   }
 
@@ -580,7 +538,7 @@ export class GitService {
   // absent when the remote reported no symref.
   private async resolveDefaultBranch(repoRoot: string): Promise<string | null> {
     try {
-      const { stdout } = await this.gitRun(repoRoot, [
+      const { stdout } = await this.git.run(repoRoot, [
         'symbolic-ref',
         '--short',
         DEFAULT_BRANCH_REF,
@@ -594,9 +552,9 @@ export class GitService {
   // A GitHub pull request can use only branches that exist on the remote.
   async listBranches(projectId: string): Promise<BranchesInfo> {
     const repoRoot = projectRepoDir(projectId);
-    await this.gitRun(repoRoot, ['fetch', 'origin', '--prune']);
+    await this.git.run(repoRoot, ['fetch', 'origin', '--prune']);
     const [refsOut, defaultBranch] = await Promise.all([
-      this.gitRun(repoRoot, ['for-each-ref', '--format=%(refname:short)', 'refs/remotes/origin']),
+      this.git.run(repoRoot, ['for-each-ref', '--format=%(refname:short)', 'refs/remotes/origin']),
       this.resolveDefaultBranch(repoRoot),
     ]);
     return { branches: parseBranchNames(refsOut.stdout), defaultBranch };

@@ -6,11 +6,12 @@ import { PathTarget } from './PathTarget';
 import { useTargetingEffects } from './useTargetingEffects';
 import { HeaderLogo } from './HeaderLogo';
 import { useHeaderStatus } from './useHeaderStatus';
-import { Sidebar } from 'react-feather';
+import { Sidebar, WifiOff } from 'react-feather';
 import { IconButton } from '../../components/IconButton';
 import { Ellipsis } from '../../components/Ellipsis';
 import { Inline } from '../../components/Layout';
 import { useIndexStatus, useSetLayout } from '../../queries/projects';
+import { useOffline } from '../../queries/connectivity';
 import { useUiDispatch } from '../../state/UiContext';
 import { useActiveFile, useLayout, useTargeting } from '../../state/hooks';
 import { ProgressBar } from '../../components/ProgressBar';
@@ -32,6 +33,14 @@ const messages = defineMessages({
   fileDetails: {
     id: 'content.fileControls.fileDetails',
     defaultMessage: 'File details',
+  },
+  offline: {
+    id: 'header.offline',
+    defaultMessage: 'Offline',
+  },
+  offlineHint: {
+    id: 'header.offlineHint',
+    defaultMessage: 'GitHub could not be reached. Changes stay local until the connection returns.',
   },
 });
 
@@ -60,6 +69,15 @@ const Group = styled.div`
   min-width: 0;
 `;
 
+const Offline = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[1]};
+  font-size: ${({ theme }) => theme.font.size.xs};
+  color: ${({ theme }) => theme.colors.warning};
+  white-space: nowrap;
+`;
+
 const Progress = styled.div`
   display: flex;
   align-items: center;
@@ -82,6 +100,7 @@ export function Header(): React.JSX.Element {
   const isChangedFile = useIsCheckedOutChangedFile(path);
 
   const headerStatus = useHeaderStatus();
+  const offline = useOffline();
 
   function toggleFileComments(): void {
     const open = !layout.fileCommentsPanelOpen;
@@ -110,6 +129,12 @@ export function Header(): React.JSX.Element {
         )}
       </Group>
       <Group>
+        {offline && (
+          <Offline role="status" title={intl.formatMessage(messages.offlineHint)}>
+            <WifiOff size={14} />
+            <FormattedMessage {...messages.offline} />
+          </Offline>
+        )}
         {progress.totalCount > 0 && (
           <Progress>
             <FormattedMessage

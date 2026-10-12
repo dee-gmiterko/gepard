@@ -191,6 +191,7 @@ export const channels = {
     }),
   },
   'sync.pendingCount': { input: PrRef, output: z.int().nonnegative() },
+  'connectivity.get': { input: z.void(), output: z.object({ offline: z.boolean() }) },
   'index.get': { input: ProjectRef, output: IndexStatus },
   'index.languages': { input: ProjectRef, output: z.array(LanguageServerStatus).nullable() },
 
@@ -252,6 +253,7 @@ export const events = {
   'index.status': ProjectRef.extend({ status: IndexStatus }),
   'theme.changed': z.object({ dark: z.boolean() }),
   'app.error': z.object({ scope: z.string(), message: z.string() }),
+  'connectivity.changed': z.object({ offline: z.boolean() }),
 } as const satisfies Record<EventNameList, z.ZodType>;
 
 export type Channels = typeof channels;
