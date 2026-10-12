@@ -161,6 +161,10 @@ const Ring = styled.span`
   @media (prefers-reduced-motion: reduce) {
     display: none;
   }
+
+  :root[data-motion='reduced'] & {
+    display: none;
+  }
 `;
 
 const ViewedInput = styled.input`

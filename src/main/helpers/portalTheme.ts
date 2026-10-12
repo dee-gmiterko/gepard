@@ -8,13 +8,19 @@ const PORTAL_PATH = '/org/freedesktop/portal/desktop';
 const NAMESPACE = 'org.freedesktop.appearance';
 const COLOR_SCHEME_KEY = 'color-scheme';
 const CONTRAST_KEY = 'contrast';
+const REDUCED_MOTION_KEY = 'reduced-motion';
 
 const UINT32_PATTERN = /uint32\s+(\d+)/;
 
 let contrast: ThemeContrast = 'normal';
+let reducedMotion = false;
 
 export function portalContrast(): ThemeContrast {
   return contrast;
+}
+
+export function portalReducedMotion(): boolean {
+  return reducedMotion;
 }
 
 function parseUint32(output: string): number | null {
@@ -36,6 +42,16 @@ function applyContrast(output: string, onChange: () => void): void {
   const next: ThemeContrast = value === 1 ? 'high' : 'normal';
   if (next === contrast) return;
   contrast = next;
+  onChange();
+}
+
+// 1 = reduce motion, 0 = no preference.
+function applyReducedMotion(output: string, onChange: () => void): void {
+  const value = parseUint32(output);
+  if (value === null) return;
+  const next = value === 1;
+  if (next === reducedMotion) return;
+  reducedMotion = next;
   onChange();
 }
 
@@ -62,9 +78,8 @@ function readSetting(key: string, onOutput: (output: string) => void): void {
   );
 }
 
-// Electron on Linux derives dark mode from the GTK theme and ignores the
-// freedesktop portal, so the portal's color scheme is mirrored into themeSource.
-export function startPortalThemeSync(onContrastChange: () => void): () => void {
+// Electron on Linux ignores the portal color scheme, so it is mirrored into themeSource.
+export function startPortalThemeSync(onPreferenceChange: () => void): () => void {
   if (process.platform !== 'linux') return () => undefined;
 
   let monitor: ChildProcess | null = null;
@@ -74,7 +89,10 @@ export function startPortalThemeSync(onContrastChange: () => void): () => void {
     if (!stopped) applyColorScheme(output);
   });
   readSetting(CONTRAST_KEY, (output) => {
-    if (!stopped) applyContrast(output, onContrastChange);
+    if (!stopped) applyContrast(output, onPreferenceChange);
+  });
+  readSetting(REDUCED_MOTION_KEY, (output) => {
+    if (!stopped) applyReducedMotion(output, onPreferenceChange);
   });
 
   try {
@@ -93,7 +111,9 @@ export function startPortalThemeSync(onContrastChange: () => void): () => void {
       for (const line of lines) {
         if (!line.includes('SettingChanged') || !line.includes(NAMESPACE)) continue;
         if (line.includes(`'${COLOR_SCHEME_KEY}'`)) applyColorScheme(line);
-        else if (line.includes(`'${CONTRAST_KEY}'`)) applyContrast(line, onContrastChange);
+        else if (line.includes(`'${CONTRAST_KEY}'`)) applyContrast(line, onPreferenceChange);
+        else if (line.includes(`'${REDUCED_MOTION_KEY}'`))
+          applyReducedMotion(line, onPreferenceChange);
       }
     });
   } catch (err) {
