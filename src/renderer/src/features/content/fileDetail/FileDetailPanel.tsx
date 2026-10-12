@@ -15,6 +15,7 @@ import { FilePrComments } from '../../commentEditor/FilePrComments';
 import { SymbolsTree } from './SymbolsTree';
 import { FileControls } from './FileControls';
 import { MassActions } from './massActions/MassActions';
+import { useMassActions } from './massActions/useMassActions';
 
 const MIN_WIDTH = 220;
 const MAX_WIDTH = 640;
@@ -104,6 +105,7 @@ export function FileDetailPanel(): React.JSX.Element | null {
   const setLayout = useSetLayout();
   const path = useActiveFile();
   const isChangedFile = useIsCheckedOutChangedFile(path);
+  const { sameSet, similarSet } = useMassActions(path);
 
   function commitWidth(value: number): void {
     dispatch({ type: 'layout/setFileCommentsPanelWidth', width: value });
@@ -156,7 +158,7 @@ export function FileDetailPanel(): React.JSX.Element | null {
           <Body>
             {isChangedFile ? (
               <Stack>
-                <MassActions path={path} />
+                <MassActions sameSet={sameSet} similarSet={similarSet} />
                 <FileComments key={path} path={path} />
               </Stack>
             ) : targeting.pr === null ? (

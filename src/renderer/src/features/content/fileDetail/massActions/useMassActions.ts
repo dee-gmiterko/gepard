@@ -16,16 +16,16 @@ import type { LineSymbol } from '@gepard/common';
 const MAX_SYMBOL_LINES = 60;
 
 export interface MassActions {
-  same: string[];
-  similar: string[];
+  sameSet?: string[];
+  similarSet?: string[];
 }
 
-export function useMassActions(path: string): MassActions {
+export function useMassActions(path: string | null): MassActions {
   const checkoutHead = useCheckoutHead();
   const projectId = useProjectId() ?? '';
   const base = checkoutHead?.base ?? '';
   const head = checkoutHead?.head ?? '';
-  const diff = useFileDiff(path);
+  const diff = useFileDiff(path ?? '');
   const changed = useChangedFiles();
 
   const rows = useMemo(
@@ -35,7 +35,7 @@ export function useMassActions(path: string): MassActions {
   const lines = useMemo(() => changeLines(rows), [rows]);
 
   const candidatePaths = useMemo(() => {
-    const self = changed.data?.find((f) => f.path === path);
+    const self = path === null ? undefined : changed.data?.find((f) => f.path === path);
     if (!self || lines.length === 0) return [];
     return (changed.data ?? [])
       .filter(
@@ -57,8 +57,9 @@ export function useMassActions(path: string): MassActions {
   const symbolLines = lines.length <= MAX_SYMBOL_LINES ? rows : [];
   const symbolsPerLine = useQueries({
     queries: symbolLines.map((r) => ({
-      queryKey: [...qk.file(projectId, head, path), 'lineSymbols', r.newLine] as const,
-      queryFn: () => invoke('symbols.line', { projectId, sha: head, path, line: r.newLine ?? 1 }),
+      queryKey: [...qk.file(projectId, head, path ?? ''), 'lineSymbols', r.newLine] as const,
+      queryFn: () =>
+        invoke('symbols.line', { projectId, sha: head, path: path ?? '', line: r.newLine ?? 1 }),
       enabled: r.kind === 'add' && r.newLine !== null && Boolean(projectId) && Boolean(head),
       staleTime: Infinity,
     })),
@@ -69,6 +70,7 @@ export function useMassActions(path: string): MassActions {
   });
 
   return useMemo(() => {
+    if (path === null) return { sameSet: undefined, similarSet: undefined };
     const signature = changeSignature(lines);
     const same: string[] = [];
     const rest: { path: string; lines: string[] }[] = [];
@@ -85,6 +87,9 @@ export function useMassActions(path: string): MassActions {
     const similar = matcher
       ? rest.filter((c) => matchesSimilar(matcher, c.lines)).map((c) => c.path)
       : [];
-    return { same, similar };
-  }, [lines, candidatePaths, candidateLines, symbolsPerLine, symbolLines.length]);
+    return {
+      sameSet: same.length > 0 ? [path, ...same] : undefined,
+      similarSet: similar.length > 0 ? [path, ...similar] : undefined,
+    };
+  }, [path, lines, candidatePaths, candidateLines, symbolsPerLine, symbolLines.length]);
 }
