@@ -1,14 +1,10 @@
 import type { IpcErrorShape } from '../ipc/contract';
+import { AppError } from './AppError';
 
-export class IpcError extends Error {
-  code: string;
-  details?: unknown;
-  channel?: string;
+export class IpcError extends AppError {
   constructor(shape: IpcErrorShape, channel?: string) {
-    super(shape.message);
+    super(shape.code, shape.message, shape.details);
     this.name = 'IpcError';
-    this.code = shape.code;
-    this.details = shape.details;
     this.channel = channel;
   }
 }

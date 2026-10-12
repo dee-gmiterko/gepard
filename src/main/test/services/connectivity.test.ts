@@ -1,14 +1,11 @@
-import { ExecExitError } from '@gepard/common';
+import { AuthError, ConnectionError, ExecExitError } from '@gepard/common';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { ConnectionError } from '../../helpers/process/connection';
 import { connectivity, ConnectivityService } from '../../services/connectivity';
 import { __clearEmittedEvents, __setUserDataDir, emittedEvents } from '../support/electron';
 import { makeTmpDir } from '../support/tmp';
 
-const offlineFailure = (): ExecExitError =>
-  new ExecExitError('gh', ['api', 'user'], 1, null, 'error connecting to api.github.com');
-const otherFailure = (): ExecExitError =>
-  new ExecExitError('gh', ['api', 'user'], 1, null, 'gh: Not Found (HTTP 404)');
+const offlineFailure = (): ConnectionError =>
+  new ConnectionError('gh exited with code 1: error connecting to api.github.com');
 
 describe('ConnectivityService.onRemoteResult', () => {
   let published: boolean[];
@@ -32,11 +29,6 @@ describe('ConnectivityService.onRemoteResult', () => {
     expect(published).toEqual([true]);
   });
 
-  it('accepts an already translated ConnectionError', () => {
-    service.onRemoteResult(false, new ConnectionError(offlineFailure()));
-    expect(service.isOffline()).toBe(true);
-  });
-
   it('publishes each flip once', () => {
     service.onRemoteResult(false, offlineFailure());
     service.onRemoteResult(false, offlineFailure());
@@ -54,12 +46,16 @@ describe('ConnectivityService.onRemoteResult', () => {
   });
 
   it('ignores failures that are not connection failures', () => {
-    service.onRemoteResult(false, otherFailure());
+    service.onRemoteResult(false, new AuthError('gh: Bad credentials (HTTP 401)'));
+    service.onRemoteResult(
+      false,
+      new ExecExitError('gh', ['api', 'user'], 1, null, 'error connecting to api.github.com'),
+    );
     service.onRemoteResult(false, new Error('ECONNREFUSED'));
     service.onRemoteResult(false);
     expect(service.isOffline()).toBe(false);
     service.onRemoteResult(false, offlineFailure());
-    service.onRemoteResult(false, otherFailure());
+    service.onRemoteResult(false, new AuthError('gh: Bad credentials (HTTP 401)'));
     expect(service.isOffline()).toBe(true);
     expect(published).toEqual([true]);
   });

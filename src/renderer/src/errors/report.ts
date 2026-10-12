@@ -1,15 +1,8 @@
-import { IpcError } from '@gepard/common';
-import { defineMessages, type MessageDescriptor } from 'react-intl';
+import { AbortError, AppError, ConnectionError, StaleShaError } from '@gepard/common';
+import type { MessageDescriptor } from 'react-intl';
 import { z } from 'zod';
-import { invoke, isCancelledError, isConnectionError, isStaleShaError } from '../ipc/client';
+import { invoke } from '../ipc/client';
 import { describeError, errorText } from './errorMessage';
-
-const messages = defineMessages({
-  connectionFailed: {
-    id: 'errors.connectionFailed',
-    defaultMessage: 'GitHub could not be reached. Check your connection and try again.',
-  },
-});
 
 export const ReportTone = z.enum(['danger', 'warning']);
 export type ReportTone = z.infer<typeof ReportTone>;
@@ -47,27 +40,15 @@ export interface ReportQueryErrorOptions {
   explicit?: boolean;
 }
 
-// Background connection failures surface only through the header's offline indicator.
 export function reportQueryError(
   scope: string,
   error: unknown,
   { explicit = false }: ReportQueryErrorOptions = {},
 ): void {
-  if (isCancelledError(error) || isStaleShaError(error)) return;
-  if (isConnectionError(error)) {
-    if (explicit) reportConnectionError(scope, error);
-    return;
-  }
+  if (error instanceof AbortError || error instanceof StaleShaError) return;
+  if (error instanceof ConnectionError && !explicit) return;
   const { message, detail } = describeError(error);
   reportError({ scope, message, detail: mergeDetail(detail, errorDetail(error)) });
-}
-
-function reportConnectionError(scope: string, error: unknown): void {
-  reportError({
-    scope,
-    message: messages.connectionFailed,
-    detail: mergeDetail(error instanceof IpcError ? error.message : undefined, errorDetail(error)),
-  });
 }
 
 function mergeDetail(primary: string | undefined, extra: string | undefined): string | undefined {
@@ -75,7 +56,7 @@ function mergeDetail(primary: string | undefined, extra: string | undefined): st
 }
 
 function errorDetail(error: unknown): string | undefined {
-  if (error instanceof IpcError) {
+  if (error instanceof AppError) {
     const parts = [`channel=${error.channel ?? '?'} code=${error.code}`];
     if (error.details !== undefined) {
       try {

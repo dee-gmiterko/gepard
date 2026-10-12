@@ -1,7 +1,10 @@
-import type { RemoteObserver } from '../clients/remote';
-import { toConnectionError } from '../helpers/process/connection';
+import { ConnectionError } from '@gepard/common';
 import { emit } from '../ipc/registry';
 import { log } from '../log';
+
+export interface RemoteObserver {
+  onRemoteResult(ok: boolean, error?: unknown): void;
+}
 
 export class ConnectivityService implements RemoteObserver {
   private offline = false;
@@ -23,12 +26,8 @@ export class ConnectivityService implements RemoteObserver {
   }
 
   onRemoteResult(ok: boolean, error?: unknown): void {
-    if (ok) {
-      this.setOffline(false);
-      return;
-    }
-    const failure = toConnectionError(error);
-    if (failure !== null) this.setOffline(true, failure.message);
+    if (ok) this.setOffline(false);
+    else if (error instanceof ConnectionError) this.setOffline(true, error.message);
   }
 }
 

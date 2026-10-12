@@ -1,9 +1,15 @@
 import { z } from 'zod';
-import type { GqlError } from '@gepard/common';
+import {
+  AuthError,
+  ConnectionError,
+  ExecError,
+  RateLimitError,
+  RemoteNotFoundError,
+  type GqlError,
+} from '@gepard/common';
 import { checkGqlErrors } from '../helpers/github/ghParsing';
 import { run, runJson, type RunResult } from '../helpers/process/exec';
-import { connectivity } from '../services/connectivity';
-import { observeRemote, type RemoteObserver } from './remote';
+import { connectivity, type RemoteObserver } from '../services/connectivity';
 
 const GH_ENV: NodeJS.ProcessEnv = {
   ...process.env,
@@ -15,6 +21,50 @@ const GH_ENV: NodeJS.ProcessEnv = {
 };
 
 const DEFAULT_TIMEOUT_MS = 30_000;
+
+// gh prints its own "error connecting to <host>" for dial failures and Go's
+// net errors (`dial tcp ...`, `net/http: ...`) for everything else.
+const CONNECTION_PATTERNS: RegExp[] = [
+  /error connecting to /i,
+  /check your internet connection/i,
+  /dial tcp/i,
+  /no such host/i,
+  /temporary failure in name resolution/i,
+  /i\/o timeout/i,
+  /TLS handshake timeout/i,
+  /context deadline exceeded/i,
+  /connection (refused|reset)/i,
+  /network is unreachable/i,
+  /no route to host/i,
+];
+
+const AUTH_PATTERNS: RegExp[] = [
+  /gh auth login/i,
+  /not logged in/i,
+  /HTTP 401/,
+  /bad credentials/i,
+  /requires authentication/i,
+  /authentication (required|failed)/i,
+];
+
+const RATE_LIMIT_PATTERNS: RegExp[] = [/rate limit/i, /HTTP 429/, /\(RATE_LIMITED\)/];
+
+// REST failures end in "(HTTP 404)"; GraphQL partial errors in "(NOT_FOUND)".
+const NOT_FOUND_PATTERNS: RegExp[] = [/HTTP 404/, /\(NOT_FOUND\)/];
+
+function matches(patterns: RegExp[], text: string): boolean {
+  return patterns.some((pattern) => pattern.test(text));
+}
+
+function classifyFailure(error: unknown): unknown {
+  if (!(error instanceof ExecError)) return error;
+  const { stderr, message, details } = error;
+  if (matches(CONNECTION_PATTERNS, stderr)) return new ConnectionError(message, details);
+  if (matches(AUTH_PATTERNS, stderr)) return new AuthError(message, details);
+  if (matches(RATE_LIMIT_PATTERNS, stderr)) return new RateLimitError(message, details);
+  if (matches(NOT_FOUND_PATTERNS, stderr)) return new RemoteNotFoundError(message, details);
+  return error;
+}
 
 export interface GhCallOptions {
   stdin?: string;
@@ -33,8 +83,20 @@ export class GhClient {
     return { env: GH_ENV, timeoutMs: opts.timeoutMs ?? DEFAULT_TIMEOUT_MS, stdin: opts.stdin };
   }
 
+  private async observe<T>(call: Promise<T>): Promise<T> {
+    try {
+      const value = await call;
+      this.observer.onRemoteResult(true);
+      return value;
+    } catch (e) {
+      const failure = classifyFailure(e);
+      this.observer.onRemoteResult(false, failure);
+      throw failure;
+    }
+  }
+
   run(args: string[], opts: GhCallOptions = {}): Promise<RunResult> {
-    return observeRemote(this.observer, this.exec.run('gh', args, this.opts(opts)));
+    return this.observe(this.exec.run('gh', args, this.opts(opts)));
   }
 
   json<T extends z.ZodType>(
@@ -42,7 +104,7 @@ export class GhClient {
     args: string[],
     opts: GhCallOptions = {},
   ): Promise<z.output<T>> {
-    return observeRemote(this.observer, this.exec.runJson(schema, 'gh', args, this.opts(opts)));
+    return this.observe(this.exec.runJson(schema, 'gh', args, this.opts(opts)));
   }
 
   // `gh api --paginate` hangs on GraphQL queries whose cursor variable is not

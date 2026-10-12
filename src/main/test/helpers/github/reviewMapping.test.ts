@@ -4,7 +4,6 @@ import {
   composeBody,
   countPendingChanges,
   groupPendingByCommit,
-  isRemoteNotFoundError,
   isViewedDirty,
   mapComment,
   mapGeneralComment,
@@ -20,7 +19,6 @@ import {
   type LocalViewedState,
   type RemoteViewedFile,
   type ReviewThread,
-  ExecError,
   generalCommentAnchor,
 } from '@gepard/common';
 
@@ -49,10 +47,6 @@ function rawComment(overrides: Partial<GqlReviewCommentRaw> = {}): GqlReviewComm
     viewerCanDelete: false,
     ...overrides,
   };
-}
-
-function execError(stderr: string): ExecError {
-  return new ExecError('EXEC_FAILED', 'failed', 'gh', [], 1, stderr);
 }
 
 describe('mapComment', () => {
@@ -163,14 +157,6 @@ describe('isViewedDirty', () => {
         state({ localUpdatedAt: '2024-01-01T00:00:00Z', remoteFetchedAt: '2024-01-02T00:00:00Z' }),
       ),
     ).toBe(false);
-  });
-});
-
-describe('isRemoteNotFoundError', () => {
-  it('matches an ExecError with a NOT_FOUND stderr', () => {
-    expect(isRemoteNotFoundError(execError('gh: Could not resolve (NOT_FOUND)'))).toBe(true);
-    expect(isRemoteNotFoundError(execError('gh: other'))).toBe(false);
-    expect(isRemoteNotFoundError(new Error('(NOT_FOUND)'))).toBe(false);
   });
 });
 

@@ -1,4 +1,4 @@
-import { IpcError } from '@gepard/common';
+import { ConnectionError } from '@gepard/common';
 import { describe, expect, it } from 'vitest';
 import { act, screen, waitFor } from '@testing-library/react';
 import App from '../../../src/App';
@@ -34,10 +34,7 @@ describe('offline indicator', () => {
     if (!pullSync) throw new Error('world has no sync handler');
     world.handlers['sync.run'] = (input) => {
       if (input.mode !== 'full') return pullSync(input);
-      throw new IpcError(
-        { code: 'CONNECTION_FAILED', message: 'gh exited with code 1: Could not resolve host' },
-        'sync.run',
-      );
+      throw new ConnectionError('gh exited with code 1: error connecting to api.github.com');
     };
     const { user } = renderWithProviders(<App />, world.handlers);
 

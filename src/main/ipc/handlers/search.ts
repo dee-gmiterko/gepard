@@ -14,7 +14,7 @@ import {
   type WorkspaceSymbol,
   navigationSymbols,
   makeTargetMatcher,
-  AppError,
+  StaleShaError,
 } from '@gepard/common';
 import { projectRepoDir } from '../../paths';
 
@@ -23,8 +23,7 @@ const KIND_FILTER_POOL_FACTOR = 10;
 function requireCurrentSha(projectId: string, sha: string): void {
   const current = indexer.currentSha(projectId);
   if (current !== null && current !== sha) {
-    throw new AppError(
-      'STALE_SHA',
+    throw new StaleShaError(
       `Requested sha ${sha} does not match the checked-out head ${current}; the project was checked out to a different target since this request was made`,
     );
   }

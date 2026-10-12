@@ -23,7 +23,6 @@ import { emit } from '../ipc/registry';
 import { indexer as defaultIndexer } from '../lsp/indexer';
 import { nohooksDir, projectCloneTmpDir, projectRepoDir } from '../paths';
 import { isCloned } from '../store/projects';
-import { ConnectionError } from '../helpers/process/connection';
 import { log } from '../log';
 import {
   type ChangedFile,
@@ -36,6 +35,8 @@ import {
   matchesTarget,
   staticPrefixOf,
   AppError,
+  AuthError,
+  ConnectionError,
 } from '@gepard/common';
 
 const EMPTY_TREE_SHA = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
@@ -212,7 +213,7 @@ export class GitService {
     try {
       await this.git.run(repoRoot, ['fetch', 'origin', `+refs/pull/${pr}/head:${localRef}`]);
     } catch (e) {
-      if (e instanceof ConnectionError) throw e;
+      if (e instanceof ConnectionError || e instanceof AuthError) throw e;
       const detail = e instanceof Error ? e.message : String(e);
       throw new AppError(
         'PR_HEAD_UNAVAILABLE',

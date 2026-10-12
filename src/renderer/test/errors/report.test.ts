@@ -1,4 +1,10 @@
-import { IpcError } from '@gepard/common';
+import {
+  type AppError,
+  ConnectionError,
+  IpcError,
+  fromIpcErrorShape,
+  toIpcErrorShape,
+} from '@gepard/common';
 import { describe, expect, it } from 'vitest';
 import { onReportedError, reportQueryError, type ReportedError } from '../../src/errors/report';
 
@@ -13,12 +19,13 @@ function capture(run: () => void): ReportedError[] {
   return reported;
 }
 
-const connectionFailure = (): IpcError =>
-  new IpcError(
-    {
-      code: 'CONNECTION_FAILED',
-      message: 'gh exited with code 1: error connecting to api.github.com',
-    },
+const connectionFailure = (): AppError =>
+  fromIpcErrorShape(
+    toIpcErrorShape(
+      new ConnectionError('gh exited with code 1: error connecting to api.github.com', {
+        cmd: 'gh',
+      }),
+    ),
     'sync.run',
   );
 
@@ -30,10 +37,11 @@ describe('reportQueryError with a connection failure', () => {
     expect(reported).toHaveLength(1);
     expect(reported[0]).toMatchObject({
       scope: 'mutation:sync',
-      message: { id: 'errors.connectionFailed' },
+      message: { id: 'errors.code.connectionFailed' },
     });
     expect(reported[0].detail).toContain('error connecting to api.github.com');
     expect(reported[0].detail).toContain('channel=sync.run code=CONNECTION_FAILED');
+    expect(reported[0].detail).toContain('details={"cmd":"gh"}');
   });
 
   it('stays silent for a background query', () => {

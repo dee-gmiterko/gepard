@@ -1,6 +1,8 @@
-export class AbortError extends Error {
+import { AppError } from './AppError';
+
+export class AbortError extends AppError {
   constructor(message: string) {
-    super(message);
+    super('CANCELLED', message);
     this.name = 'AbortError';
   }
 }

@@ -1,4 +1,4 @@
-import { AppError } from '@gepard/common';
+import { AppError, RemoteNotFoundError } from '@gepard/common';
 import type { SyncMode } from '@gepard/common';
 import { log } from '../log';
 import { GhService, ghService as defaultGhService } from './gh';
@@ -9,7 +9,6 @@ import {
   collectPendingGeneralReplies,
   composeBody,
   groupPendingByCommit,
-  isRemoteNotFoundError,
   isViewedDirty,
   mapGeneralComment,
   mapThread,
@@ -84,7 +83,7 @@ export class SyncService {
           else await this.gh.deleteReviewComment(root.id);
           pushedCount++;
         } catch (e) {
-          if (!isRemoteNotFoundError(e)) throw e;
+          if (!(e instanceof RemoteNotFoundError)) throw e;
           goneRemotely++;
         }
         store.threads = store.threads.filter((t) => t.id !== thread.id);
@@ -98,7 +97,7 @@ export class SyncService {
           else await this.gh.deleteReviewComment(comment.id);
           pushedCount++;
         } catch (e) {
-          if (!isRemoteNotFoundError(e)) throw e;
+          if (!(e instanceof RemoteNotFoundError)) throw e;
           goneRemotely++;
         }
         thread.comments = thread.comments.filter((c) => c.id !== comment.id);
@@ -130,7 +129,7 @@ export class SyncService {
           comment.local = undefined;
           pushedCount++;
         } catch (e) {
-          if (!isRemoteNotFoundError(e)) throw e;
+          if (!(e instanceof RemoteNotFoundError)) throw e;
           goneRemotely++;
           if (thread.comments[0]?.id === comment.id) {
             store.threads = store.threads.filter((t) => t.id !== thread.id);
