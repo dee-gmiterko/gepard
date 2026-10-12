@@ -51,6 +51,10 @@ export function useReadOnlyEditor(
 ): ReadOnlyEditor {
   const theme = useTheme();
   const commands = useCommands();
+  const commandsRef = useRef(commands);
+  useLayoutEffect(() => {
+    commandsRef.current = commands;
+  });
   const intl = useIntl();
   const intlRef = useRef(intl);
   useLayoutEffect(() => {
@@ -93,7 +97,7 @@ export function useReadOnlyEditor(
           compartments.comments.of([]),
           compartments.commentGutter.of([]),
           keymapBridge(
-            () => commands,
+            () => commandsRef.current,
             () => overridesRef.current,
           ),
         ],
@@ -107,7 +111,7 @@ export function useReadOnlyEditor(
       newView.destroy();
       setView(null);
     };
-  }, [compartments, commands]);
+  }, [compartments]);
 
   useEffect(() => {
     if (!view) return;
