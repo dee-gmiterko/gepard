@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
-import { defineMessages } from 'react-intl';
+import { defineMessages, type MessageDescriptor } from 'react-intl';
 import { useUiDispatch, useUiStore } from '../state/UiContext';
 import { useActiveFile, useLayout } from '../state/hooks';
-import type { QuickSearchMode, SidePanelTab } from '../state/reducer';
+import type { Layout, QuickSearchMode, SidePanelTab, UiAction } from '../state/reducer';
 import { useSetLayout } from '../queries/projects';
 import { useViewed } from '../queries/comments';
 import { useTargetedFiles } from '../queries/files';
@@ -44,6 +44,10 @@ const messages = defineMessages({
   },
 });
 
+type BooleanLayoutKey = {
+  [K in keyof Layout]: Layout[K] extends boolean ? K : never;
+}[keyof Layout];
+
 export interface Commands {
   toggleViewed: (path?: string | null) => boolean;
   markViewed: (paths: string[], viewed: boolean) => void;
@@ -78,8 +82,20 @@ export function useCommands(): Commands {
   const { mutate: setLayout } = useSetLayout();
   const review = useReviewActions();
 
-  return useMemo<Commands>(
-    () => ({
+  return useMemo<Commands>(() => {
+    const toggleLayout = (
+      key: BooleanLayoutKey,
+      action: (value: boolean) => UiAction,
+      status: { on: MessageDescriptor; off: MessageDescriptor },
+    ): boolean => {
+      const { layout } = store.getState();
+      const value = !layout[key];
+      dispatch(action(value));
+      setLayout({ ...layout, [key]: value });
+      dispatch({ type: 'headerStatus/publish', message: value ? status.on : status.off });
+      return true;
+    };
+    return {
       toggleViewed: (path = store.getState().activeFile) => review.toggleViewed(path),
       markViewed: review.markViewed,
       nextFile: () => review.step(1),
@@ -94,51 +110,28 @@ export function useCommands(): Commands {
         dispatch({ type: 'quickSearch/open', mode });
         return true;
       },
-      toggleWrapLines: () => {
-        const { layout } = store.getState();
-        const wrap = !layout.wrapLongLines;
-        dispatch({ type: 'layout/setWrapLongLines', wrap });
-        setLayout({ ...layout, wrapLongLines: wrap });
-        dispatch({
-          type: 'headerStatus/publish',
-          message: wrap ? messages.wrapOn : messages.wrapOff,
-        });
-        return true;
-      },
-      toggleFullFileDiff: () => {
-        const { layout } = store.getState();
-        const full = !layout.fullFileDiff;
-        dispatch({ type: 'layout/setFullFileDiff', full });
-        setLayout({ ...layout, fullFileDiff: full });
-        dispatch({
-          type: 'headerStatus/publish',
-          message: full ? messages.fullFileOn : messages.fullFileOff,
-        });
-        return true;
-      },
-      toggleRandomizeOrder: () => {
-        const { layout } = store.getState();
-        const randomize = !layout.randomizeOrder;
-        dispatch({ type: 'layout/setRandomizeOrder', randomize });
-        setLayout({ ...layout, randomizeOrder: randomize });
-        dispatch({
-          type: 'headerStatus/publish',
-          message: randomize ? messages.randomizeOn : messages.randomizeOff,
-        });
-        return true;
-      },
-      toggleIncrementalDiff: () => {
-        const { layout } = store.getState();
-        const incremental = !layout.incrementalDiff;
-        dispatch({ type: 'layout/setIncrementalDiff', incremental });
-        setLayout({ ...layout, incrementalDiff: incremental });
-        dispatch({
-          type: 'headerStatus/publish',
-          message: incremental ? messages.incrementalOn : messages.incrementalOff,
-        });
-        return true;
-      },
-    }),
-    [store, dispatch, setLayout, review],
-  );
+      toggleWrapLines: () =>
+        toggleLayout('wrapLongLines', (wrap) => ({ type: 'layout/setWrapLongLines', wrap }), {
+          on: messages.wrapOn,
+          off: messages.wrapOff,
+        }),
+      toggleFullFileDiff: () =>
+        toggleLayout('fullFileDiff', (full) => ({ type: 'layout/setFullFileDiff', full }), {
+          on: messages.fullFileOn,
+          off: messages.fullFileOff,
+        }),
+      toggleRandomizeOrder: () =>
+        toggleLayout(
+          'randomizeOrder',
+          (randomize) => ({ type: 'layout/setRandomizeOrder', randomize }),
+          { on: messages.randomizeOn, off: messages.randomizeOff },
+        ),
+      toggleIncrementalDiff: () =>
+        toggleLayout(
+          'incrementalDiff',
+          (incremental) => ({ type: 'layout/setIncrementalDiff', incremental }),
+          { on: messages.incrementalOn, off: messages.incrementalOff },
+        ),
+    };
+  }, [store, dispatch, setLayout, review]);
 }
