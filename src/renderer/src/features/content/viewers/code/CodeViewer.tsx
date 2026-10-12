@@ -1,38 +1,28 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Compartment } from '@codemirror/state';
-import { closeHoverTooltips, EditorView, lineNumbers } from '@codemirror/view';
+import { EditorView, lineNumbers } from '@codemirror/view';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import type { DiffRow } from '@gepard/common';
-import { useUiDispatch } from '../../../../state/UiContext';
-import {
-  useActiveFile,
-  useCheckoutHead,
-  useLayout,
-  useRevealLine,
-  useTargeting,
-} from '../../../../state/hooks';
+import { useActiveFile, useLayout, useRevealLine, useTargeting } from '../../../../state/hooks';
 import { useCurrentHead } from '../../../../queries/projects';
 import { useFileContent } from '../../../../queries/files';
 import { useComments } from '../../../../queries/comments';
-import { useFileAnnotations } from '../../../../queries/checks';
-import { useDefinitionLookup } from '../../../../queries/search';
-import {
-  commentAffordanceGutter,
-  commentBlockDecorations,
-  fullFileDiffDecorations,
-  pipelineGutter,
-  revealDocLine,
-  symbolTooltip,
-  useReadOnlyEditor,
-} from '../../../../components/CodeEditor';
-import { lineContextMenu } from '../../../../components/lineContextMenu';
-import { SymbolPortals } from '../../../../components/SymbolPortals';
-import { CommentPortals } from '../../../../components/CommentPortals';
+import { commentAffordanceGutter } from '../../../../codeEditor/commentAffordance';
+import { commentBlockDecorations } from '../../../../codeEditor/commentBlocks';
+import { CommentPortals } from '../../../../codeEditor/CommentPortals';
+import { fullFileDiffDecorations } from '../../../../codeEditor/fullFileDiff';
+import { lineContextMenu } from '../../../../codeEditor/lineContextMenu';
+import { pipelineGutter } from '../../../../codeEditor/pipeline';
+import { useReadOnlyEditor } from '../../../../codeEditor/readOnlyEditor';
+import { revealDocLine } from '../../../../codeEditor/reveal';
+import { symbolTooltip } from '../../../../codeEditor/symbols';
 import { codeViewCommentEntries } from '../../../../helpers/comment';
 import { deletedLineDocLines, fullFileDiffMarks } from '../../../../helpers/diff';
 import { EditorHost } from '../../../../components/EditorHost';
 import { Message } from '../../../../components/Message';
 import { CommentPortalHost } from '../CommentPortalHost';
+import { useOpenLocation, useSymbolPortals } from '../useSymbolNavigation';
+import { useViewerAnnotations } from '../useViewerAnnotations';
 import { ImageViewer } from '../image/ImageViewer';
 import { MissingViewer } from '../missing/MissingViewer';
 import { SymbolPopupHost } from './SymbolPopup';
@@ -94,26 +84,11 @@ function CodeText({
   const layout = useLayout();
   const revealLine = useRevealLine();
   const targeting = useTargeting();
-  const dispatch = useUiDispatch();
   const unassigned = targeting.pr === null;
   const { data: threads } = useComments();
   const head = useCurrentHead() ?? '';
-  const checkoutHead = useCheckoutHead();
-  const { data: fileAnnotations } = useFileAnnotations(path);
-  const annotations = useMemo(
-    () => (checkoutHead?.head === head ? (fileAnnotations ?? []) : []),
-    [checkoutHead, head, fileAnnotations],
-  );
-  const lookupDefinition = useDefinitionLookup(head, path);
-  const symbolPortals = useMemo(() => new SymbolPortals(), []);
-  useLayoutEffect(() => {
-    symbolPortals.setResolver((symbol) =>
-      lookupDefinition({ line: symbol.line, col: symbol.col }).then(
-        (result) => result.definitions,
-        () => [],
-      ),
-    );
-  }, [symbolPortals, lookupDefinition]);
+  const annotations = useViewerAnnotations(path);
+  const symbolPortals = useSymbolPortals(head, path);
   const wrapLongLines = layout.wrapLongLines;
   const diffCompartment = useMemo(() => new Compartment(), []);
   const extensions = useMemo(
@@ -129,13 +104,7 @@ function CodeText({
   const { containerRef, view, comments, commentGutter } = useReadOnlyEditor(path, text, extensions);
   const [draft, setDraft] = useState<number | null>(null);
   const portals = useMemo(() => new CommentPortals(), []);
-  const openLocation = useCallback(
-    (target: string, line: number) => {
-      view?.dispatch({ effects: closeHoverTooltips });
-      dispatch({ type: 'file/open', path: target, line });
-    },
-    [view, dispatch],
-  );
+  const openLocation = useOpenLocation(view);
 
   const diffMarks = useMemo(() => (diffRows ? fullFileDiffMarks(diffRows) : null), [diffRows]);
   useEffect(() => {

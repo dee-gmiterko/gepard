@@ -1,5 +1,5 @@
 import type { DefinitionResult } from '@gepard/common';
-import type { HoveredSymbol, SymbolPopupEntry, SymbolPortal, SymbolResolver } from './CodeEditor';
+import type { HoveredSymbol, SymbolPopupEntry, SymbolPortal, SymbolResolver } from './symbols';
 
 // Only one hover popup is open at a time; the React content is portalled into its DOM.
 export class SymbolPortals {

@@ -40,7 +40,7 @@ import {
   PrSummary,
   Commit,
   Login,
-  type Annotation,
+  type CommitAnnotation,
   GqlError,
   GqlIssueCommentRaw,
   GqlPageInfo,
@@ -55,7 +55,6 @@ import {
 } from '@gepard/common';
 
 const VIEWED_MUTATION_CHUNK_SIZE = 50;
-const ANNOTATIONS_TTL_MS = 30_000;
 
 export interface RepoRef {
   owner: string;
@@ -586,32 +585,13 @@ export class GhService {
     ]);
   }
 
-  private readonly annotationCache = new Map<
-    string,
-    { at: number; load: Promise<ReturnType<typeof parseCommitAnnotations>> }
-  >();
-
-  async fileAnnotations(
-    owner: string,
-    repo: string,
-    sha: string,
-    path: string,
-  ): Promise<Annotation[]> {
-    const key = `${owner}/${repo}@${sha}`;
-    let entry = this.annotationCache.get(key);
-    if (!entry || Date.now() - entry.at > ANNOTATIONS_TTL_MS) {
-      const load = this.gh
-        .graphql(CommitAnnotationsResponse, COMMIT_ANNOTATIONS_QUERY, {
-          owner,
-          name: repo,
-          sha,
-        })
-        .then(parseCommitAnnotations);
-      entry = { at: Date.now(), load };
-      this.annotationCache.set(key, entry);
-      load.catch(() => this.annotationCache.delete(key));
-    }
-    return (await entry.load).filter((a) => a.path === path).map((a) => a.annotation);
+  async commitAnnotations(owner: string, repo: string, sha: string): Promise<CommitAnnotation[]> {
+    const res = await this.gh.graphql(CommitAnnotationsResponse, COMMIT_ANNOTATIONS_QUERY, {
+      owner,
+      name: repo,
+      sha,
+    });
+    return parseCommitAnnotations(res);
   }
 
   async projectOverview(owner: string, repo: string): Promise<ProjectOverview> {
