@@ -344,11 +344,13 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
       wrapLongLines: layout.wrapLongLines,
       fullFileDiff: layout.fullFileDiff,
       randomizeOrder: layout.randomizeOrder,
+      incrementalDiff: layout.incrementalDiff,
     })
       .then((pick) => {
         if (pick === 'wrapLongLines') commands.toggleWrapLines();
         if (pick === 'fullFile') commands.toggleFullFileDiff();
         if (pick === 'randomizeOrder') commands.toggleRandomizeOrder();
+        if (pick === 'incrementalDiff') commands.toggleIncrementalDiff();
       })
       .catch((error: unknown) => reportQueryError('contextMenu.showFileView', error));
   }

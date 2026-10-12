@@ -29,6 +29,7 @@ export const LocalViewedState = z.object({
   remote: ViewedState.nullable(),
   localUpdatedAt: IsoDate.nullable(),
   remoteFetchedAt: IsoDate.nullable(),
+  viewedSha: Sha.nullable().default(null),
 });
 export type LocalViewedState = z.infer<typeof LocalViewedState>;
 

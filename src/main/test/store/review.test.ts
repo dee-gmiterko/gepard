@@ -340,6 +340,31 @@ describe('store/review', () => {
     expect(updated.find((r) => r.path === 'b.ts')?.viewed).toBe(true);
   });
 
+  it('setLocalViewed records the commit a file was viewed at and keeps it when unviewed', async () => {
+    const first = 'a'.repeat(40);
+    const second = 'b'.repeat(40);
+    const rows = await review.setLocalViewed('proj-h', 41, 'PR_H', ['a.ts', 'b.ts'], true, first);
+    expect(rows.map((r) => r.viewedSha)).toEqual([first, first]);
+
+    const unviewed = await review.setLocalViewed('proj-h', 41, 'PR_H', ['a.ts'], false, second);
+    expect(unviewed.find((r) => r.path === 'a.ts')).toMatchObject({
+      viewed: false,
+      viewedSha: first,
+    });
+
+    const reviewed = await review.setLocalViewed('proj-h', 41, 'PR_H', ['a.ts'], true, second);
+    expect(reviewed.find((r) => r.path === 'a.ts')?.viewedSha).toBe(second);
+    expect(reviewed.find((r) => r.path === 'b.ts')?.viewedSha).toBe(first);
+
+    const withoutSha = await review.setLocalViewed('proj-h', 41, 'PR_H', ['a.ts', 'c.ts'], true);
+    expect(withoutSha.find((r) => r.path === 'a.ts')?.viewedSha).toBe(second);
+    expect(withoutSha.find((r) => r.path === 'c.ts')?.viewedSha).toBeNull();
+
+    expect((await review.listViewed('proj-h', 41)).find((r) => r.path === 'a.ts')?.viewedSha).toBe(
+      second,
+    );
+  });
+
   it('keeps unassigned comments apart from PR comments and clears selected threads', async () => {
     const unassignedCtx = { prId: review.UNASSIGNED_PR_ID, commitOid: ctx.commitOid };
     const general = await review.upsertLocalComment('proj-g', null, unassignedCtx, {

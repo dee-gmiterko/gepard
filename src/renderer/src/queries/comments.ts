@@ -8,7 +8,7 @@ import {
 import { invoke } from '../ipc/client';
 import { qk } from './keys';
 import { useUiDispatch } from '../state/UiContext';
-import { useProjectId, useTargetCommit, useTargetPr } from '../state/hooks';
+import { useCheckoutHead, useProjectId, useTargetCommit, useTargetPr } from '../state/hooks';
 import { useTargetedPr } from './prs';
 import type { ChannelInput, CommentDraft, LocalViewedState, SyncMode } from '@gepard/common';
 
@@ -91,12 +91,13 @@ export function useSetViewed() {
   const projectId = useProjectId() ?? '';
   const pr = useTargetPr() ?? NaN;
   const prId = useTargetedPr()?.id ?? null;
+  const sha = useCheckoutHead()?.head ?? null;
   const qc = useQueryClient();
   const key = qk.viewed(projectId, pr);
   return useMutation({
     mutationKey: [...key, 'set'] as const,
     mutationFn: (input: { paths: string[]; viewed: boolean }) =>
-      invoke('viewed.set', { projectId, pr, paths: input.paths, viewed: input.viewed, prId }),
+      invoke('viewed.set', { projectId, pr, paths: input.paths, viewed: input.viewed, prId, sha }),
     onMutate: async (input) => {
       await qc.cancelQueries({ queryKey: key });
       const previous = qc.getQueryData<LocalViewedState[]>(key);
@@ -104,7 +105,14 @@ export function useSetViewed() {
         const paths = new Set(input.paths);
         const now = new Date().toISOString();
         const next = (prev ?? []).map((v) =>
-          paths.has(v.path) ? { ...v, viewed: input.viewed, localUpdatedAt: now } : v,
+          paths.has(v.path)
+            ? {
+                ...v,
+                viewed: input.viewed,
+                localUpdatedAt: now,
+                viewedSha: input.viewed ? (sha ?? v.viewedSha) : v.viewedSha,
+              }
+            : v,
         );
         for (const path of input.paths) {
           if (!next.some((v) => v.path === path)) {
@@ -115,6 +123,7 @@ export function useSetViewed() {
               remote: null,
               localUpdatedAt: now,
               remoteFetchedAt: null,
+              viewedSha: input.viewed ? sha : null,
             });
           }
         }

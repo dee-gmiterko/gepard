@@ -4,6 +4,7 @@ import {
   buildDiffDoc,
   changeLines,
   changeSignature,
+  diffRange,
   findDiffDocLine,
   fullFileDiffMarks,
   matchesSimilar,
@@ -17,6 +18,24 @@ const infos = [
   { oldLine: null, newLine: 20 },
   { oldLine: 3, newLine: 3 },
 ];
+
+describe('diffRange', () => {
+  const full = { base: 'b'.repeat(40), head: 'h'.repeat(40) };
+  const viewedSha = 'v'.repeat(40);
+
+  it('keeps the full range while incremental is off', () => {
+    expect(diffRange(full, false, viewedSha)).toBe(full);
+  });
+
+  it('starts from the last viewed commit when incremental is on', () => {
+    expect(diffRange(full, true, viewedSha)).toEqual({ base: viewedSha, head: full.head });
+  });
+
+  it('falls back to the full range for a file without a recorded commit', () => {
+    expect(diffRange(full, true, null)).toBe(full);
+    expect(diffRange(full, true, undefined)).toBe(full);
+  });
+});
 
 describe('findDiffDocLine', () => {
   it('finds the doc line for an added (RIGHT-only) line number', () => {

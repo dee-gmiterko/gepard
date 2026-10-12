@@ -54,6 +54,7 @@ export const PersistedLayout = z.object({
   wrapLongLines: z.boolean().default(false),
   fullFileDiff: z.boolean().default(false),
   randomizeOrder: z.boolean().default(false),
+  incrementalDiff: z.boolean().default(false),
 });
 export type PersistedLayout = z.infer<typeof PersistedLayout>;
 

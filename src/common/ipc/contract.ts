@@ -184,6 +184,7 @@ export const channels = {
       paths: z.array(RepoPath).min(1),
       viewed: z.boolean(),
       prId: NodeId.nullable().default(null),
+      sha: Sha.nullable().default(null),
     }),
     output: z.array(LocalViewedState),
   },

@@ -206,6 +206,16 @@ describe('layout', () => {
     );
   });
 
+  it('toggles the incremental diff via layout/setIncrementalDiff and defaults to off', () => {
+    expect(initialUiState.layout.incrementalDiff).toBe(false);
+    const on = uiReducer(state(), { type: 'layout/setIncrementalDiff', incremental: true });
+    expect(on.layout.incrementalDiff).toBe(true);
+    expect(
+      uiReducer(on, { type: 'layout/setIncrementalDiff', incremental: false }).layout
+        .incrementalDiff,
+    ).toBe(false);
+  });
+
   it('toggles hiding viewed files via layout/setHideViewedFiles', () => {
     const hidden = uiReducer(state(), { type: 'layout/setHideViewedFiles', hide: true });
     expect(hidden.layout.hideViewedFiles).toBe(true);

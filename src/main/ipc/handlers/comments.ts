@@ -54,9 +54,9 @@ export function createCommentsHandlers(
 
     'viewed.list': ({ projectId, pr }) => review.listViewed(projectId, pr),
 
-    'viewed.set': async ({ projectId, pr, paths, viewed, prId }) => {
+    'viewed.set': async ({ projectId, pr, paths, viewed, prId, sha }) => {
       const resolvedPrId = await resolvePrId(projectId, pr, prId);
-      return review.setLocalViewed(projectId, pr, resolvedPrId, paths, viewed);
+      return review.setLocalViewed(projectId, pr, resolvedPrId, paths, viewed, sha);
     },
   };
 }
