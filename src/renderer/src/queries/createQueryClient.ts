@@ -1,6 +1,6 @@
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
+import { AbortError } from '@gepard/common';
 import { reportQueryError } from '../errors/report';
-import { isCancelledError } from '../ipc/client';
 
 function mutationScope(mutation: {
   options: { mutationKey?: unknown };
@@ -22,7 +22,7 @@ export function createQueryClient(): QueryClient {
     defaultOptions: {
       queries: {
         refetchOnWindowFocus: false,
-        retry: (failureCount, error) => !isCancelledError(error) && failureCount < 3,
+        retry: (failureCount, error) => !(error instanceof AbortError) && failureCount < 3,
       },
     },
   });

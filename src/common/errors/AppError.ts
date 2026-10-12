@@ -1,4 +1,6 @@
 export class AppError extends Error {
+  channel?: string;
+
   constructor(
     public code: string,
     message: string,

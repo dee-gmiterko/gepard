@@ -1,4 +1,4 @@
-import { isCancelledError } from '../ipc/client';
+import { AbortError } from '@gepard/common';
 import { reportError } from './report';
 
 export function installWindowErrorHandlers(): void {
@@ -10,7 +10,7 @@ export function installWindowErrorHandlers(): void {
     });
   });
   window.addEventListener('unhandledrejection', (event) => {
-    if (isCancelledError(event.reason)) return;
+    if (event.reason instanceof AbortError) return;
     const reason: unknown = event.reason;
     reportError({
       scope: 'unhandledrejection',

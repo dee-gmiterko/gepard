@@ -1,16 +1,15 @@
 import { BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { z } from 'zod';
 import {
-  AppError,
   ChannelNameList,
   channels,
+  toIpcErrorShape,
   type ChannelName,
   type ChannelParsedInput,
   type ChannelOutput,
   type Envelope,
   type EventName,
   type EventPayload,
-  type IpcErrorShape,
 } from '@gepard/common';
 
 export interface HandlerCtx {
@@ -24,14 +23,6 @@ export type HandlerMap = {
     ctx: HandlerCtx,
   ) => Promise<ChannelOutput<C>> | ChannelOutput<C>;
 };
-
-function toIpcError(e: unknown): IpcErrorShape {
-  if (e instanceof AppError) return { code: e.code, message: e.message, details: e.details };
-  if (e instanceof Error && e.name === 'AbortError')
-    return { code: 'CANCELLED', message: e.message };
-  if (e instanceof Error) return { code: 'INTERNAL', message: e.message };
-  return { code: 'INTERNAL', message: String(e) };
-}
 
 function isTrustedSender(event: IpcMainInvokeEvent): boolean {
   return event.senderFrame != null && event.senderFrame === event.sender.mainFrame;
@@ -62,7 +53,7 @@ function registerChannel<C extends ChannelName>(name: C, handlers: HandlerMap): 
       const ctx: HandlerCtx = { event, window: BrowserWindow.fromWebContents(event.sender) };
       return { ok: true, value: await handler(parsed.data, ctx) };
     } catch (e) {
-      return { ok: false, error: toIpcError(e) };
+      return { ok: false, error: toIpcErrorShape(e) };
     }
   });
 }

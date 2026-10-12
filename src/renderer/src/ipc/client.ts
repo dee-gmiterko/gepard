@@ -5,27 +5,15 @@ import {
   type EventName,
   type EventPayload,
   type InvokeArgs,
-  IpcError,
+  fromIpcErrorShape,
 } from '@gepard/common';
-
-export function isCancelledError(error: unknown): boolean {
-  return error instanceof IpcError && error.code === 'CANCELLED';
-}
-
-export function isStaleShaError(error: unknown): boolean {
-  return error instanceof IpcError && error.code === 'STALE_SHA';
-}
-
-export function isConnectionError(error: unknown): boolean {
-  return error instanceof IpcError && error.code === 'CONNECTION_FAILED';
-}
 
 export async function invoke<C extends ChannelName>(
   channel: C,
   ...args: InvokeArgs<C>
 ): Promise<ChannelOutput<C>> {
   const res = await window.ipc.invoke(channel, args[0]);
-  if (!res.ok) throw new IpcError(res.error, channel);
+  if (!res.ok) throw fromIpcErrorShape(res.error, channel);
   return res.value;
 }
 

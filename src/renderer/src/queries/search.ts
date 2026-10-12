@@ -6,7 +6,8 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { invoke, isCancelledError } from '../ipc/client';
+import { AbortError } from '@gepard/common';
+import { invoke } from '../ipc/client';
 import { qk } from './keys';
 import { useProjectId } from '../state/hooks';
 import { useCurrentHead } from './projects';
@@ -21,7 +22,7 @@ const SEARCH_GC_MS = 30_000;
 function ignoreCancelled<T extends { error: unknown; isError: boolean; failureReason: unknown }>(
   result: T,
 ): T {
-  if (!result.error || !isCancelledError(result.error)) return result;
+  if (!(result.error instanceof AbortError)) return result;
   return { ...result, error: null, isError: false, failureReason: null };
 }
 

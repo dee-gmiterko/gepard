@@ -9,7 +9,6 @@ import {
   type ReviewThread,
   generalCommentAnchor,
   AppError,
-  ExecError,
 } from '@gepard/common';
 
 export function mapComment(raw: GqlReviewCommentRaw, threadId: string): Comment {
@@ -257,13 +256,4 @@ export function countPendingChanges(store: ReviewStoreFile): number {
     }
   }
   return count + store.viewed.filter(isViewedDirty).length;
-}
-
-// GitHub errors a mutation on a comment someone else already deleted with a
-// GraphQL NOT_FOUND partial error rather than a benign no-op. `gh api
-// graphql` exits non-zero on that response and prints "gh: <message>
-// (<type>)" to stderr, so the failure surfaces as an ExecError before any
-// JSON body is parsed.
-export function isRemoteNotFoundError(e: unknown): boolean {
-  return e instanceof ExecError && /\(NOT_FOUND\)/.test(e.stderr);
 }

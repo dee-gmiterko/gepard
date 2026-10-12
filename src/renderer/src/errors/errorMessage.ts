@@ -1,11 +1,19 @@
 import { defineMessages, type IntlShape, type MessageDescriptor } from 'react-intl';
-import { errorMessage, IpcError } from '@gepard/common';
+import { errorMessage, AppError } from '@gepard/common';
 
 const codeMessages = defineMessages({
+  AUTH_REQUIRED: {
+    id: 'errors.code.authRequired',
+    defaultMessage: 'GitHub rejected the sign-in. Run `gh auth login` and try again.',
+  },
   BAD_INPUT: { id: 'errors.code.badInput', defaultMessage: "That input isn't valid." },
   BAD_JSON: {
     id: 'errors.code.badJson',
     defaultMessage: 'Unexpected response from a command-line tool.',
+  },
+  CONNECTION_FAILED: {
+    id: 'errors.code.connectionFailed',
+    defaultMessage: 'GitHub could not be reached. Check your connection and try again.',
   },
   EXEC_FAILED: { id: 'errors.code.execFailed', defaultMessage: 'A command-line tool failed.' },
   EXEC_NOT_FOUND: {
@@ -73,6 +81,10 @@ const codeMessages = defineMessages({
     id: 'errors.code.prHeadUnavailable',
     defaultMessage: "This pull request's code could not be fetched from GitHub.",
   },
+  RATE_LIMITED: {
+    id: 'errors.code.rateLimited',
+    defaultMessage: "GitHub's API rate limit was reached. Try again in a few minutes.",
+  },
   SCHEMA_MISMATCH: {
     id: 'errors.code.schemaMismatch',
     defaultMessage: 'Unexpected response from a command-line tool.',
@@ -101,10 +113,8 @@ export interface DescribedError {
 }
 
 export function describeError(error: unknown): DescribedError {
-  if (error instanceof IpcError) {
-    if (isKnownCode(error.code)) {
-      return { message: codeMessages[error.code], detail: error.message };
-    }
+  if (error instanceof AppError && isKnownCode(error.code)) {
+    return { message: codeMessages[error.code], detail: error.message };
   }
   return { message: errorMessage(error) };
 }

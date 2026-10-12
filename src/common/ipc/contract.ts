@@ -268,6 +268,7 @@ export type EventPayload<E extends EventName> = z.output<Events[E]>;
 
 // Electron keeps only `.message` of an error rejected from `ipcMain.handle`.
 export interface IpcErrorShape {
+  kind?: string;
   code: string;
   message: string;
   details?: unknown;
