@@ -51,8 +51,7 @@
         "//#format:check:scripts",
         "//#locales:check",
         "//#barrels:check"
-      ],
-      "cache": false
+      ]
     },
     "//#format:scripts": {
       "cache": false
