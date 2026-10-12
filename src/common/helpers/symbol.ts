@@ -2,7 +2,7 @@ import type { z } from 'zod';
 import type { DocumentSymbol } from '../ipc/schemas/lsp';
 import { SymbolKind } from '../ipc/schemas/search';
 
-const NoiseSymbolKind = SymbolKind.extract(['typeParameter', 'parameter', 'unknown']);
+const NoiseSymbolKind = SymbolKind.extract(['typeParameter', 'parameter', 'import', 'unknown']);
 const NOISE: ReadonlySet<SymbolKind> = new Set(NoiseSymbolKind.options);
 // Only members of type-level declarations are declarations themselves; children of functions,
 // methods and variables are locals, callbacks and object-literal members.

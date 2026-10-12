@@ -161,6 +161,23 @@ export function useDefinitionLookup(sha: string, path: string) {
   );
 }
 
+export function useImportResolver(sha: string, path: string) {
+  const projectId = useProjectId() ?? '';
+  const qc = useQueryClient();
+  return useCallback(
+    async (specifier: string): Promise<string | null> => {
+      if (!projectId || !sha || !path) return null;
+      const result = await qc.fetchQuery({
+        queryKey: [...qk.file(projectId, sha, path), 'importTarget', specifier] as const,
+        queryFn: () => invoke('symbols.import', { projectId, sha, path, specifier }),
+        staleTime: Infinity,
+      });
+      return result.path;
+    },
+    [qc, projectId, sha, path],
+  );
+}
+
 export function useDocumentSymbols(sha: string, path: string) {
   const projectId = useProjectId() ?? '';
   return ignoreCancelled(

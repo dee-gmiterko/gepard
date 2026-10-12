@@ -1,4 +1,5 @@
 export * from './grammar';
+export * from './importResolution';
 export * from './language';
 export * from './locale';
 export * from './lsp';

@@ -1,4 +1,4 @@
-import { access, readFile } from 'node:fs/promises';
+import { access, readFile, stat } from 'node:fs/promises';
 import type { HandlerMap } from '../registry';
 import { withLatestWins } from '../cancellation';
 import { ripgrepSearch, ripgrepSearchPage } from '../../helpers/process/ripgrep';
@@ -13,6 +13,7 @@ import {
   type LanguageSession,
   type WorkspaceSymbol,
   navigationSymbols,
+  resolveImportSpecifier,
   makeTargetMatcher,
   StaleShaError,
 } from '@gepard/common';
@@ -152,6 +153,23 @@ export function definitionAt(
   );
 }
 
+export function importTarget(
+  input: ChannelParsedInput<'symbols.import'>,
+): Promise<ChannelOutput<'symbols.import'>> {
+  requireCurrentSha(input.projectId, input.sha);
+  const rules = indexer.extension(input.projectId, input.path)?.importResolution;
+  if (!rules) return Promise.resolve({ path: null });
+  const repoRoot = projectRepoDir(input.projectId);
+  const isFile = (path: string): Promise<boolean> =>
+    stat(resolveInRepo(repoRoot, path)).then(
+      (s) => s.isFile(),
+      () => false,
+    );
+  return resolveImportSpecifier(input.path, input.specifier, rules, isFile).then((path) => ({
+    path,
+  }));
+}
+
 export function workspaceSymbols(
   input: ChannelParsedInput<'symbols.workspace'>,
 ): Promise<ChannelOutput<'symbols.workspace'>> {
@@ -191,11 +209,17 @@ export function documentSymbols(
 
 export const searchHandlers: Pick<
   HandlerMap,
-  'search.run' | 'symbols.line' | 'symbols.definition' | 'symbols.workspace' | 'symbols.document'
+  | 'search.run'
+  | 'symbols.line'
+  | 'symbols.definition'
+  | 'symbols.import'
+  | 'symbols.workspace'
+  | 'symbols.document'
 > = {
   'search.run': runSearch,
   'symbols.line': lineSymbols,
   'symbols.definition': definitionAt,
+  'symbols.import': importTarget,
   'symbols.workspace': workspaceSymbols,
   'symbols.document': documentSymbols,
 };

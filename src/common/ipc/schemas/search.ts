@@ -22,6 +22,7 @@ export const SymbolKind = z.enum([
   'variable',
   'parameter',
   'constant',
+  'import',
   'unknown',
 ]);
 export type SymbolKind = z.infer<typeof SymbolKind>;

@@ -30,6 +30,7 @@ import { Comment, CommentDraft, LocalViewedState, ReviewThread } from './schemas
 import { GroupedResult, Pos, SearchQuery, SymbolKind, WorkspaceSymbol } from './schemas/search';
 import {
   DefinitionResult,
+  ImportTargetResult,
   DocumentSymbolsResult,
   IndexStatus,
   LanguageServerStatus,
@@ -160,6 +161,10 @@ export const channels = {
   'symbols.definition': {
     input: ProjectRef.extend({ sha: Sha, path: RepoPath, pos: Pos }),
     output: DefinitionResult,
+  },
+  'symbols.import': {
+    input: ProjectRef.extend({ sha: Sha, path: RepoPath, specifier: z.string() }),
+    output: ImportTargetResult,
   },
   'symbols.workspace': {
     input: ProjectRef.extend({
