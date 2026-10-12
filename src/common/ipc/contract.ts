@@ -38,7 +38,7 @@ import { LogLevel } from './schemas/log';
 import { ChangedFileOwners, PrOverviewDetails, ProjectOverview } from './schemas/overview';
 import { ExtensionInfo } from './schemas/extensions';
 import { GrammarModule } from './schemas/grammar';
-import { SystemThemePreference, ThemeTemplateData } from './schemas/theme';
+import { SystemPreference, ThemeTemplateData } from './schemas/theme';
 import { LocaleData } from './schemas/locale';
 import {
   ContextMenuLabels,
@@ -217,7 +217,7 @@ export const channels = {
 
   'grammars.list': { input: z.void(), output: z.array(GrammarModule) },
 
-  'theme.getSystemPreference': { input: z.void(), output: SystemThemePreference },
+  'systemPreference.get': { input: z.void(), output: SystemPreference },
   'theme.getTemplateId': { input: z.void(), output: z.string().nullable() },
   'theme.setTemplateId': {
     input: z.object({ templateId: z.string().nullable() }),
@@ -250,7 +250,7 @@ export const events = {
     message: z.string().optional(),
   }),
   'index.status': ProjectRef.extend({ status: IndexStatus }),
-  'theme.changed': SystemThemePreference,
+  'systemPreference.changed': SystemPreference,
   'app.error': z.object({ scope: z.string(), message: z.string() }),
 } as const satisfies Record<EventNameList, z.ZodType>;
 

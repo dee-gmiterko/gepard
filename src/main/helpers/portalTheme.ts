@@ -1,5 +1,6 @@
 import { spawn, execFile, type ChildProcess } from 'node:child_process';
 import { nativeTheme } from 'electron';
+import type { ThemeContrast } from '@gepard/common';
 import { log } from '../log';
 
 const PORTAL_DEST = 'org.freedesktop.portal.Desktop';
@@ -10,10 +11,10 @@ const CONTRAST_KEY = 'contrast';
 
 const UINT32_PATTERN = /uint32\s+(\d+)/;
 
-let highContrast = false;
+let contrast: ThemeContrast = 'normal';
 
-export function portalPrefersHighContrast(): boolean {
-  return highContrast;
+export function portalContrast(): ThemeContrast {
+  return contrast;
 }
 
 function parseUint32(output: string): number | null {
@@ -32,9 +33,9 @@ function applyColorScheme(output: string): void {
 function applyContrast(output: string, onChange: () => void): void {
   const value = parseUint32(output);
   if (value === null) return;
-  const next = value === 1;
-  if (next === highContrast) return;
-  highContrast = next;
+  const next: ThemeContrast = value === 1 ? 'high' : 'normal';
+  if (next === contrast) return;
+  contrast = next;
   onChange();
 }
 

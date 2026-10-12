@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FALLBACK_TEMPLATE, resolveTemplate } from '../../src/helpers/theme';
-import type { ThemeTemplateData } from '@gepard/common';
+import type { SystemPreference, ThemeTemplateData } from '@gepard/common';
 
 const tpl = (
   id: string,
@@ -18,10 +18,10 @@ const lightHc = tpl('l-hc', 'light', 'high');
 const darkHc = tpl('d-hc', 'dark', 'high');
 const all = [darkHc, lightHc, dark, light];
 
-const normal = { dark: false, highContrast: false };
-const darkNormal = { dark: true, highContrast: false };
-const lightHigh = { dark: false, highContrast: true };
-const darkHigh = { dark: true, highContrast: true };
+const normal: SystemPreference = { mode: 'light', contrast: 'normal' };
+const darkNormal: SystemPreference = { mode: 'dark', contrast: 'normal' };
+const lightHigh: SystemPreference = { mode: 'light', contrast: 'high' };
+const darkHigh: SystemPreference = { mode: 'dark', contrast: 'high' };
 
 describe('resolveTemplate', () => {
   it('uses the selected template when it exists', () => {
