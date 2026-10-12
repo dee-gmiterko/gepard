@@ -171,7 +171,7 @@ export function composeBody(comment: Comment): string {
     ...new Set(
       refs.map((r) =>
         r.kind === 'pipeline'
-          ? `Pipeline failure at ${r.path}:${r.line}: ${r.detail ?? ''}`
+          ? `Pipeline failure at ${r.path}:${r.line}: ${r.detail ?? ''}${r.runId === undefined ? '' : ` (check run ${r.runId}, full log: ${r.url ?? ''})`}`
           : `${r.path}:${r.line}`,
       ),
     ),

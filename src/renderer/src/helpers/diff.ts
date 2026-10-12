@@ -11,6 +11,13 @@ export function findDiffDocLine(
   return i === -1 ? null : i + 1;
 }
 
+export function newLineOfDocLine(
+  infos: readonly { newLine: number | null }[],
+  docLine: number,
+): number | null {
+  return infos[docLine - 1]?.newLine ?? null;
+}
+
 export function deletedLineDocLines(rows: readonly DiffRow[]): Map<number, number> {
   const docLines = new Map<number, number>();
   let pending: number[] = [];

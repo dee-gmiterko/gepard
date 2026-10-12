@@ -1,7 +1,5 @@
 import { z } from 'zod';
-import { GqlError, type Annotation } from '@gepard/common';
-
-const LEVELS = { FAILURE: 'failure', WARNING: 'warning', NOTICE: 'notice' } as const;
+import { AnnotationLevel, GqlError, type CommitAnnotation } from '@gepard/common';
 
 export const COMMIT_ANNOTATIONS_QUERY = `
 query($owner:String!, $name:String!, $sha:GitObjectID!) {
@@ -13,6 +11,9 @@ query($owner:String!, $name:String!, $sha:GitObjectID!) {
             checkRuns(first:50, filterBy:{checkType:LATEST}) {
               nodes {
                 name
+                databaseId
+                detailsUrl
+                permalink
                 annotations(first:50) {
                   nodes { path message title annotationLevel location { start { line } } }
                 }
@@ -29,7 +30,10 @@ const RawAnnotation = z.object({
   path: z.string(),
   message: z.string(),
   title: z.string().nullable(),
-  annotationLevel: z.enum(['FAILURE', 'WARNING', 'NOTICE']).nullable(),
+  annotationLevel: z
+    .enum(['FAILURE', 'WARNING', 'NOTICE'])
+    .transform((l) => AnnotationLevel.parse(l.toLowerCase()))
+    .nullable(),
   location: z.object({ start: z.object({ line: z.int().positive() }) }),
 });
 
@@ -49,6 +53,9 @@ export const CommitAnnotationsResponse = z.object({
                           z
                             .object({
                               name: z.string(),
+                              databaseId: z.int().nullable(),
+                              detailsUrl: z.string().nullable(),
+                              permalink: z.string(),
                               annotations: z.object({ nodes: z.array(RawAnnotation) }).nullable(),
                             })
                             .nullable(),
@@ -68,28 +75,30 @@ export const CommitAnnotationsResponse = z.object({
 });
 export type CommitAnnotationsResponse = z.infer<typeof CommitAnnotationsResponse>;
 
-export function parseCommitAnnotations(
-  res: CommitAnnotationsResponse,
-): { path: string; annotation: Annotation }[] {
+export function parseCommitAnnotations(res: CommitAnnotationsResponse): CommitAnnotation[] {
   const suites = res.data.repository?.object?.checkSuites?.nodes ?? [];
   return suites.flatMap((suite) =>
     (suite?.checkRuns.nodes ?? []).flatMap((run) =>
-      (run?.annotations?.nodes ?? []).flatMap((a) =>
-        a.annotationLevel === null
-          ? []
-          : [
-              {
-                path: a.path,
-                annotation: {
-                  checkName: run?.name ?? '',
-                  level: LEVELS[a.annotationLevel],
-                  line: a.location.start.line,
-                  title: a.title ?? '',
-                  message: a.message,
-                },
-              },
-            ],
-      ),
+      run === null
+        ? []
+        : (run.annotations?.nodes ?? []).flatMap((a) =>
+            a.annotationLevel === null
+              ? []
+              : [
+                  {
+                    path: a.path,
+                    annotation: {
+                      checkName: run.name,
+                      level: a.annotationLevel,
+                      line: a.location.start.line,
+                      title: a.title ?? '',
+                      message: a.message,
+                      runId: run.databaseId ?? 0,
+                      url: run.detailsUrl ?? run.permalink,
+                    },
+                  },
+                ],
+          ),
     ),
   );
 }

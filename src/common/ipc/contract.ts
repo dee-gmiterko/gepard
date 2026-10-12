@@ -9,7 +9,7 @@ import {
   PersistedLayout,
 } from './schemas/project';
 import { CommentsRef, PrRef, ProjectRef } from './schemas/refs';
-import { Annotation } from './schemas/checks';
+import { CommitAnnotation } from './schemas/checks';
 import {
   ChangedFile,
   CheckoutResult,
@@ -133,8 +133,8 @@ export const channels = {
   'overview.project': { input: ProjectRef, output: ProjectOverview },
   'overview.pr': { input: PrRef, output: PrOverviewDetails },
   'checks.annotations': {
-    input: ProjectRef.extend({ sha: Sha, path: RepoPath }),
-    output: z.array(Annotation),
+    input: ProjectRef.extend({ sha: Sha }),
+    output: z.array(CommitAnnotation),
   },
   'overview.owners': {
     input: ProjectRef.extend({ base: Sha, head: Sha }),

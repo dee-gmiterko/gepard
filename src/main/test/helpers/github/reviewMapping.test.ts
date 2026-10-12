@@ -223,6 +223,30 @@ describe('composeBody', () => {
     expect(composeBody(comment)).toBe('see this\n\nsrc/a.ts:5\nsrc/b.ts:9');
   });
 
+  it('adds the check run id and full log url to pipeline failures', () => {
+    const comment = makeComment({
+      id: 'c1',
+      body: 'broken',
+      local: {
+        status: 'new',
+        updatedAt: '2024-01-01T00:00:00Z',
+        references: [
+          {
+            path: 'src/a.ts',
+            line: 5,
+            kind: 'pipeline',
+            detail: 'lint: bad',
+            runId: 42,
+            url: 'https://github.com/o/r/runs/42',
+          },
+        ],
+      },
+    });
+    expect(composeBody(comment)).toBe(
+      'broken\n\nPipeline failure at src/a.ts:5: lint: bad (check run 42, full log: https://github.com/o/r/runs/42)',
+    );
+  });
+
   it('dedupes identical references', () => {
     const comment = makeComment({
       id: 'c1',

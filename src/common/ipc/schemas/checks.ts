@@ -9,5 +9,10 @@ export const Annotation = z.object({
   line: z.int().positive(),
   title: z.string(),
   message: z.string(),
+  runId: z.int(),
+  url: z.string(),
 });
 export type Annotation = z.infer<typeof Annotation>;
+
+export const CommitAnnotation = z.object({ path: z.string(), annotation: Annotation });
+export type CommitAnnotation = z.infer<typeof CommitAnnotation>;
