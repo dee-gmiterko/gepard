@@ -32,13 +32,14 @@ export const LocalViewedState = z.object({
 });
 export type LocalViewedState = z.infer<typeof LocalViewedState>;
 
-export const ReferenceKind = z.enum(['symbol', 'exact', 'pattern']);
+export const ReferenceKind = z.enum(['symbol', 'exact', 'pattern', 'pipeline']);
 export type ReferenceKind = z.infer<typeof ReferenceKind>;
 
 export const CommentReference = z.object({
   path: z.string(),
   line: z.int(),
   kind: ReferenceKind,
+  detail: z.string().optional(),
 });
 export type CommentReference = z.infer<typeof CommentReference>;
 

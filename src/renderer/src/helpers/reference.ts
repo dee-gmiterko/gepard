@@ -1,9 +1,15 @@
 import { z } from 'zod';
 import { withoutExactMatches, type LinePattern } from './linePattern';
-import type { CommentReference, GroupedResult, ReferenceKind, SearchScope } from '@gepard/common';
+import type {
+  Annotation,
+  CommentReference,
+  GroupedResult,
+  ReferenceKind,
+  SearchScope,
+} from '@gepard/common';
 
 export function sameRef(a: CommentReference, b: CommentReference): boolean {
-  return a.kind === b.kind && a.path === b.path && a.line === b.line;
+  return a.kind === b.kind && a.path === b.path && a.line === b.line && a.detail === b.detail;
 }
 
 export function toggleRefIn(
@@ -15,6 +21,21 @@ export function toggleRefIn(
     : [...references, ref];
 }
 
+export function pipelineRefsOf(
+  annotations: readonly Annotation[],
+  path: string,
+  line: number,
+): CommentReference[] {
+  return annotations
+    .filter((a) => a.line === line)
+    .map((a) => ({
+      path,
+      line,
+      kind: 'pipeline',
+      detail: `${a.checkName}: ${a.title ? `${a.title} — ` : ''}${a.message}`,
+    }));
+}
+
 export interface ReferenceChoices {
   symbolOpen: boolean;
   symbols: CommentReference[];
@@ -24,6 +45,7 @@ export interface ReferenceChoices {
   patterns: Record<string, { open?: boolean; scope?: SearchScope }>;
   savedExact: CommentReference[];
   savedPatterns: CommentReference[];
+  pipeline: CommentReference[];
 }
 
 export function initialReferenceChoices(references: CommentReference[]): ReferenceChoices {
@@ -36,12 +58,13 @@ export function initialReferenceChoices(references: CommentReference[]): Referen
     patterns: {},
     savedExact: references.filter((r) => r.kind === 'exact'),
     savedPatterns: references.filter((r) => r.kind === 'pattern'),
+    pipeline: references.filter((r) => r.kind === 'pipeline'),
   };
 }
 
 export function referencesFromResult(
   data: GroupedResult | undefined,
-  kind: Exclude<ReferenceKind, 'symbol'>,
+  kind: Exclude<ReferenceKind, 'symbol' | 'pipeline'>,
 ): CommentReference[] {
   if (!data) return [];
   return data.files.flatMap((f) => f.matches.map((m) => ({ path: f.path, line: m.line, kind })));
@@ -176,5 +199,5 @@ export function combineReferences(
   const untouched = Object.keys(choices.patterns).length === 0;
   const patterns =
     patternReferences.length === 0 && untouched ? choices.savedPatterns : patternReferences;
-  return [...choices.symbols, ...exact, ...patterns];
+  return [...choices.symbols, ...exact, ...patterns, ...choices.pipeline];
 }

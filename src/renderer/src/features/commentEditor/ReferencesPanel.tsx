@@ -12,6 +12,7 @@ import { SymbolDefinitionSection, type LineSymbol } from './SymbolDefinitionSect
 import {
   isPatternOpen,
   patternScopeOf,
+  sameRef,
   toggleRefIn,
   type ReferenceChoices,
 } from '../../helpers/reference';
@@ -35,6 +36,10 @@ const messages = defineMessages({
   samePatternIn: {
     id: 'commentEditor.referencesPanel.samePatternIn',
     defaultMessage: 'Same pattern <small>{pattern}</small> in:',
+  },
+  pipelineFailure: {
+    id: 'commentEditor.referencesPanel.pipelineFailure',
+    defaultMessage: 'Pipeline failure',
   },
   truncated: {
     id: 'commentEditor.referencesPanel.truncated',
@@ -135,6 +140,7 @@ interface ReferencesPanelProps {
   exactData: GroupedResult | undefined;
   exactFetching: boolean;
   patterns: PatternView[];
+  pipelineRefs: CommentReference[];
 }
 
 export function ReferencesPanel({
@@ -148,6 +154,7 @@ export function ReferencesPanel({
   exactData,
   exactFetching,
   patterns,
+  pipelineRefs,
 }: ReferencesPanelProps): React.JSX.Element | null {
   const intl = useIntl();
   function toggleSymbolRef(symbolRef: CommentReference): void {
@@ -178,12 +185,38 @@ export function ReferencesPanel({
     }));
   }
 
+  function togglePipelineRef(pipelineRef: CommentReference): void {
+    onChoicesChange((prev) => ({ ...prev, pipeline: toggleRefIn(prev.pipeline, pipelineRef) }));
+  }
+
+  const pipelineSections = pipelineRefs.map((r) => {
+    const checked = choices.pipeline.some((c) => sameRef(c, r));
+    return (
+      <Accordion
+        key={r.detail}
+        open={checked}
+        onToggle={() => togglePipelineRef(r)}
+        leading={
+          <Checkbox
+            checked={checked}
+            ariaLabel={intl.formatMessage(messages.pipelineFailure)}
+            onChange={() => togglePipelineRef(r)}
+          />
+        }
+        title={<FormattedMessage {...messages.pipelineFailure} />}
+      >
+        <Message layout="inline">{r.detail}</Message>
+      </Accordion>
+    );
+  });
+
   if (!refAnchor) {
-    return null;
+    return pipelineSections.length > 0 ? <Stack>{pipelineSections}</Stack> : null;
   }
 
   return (
     <Stack>
+      {pipelineSections}
       {!symbolDisabled && (
         <SymbolDefinitionSection
           refAnchor={refAnchor}

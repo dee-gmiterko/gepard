@@ -1,3 +1,4 @@
+export * from './checks';
 export * from './comment';
 export * from './contextMenu';
 export * from './extensions';
