@@ -33,7 +33,7 @@
 ### Settings
 - Fullscreen overlay, opened via a settings icon in the side panel or from the launchpad; not part of the launchpad page itself; closes on the header close button.
 - Sections:
-	- Theme - single select: Follow system, Light, Dark, Light - High contrast, Dark - High contrast, plus any installed theme extensions. Follow system picks light/dark from the OS colour scheme and the high contrast variant when the OS asks for more contrast (`prefers-contrast`/`forced-colors` in the renderer, Electron's `nativeTheme` and the freedesktop portal `contrast` key in main).
+	- Theme - single select: Follow system, Light, Dark, Light - High contrast, Dark - High contrast, plus any installed theme extensions. Follow system picks light or dark from the OS colour scheme and the high contrast variant when the OS asks for more contrast.
 	- Language - single select: Follow system (OS/browser-detected), plus each installed locale extension by display name; persisted selection wins over OS detection, applied live without restart.
 	- Controls - list of the current global keyboard shortcuts (command name + effective key), sourced from the same binding table `useGlobalKeys` runs, so the list can't drift from actual behavior. Each shortcut can be rebound: click `Rebind`, press the new key, the override is persisted and takes effect immediately, no restart; a `Reset` button clears a customized binding back to its default. If a rebind lands on a key another binding also effectively uses, both rows show a visible conflict note (not a hard block - the earlier-listed binding wins at runtime).
 	- Extensions - list of installed extensions (built-in and external), each showing kind (language server/grammar/theme/locale), source (built-in/external) badge and an enable/disable checkbox; `Add extension` opens a file picker to install an extension package from disk; shows the install directory path and per-extension load errors.
@@ -120,8 +120,8 @@
 ### Styling
 - heavy use of styled components - all dedicated locally defined in React components (any duplication is sign of missing component)
 - default fonts
-- themes: full color templates, with light and dark ones built in (each with a high contrast variant whose colour pairs, found by static analysis of the stylesheets in `scripts/theme-contrast.ts`, are validated against WCAG AA/AAA by a unit test) and followed by system preference
-- reduced motion: the mark-viewed animation is disabled under `prefers-reduced-motion: reduce`, in CSS only
+- themes: full color templates, with light and dark ones built in, each with a high contrast variant, and followed by system preference
+- reduced motion: the mark-viewed animation is disabled when the OS asks for reduced motion
 - icons from a feathericons react
 - minimalist interface like similar software
 
