@@ -25,6 +25,7 @@ export function createPrsHandlers(
   | 'overview.project'
   | 'overview.pr'
   | 'overview.owners'
+  | 'checks.annotations'
 > {
   return {
     'pr.list': async ({ projectId, search, commit, path }) => {
@@ -70,6 +71,11 @@ export function createPrsHandlers(
       if (clearUnassignedThreadIds.length > 0)
         await review.clearUnassignedThreads(projectId, clearUnassignedThreadIds);
       return issue;
+    },
+
+    'checks.annotations': async ({ projectId, sha, path }) => {
+      const { owner, repo } = await gh.repoRefFor(projectId);
+      return gh.fileAnnotations(owner, repo, sha, path);
     },
 
     'overview.project': async ({ projectId }) => {

@@ -167,7 +167,15 @@ export function isViewedDirty(v: LocalViewedState): boolean {
 export function composeBody(comment: Comment): string {
   const refs = comment.local?.references ?? [];
   if (refs.length === 0) return comment.body;
-  const lines = [...new Set(refs.map((r) => `${r.path}:${r.line}`))];
+  const lines = [
+    ...new Set(
+      refs.map((r) =>
+        r.kind === 'pipeline'
+          ? `Pipeline failure at ${r.path}:${r.line}: ${r.detail ?? ''}`
+          : `${r.path}:${r.line}`,
+      ),
+    ),
+  ];
   return `${comment.body}\n\n${lines.join('\n')}`;
 }
 
