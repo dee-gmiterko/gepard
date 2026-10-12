@@ -8,7 +8,7 @@
 
 ## Findings from exploring the repo
 
-- Yarn 4 workspaces plus Turborepo; `yarn validate` (typecheck, lint, format check, locale check) and `yarn test` are the quality gates.
+- Yarn 4 workspaces plus Turborepo; `yarn validate` (a Turborepo `validate` task over typecheck, lint, format check, locale check and barrel check) and `yarn test` are the quality gates.
 - Commits already follow Conventional Commits, enforced locally by husky and commitlint.
 - Packaging is electron-builder in `src/app` (AppImage, NSIS, dmg), with a `github` publish provider already configured.
 - All five app workspaces share version `0.1.0`; `src/app/package.json` is the one electron-builder uses for artifact names. No tags exist yet.

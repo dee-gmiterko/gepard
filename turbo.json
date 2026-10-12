@@ -30,6 +30,30 @@
     "//#typecheck:scripts": {
       "inputs": ["scripts/**", "vitest.config.ts", "package.json"]
     },
+    "//#locales:check": {
+      "inputs": [
+        "scripts/refresh-locales.ts",
+        "extensions/locales/**",
+        "src/renderer/src/**/*.{ts,tsx}",
+        "package.json"
+      ]
+    },
+    "//#barrels:check": {
+      "inputs": ["scripts/refresh-barrels.sh", "src/common/**", "src/common-lsp/**", "package.json"]
+    },
+    "validate": {
+      "dependsOn": [
+        "typecheck",
+        "lint",
+        "format:check",
+        "//#typecheck:scripts",
+        "//#lint:scripts",
+        "//#format:check:scripts",
+        "//#locales:check",
+        "//#barrels:check"
+      ],
+      "cache": false
+    },
     "//#format:scripts": {
       "cache": false
     },
