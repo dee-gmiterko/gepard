@@ -5,4 +5,4 @@ const exclude = process.env.CI
   ? [...configDefaults.exclude, 'test/extension.test.ts']
   : configDefaults.exclude;
 
-export default defineConfig({ test: { exclude } });
+export default defineConfig({ test: { exclude, passWithNoTests: true } });
