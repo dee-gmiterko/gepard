@@ -46,10 +46,17 @@ const ThemeSyntax = z.object({
 export const ThemeMode = z.enum(['light', 'dark']);
 export type ThemeMode = z.infer<typeof ThemeMode>;
 
+export const ThemeContrast = z.enum(['normal', 'high']);
+export type ThemeContrast = z.infer<typeof ThemeContrast>;
+
+export const SystemThemePreference = z.object({ dark: z.boolean(), highContrast: z.boolean() });
+export type SystemThemePreference = z.infer<typeof SystemThemePreference>;
+
 export const ThemeTemplateData = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   mode: ThemeMode,
+  contrast: ThemeContrast.optional(),
   shadow: ThemeShadow,
   colors: ThemeColors,
   syntax: ThemeSyntax,

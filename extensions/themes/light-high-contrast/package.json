@@ -1,0 +1,23 @@
+{
+  "name": "gepard-theme-light-high-contrast",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Built-in light high contrast theme extension for Gepard.",
+  "main": "index.mjs",
+  "gepard": {
+    "type": "theme"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@gepard/common": "workspace:^",
+    "@gepard/eslint-config": "workspace:^",
+    "@types/node": "^26.6.4",
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.9",
+    "typescript": "^7.0.2"
+  }
+}
