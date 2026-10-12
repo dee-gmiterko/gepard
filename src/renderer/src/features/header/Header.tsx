@@ -1,46 +1,23 @@
 import styled from 'styled-components';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, useIntl } from 'react-intl';
 import { PrTarget } from './PrTarget';
 import { CommitTarget } from './CommitTarget';
 import { PathTarget } from './PathTarget';
 import { useTargetingEffects } from './useTargetingEffects';
 import { HeaderLogo } from './HeaderLogo';
-import { useHeaderStatus } from './useHeaderStatus';
-import { Sidebar, WifiOff } from 'react-feather';
+import { HeaderStatus } from './HeaderStatus';
+import { Sidebar } from 'react-feather';
 import { IconButton } from '../../components/IconButton';
-import { Ellipsis } from '../../components/Ellipsis';
 import { Inline } from '../../components/Layout';
-import { useIndexStatus, useSetLayout } from '../../queries/projects';
-import { useOffline } from '../../queries/connectivity';
+import { useSetLayout } from '../../queries/projects';
 import { useUiDispatch } from '../../state/UiContext';
 import { useActiveFile, useLayout, useTargeting } from '../../state/hooks';
-import { ProgressBar } from '../../components/ProgressBar';
-import { useIsCheckedOutChangedFile, useReviewProgress } from '../../queries/review';
+import { useIsCheckedOutChangedFile } from '../../queries/review';
 
 const messages = defineMessages({
-  checkingOut: {
-    id: 'header.checkingOut',
-    defaultMessage: 'Checking out…',
-  },
-  indexing: {
-    id: 'header.indexing',
-    defaultMessage: 'Indexing…',
-  },
-  progress: {
-    id: 'header.progress',
-    defaultMessage: '{viewed} / {total} viewed',
-  },
   fileDetails: {
     id: 'content.fileControls.fileDetails',
     defaultMessage: 'File details',
-  },
-  offline: {
-    id: 'header.offline',
-    defaultMessage: 'Offline',
-  },
-  offlineHint: {
-    id: 'header.offlineHint',
-    defaultMessage: 'GitHub could not be reached. Changes stay local until the connection returns.',
   },
 });
 
@@ -55,36 +32,11 @@ const Bar = styled.header`
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
-const Status = styled(Ellipsis)`
-  flex: none;
-  width: 90px;
-  font-size: ${({ theme }) => theme.font.size.xs};
-  color: ${({ theme }) => theme.colors.fgMuted};
-`;
-
 const Group = styled.div`
   display: flex;
   align-items: center;
   gap: ${({ theme }) => theme.space[3]};
   min-width: 0;
-`;
-
-const Offline = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.space[1]};
-  font-size: ${({ theme }) => theme.font.size.xs};
-  color: ${({ theme }) => theme.colors.warning};
-  white-space: nowrap;
-`;
-
-const Progress = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.space[2]};
-  font-size: ${({ theme }) => theme.font.size.xs};
-  color: ${({ theme }) => theme.colors.fgMuted};
-  white-space: nowrap;
 `;
 
 export function Header(): React.JSX.Element {
@@ -94,13 +46,8 @@ export function Header(): React.JSX.Element {
   const layout = useLayout();
   const targeting = useTargeting();
   const setLayout = useSetLayout();
-  const { data: index } = useIndexStatus();
   const path = useActiveFile();
-  const progress = useReviewProgress();
   const isChangedFile = useIsCheckedOutChangedFile(path);
-
-  const headerStatus = useHeaderStatus();
-  const offline = useOffline();
 
   function toggleFileComments(): void {
     const open = !layout.fileCommentsPanelOpen;
@@ -117,55 +64,15 @@ export function Header(): React.JSX.Element {
           <CommitTarget />
           <PathTarget />
         </Inline>
-        {pending && (
-          <Status>
-            <FormattedMessage {...messages.checkingOut} />
-          </Status>
-        )}
-        {headerStatus && (
-          <Status>
-            <FormattedMessage {...headerStatus.message} />
-          </Status>
-        )}
       </Group>
-      <Group>
-        {offline && (
-          <Offline role="status" title={intl.formatMessage(messages.offlineHint)}>
-            <WifiOff size={14} />
-            <FormattedMessage {...messages.offline} />
-          </Offline>
-        )}
-        {progress.totalCount > 0 && (
-          <Progress>
-            <FormattedMessage
-              {...messages.progress}
-              values={{ viewed: progress.viewedCount, total: progress.totalCount }}
-            />
-            <ProgressBar
-              value={progress.viewedCount}
-              max={progress.totalCount}
-              tone="muted"
-              width="80px"
-              label={intl.formatMessage(messages.progress, {
-                viewed: progress.viewedCount,
-                total: progress.totalCount,
-              })}
-            />
-          </Progress>
-        )}
-        {index?.state === 'indexing' && (
-          <Status>
-            <FormattedMessage {...messages.indexing} />
-          </Status>
-        )}
-        <IconButton
-          icon={Sidebar}
-          active={layout.fileCommentsPanelOpen}
-          disabled={path === null || (targeting.pr !== null && !isChangedFile)}
-          label={intl.formatMessage(messages.fileDetails)}
-          onClick={toggleFileComments}
-        />
-      </Group>
+      <HeaderStatus pending={pending} />
+      <IconButton
+        icon={Sidebar}
+        active={layout.fileCommentsPanelOpen}
+        disabled={path === null || (targeting.pr !== null && !isChangedFile)}
+        label={intl.formatMessage(messages.fileDetails)}
+        onClick={toggleFileComments}
+      />
     </Bar>
   );
 }

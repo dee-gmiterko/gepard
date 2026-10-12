@@ -46,7 +46,7 @@
 		- path filters live as-you-type (each keystroke updates the target and narrows navigation), not only on Enter/selection
 	- `+` next to the PR select opens a New PR modal: base and head branch, title, description; creates the PR immediately and targets it
 	- Toggle for the file comments/right panel: shown whenever a PR is targeted and the active file is a changed file.
-	- Offline indicator: a warning shown while the main process reports GitHub as unreachable (a `gh` or network `git` call failed on a connection error; cleared by the next one that succeeds). Background failures only flip the indicator; an explicit action such as sync additionally gets a dedicated toast.
+	- Offline indicator: a warning shown while GitHub is unreachable; an explicit action such as sync that fails because of the connection also gets a dedicated error toast.
 - Side panel - navigation: vertical tabs:
 	- file browser - full tree.
 	- targeted file browser - limited to targeted files changed (or path targeted). Tree or flat list. When a PR is targeted, a toggle hides files already marked viewed (folders left empty disappear, the repository root stays); persisted per project. If the active file gets hidden, review moves on to the next unviewed file.
