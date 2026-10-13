@@ -4,8 +4,13 @@
   "private": true,
   "description": "Built-in English locale extension for Gepard.",
   "main": "index.mjs",
+  "files": [
+    "index.mjs",
+    "messages.json"
+  ],
   "gepard": {
-    "type": "locale"
+    "type": "locale",
+    "displayName": "English"
   },
   "scripts": {
     "lint": "eslint .",

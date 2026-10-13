@@ -2,7 +2,7 @@ import { readdir } from 'node:fs/promises';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ExtensionEvents, ExtensionHost, LanguageSession } from '@gepard/common';
-import { materializePayload, packageRoot } from '@gepard/common-lsp';
+import { materializePayload, packageRoot, requireCommand } from '@gepard/common-lsp';
 import { JdtlsSession } from './session';
 
 function configDirName(): string {
@@ -24,6 +24,7 @@ export async function open(
   host: ExtensionHost,
   sink: ExtensionEvents,
 ): Promise<LanguageSession> {
+  await requireCommand('java');
   const dir = await materializePayload(
     {
       vendorDir: path.join(

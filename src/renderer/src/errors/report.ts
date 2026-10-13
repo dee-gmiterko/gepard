@@ -2,7 +2,7 @@ import { AbortError, AppError, ConnectionError, StaleShaError } from '@gepard/co
 import type { MessageDescriptor } from 'react-intl';
 import { z } from 'zod';
 import { invoke } from '../ipc/client';
-import { describeError, errorText } from './errorMessage';
+import { describeError, errorText, type ErrorValues } from './errorMessage';
 
 export const ReportTone = z.enum(['danger', 'warning']);
 export type ReportTone = z.infer<typeof ReportTone>;
@@ -10,8 +10,9 @@ export type ReportTone = z.infer<typeof ReportTone>;
 export interface ReportedError {
   scope: string;
   message: string | MessageDescriptor;
+  values?: ErrorValues;
   tone?: ReportTone;
-  detail?: string;
+  detail?: string | MessageDescriptor;
   loggedByMain?: boolean;
 }
 
@@ -27,8 +28,9 @@ export function reportError(error: ReportedError): void {
   for (const listener of listeners) listener(error);
   if (error.loggedByMain) return;
 
-  const headline = errorText(error.message);
-  const message = error.detail ? `${headline}\n${error.detail}` : headline;
+  const headline = errorText(error.message, error.values);
+  const detail = error.detail === undefined ? '' : errorText(error.detail, error.values);
+  const message = detail ? `${headline}\n${detail}` : headline;
   invoke('log.write', {
     level: error.tone === 'warning' ? 'warn' : 'error',
     scope: error.scope,
@@ -46,12 +48,12 @@ export function reportQueryError(
   { explicit = false }: ReportQueryErrorOptions = {},
 ): void {
   if (error instanceof AbortError || error instanceof StaleShaError) return;
-  const { message, detail } = describeError(error);
+  const { message, values, detail } = describeError(error);
   if (error instanceof ConnectionError) {
     if (explicit) reportError({ scope, message, tone: 'warning' });
     return;
   }
-  reportError({ scope, message, detail: mergeDetail(detail, errorDetail(error)) });
+  reportError({ scope, message, values, detail: mergeDetail(detail, errorDetail(error)) });
 }
 
 function mergeDetail(primary: string | undefined, extra: string | undefined): string | undefined {

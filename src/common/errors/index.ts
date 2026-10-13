@@ -6,6 +6,7 @@ export * from './ExecError';
 export * from './ExecExitError';
 export * from './ExecSpawnError';
 export * from './IpcError';
+export * from './MissingDependencyError';
 export * from './RateLimitError';
 export * from './RemoteNotFoundError';
 export * from './StaleShaError';

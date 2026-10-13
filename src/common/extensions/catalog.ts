@@ -10,7 +10,8 @@ export const CatalogEntry = z.object({
   description: z.string(),
   path: z.string().min(1),
   version: z.string().min(1),
-  platforms: z.array(z.string().min(1)).min(1),
+  platforms: z.array(z.string().min(1)).min(1).optional(),
+  sha: z.string().regex(/^[0-9a-f]{40}$/),
 });
 export type CatalogEntry = z.infer<typeof CatalogEntry>;
 
@@ -26,26 +27,27 @@ export function platformTarget(platform: string, arch: string): string {
 }
 
 export function catalogAssetPlatform(entry: CatalogEntry, target: string): string | null {
-  if (entry.platforms.includes(target)) return target;
-  if (entry.platforms.includes(PLATFORM_ANY)) return PLATFORM_ANY;
-  return null;
+  if (!entry.platforms) return PLATFORM_ANY;
+  return entry.platforms.includes(target) ? target : null;
 }
 
 export function releaseTag(name: string, version: string): string {
   return `${name}-v${version}`;
 }
 
+// npm pack names a scoped package's tarball scope-name-version.tgz.
 export function releaseArchiveName(name: string, version: string, platform: string): string {
-  return `${name}-v${version}-${platform}.tar.gz`;
+  const base = `${name.replace(/^@/, '').replace('/', '-')}-${version}`;
+  return platform === PLATFORM_ANY ? `${base}.tgz` : `${base}-${platform}.tgz`;
 }
 
-const ARCHIVE_RE = /^(.+)-v([^-]+(?:-[^-]+)*?)-([a-z0-9]+(?:-[a-z0-9]+)?)\.tar\.gz$/;
+const PLATFORM_ARCHIVE_RE = /-[a-z0-9]+-(?:x64|arm64|ia32|arm|ppc64|s390x|riscv64|loong64)\.tgz$/;
 
 export function pickReleaseAsset(assetNames: readonly string[], target: string): string | null {
-  const archives = assetNames.filter((name) => ARCHIVE_RE.test(name));
+  const archives = assetNames.filter((name) => name.endsWith('.tgz'));
   return (
-    archives.find((name) => name.endsWith(`-${target}.tar.gz`)) ??
-    archives.find((name) => name.endsWith(`-${PLATFORM_ANY}.tar.gz`)) ??
+    archives.find((name) => name.endsWith(`-${target}.tgz`)) ??
+    archives.find((name) => !PLATFORM_ARCHIVE_RE.test(name)) ??
     null
   );
 }
@@ -93,27 +95,6 @@ export function compareVersions(a: string, b: string): number {
 
 export function isNewerVersion(candidate: string, installed: string): boolean {
   return compareVersions(candidate, installed) > 0;
-}
-
-const REPO_NAME_RE = /^[A-Za-z0-9_.-]+$/;
-
-export interface RepositoryInput {
-  owner: string;
-  repo: string;
-}
-
-export function parseRepositoryInput(text: string): RepositoryInput {
-  const segments = text
-    .trim()
-    .replace(/^https?:\/\/(www\.)?github\.com\//i, '')
-    .replace(/^github\.com\//i, '')
-    .replace(/\/+$/, '')
-    .replace(/\.git$/, '')
-    .split('/');
-  if (segments.length !== 2 || !segments.every((s) => REPO_NAME_RE.test(s))) {
-    throw new AppError('BAD_INPUT', `expected <owner>/<repo>, got: ${text}`);
-  }
-  return { owner: segments[0], repo: segments[1] };
 }
 
 export function normalizeRepoPath(text: string | null | undefined): string | null {

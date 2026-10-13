@@ -11,6 +11,7 @@ files:
   - '!resources/**'
   - '!scripts/**'
   - '!.yarn/**'
+  - '!extensions-dist/**'
   # electron is a devDependency, but @electron-toolkit/utils' peerDependencies.electron
   # resolves against it in the installed tree, so electron-builder's module collector
   # treats electron and its download toolchain as production dependencies.
@@ -25,18 +26,10 @@ files:
 # Electron cannot execute binaries from inside an asar archive.
 asarUnpack:
   - '**/@vscode/ripgrep-*/bin/**'
-# LSP extensions are released on their own (docs/releases.md) and installed from Settings.
+# Released extension tarballs unpacked by scripts/bundle-extensions.ts before the build.
 extraResources:
-  - from: ../../extensions
+  - from: extensions-dist
     to: extensions
-    filter:
-      - '!lsp/**'
-      - '*/*/dist/**'
-      - '*/*/vendor/**'
-      - '*/*/package.json'
-      - '*/*/index.mjs'
-      - '*/*/messages.json'
-      - '*/*/{LICENSE,README.md,THIRD_PARTY_LICENSES,UPSTREAM_LICENSE}'
 win:
   executableName: Gepard
 nsis:

@@ -2,11 +2,12 @@ import { spawn } from 'node:child_process';
 import { app, BrowserWindow } from 'electron';
 import {
   AppError,
+  isGitHubRepoUrl,
   type ChannelParsedInput,
   type OpenedProject,
   type Project,
 } from '@gepard/common';
-import { isGitHubRepoUrl } from '../helpers/github/repoUrl';
+
 import { findProjectByName } from '../helpers/projects';
 import { instanceCommand, waitForInstance } from '../helpers/process/instance';
 import { ProjectLocks } from '../helpers/process/projectLock';

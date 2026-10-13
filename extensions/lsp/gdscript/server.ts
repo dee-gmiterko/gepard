@@ -1,5 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import type { ExtensionEvents, ExtensionHost, LanguageSession } from '@gepard/common';
+import { requireCommand } from '@gepard/common-lsp';
 import { editorEnv, findProjectDir, PROJECT_FILE } from './project';
 import { GodotSession } from './session';
 
@@ -8,6 +9,7 @@ export async function open(
   host: ExtensionHost,
   sink: ExtensionEvents,
 ): Promise<LanguageSession> {
+  await requireCommand('godot');
   const projectDir = await findProjectDir(project.root);
   if (!projectDir) {
     throw new Error(`no ${PROJECT_FILE} found under ${project.root}`);

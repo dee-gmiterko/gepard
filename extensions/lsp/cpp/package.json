@@ -3,10 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Bundled C/C++ language extension for Gepard (clangd, downloaded on first use).",
+  "description": "Code intelligence for C and C++ projects (clangd, downloaded on first use).",
   "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
   "gepard": {
     "type": "lsp",
+    "displayName": "C/C++",
     "vendor": {
       "version": "23.1.0",
       "assets": {

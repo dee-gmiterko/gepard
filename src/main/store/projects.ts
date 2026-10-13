@@ -1,11 +1,17 @@
 import { mkdir, readdir, rm, stat } from 'node:fs/promises';
 import { z } from 'zod';
-import { Project, PersistedLayout, PersistedTargeting, AppError } from '@gepard/common';
+import {
+  Project,
+  PersistedLayout,
+  PersistedTargeting,
+  AppError,
+  parseGitHubRepoUrl,
+} from '@gepard/common';
 import { readJsonFile, writeJsonFile } from '../helpers/jsonFile';
 import { withFileLock } from '../helpers/fileLock';
 import { formatCaughtError } from '../helpers/error';
 import { log } from '../log';
-import { parseGitHubRepoUrl } from '../helpers/github/repoUrl';
+
 import {
   projectDir,
   projectId as makeProjectId,

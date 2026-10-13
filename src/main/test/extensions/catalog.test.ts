@@ -1,50 +1,63 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import {
   compareVersions,
   isNewerVersion,
-  parseRepositoryInput,
   normalizeRepoPath,
   pickReleaseAsset,
   catalogAssetPlatform,
   releaseArchiveName,
   releaseTag,
+  type CatalogEntry,
   type ExtensionInfo,
 } from '@gepard/common';
-import { builtinCatalog, catalogStatus, loadCatalog, parseCatalog } from '../../extensions/catalog';
+import { catalogStatus, extensionCatalog } from '../../extensions/catalog';
 
-const REMOTE = JSON.stringify({
-  schemaVersion: 1,
+const EXTENSIONS_DIR = join(import.meta.dirname, '..', '..', '..', '..', 'extensions');
+
+const ENTRY: CatalogEntry = {
+  displayName: 'x',
+  kind: 'lsp',
+  description: '',
+  path: 'extensions/lsp/x',
+  version: '1.0.0',
+  platforms: ['linux-x64'],
+  sha: 'a'.repeat(40),
+};
+
+const CATALOG = {
+  schemaVersion: 1 as const,
   repository: 'dee-gmiterko/gepard',
   extensions: {
     'gepard-ext-typescript': {
+      ...ENTRY,
       displayName: 'TypeScript',
-      kind: 'lsp',
-      description: 'ts',
       path: 'extensions/lsp/typescript',
       version: '0.2.0',
       platforms: ['linux-x64', 'darwin-arm64'],
     },
     'gepard-ext-python': {
+      ...ENTRY,
       displayName: 'Python',
-      kind: 'lsp',
-      description: 'py',
       path: 'extensions/lsp/python',
       version: '0.1.0',
-      platforms: ['any'],
+      platforms: undefined,
     },
   },
-});
+};
 
 function installed(
   packageName: string,
   version: string,
-  source: 'builtin' | 'external',
+  source: 'builtin' | 'local',
 ): ExtensionInfo {
   return {
     id: packageName,
     displayName: packageName,
     kind: 'lsp',
-    source,
+    source: { kind: source },
     enabled: true,
     packageName,
     version,
@@ -70,26 +83,8 @@ describe('compareVersions', () => {
   });
 });
 
-describe('parseRepositoryInput', () => {
-  it('accepts owner/repo and GitHub URLs', () => {
-    expect(parseRepositoryInput('dee-gmiterko/gepard')).toEqual({
-      owner: 'dee-gmiterko',
-      repo: 'gepard',
-    });
-    expect(parseRepositoryInput(' https://github.com/dee-gmiterko/gepard.git/ ')).toEqual({
-      owner: 'dee-gmiterko',
-      repo: 'gepard',
-    });
-    expect(parseRepositoryInput('github.com/a/b')).toEqual({ owner: 'a', repo: 'b' });
-  });
-
-  it('rejects other shapes', () => {
-    expect(() => parseRepositoryInput('gepard')).toThrow(/expected <owner>\/<repo>/);
-    expect(() => parseRepositoryInput('a/b/c')).toThrow();
-    expect(() => parseRepositoryInput('a/b c')).toThrow();
-  });
-
-  it('normalizes repository paths', () => {
+describe('normalizeRepoPath', () => {
+  it('trims slashes and rejects traversal', () => {
     expect(normalizeRepoPath(' /extensions/lsp/csharp/ ')).toBe('extensions/lsp/csharp');
     expect(normalizeRepoPath('')).toBeNull();
     expect(normalizeRepoPath(null)).toBeNull();
@@ -98,84 +93,70 @@ describe('parseRepositoryInput', () => {
 });
 
 describe('release assets', () => {
-  it('names tags and archives', () => {
+  it('names tags and npm tarballs', () => {
     expect(releaseTag('gepard-ext-csharp', '0.1.2')).toBe('gepard-ext-csharp-v0.1.2');
     expect(releaseArchiveName('gepard-ext-csharp', '0.1.2', 'linux-x64')).toBe(
-      'gepard-ext-csharp-v0.1.2-linux-x64.tar.gz',
+      'gepard-ext-csharp-0.1.2-linux-x64.tgz',
+    );
+    expect(releaseArchiveName('gepard-theme-dark', '0.1.2', 'any')).toBe(
+      'gepard-theme-dark-0.1.2.tgz',
+    );
+    expect(releaseArchiveName('@scope/ext', '1.0.0', 'any')).toBe('scope-ext-1.0.0.tgz');
+  });
+
+  it('prefers the exact platform, then the platform-independent tarball', () => {
+    const assets = [
+      'gepard-ext-x-1.0.0.tgz',
+      'gepard-ext-x-1.0.0-linux-x64.tgz',
+      'gepard-ext-x-1.0.0-linux-x64.tgz.sha256',
+      'notes.txt',
+    ];
+    expect(pickReleaseAsset(assets, 'linux-x64')).toBe('gepard-ext-x-1.0.0-linux-x64.tgz');
+    expect(pickReleaseAsset(assets, 'win32-arm64')).toBe('gepard-ext-x-1.0.0.tgz');
+    expect(pickReleaseAsset(['gepard-ext-x-1.0.0-darwin-x64.tgz'], 'linux-x64')).toBeNull();
+    expect(pickReleaseAsset(['gepard-ext-x-1.0.0-rc-1.tgz'], 'linux-x64')).toBe(
+      'gepard-ext-x-1.0.0-rc-1.tgz',
     );
   });
 
-  it('prefers the exact platform, then "any"', () => {
-    const assets = [
-      'gepard-ext-x-v1.0.0-any.tar.gz',
-      'gepard-ext-x-v1.0.0-linux-x64.tar.gz',
-      'gepard-ext-x-v1.0.0-linux-x64.tar.gz.sha256',
-      'notes.txt',
-    ];
-    expect(pickReleaseAsset(assets, 'linux-x64')).toBe('gepard-ext-x-v1.0.0-linux-x64.tar.gz');
-    expect(pickReleaseAsset(assets, 'win32-arm64')).toBe('gepard-ext-x-v1.0.0-any.tar.gz');
-    expect(pickReleaseAsset(['gepard-ext-x-v1.0.0-darwin-x64.tar.gz'], 'linux-x64')).toBeNull();
-  });
-
-  it('resolves the platform of a catalog entry', () => {
-    const entry = {
-      displayName: 'x',
-      kind: 'lsp' as const,
-      description: '',
-      path: 'p',
-      version: '1.0.0',
-      platforms: ['linux-x64'],
-    };
-    expect(catalogAssetPlatform(entry, 'linux-x64')).toBe('linux-x64');
-    expect(catalogAssetPlatform(entry, 'win32-x64')).toBeNull();
-    expect(catalogAssetPlatform({ ...entry, platforms: ['any'] }, 'win32-x64')).toBe('any');
+  it('resolves the platform of a catalog entry, any when none are listed', () => {
+    expect(catalogAssetPlatform(ENTRY, 'linux-x64')).toBe('linux-x64');
+    expect(catalogAssetPlatform(ENTRY, 'win32-x64')).toBeNull();
+    expect(catalogAssetPlatform({ ...ENTRY, platforms: undefined }, 'win32-x64')).toBe('any');
   });
 });
 
 describe('catalog', () => {
-  it('bundles a valid catalog that matches the repository', () => {
-    expect(builtinCatalog.repository).toBe('dee-gmiterko/gepard');
-    expect(Object.keys(builtinCatalog.extensions)).toContain('gepard-ext-typescript');
-  });
-
-  it('parses a remote catalog and rejects malformed ones', () => {
-    expect(Object.keys(parseCatalog(REMOTE).extensions)).toEqual([
-      'gepard-ext-typescript',
-      'gepard-ext-python',
-    ]);
-    expect(() => parseCatalog('{')).toThrow(/not valid JSON/);
-    expect(() => parseCatalog('{"schemaVersion":2}')).toThrow(/unexpected shape/);
-  });
-
-  it('uses the remote catalog when it loads and the bundled copy otherwise', async () => {
-    const remote = await loadCatalog(
-      () => Promise.resolve(REMOTE),
-      'https://example.invalid/catalog.json',
-    );
-    expect(remote.source).toBe('remote');
-    expect(remote.catalog.extensions['gepard-ext-typescript'].version).toBe('0.2.0');
-
-    const fallback = await loadCatalog(() => Promise.reject(new Error('offline')));
-    expect(fallback.source).toBe('builtin');
-    expect(fallback.error).toBe('offline');
-    expect(fallback.catalog).toBe(builtinCatalog);
-
-    const invalid = await loadCatalog(() => Promise.resolve('nope'));
-    expect(invalid.source).toBe('builtin');
+  it('is packaged with the app and lists every extension in the repository', () => {
+    expect(extensionCatalog.repository).toBe('dee-gmiterko/gepard');
+    const names = readdirSync(EXTENSIONS_DIR, { withFileTypes: true })
+      .filter((kind) => kind.isDirectory())
+      .flatMap((kind) =>
+        readdirSync(join(EXTENSIONS_DIR, kind.name), { withFileTypes: true })
+          .filter((ext) => ext.isDirectory() && !ext.name.startsWith('.'))
+          .map((ext) => {
+            const file = join(EXTENSIONS_DIR, kind.name, ext.name, 'package.json');
+            return z.object({ name: z.string() }).parse(JSON.parse(readFileSync(file, 'utf8')))
+              .name;
+          }),
+      )
+      .sort();
+    expect(Object.keys(extensionCatalog.extensions).sort()).toEqual(names);
   });
 
   it('joins catalog entries with installed extensions', () => {
     const entries = catalogStatus(
-      parseCatalog(REMOTE),
-      [installed('gepard-ext-typescript', '0.1.0', 'external')],
+      CATALOG,
+      [installed('gepard-ext-typescript', '0.1.0', 'local')],
       'linux-x64',
     );
     expect(entries).toEqual([
       expect.objectContaining({
         name: 'gepard-ext-typescript',
         latestVersion: '0.2.0',
+        sha: 'a'.repeat(40),
         installedVersion: '0.1.0',
-        installedSource: 'external',
+        installedSource: { kind: 'local' },
         supported: true,
         updateAvailable: true,
         repository: 'dee-gmiterko/gepard',
@@ -192,17 +173,17 @@ describe('catalog', () => {
 
   it('marks unsupported platforms and never offers updates for built-ins', () => {
     const entries = catalogStatus(
-      parseCatalog(REMOTE),
+      CATALOG,
       [
         installed('gepard-ext-typescript', '0.1.0', 'builtin'),
-        installed('gepard-ext-typescript', '0.1.5', 'external'),
+        installed('gepard-ext-typescript', '0.1.5', 'local'),
       ],
       'win32-x64',
     );
     expect(entries[0]).toEqual(
       expect.objectContaining({
         supported: false,
-        installedSource: 'builtin',
+        installedSource: { kind: 'builtin' },
         installedVersion: '0.1.0',
         updateAvailable: false,
       }),

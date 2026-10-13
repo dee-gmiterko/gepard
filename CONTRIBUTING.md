@@ -126,38 +126,3 @@ being installed or even compatible.
 
 To add a new extension, add a new package under the matching `extensions/`
 directory, following an existing one as a template.
-
-### Packaging and releasing
-
-Grammar, theme and locale extensions are small and ship inside the app
-(`extraResources` in `src/app/electron-builder.yml`). Language server
-extensions (`extensions/lsp/*`) are not bundled: each is released on its own
-and installed from Settings. In development (`yarn dev`) every extension in
-the repo is still loaded as a built-in.
-
-Each LSP extension is its own release-please package in
-`release-please-config.json`, versioned by its own `package.json` and tagged
-`<package name>-v<version>` (for example `gepard-ext-csharp-v0.1.1`). Merging
-an extension's release PR creates its GitHub release; `release.yml` then
-builds one archive per platform listed in the extension's
-`gepard.platforms` (`any` when absent) and uploads
-`<name>-v<version>-<platform>.tar.gz` plus a `.sha256` sidecar. The archive is
-produced by `scripts/pack-extension.ts` and contains the same files the app
-bundle used to include (`dist/`, `vendor/`, `package.json`, licences) under a
-single top-level directory. Run it locally with
-`node scripts/pack-extension.ts extensions/lsp/<name> <platform> <out dir>`
-after `yarn turbo run build --filter=<package name>`.
-
-`extensions/catalog.json` is the official list the app shows in Settings. It
-maps package names to display data and the released version (release-please
-bumps `version` through `extra-files`); the app fetches it from the `main`
-branch and falls back to the copy compiled into the main process. Add an
-entry there and a package in `release-please-config.json` when adding a new
-externally released extension.
-
-Third-party extensions are installed the same way from any GitHub repository:
-the app reads the latest non-draft release (filtered to tags
-`<package name>-v*` when a path inside the repository is given), picks the
-`-<platform>.tar.gz` or `-any.tar.gz` asset, verifies the `.sha256` sidecar
-and installs the archive into the user extensions directory as
-`<name>-<version>`.

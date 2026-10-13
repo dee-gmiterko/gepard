@@ -1,8 +1,13 @@
-import { AppError } from '@gepard/common';
+import { AppError } from '../errors';
 
 const NAME_RE = /^[A-Za-z0-9_.-]+$/;
 
-export function parseGitHubRepoUrl(url: string): { owner: string; repo: string } {
+export interface RepositoryInput {
+  owner: string;
+  repo: string;
+}
+
+export function parseGitHubRepoUrl(url: string): RepositoryInput {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -27,6 +32,25 @@ export function parseGitHubRepoUrl(url: string): { owner: string; repo: string }
 export function isGitHubRepoUrl(text: string): boolean {
   try {
     parseGitHubRepoUrl(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function parseRepositoryInput(text: string): RepositoryInput {
+  const trimmed = text.trim();
+  if (/^https?:\/\//i.test(trimmed)) return parseGitHubRepoUrl(trimmed);
+  const segments = trimmed.split('/');
+  if (segments.length !== 2 || !segments.every((s) => NAME_RE.test(s))) {
+    throw new AppError('BAD_INPUT', `expected <owner>/<repo>, got: ${text}`);
+  }
+  return { owner: segments[0], repo: segments[1] };
+}
+
+export function isRepositoryInput(text: string): boolean {
+  try {
+    parseRepositoryInput(text);
     return true;
   } catch {
     return false;

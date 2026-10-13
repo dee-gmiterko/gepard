@@ -35,49 +35,29 @@
           "jsonpath": "$.version"
         }
       ],
-      "exclude-paths": ["extensions/lsp"]
+      "exclude-paths": [
+        "extensions"
+      ]
     },
-    "extensions/lsp/typescript": {
-      "component": "gepard-ext-typescript",
+    "extensions/grammars/godot": {
+      "component": "gepard-grammar-godot",
       "include-component-in-tag": true,
       "extra-files": [
         {
           "type": "json",
           "path": "/extensions/catalog.json",
-          "jsonpath": "$.extensions['gepard-ext-typescript'].version"
+          "jsonpath": "$.extensions['gepard-grammar-godot'].version"
         }
       ]
     },
-    "extensions/lsp/python": {
-      "component": "gepard-ext-python",
+    "extensions/locales/en": {
+      "component": "gepard-locale-en",
       "include-component-in-tag": true,
       "extra-files": [
         {
           "type": "json",
           "path": "/extensions/catalog.json",
-          "jsonpath": "$.extensions['gepard-ext-python'].version"
-        }
-      ]
-    },
-    "extensions/lsp/java": {
-      "component": "gepard-ext-java",
-      "include-component-in-tag": true,
-      "extra-files": [
-        {
-          "type": "json",
-          "path": "/extensions/catalog.json",
-          "jsonpath": "$.extensions['gepard-ext-java'].version"
-        }
-      ]
-    },
-    "extensions/lsp/csharp": {
-      "component": "gepard-ext-csharp",
-      "include-component-in-tag": true,
-      "extra-files": [
-        {
-          "type": "json",
-          "path": "/extensions/catalog.json",
-          "jsonpath": "$.extensions['gepard-ext-csharp'].version"
+          "jsonpath": "$.extensions['gepard-locale-en'].version"
         }
       ]
     },
@@ -92,14 +72,14 @@
         }
       ]
     },
-    "extensions/lsp/php": {
-      "component": "gepard-ext-php",
+    "extensions/lsp/csharp": {
+      "component": "gepard-ext-csharp",
       "include-component-in-tag": true,
       "extra-files": [
         {
           "type": "json",
           "path": "/extensions/catalog.json",
-          "jsonpath": "$.extensions['gepard-ext-php'].version"
+          "jsonpath": "$.extensions['gepard-ext-csharp'].version"
         }
       ]
     },
@@ -111,6 +91,94 @@
           "type": "json",
           "path": "/extensions/catalog.json",
           "jsonpath": "$.extensions['gepard-ext-gdscript'].version"
+        }
+      ]
+    },
+    "extensions/lsp/java": {
+      "component": "gepard-ext-java",
+      "include-component-in-tag": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/extensions/catalog.json",
+          "jsonpath": "$.extensions['gepard-ext-java'].version"
+        }
+      ]
+    },
+    "extensions/lsp/php": {
+      "component": "gepard-ext-php",
+      "include-component-in-tag": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/extensions/catalog.json",
+          "jsonpath": "$.extensions['gepard-ext-php'].version"
+        }
+      ]
+    },
+    "extensions/lsp/python": {
+      "component": "gepard-ext-python",
+      "include-component-in-tag": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/extensions/catalog.json",
+          "jsonpath": "$.extensions['gepard-ext-python'].version"
+        }
+      ]
+    },
+    "extensions/lsp/typescript": {
+      "component": "gepard-ext-typescript",
+      "include-component-in-tag": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/extensions/catalog.json",
+          "jsonpath": "$.extensions['gepard-ext-typescript'].version"
+        }
+      ]
+    },
+    "extensions/themes/dark": {
+      "component": "gepard-theme-dark",
+      "include-component-in-tag": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/extensions/catalog.json",
+          "jsonpath": "$.extensions['gepard-theme-dark'].version"
+        }
+      ]
+    },
+    "extensions/themes/dark-high-contrast": {
+      "component": "gepard-theme-dark-high-contrast",
+      "include-component-in-tag": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/extensions/catalog.json",
+          "jsonpath": "$.extensions['gepard-theme-dark-high-contrast'].version"
+        }
+      ]
+    },
+    "extensions/themes/light": {
+      "component": "gepard-theme-light",
+      "include-component-in-tag": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/extensions/catalog.json",
+          "jsonpath": "$.extensions['gepard-theme-light'].version"
+        }
+      ]
+    },
+    "extensions/themes/light-high-contrast": {
+      "component": "gepard-theme-light-high-contrast",
+      "include-component-in-tag": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/extensions/catalog.json",
+          "jsonpath": "$.extensions['gepard-theme-light-high-contrast'].version"
         }
       ]
     }
