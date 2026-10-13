@@ -3,10 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Bundled TypeScript/JavaScript language extension for Gepard (native TypeScript LSP).",
+  "description": "Code intelligence for TypeScript and JavaScript projects (native TypeScript language server).",
   "main": "dist/index.js",
+  "files": [
+    "dist",
+    "vendor"
+  ],
   "gepard": {
     "type": "lsp",
+    "displayName": "TypeScript and JavaScript",
     "platforms": [
       "linux-x64",
       "linux-arm64",

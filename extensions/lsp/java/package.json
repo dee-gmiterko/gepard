@@ -3,10 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Bundled Java language extension for Gepard (vendored Eclipse JDT Language Server).",
+  "description": "Code intelligence for Java projects (Eclipse JDT Language Server).",
   "main": "dist/index.js",
+  "files": [
+    "dist",
+    "vendor",
+    "THIRD_PARTY_LICENSES"
+  ],
   "gepard": {
     "type": "lsp",
+    "displayName": "Java",
     "vendor": {
       "version": "1.61.0",
       "url": "https://download.eclipse.org/jdtls/milestones/1.61.0/jdt-language-server-1.61.0-202609031315.tar.gz",

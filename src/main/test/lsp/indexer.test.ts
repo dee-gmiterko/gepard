@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
-import type { LanguageExtension, LanguageSession } from '@gepard/common';
-import { __setUserDataDir } from '../support/electron';
+import {
+  MissingDependencyError,
+  type LanguageExtension,
+  type LanguageSession,
+} from '@gepard/common';
+import { __clearEmittedEvents, __setUserDataDir, emittedEvents } from '../support/electron';
 import { fakeLanguageSession } from '../support/session';
 import { makeTmpDir, type TmpDir } from '../support/tmp';
 
@@ -51,6 +55,7 @@ function fakeExtension(id: string, suffix: string): FakeExtension {
     languages: [{ name: id, extensions: [suffix.replace(/^\./, '')] }],
     open: vi.fn(() => {
       if (id.startsWith('broken')) return Promise.reject(new Error(`${id} exploded`));
+      if (id.startsWith('missing')) return Promise.reject(new MissingDependencyError(id));
       const fake = fakeSession();
       sessions.set(id, fake);
       return Promise.resolve(fake.session);
@@ -60,6 +65,12 @@ function fakeExtension(id: string, suffix: string): FakeExtension {
 
 const sessions = new Map<string, FakeSession>();
 
+function activationFailures(): unknown[] {
+  return emittedEvents
+    .filter((event) => event.channel === 'extension.activationFailed')
+    .map((event) => event.payload);
+}
+
 describe('indexer with several language extensions', () => {
   let userData: TmpDir;
 
@@ -67,6 +78,7 @@ describe('indexer with several language extensions', () => {
     userData = await makeTmpDir('lsp-multi');
     __setUserDataDir(userData.path);
     sessions.clear();
+    __clearEmittedEvents();
   });
 
   afterEach(async () => {
@@ -118,6 +130,51 @@ describe('indexer with several language extensions', () => {
     expect(status.state === 'error' && status.message).toContain('BROKEN1: broken1 exploded');
     expect(status.state === 'error' && status.message).toContain('BROKEN2: broken2 exploded');
     expect(indexer.sessions('p')).toEqual([]);
+    expect(activationFailures()).toEqual([
+      {
+        extensionId: 'broken1',
+        displayName: 'BROKEN1',
+        error: { code: 'INTERNAL', message: 'broken1 exploded' },
+      },
+      {
+        extensionId: 'broken2',
+        displayName: 'BROKEN2',
+        error: { code: 'INTERNAL', message: 'broken2 exploded' },
+      },
+    ]);
+  });
+
+  it('reports a missing dependency as the dedicated error naming the dependency', async () => {
+    mocks.extensions = [fakeExtension('missing', '.a'), fakeExtension('beta', '.b')];
+
+    await indexer.open('p', '/repo', ['x.a', 'y.b'], 'head');
+
+    expect(activationFailures()).toEqual([
+      {
+        extensionId: 'missing',
+        displayName: 'MISSING',
+        error: {
+          kind: 'MissingDependencyError',
+          code: 'MISSING_DEPENDENCY',
+          message: 'missing: not found',
+          details: { dependency: 'missing' },
+        },
+      },
+    ]);
+    expect(indexer.languages('p')).toContainEqual({
+      id: 'missing',
+      displayName: 'MISSING',
+      state: 'failed',
+      message: 'missing: not found',
+    });
+  });
+
+  it('reports no activation failure when every session starts', async () => {
+    mocks.extensions = [fakeExtension('alpha', '.a')];
+
+    await indexer.open('p', '/repo', ['x.a'], 'head');
+
+    expect(activationFailures()).toEqual([]);
   });
 
   it('reports every enabled extension, with present ones active or failed and the rest absent', async () => {

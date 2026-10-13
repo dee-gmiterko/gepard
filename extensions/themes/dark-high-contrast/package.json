@@ -4,8 +4,12 @@
   "private": true,
   "description": "Built-in dark high contrast theme extension for Gepard.",
   "main": "index.mjs",
+  "files": [
+    "index.mjs"
+  ],
   "gepard": {
-    "type": "theme"
+    "type": "theme",
+    "displayName": "Dark - High contrast"
   },
   "scripts": {
     "lint": "eslint .",

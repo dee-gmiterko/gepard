@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { AppError } from '@gepard/common';
-import { isGitHubRepoUrl, parseGitHubRepoUrl } from '../../../helpers/github/repoUrl';
+import { AppError } from '../../errors';
+import { isGitHubRepoUrl, parseGitHubRepoUrl, parseRepositoryInput } from '../../helpers/repoUrl';
 
 describe('parseGitHubRepoUrl', () => {
   it('extracts owner and repo, dropping a .git suffix', () => {
@@ -31,5 +31,25 @@ describe('isGitHubRepoUrl', () => {
     expect(isGitHubRepoUrl('o/r')).toBe(false);
     expect(isGitHubRepoUrl('github.com/o/r')).toBe(false);
     expect(isGitHubRepoUrl('https://example.com/o/r')).toBe(false);
+  });
+});
+
+describe('parseRepositoryInput', () => {
+  it('accepts owner/repo and GitHub URLs', () => {
+    expect(parseRepositoryInput('dee-gmiterko/gepard')).toEqual({
+      owner: 'dee-gmiterko',
+      repo: 'gepard',
+    });
+    expect(parseRepositoryInput(' https://github.com/dee-gmiterko/gepard.git/ ')).toEqual({
+      owner: 'dee-gmiterko',
+      repo: 'gepard',
+    });
+  });
+
+  it('rejects other shapes', () => {
+    expect(() => parseRepositoryInput('gepard')).toThrow(/expected <owner>\/<repo>/);
+    expect(() => parseRepositoryInput('a/b/c')).toThrow(AppError);
+    expect(() => parseRepositoryInput('a/b c')).toThrow(AppError);
+    expect(() => parseRepositoryInput('https://gitlab.com/a/b')).toThrow(AppError);
   });
 });

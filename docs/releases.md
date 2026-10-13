@@ -47,23 +47,27 @@ After a release is created, a matrix (Ubuntu, Windows, macOS) builds with `turbo
 
 ## Extension releases (issue #25)
 
-Language server extensions carry vendored servers that are too large to ship with every app download, so they are released and versioned separately from the app and installed on demand.
+Every extension (`extensions/lsp/*`, `extensions/grammars/*`, `extensions/themes/*`, `extensions/locales/*`) is released and versioned separately from the app; the app bundles a few of them from their releases and installs the rest on demand.
 
 ### Versioning
 
-Each `extensions/lsp/<name>` directory is its own release-please package with `component` set to its package name (`gepard-ext-<name>`) and `include-component-in-tag` on, so tags look like `gepard-ext-csharp-v0.1.1`; the app keeps plain `vX.Y.Z` tags. `separate-pull-requests` gives every package its own release PR, and the root package lists `extensions/lsp` in `exclude-paths` so extension-only commits no longer bump the app. `.release-please-manifest.json` tracks every package's version. Each extension package also bumps its entry in `extensions/catalog.json` through an `extra-files` JSON update (root-relative path with a leading `/`), so the official list on `main` always names the latest released version.
+Each extension directory is its own release-please package with `component` set to its package name and `include-component-in-tag` on, so tags look like `gepard-ext-csharp-v0.1.1`; the app keeps plain `vX.Y.Z` tags. `separate-pull-requests` gives every package its own release PR, and the root package lists `extensions` in `exclude-paths` so extension-only commits do not bump the app. `.release-please-manifest.json` tracks every package's version. Each extension package bumps its `version` in `extensions/catalog.json` through an `extra-files` JSON update (root-relative path with a leading `/`).
+
+### Catalog
+
+`extensions/catalog.json` lists every extension in the repository: display name, kind, description, path, released version, `platforms` (absent when unrestricted) and `sha` (git tree id of the extension directory). It is imported into the main process at build time; nothing is fetched at runtime. `scripts/refresh-catalog.ts` generates it from the `package.json` of each `extensions/<kind>/<name>` directory, generates the extension packages in `release-please-config.json` and adds missing entries to `.release-please-manifest.json`: `yarn catalog:refresh` writes, `yarn catalog:check` fails when any of the three files is out of date. Adding an extension is adding its package under `extensions/` and running `yarn catalog:refresh`.
 
 ### Build pipeline
 
-`release.yml` keeps the app build as is and adds two jobs. `extensions-matrix` runs `scripts/extension-release-matrix.ts` (plain Node, no install) over release-please's `paths_released` and per-path `<path>--tag_name` outputs, expanding each released extension by its `gepard.platforms` (`any` when absent) into a job matrix. `build-extensions` checks out the extension's tag, installs, re-vendors the matrix platform's payload with `GEPARD_VENDOR_TARGETS` (so an archive carries exactly one platform), builds the workspace with turbo, packs it with `scripts/pack-extension.ts` and uploads `<name>-v<version>-<platform>.tar.gz` and its `.sha256` to the extension's release with `gh release upload --clobber`. All extension builds run on Ubuntu: the vendor scripts download prebuilt servers for any target.
+`release.yml` has three jobs after `release-please`. `extensions-matrix` runs `scripts/extension-release-matrix.ts` (plain Node, no install) over release-please's `paths_released` and per-path `<path>--tag_name` outputs, expanding each released extension by its `gepard.platforms` (`any` when absent) into a job matrix. `build-extensions` checks out the extension's tag, installs, re-vendors the matrix platform's payload with `GEPARD_VENDOR_TARGETS` when the platform is not `any`, runs the turbo build when the package has a `build` script, packs it with `npm pack` (platform-specific archives get a `-<platform>` suffix before `.tgz`) and uploads the archive to the extension's release with `gh release upload --clobber`. All extension builds run on Ubuntu: the vendor scripts download prebuilt servers for any target. `build` (the app) waits for `build-extensions` and is skipped when it fails.
 
-The app no longer bundles `extensions/lsp/*` (`!lsp/**` in the `extraResources` filter), so the installers shrink to the app itself plus grammars, themes and locales.
+### Bundling
+
+`scripts/bundle-extensions.ts` (`yarn extensions:bundle`, run by the root `build:*` scripts and by the release `build` job before electron-builder) downloads the released tarballs of the four themes and the English locale from GitHub releases by catalog version into `node_modules/.cache/gepard-extensions` and extracts them into `src/app/extensions-dist/<kind>/<name>` (gitignored); `extraResources` copies that directory to `resources/extensions`. It fails when the catalog version differs from the workspace's `package.json` or the extension has platform-specific builds.
 
 ### Install and update
 
-`extensions/catalog.json` is the official list. The app fetches it from `https://raw.githubusercontent.com/dee-gmiterko/gepard/main/extensions/catalog.json` with a 10 s timeout and falls back to the copy compiled into the main process. Settings shows installed vs latest version per entry and offers install or update; the main process downloads the archive and sidecar through `gh release download`, verifies the sha256, extracts the tarball with the in-process extractor (`src/main/helpers/tar.ts`, which rejects links and paths outside the destination), validates `package.json` and installs it with the existing registry install path as `<name>-<version>`, removing any older directory of the same package first. A new directory per version sidesteps Node's module cache so the updated code loads without a restart.
-
-Install from a GitHub repository reuses the same path: the app lists the repository's releases through `gh api`, optionally narrows them to the package named by `<path>/package.json`, picks the newest non-draft, non-prerelease release that has a `-<platform>.tar.gz` or `-any.tar.gz` asset and installs it. Installing from a folder on disk is unchanged.
+Settings lists the catalog with installed and latest version per entry and offers install or update; the IPC call is `extensions.install` with a source of kind `github-release` (`repository`, optional `path`) or `local` (file picker). `src/main/extensions/githubRelease.ts` handles `github-release`: a repository and path matching a catalog entry resolve to the tag `<name>-v<version>` and the asset `<name>-<version>[-<platform>].tgz`; any other repository is listed through `gh api`, optionally narrowed to tags `<name>-v*` where `<name>` comes from `<path>/package.json`, and the newest non-draft, non-prerelease release with a `-<platform>.tgz` or platform-independent `.tgz` asset is used. The asset is downloaded with `gh release download`, extracted with `src/main/helpers/tar.ts` (rejects links and paths outside the destination), checked for a `package.json` with a name and a version (matching the expected name when known) and installed by the registry as `<name>-<version>`, removing any older directory of the same package. A new directory per version sidesteps Node's module cache so the updated code loads without a restart.
 
 ## Files
 
@@ -72,8 +76,11 @@ Install from a GitHub repository reuses the same path: the app lists the reposit
 - `release-please-config.json`
 - `.release-please-manifest.json`
 - `extensions/catalog.json`
+- `scripts/refresh-catalog.ts`
 - `scripts/extension-release-matrix.ts`
-- `scripts/pack-extension.ts`
+- `scripts/bundle-extensions.ts`
+- `src/main/extensions/catalog.ts`
+- `src/main/extensions/githubRelease.ts`
 
 ## Manual setup required
 

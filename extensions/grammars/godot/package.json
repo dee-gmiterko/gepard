@@ -5,8 +5,13 @@
   "type": "module",
   "description": "Bundled Godot grammar extension for Gepard (GDScript, scene and resource files, shaders).",
   "main": "dist/index.js",
+  "files": [
+    "dist",
+    "THIRD_PARTY_LICENSES"
+  ],
   "gepard": {
-    "type": "grammar"
+    "type": "grammar",
+    "displayName": "Godot"
   },
   "scripts": {
     "build": "esbuild index.ts --bundle --format=esm --target=es2023 --outfile=dist/index.js --log-level=warning",

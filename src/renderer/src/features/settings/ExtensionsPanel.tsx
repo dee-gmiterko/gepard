@@ -2,7 +2,7 @@ import { useState } from 'react';
 import styled from 'styled-components';
 import { Plus } from 'react-feather';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
-import type { CatalogEntryStatus } from '@gepard/common';
+import { isRepositoryInput, type CatalogEntryStatus } from '@gepard/common';
 import { Checkbox } from '../../components/Checkbox';
 import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
@@ -14,14 +14,12 @@ import { Section } from '../../components/Section';
 import { SectionHeading } from '../../components/SectionHeading';
 import { TextInput } from '../../components/TextInput';
 import { describeError, formatErrorText } from '../../errors/errorMessage';
-import { catalogAction, isRepositoryInputValid } from '../../helpers/extensionCatalog';
+import { catalogAction } from '../../helpers/extensionCatalog';
 import {
   useExtensionCatalog,
   useExtensions,
   useExtensionsDir,
   useInstallExtension,
-  useInstallFromCatalog,
-  useInstallFromRepo,
   useSetExtensionEnabled,
 } from '../../queries/extensions';
 
@@ -105,10 +103,6 @@ const messages = defineMessages({
   catalogEmpty: {
     id: 'settings.extensions.catalog.empty',
     defaultMessage: 'No extensions are available.',
-  },
-  catalogOffline: {
-    id: 'settings.extensions.catalog.offline',
-    defaultMessage: 'Showing the list bundled with this version of Gepard; it may be out of date.',
   },
   catalogLatest: {
     id: 'settings.extensions.catalog.latest',
@@ -279,17 +273,12 @@ function CatalogRow({
 function CatalogSection(): React.JSX.Element {
   const intl = useIntl();
   const { data, isLoading, isError } = useExtensionCatalog();
-  const install = useInstallFromCatalog();
+  const install = useInstallExtension();
   const entries = data?.entries ?? [];
 
   return (
     <Section>
       <SectionHeading title={<FormattedMessage {...messages.catalogTitle} />} />
-      {data?.source === 'builtin' && (
-        <Message tone="subtle" layout="inline">
-          <FormattedMessage {...messages.catalogOffline} />
-        </Message>
-      )}
       {install.isError && (
         <Message tone="danger" layout="inline">
           {formatErrorText(intl, describeError(install.error).message)}
@@ -319,9 +308,19 @@ function CatalogSection(): React.JSX.Element {
             <CatalogRow
               key={entry.name}
               entry={entry}
-              installing={install.isPending && install.variables?.name === entry.name}
+              installing={
+                install.isPending &&
+                install.variables?.kind === 'github-release' &&
+                install.variables.path === entry.path
+              }
               disabled={install.isPending}
-              onInstall={() => install.mutate({ name: entry.name })}
+              onInstall={() =>
+                install.mutate({
+                  kind: 'github-release',
+                  repository: entry.repository,
+                  path: entry.path,
+                })
+              }
             />
           ))
         )}
@@ -332,10 +331,10 @@ function CatalogSection(): React.JSX.Element {
 
 function RepositorySection(): React.JSX.Element {
   const intl = useIntl();
-  const install = useInstallFromRepo();
+  const install = useInstallExtension();
   const [repository, setRepository] = useState('');
   const [path, setPath] = useState('');
-  const valid = isRepositoryInputValid(repository);
+  const valid = isRepositoryInput(repository);
 
   return (
     <Section>
@@ -348,7 +347,7 @@ function RepositorySection(): React.JSX.Element {
           event.preventDefault();
           if (!valid || install.isPending) return;
           install.mutate(
-            { repository: repository.trim(), path: path.trim() || null },
+            { kind: 'github-release', repository: repository.trim(), path: path.trim() || null },
             { onSuccess: () => setRepository('') },
           );
         }}
@@ -409,6 +408,7 @@ export function ExtensionsPanel(): React.JSX.Element {
             <Button
               onClick={() =>
                 install.mutate({
+                  kind: 'local',
                   dialogTitle: intl.formatMessage(messages.installDialogTitle),
                 })
               }
@@ -453,9 +453,9 @@ export function ExtensionsPanel(): React.JSX.Element {
                     <Badge $tone="muted">
                       <FormattedMessage {...kindMessages[ext.kind]} />
                     </Badge>
-                    <Badge $tone={ext.source === 'builtin' ? 'muted' : undefined}>
+                    <Badge $tone={ext.source.kind === 'builtin' ? 'muted' : undefined}>
                       <FormattedMessage
-                        {...(ext.source === 'builtin' ? messages.builtin : messages.external)}
+                        {...(ext.source.kind === 'builtin' ? messages.builtin : messages.external)}
                       />
                     </Badge>
                     {ext.version && (

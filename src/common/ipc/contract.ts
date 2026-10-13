@@ -30,6 +30,7 @@ import { Comment, CommentDraft, LocalViewedState, ReviewThread } from './schemas
 import { GroupedResult, Pos, SearchQuery, SymbolKind, WorkspaceSymbol } from './schemas/search';
 import {
   DefinitionResult,
+  ExtensionActivationFailure,
   ImportTargetResult,
   DocumentSymbolsResult,
   IndexStatus,
@@ -38,7 +39,11 @@ import {
 } from './schemas/lsp';
 import { LogLevel } from './schemas/log';
 import { ChangedFileOwners, PrOverviewDetails, ProjectOverview } from './schemas/overview';
-import { ExtensionCatalogStatus, ExtensionInfo } from './schemas/extensions';
+import {
+  ExtensionCatalogStatus,
+  ExtensionInfo,
+  ExtensionInstallSource,
+} from './schemas/extensions';
 import { GrammarModule } from './schemas/grammar';
 import { SystemPreference, ThemeTemplateData } from './schemas/theme';
 import { LocaleData } from './schemas/locale';
@@ -221,20 +226,9 @@ export const channels = {
     input: z.object({ id: z.string(), enabled: z.boolean() }),
     output: z.array(ExtensionInfo),
   },
-  'extensions.install': {
-    input: z.object({ dialogTitle: z.string().min(1) }),
-    output: z.array(ExtensionInfo),
-  },
+  'extensions.install': { input: ExtensionInstallSource, output: z.array(ExtensionInfo) },
   'extensions.dir': { input: z.void(), output: z.string() },
   'extensions.catalog': { input: z.void(), output: ExtensionCatalogStatus },
-  'extensions.installFromCatalog': {
-    input: z.object({ name: z.string().min(1) }),
-    output: z.array(ExtensionInfo),
-  },
-  'extensions.installFromRepo': {
-    input: z.object({ repository: z.string().min(1), path: z.string().nullable() }),
-    output: z.array(ExtensionInfo),
-  },
 
   'grammars.list': { input: z.void(), output: z.array(GrammarModule) },
 
@@ -274,6 +268,7 @@ export const events = {
   'systemPreference.changed': SystemPreference,
   'app.error': z.object({ scope: z.string(), message: z.string() }),
   'connectivity.changed': z.object({ offline: z.boolean() }),
+  'extension.activationFailed': ExtensionActivationFailure,
 } as const satisfies Record<EventNameList, z.ZodType>;
 
 export type Channels = typeof channels;

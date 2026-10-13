@@ -3,10 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Bundled GDScript language extension for Gepard (headless Godot editor language server).",
+  "description": "Code intelligence for Godot projects (headless Godot editor language server).",
   "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
   "gepard": {
-    "type": "lsp"
+    "type": "lsp",
+    "displayName": "GDScript"
   },
   "scripts": {
     "build": "esbuild index.ts --bundle --platform=node --format=esm --target=es2023 --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\" --outfile=dist/index.js --log-level=warning",

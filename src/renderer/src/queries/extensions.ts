@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ExtensionInstallSource } from '@gepard/common';
 import { invoke } from '../ipc/client';
 import { qk } from './keys';
 
@@ -36,25 +37,6 @@ export function useExtensionCatalog() {
   });
 }
 
-export function useInstallFromCatalog() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: { name: string }) => invoke('extensions.installFromCatalog', input),
-    onSuccess: (extensions) => qc.setQueryData(qk.extensions(), extensions),
-    onSettled: () => invalidateInstalled(qc),
-  });
-}
-
-export function useInstallFromRepo() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: { repository: string; path: string | null }) =>
-      invoke('extensions.installFromRepo', input),
-    onSuccess: (extensions) => qc.setQueryData(qk.extensions(), extensions),
-    onSettled: () => invalidateInstalled(qc),
-  });
-}
-
 export function useExtensionsDir() {
   return useQuery({ queryKey: qk.extensionsDir(), queryFn: () => invoke('extensions.dir') });
 }
@@ -64,12 +46,8 @@ export function useExtensionsDir() {
 export function useInstallExtension() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { dialogTitle: string }) => invoke('extensions.install', input),
+    mutationFn: (source: ExtensionInstallSource) => invoke('extensions.install', source),
     onSuccess: (extensions) => qc.setQueryData(qk.extensions(), extensions),
-    onSettled: () =>
-      Promise.all([
-        qc.invalidateQueries({ queryKey: qk.extensions() }),
-        qc.invalidateQueries({ queryKey: qk.grammars() }),
-      ]),
+    onSettled: () => invalidateInstalled(qc),
   });
 }

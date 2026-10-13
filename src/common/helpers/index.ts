@@ -3,5 +3,6 @@ export * from './error';
 export * from './extension';
 export * from './fork';
 export * from './path';
+export * from './repoUrl';
 export * from './symbol';
 export * from './target';

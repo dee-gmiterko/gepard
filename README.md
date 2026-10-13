@@ -42,9 +42,7 @@ review better.
 
 Language support, syntax highlighting, themes and UI languages are
 extensions. Text search and review work for any file type. Grammars, themes
-and locales are bundled; language servers are installed from the list in
-Settings (or from any GitHub repository, or from a folder on disk) without a
-restart.
+and locales are bundled; language servers are installed from Settings.
 
 - Language servers
   - [TypeScript and JavaScript](extensions/lsp/typescript)

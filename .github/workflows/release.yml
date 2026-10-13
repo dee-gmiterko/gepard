@@ -29,8 +29,11 @@ jobs:
           manifest-file: .release-please-manifest.json
 
   build:
-    needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
+    needs: [release-please, build-extensions]
+    if: >-
+      always() &&
+      needs.release-please.outputs.release_created == 'true' &&
+      !contains(fromJSON('["failure", "cancelled"]'), needs.build-extensions.result)
     strategy:
       fail-fast: false
       matrix:
@@ -53,6 +56,7 @@ jobs:
       - run: corepack enable
       - run: yarn install --immutable
       - run: yarn turbo run build
+      - run: yarn extensions:bundle
       - run: yarn workspace gepard run build:${{ matrix.target }} --publish never
       - name: Upload to release
         shell: bash
@@ -105,11 +109,20 @@ jobs:
         run: |
           rm -rf "${{ matrix.path }}/vendor"
           yarn workspace "${{ matrix.name }}" run vendor
-      - run: yarn turbo run build --filter="${{ matrix.name }}"
+      - if: matrix.build
+        run: yarn turbo run build --filter="${{ matrix.name }}"
       - name: Pack
         id: pack
-        run: echo "archive=$(node scripts/pack-extension.ts "${{ matrix.path }}" "${{ matrix.platform }}" dist-release)" >> "$GITHUB_OUTPUT"
+        working-directory: ${{ matrix.path }}
+        run: |
+          archive="$(npm pack --pack-destination "$RUNNER_TEMP" | tail -n 1)"
+          if [ "${{ matrix.platform }}" != any ]; then
+            renamed="${archive%.tgz}-${{ matrix.platform }}.tgz"
+            mv "$RUNNER_TEMP/$archive" "$RUNNER_TEMP/$renamed"
+            archive="$renamed"
+          fi
+          echo "archive=$RUNNER_TEMP/$archive" >> "$GITHUB_OUTPUT"
       - name: Upload to release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ matrix.tag }}" "${{ steps.pack.outputs.archive }}" "${{ steps.pack.outputs.archive }}.sha256" --clobber
+        run: gh release upload "${{ matrix.tag }}" "${{ steps.pack.outputs.archive }}" --clobber

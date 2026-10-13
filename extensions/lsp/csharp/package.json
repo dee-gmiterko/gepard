@@ -3,10 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Bundled C# language extension for Gepard (vendored Roslyn language server).",
+  "description": "Code intelligence for C# projects (Roslyn language server).",
   "main": "dist/index.js",
+  "files": [
+    "dist",
+    "vendor",
+    "UPSTREAM_LICENSE"
+  ],
   "gepard": {
     "type": "lsp",
+    "displayName": "C#",
     "platforms": [
       "linux-x64",
       "linux-arm64",

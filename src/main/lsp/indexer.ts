@@ -2,6 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import {
   errorMessage,
   languageIdOf,
+  toIpcErrorShape,
   type IndexStatus,
   type LanguageServerStatus,
   type ExtensionEvents,
@@ -201,11 +202,18 @@ export const indexer: {
             setLanguageStatus(state, extension.id, { state: 'active' });
             return entry;
           },
-          (error: Error) => {
+          (error: unknown) => {
             setLanguageStatus(state, extension.id, {
               state: 'failed',
               message: errorMessage(error),
             });
+            if (isCurrent(projectId, state)) {
+              emit('extension.activationFailed', {
+                extensionId: extension.id,
+                displayName: extension.displayName,
+                error: toIpcErrorShape(error),
+              });
+            }
             throw error;
           },
         ),

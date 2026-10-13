@@ -1,5 +1,5 @@
 import { defineMessages, type IntlShape, type MessageDescriptor } from 'react-intl';
-import { errorMessage, AppError } from '@gepard/common';
+import { errorMessage, AppError, MissingDependencyError } from '@gepard/common';
 
 const codeMessages = defineMessages({
   AUTH_REQUIRED: {
@@ -24,21 +24,9 @@ const codeMessages = defineMessages({
     id: 'errors.code.execTooLarge',
     defaultMessage: 'A command produced too much output.',
   },
-  CATALOG_INVALID: {
-    id: 'errors.code.catalogInvalid',
-    defaultMessage: 'The extension list could not be read.',
-  },
-  CATALOG_UNAVAILABLE: {
-    id: 'errors.code.catalogUnavailable',
-    defaultMessage: 'The extension list could not be downloaded.',
-  },
   EXTENSION_ALREADY_EXISTS: {
     id: 'errors.code.extensionAlreadyExists',
     defaultMessage: 'This extension is already installed.',
-  },
-  EXTENSION_CHECKSUM_MISMATCH: {
-    id: 'errors.code.extensionChecksumMismatch',
-    defaultMessage: 'The downloaded extension failed its checksum verification.',
   },
   EXTENSION_IN_USE: {
     id: 'errors.code.extensionInUse',
@@ -55,10 +43,6 @@ const codeMessages = defineMessages({
   EXTENSION_INVALID_PACKAGE: {
     id: 'errors.code.extensionInvalidPackage',
     defaultMessage: "That package isn't a valid extension.",
-  },
-  EXTENSION_NOT_IN_CATALOG: {
-    id: 'errors.code.extensionNotInCatalog',
-    defaultMessage: "This extension isn't in the extension list.",
   },
   EXTENSION_RELEASE_NOT_FOUND: {
     id: 'errors.code.extensionReleaseNotFound',
@@ -89,6 +73,11 @@ const codeMessages = defineMessages({
   INVALID_PROJECT_ID: {
     id: 'errors.code.invalidProjectId',
     defaultMessage: 'This project is invalid.',
+  },
+  MISSING_DEPENDENCY: {
+    id: 'errors.code.missingDependency',
+    defaultMessage:
+      '`{dependency}` is required but was not found. Install it and make sure it is on your PATH.',
   },
   NOT_DELETABLE: {
     id: 'errors.code.notDeletable',
@@ -143,23 +132,39 @@ function isKnownCode(code: string): code is keyof typeof codeMessages {
   return Object.hasOwn(codeMessages, code);
 }
 
+export type ErrorValues = Record<string, string>;
+
 export interface DescribedError {
   message: string | MessageDescriptor;
+  values?: ErrorValues;
   detail?: string;
 }
 
 export function describeError(error: unknown): DescribedError {
+  if (error instanceof MissingDependencyError) {
+    return {
+      message: codeMessages.MISSING_DEPENDENCY,
+      values: { dependency: error.dependency },
+      detail: error.message,
+    };
+  }
   if (error instanceof AppError && isKnownCode(error.code)) {
     return { message: codeMessages[error.code], detail: error.message };
   }
   return { message: errorMessage(error) };
 }
 
-export function formatErrorText(intl: IntlShape, message: string | MessageDescriptor): string {
-  return typeof message === 'string' ? message : intl.formatMessage(message);
+export function formatErrorText(
+  intl: IntlShape,
+  message: string | MessageDescriptor,
+  values?: ErrorValues,
+): string {
+  return typeof message === 'string' ? message : intl.formatMessage(message, values);
 }
 
-export function errorText(message: string | MessageDescriptor): string {
+export function errorText(message: string | MessageDescriptor, values?: ErrorValues): string {
   if (typeof message === 'string') return message;
-  return typeof message.defaultMessage === 'string' ? message.defaultMessage : (message.id ?? '');
+  const text =
+    typeof message.defaultMessage === 'string' ? message.defaultMessage : (message.id ?? '');
+  return text.replace(/\{(\w+)\}/g, (placeholder, name: string) => values?.[name] ?? placeholder);
 }

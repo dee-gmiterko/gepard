@@ -83,7 +83,7 @@ describe('ExtensionRegistry', () => {
           id: 'builtin-lang',
           displayName: 'Built-in Lang',
           kind: 'lsp',
-          source: 'builtin',
+          source: { kind: 'builtin' },
           enabled: true,
           packageName: 'builtin-lang',
         },
@@ -91,7 +91,7 @@ describe('ExtensionRegistry', () => {
           id: 'builtin-light',
           displayName: 'Built-in Light',
           kind: 'theme',
-          source: 'builtin',
+          source: { kind: 'builtin' },
           enabled: true,
           packageName: 'builtin-light',
         },
@@ -99,7 +99,7 @@ describe('ExtensionRegistry', () => {
           id: 'builtin-dark',
           displayName: 'Built-in Dark',
           kind: 'theme',
-          source: 'builtin',
+          source: { kind: 'builtin' },
           enabled: true,
           packageName: 'builtin-dark',
         },
@@ -107,7 +107,7 @@ describe('ExtensionRegistry', () => {
           id: 'builtin-en',
           displayName: 'Built-in English',
           kind: 'locale',
-          source: 'builtin',
+          source: { kind: 'builtin' },
           enabled: true,
           packageName: 'builtin-en',
         },
@@ -115,7 +115,7 @@ describe('ExtensionRegistry', () => {
           id: 'builtin-grammar',
           displayName: 'Built-in Grammar',
           kind: 'grammar',
-          source: 'builtin',
+          source: { kind: 'builtin' },
           enabled: true,
           packageName: 'builtin-grammar',
         },
@@ -149,7 +149,7 @@ describe('ExtensionRegistry', () => {
       id: 'builtin-dark',
       displayName: 'Built-in Dark',
       kind: 'theme',
-      source: 'builtin',
+      source: { kind: 'builtin' },
       enabled: false,
       packageName: 'builtin-dark',
     });
@@ -174,7 +174,7 @@ describe('ExtensionRegistry', () => {
           id: 'demo-lang',
           displayName: 'Demo Lang',
           kind: 'lsp',
-          source: 'external',
+          source: { kind: 'local' },
           enabled: true,
           packageName: 'demo',
         },
@@ -182,7 +182,7 @@ describe('ExtensionRegistry', () => {
           id: 'demo-theme',
           displayName: 'Demo Theme',
           kind: 'theme',
-          source: 'external',
+          source: { kind: 'local' },
           enabled: true,
           packageName: 'demo-theme',
         },
@@ -208,8 +208,8 @@ describe('ExtensionRegistry', () => {
     const list = await registry.list();
 
     const builtinEntry = list.find((e) => e.id === 'builtin-lang');
-    expect(builtinEntry).toMatchObject({ kind: 'lsp', source: 'builtin', enabled: true });
-    const brokenEntry = list.find((e) => e.source === 'external');
+    expect(builtinEntry).toMatchObject({ kind: 'lsp', source: { kind: 'builtin' }, enabled: true });
+    const brokenEntry = list.find((e) => e.source.kind === 'local');
     expect(brokenEntry).toMatchObject({ kind: 'lsp', enabled: false });
     expect(brokenEntry?.error).toContain('nope');
   });
@@ -230,7 +230,7 @@ describe('ExtensionRegistry', () => {
             id: 'demo-lang',
             displayName: 'Demo Lang',
             kind: 'lsp',
-            source: 'external',
+            source: { kind: 'local' },
             enabled: true,
             packageName: 'demo',
           },
@@ -243,7 +243,7 @@ describe('ExtensionRegistry', () => {
             id: 'demo-theme',
             displayName: 'Demo Theme',
             kind: 'theme',
-            source: 'external',
+            source: { kind: 'local' },
             enabled: true,
             packageName: 'demo-theme',
           },
@@ -260,7 +260,7 @@ describe('ExtensionRegistry', () => {
             id: 'demo-grammar',
             displayName: 'Demo Grammar',
             kind: 'grammar',
-            source: 'external',
+            source: { kind: 'local' },
             enabled: true,
             packageName: 'demo-grammar',
           },

@@ -22,8 +22,11 @@ export function ToastHost(): React.JSX.Element {
           toast: {
             id: crypto.randomUUID(),
             tone: error.tone ?? 'danger',
-            message: formatErrorText(intl, error.message),
-            detail: error.detail,
+            message: formatErrorText(intl, error.message, error.values),
+            detail:
+              error.detail === undefined
+                ? undefined
+                : formatErrorText(intl, error.detail, error.values),
           },
         });
       }),

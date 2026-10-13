@@ -3,10 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Bundled PHP language extension for Gepard (PHPantom, downloaded on first use).",
+  "description": "Code intelligence for PHP projects (PHPantom, downloaded on first use).",
   "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
   "gepard": {
     "type": "lsp",
+    "displayName": "PHP",
     "vendor": {
       "version": "0.11.1",
       "assets": {

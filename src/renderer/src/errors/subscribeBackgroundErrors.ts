@@ -1,6 +1,8 @@
 import { defineMessages, type MessageDescriptor } from 'react-intl';
+import { fromIpcErrorShape, MissingDependencyError, type AppError } from '@gepard/common';
 import { subscribe } from '../ipc/client';
-import { reportError } from './report';
+import { describeError } from './errorMessage';
+import { reportError, type ReportedError } from './report';
 
 const messages = defineMessages({
   cloneFailed: {
@@ -23,6 +25,10 @@ const messages = defineMessages({
     id: 'main.appErrorHeadline.default',
     defaultMessage: 'Background error.',
   },
+  extensionActivationFailed: {
+    id: 'main.extensionActivationFailed',
+    defaultMessage: '{extension} could not start.',
+  },
 });
 
 function appErrorHeadline(scope: string): MessageDescriptor {
@@ -31,7 +37,26 @@ function appErrorHeadline(scope: string): MessageDescriptor {
   return messages.appErrorHeadlineDefault;
 }
 
+function activationFailure(error: AppError): Pick<ReportedError, 'detail' | 'values'> {
+  if (!(error instanceof MissingDependencyError)) return { detail: error.message };
+  const { message, values } = describeError(error);
+  return { detail: message, values };
+}
+
 export function subscribeBackgroundErrors(): void {
+  subscribe('extension.activationFailed', ({ extensionId, displayName, error }) => {
+    const { detail, values } = activationFailure(
+      fromIpcErrorShape(error, 'extension.activationFailed'),
+    );
+    reportError({
+      scope: `lsp:${extensionId}`,
+      message: messages.extensionActivationFailed,
+      values: { extension: displayName, ...values },
+      detail,
+      loggedByMain: true,
+    });
+  });
+
   subscribe('app.error', ({ scope, message }) => {
     reportError({
       scope,

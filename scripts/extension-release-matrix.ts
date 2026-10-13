@@ -3,6 +3,7 @@ import path from 'node:path';
 
 interface ExtensionManifest {
   name: string;
+  scripts?: Record<string, string>;
   gepard?: { platforms?: string[] };
 }
 
@@ -11,6 +12,7 @@ export interface MatrixEntry {
   name: string;
   tag: string;
   platform: string;
+  build: boolean;
 }
 
 export function buildMatrix(
@@ -27,7 +29,13 @@ export function buildMatrix(
     const manifest = readManifest(dir);
     const platforms = manifest.gepard?.platforms?.length ? manifest.gepard.platforms : ['any'];
     for (const platform of platforms)
-      entries.push({ path: dir, name: manifest.name, tag, platform });
+      entries.push({
+        path: dir,
+        name: manifest.name,
+        tag,
+        platform,
+        build: manifest.scripts?.build !== undefined,
+      });
   }
   return entries;
 }

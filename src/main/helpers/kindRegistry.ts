@@ -21,6 +21,9 @@ import {
   type Sourced,
 } from '../extensions/scanner';
 
+const BUILTIN: ExtensionSource = { kind: 'builtin' };
+const LOCAL: ExtensionSource = { kind: 'local' };
+
 export interface KindSpec<T> {
   kind: ExtensionKind;
   dirName: ExtensionKindDir;
@@ -87,12 +90,12 @@ export class KindRegistry<T> {
     this.builtin = builtinResult.loaded;
     this.external = externalResult.loaded;
     this.failed = [
-      ...builtinResult.failed.map((f) => ({ ...f, source: 'builtin' as const })),
-      ...externalResult.failed.map((f) => ({ ...f, source: 'external' as const })),
+      ...builtinResult.failed.map((f) => ({ ...f, source: BUILTIN })),
+      ...externalResult.failed.map((f) => ({ ...f, source: LOCAL })),
     ];
     this.allDisabled = [
-      ...builtinResult.disabled.map((d) => ({ ...d, source: 'builtin' as const })),
-      ...externalResult.disabled.map((d) => ({ ...d, source: 'external' as const })),
+      ...builtinResult.disabled.map((d) => ({ ...d, source: BUILTIN })),
+      ...externalResult.disabled.map((d) => ({ ...d, source: LOCAL })),
     ];
     this.builtinScanCache = builtinResult.cache;
     this.externalScanCache = externalResult.cache;
@@ -127,7 +130,7 @@ export class KindRegistry<T> {
         packageName: manifest.name,
         version: manifest.version,
       });
-    return [...this.builtin.map(describe('builtin')), ...this.external.map(describe('external'))];
+    return [...this.builtin.map(describe(BUILTIN)), ...this.external.map(describe(LOCAL))];
   }
 
   async list(): Promise<ExtensionInfo[]> {
