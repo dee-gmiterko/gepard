@@ -1,8 +1,8 @@
 import { AppError, generalCommentAnchor, RemoteNotFoundError } from '@gepard/common';
 import type { SyncMode } from '@gepard/common';
 import { log } from '../log';
-import { GhService, ghService as defaultGhService } from './gh';
-import { GitService, gitService as defaultGitService } from './git';
+import type { GhService } from './gh';
+import type { GitService } from './git';
 import * as review from '../store/review';
 import { withReviewLock, type ReviewStoreFile } from '../store/review';
 import {
@@ -37,8 +37,8 @@ export interface SyncContext {
 
 export class SyncService {
   constructor(
-    private readonly gh: GhService = defaultGhService,
-    private readonly git: GitService = defaultGitService,
+    private readonly gh: GhService,
+    private readonly git: GitService,
   ) {}
 
   private async pushViewed(
@@ -483,5 +483,3 @@ export class SyncService {
     );
   }
 }
-
-export const syncService = new SyncService();

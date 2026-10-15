@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { chunk } from '../helpers/array';
 import { mapWithConcurrency, withBatches } from '../helpers/async';
-import { getProject as defaultGetProject } from '../store/projects';
-import { ghClient, type GhClient } from '../clients/gh';
+import type { getProject as getProjectFromStore } from '../store/projects';
+import type { GhClient } from '../clients/gh';
 import {
   buildPrListArgs,
   buildPrsFilesQuery,
@@ -550,19 +550,11 @@ mutation($threadId:ID!, $body:String!, $reviewId:ID) {
   }
 }`;
 
-interface GhServiceDeps {
-  getProject?: typeof defaultGetProject;
-  client?: GhClient;
-}
-
 export class GhService {
-  private readonly getProject: typeof defaultGetProject;
-  private readonly gh: GhClient;
-
-  constructor(deps: GhServiceDeps = {}) {
-    this.getProject = deps.getProject ?? defaultGetProject;
-    this.gh = deps.client ?? ghClient;
-  }
+  constructor(
+    private readonly getProject: typeof getProjectFromStore,
+    private readonly gh: GhClient,
+  ) {}
 
   async repoRefFor(projectId: string): Promise<RepoRef> {
     const project = await this.getProject(projectId);
@@ -1100,5 +1092,3 @@ export class GhService {
     });
   }
 }
-
-export const ghService = new GhService();

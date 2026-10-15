@@ -163,10 +163,7 @@ export class ExtensionInstallerService {
           `archive contains "${manifest.name}", expected "${expectedName}"`,
         );
       }
-      return await this.extensions.install(root, {
-        dirName: packageDirName(manifest.name),
-        replacePackage: manifest.name,
-      });
+      return await this.extensions.install(root, packageDirName(manifest.name), manifest.name);
     } finally {
       await rm(tmp, { recursive: true, force: true });
     }

@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { AuthError, ConnectionError, ExecExitError } from '@gepard/common';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { GitClient, gitSubcommand, isRemoteGitCommand, type GitExec } from '../../clients/git';
+import { GitClient, gitSubcommand, isRemoteGitCommand } from '../../clients/git';
 import { run, runBuffer } from '../../helpers/process/exec';
 import type { RemoteObserver } from '../../services/connectivity';
 import { makeTmpDir, type TmpDir } from '../support/tmp';
@@ -24,6 +24,15 @@ function recorder(): RemoteObserver & { results: Recorded[] } {
   };
 }
 
+interface GitExec {
+  run: typeof run;
+  runBuffer: typeof runBuffer;
+}
+
+function clientOf(observer: RemoteObserver, exec: GitExec = { run, runBuffer }): GitClient {
+  return new GitClient(observer, exec.run, exec.runBuffer);
+}
+
 function failingExec(args: string[], exitCode: number, stderr: string): GitExec {
   return {
     run: () => Promise.reject(new ExecExitError('git', args, exitCode, null, stderr)),
@@ -32,7 +41,7 @@ function failingExec(args: string[], exitCode: number, stderr: string): GitExec 
 }
 
 async function remoteFailureOf(stderr: string): Promise<unknown> {
-  return new GitClient(recorder(), failingExec(['fetch'], 128, stderr))
+  return clientOf(recorder(), failingExec(['fetch'], 128, stderr))
     .run('/repo', ['fetch', 'origin', '--prune'])
     .then(
       () => undefined,
@@ -90,7 +99,7 @@ describe('GitClient', () => {
 
   it('runs a local command without telling the observer', async () => {
     const observer = recorder();
-    const client = new GitClient(observer);
+    const client = clientOf(observer);
     const { stdout } = await client.run(repo.path, ['rev-parse', '--is-inside-work-tree']);
     expect(stdout.trim()).toBe('true');
     expect(observer.results).toEqual([]);
@@ -98,7 +107,7 @@ describe('GitClient', () => {
 
   it('reads a blob as a buffer without telling the observer', async () => {
     const observer = recorder();
-    const client = new GitClient(observer);
+    const client = clientOf(observer);
     const { stdout } = await run('git', ['hash-object', '-w', '--stdin'], {
       cwd: repo.path,
       stdin: 'hello\n',
@@ -110,14 +119,14 @@ describe('GitClient', () => {
 
   it('reports a successful remote command to the observer', async () => {
     const observer = recorder();
-    const client = new GitClient(observer);
+    const client = clientOf(observer);
     await client.run(repo.path, ['ls-remote', repo.path]);
     expect(observer.results).toEqual([{ ok: true }]);
   });
 
   it('passes an unrecognised remote failure through unchanged', async () => {
     const observer = recorder();
-    const client = new GitClient(observer);
+    const client = clientOf(observer);
     const failure = client.run(repo.path, ['fetch', 'no-such-remote']);
     await expect(failure).rejects.toBeInstanceOf(ExecExitError);
     await expect(failure).rejects.not.toBeInstanceOf(ConnectionError);
@@ -130,7 +139,7 @@ describe('GitClient', () => {
     const observer = recorder();
     const stderr =
       "fatal: unable to access 'https://github.com/a/b/': Could not resolve host: github.com";
-    const client = new GitClient(observer, failingExec(['fetch'], 128, stderr));
+    const client = clientOf(observer, failingExec(['fetch'], 128, stderr));
     const failure = client.run(repo.path, ['fetch', 'origin', '--prune']);
     await expect(failure).rejects.toBeInstanceOf(ConnectionError);
     await expect(failure).rejects.toMatchObject({
@@ -144,7 +153,7 @@ describe('GitClient', () => {
 
   it('never translates a local failure, even with connection-like stderr', async () => {
     const observer = recorder();
-    const client = new GitClient(observer, failingExec(['status'], 1, 'Connection refused'));
+    const client = clientOf(observer, failingExec(['status'], 1, 'Connection refused'));
     const failure = client.run(repo.path, ['status']);
     await expect(failure).rejects.toBeInstanceOf(ExecExitError);
     await expect(failure).rejects.not.toBeInstanceOf(ConnectionError);
@@ -153,7 +162,7 @@ describe('GitClient', () => {
 
   it('clones with hooks disabled and reports to the observer', async () => {
     const observer = recorder();
-    const client = new GitClient(observer);
+    const client = clientOf(observer);
     const hooks = await makeTmpDir('git-client-hooks');
     const target = await makeTmpDir('git-client-clone');
     try {

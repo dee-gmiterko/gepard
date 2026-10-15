@@ -18,11 +18,11 @@ vi.mock('../../notify', () => ({
 vi.mock('../../services/line-index-manager', () => ({
   startLineIndex: () => mocks.lineIndexReady.then(() => null),
 }));
-vi.mock('../../di', () => ({
-  extensionsService: { enabledLanguageExtensions: () => Promise.resolve(mocks.extensions) },
-}));
+const { IndexerService } = await import('../../lsp/indexer');
 
-const { indexer } = await import('../../lsp/indexer');
+const indexer = new IndexerService({
+  enabledLanguageExtensions: () => Promise.resolve(mocks.extensions),
+});
 
 interface FakeSession {
   session: LanguageSession;

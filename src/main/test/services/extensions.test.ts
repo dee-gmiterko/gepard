@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { ExtensionsService } from '../../services/extensions';
+import type { ExtensionsService } from '../../services/extensions';
+import { makeExtensionsService } from '../support/extensionsService';
 import * as settingsStore from '../../store/settings';
 import {
   DEMO_GRAMMAR_BODY,
@@ -55,7 +56,7 @@ describe('ExtensionsService', () => {
   let builtinRoot: string;
 
   function newService(): ExtensionsService {
-    return new ExtensionsService(
+    return makeExtensionsService(
       () => extRoot,
       () => builtinRoot,
     );

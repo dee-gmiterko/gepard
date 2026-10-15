@@ -1,9 +1,13 @@
 import { z } from 'zod';
 import type { GqlError } from '@gepard/common';
 import { checkGqlErrors } from '../helpers/github/ghParsing';
-import { run, runJson, type RunResult } from '../helpers/process/exec';
+import type {
+  run as runProcess,
+  runJson as runJsonProcess,
+  RunResult,
+} from '../helpers/process/exec';
 import { classifyFailure } from './ghError';
-import { connectivity, type RemoteObserver } from '../services/connectivity';
+import type { RemoteObserver } from '../services/connectivity';
 
 const GH_ENV: NodeJS.ProcessEnv = {
   ...process.env,
@@ -21,12 +25,11 @@ export interface GhCallOptions {
   timeoutMs?: number;
 }
 
-export type GhExec = Pick<typeof import('../helpers/process/exec'), 'run' | 'runJson'>;
-
 export class GhClient {
   constructor(
-    private readonly observer: RemoteObserver = connectivity,
-    private readonly exec: GhExec = { run, runJson },
+    private readonly observer: RemoteObserver,
+    private readonly execRun: typeof runProcess,
+    private readonly execRunJson: typeof runJsonProcess,
   ) {}
 
   private opts(opts: GhCallOptions): { env: NodeJS.ProcessEnv; timeoutMs: number; stdin?: string } {
@@ -46,7 +49,7 @@ export class GhClient {
   }
 
   run(args: string[], opts: GhCallOptions = {}): Promise<RunResult> {
-    return this.observe(this.exec.run('gh', args, this.opts(opts)));
+    return this.observe(this.execRun('gh', args, this.opts(opts)));
   }
 
   json<T extends z.ZodType>(
@@ -54,7 +57,7 @@ export class GhClient {
     args: string[],
     opts: GhCallOptions = {},
   ): Promise<z.output<T>> {
-    return this.observe(this.exec.runJson(schema, 'gh', args, this.opts(opts)));
+    return this.observe(this.execRunJson(schema, 'gh', args, this.opts(opts)));
   }
 
   // `gh api --paginate` hangs on GraphQL queries whose cursor variable is not
@@ -71,5 +74,3 @@ export class GhClient {
     return result;
   }
 }
-
-export const ghClient = new GhClient();

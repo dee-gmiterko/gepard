@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { channels } from '@gepard/common';
 import { createFilesHandlers } from '../../../ipc/handlers/files';
-import { GitService } from '../../../services/git';
+import { gitService } from '../../../di';
 import { __setUserDataDir } from '../../support/electron';
 import { makeTmpDir, type TmpDir } from '../../support/tmp';
 
@@ -29,7 +29,7 @@ async function git(cwd: string, args: string[]): Promise<string> {
 describe('files.content over the real IPC contract and handler (integration)', () => {
   let origin: TmpDir;
   let userData: TmpDir;
-  const svc = new GitService();
+  const svc = gitService;
   const handlers = createFilesHandlers(svc);
   const projectId = 'acme__ipc';
   let sha: string;

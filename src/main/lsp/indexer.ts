@@ -14,7 +14,7 @@ import { log } from '../log';
 import { isNotifiableLevel, notifyMainFailure } from '../notify';
 import { extensionDataDir } from '../paths';
 import { startLineIndex, type LineIndexHandle } from '../services/line-index-manager';
-import { extensionsService } from '../di';
+import type { ExtensionsService } from '../services/extensions';
 
 interface LanguageEntry {
   extension: LanguageExtension;
@@ -34,14 +34,6 @@ interface ProjectState {
   initialHead: string;
 }
 
-const projects = new Map<string, ProjectState>();
-
-function setStatus(projectId: string, status: IndexStatus): void {
-  const state = projects.get(projectId);
-  if (state) state.status = status;
-  emit('index.status', { projectId, status });
-}
-
 function setLanguageStatus(
   state: ProjectState,
   id: string,
@@ -50,25 +42,6 @@ function setLanguageStatus(
   state.languages = (state.languages ?? []).map((entry) =>
     entry.id === id ? { id: entry.id, displayName: entry.displayName, ...patch } : entry,
   );
-}
-
-function isCurrent(projectId: string, state: ProjectState): boolean {
-  return projects.get(projectId) === state;
-}
-
-function makeSink(projectId: string, extensionId: string, state: ProjectState): ExtensionEvents {
-  const scope = `lsp:${extensionId}:${projectId}`;
-  return {
-    status: (s) => {
-      if (isCurrent(projectId, state)) setStatus(projectId, s);
-    },
-    log: (level, msg) => {
-      if (isNotifiableLevel(level)) notifyMainFailure(scope, msg);
-      else if (level === 'warn') log.warn(scope, msg);
-      // LSP servers send frequent $/progress and window/logMessage notifications
-      // at 'info' level.
-    },
-  };
 }
 
 function isClaimedBy(extension: LanguageExtension, filePath: string): boolean {
@@ -85,55 +58,72 @@ async function disposeSessions(projectId: string, entries: LanguageEntry[]): Pro
   );
 }
 
-async function startLanguageSession(
-  projectId: string,
-  state: ProjectState,
-  extension: LanguageExtension,
-  repoRoot: string,
-  files: string[],
-): Promise<LanguageEntry> {
-  const sink = makeSink(projectId, extension.id, state);
-  const dataDir = extensionDataDir(extension.id);
-  await mkdir(dataDir, { recursive: true });
-  const session = await extension.open({ root: repoRoot }, { dataDir }, sink);
-  // Language servers load a project on the first request for one of its
-  // files, and workspace/symbol returns nothing until then.
-  const probe = extension.warmupFile?.(files) ?? files.find((f) => isClaimedBy(extension, f));
-  if (probe) {
-    await session.lineSymbols(probe, 1).catch((e: Error) => {
-      sink.log('warn', `project warm-up failed: ${e.message}`);
+export class IndexerService {
+  private readonly projects = new Map<string, ProjectState>();
+
+  constructor(private readonly extensions: Pick<ExtensionsService, 'enabledLanguageExtensions'>) {}
+
+  private setStatus(projectId: string, status: IndexStatus): void {
+    const state = this.projects.get(projectId);
+    if (state) state.status = status;
+    emit('index.status', { projectId, status });
+  }
+
+  private isCurrent(projectId: string, state: ProjectState): boolean {
+    return this.projects.get(projectId) === state;
+  }
+
+  private makeSink(projectId: string, extensionId: string, state: ProjectState): ExtensionEvents {
+    const scope = `lsp:${extensionId}:${projectId}`;
+    return {
+      status: (s) => {
+        if (this.isCurrent(projectId, state)) this.setStatus(projectId, s);
+      },
+      log: (level, msg) => {
+        if (isNotifiableLevel(level)) notifyMainFailure(scope, msg);
+        else if (level === 'warn') log.warn(scope, msg);
+        // LSP servers send frequent $/progress and window/logMessage notifications
+        // at 'info' level.
+      },
+    };
+  }
+
+  private async startLanguageSession(
+    projectId: string,
+    state: ProjectState,
+    extension: LanguageExtension,
+    repoRoot: string,
+    files: string[],
+  ): Promise<LanguageEntry> {
+    const sink = this.makeSink(projectId, extension.id, state);
+    const dataDir = extensionDataDir(extension.id);
+    await mkdir(dataDir, { recursive: true });
+    const session = await extension.open({ root: repoRoot }, { dataDir }, sink);
+    // Language servers load a project on the first request for one of its
+    // files, and workspace/symbol returns nothing until then.
+    const probe = extension.warmupFile?.(files) ?? files.find((f) => isClaimedBy(extension, f));
+    if (probe) {
+      await session.lineSymbols(probe, 1).catch((e: Error) => {
+        sink.log('warn', `project warm-up failed: ${e.message}`);
+      });
+    }
+    return { extension, session };
+  }
+
+  private async disposeLineIndex(projectId: string): Promise<void> {
+    const lineIndex = this.projects.get(projectId)?.lineIndex;
+    if (!lineIndex) return;
+    await lineIndex.dispose().catch((e: Error) => {
+      notifyMainFailure('lsp', `projectId=${projectId} line index dispose failed: ${e.message}`);
     });
   }
-  return { extension, session };
-}
 
-async function disposeLineIndex(projectId: string): Promise<void> {
-  const lineIndex = projects.get(projectId)?.lineIndex;
-  if (!lineIndex) return;
-  await lineIndex.dispose().catch((e: Error) => {
-    notifyMainFailure('lsp', `projectId=${projectId} line index dispose failed: ${e.message}`);
-  });
-}
-
-export const indexer: {
-  open(projectId: string, repoRoot: string, files: string[], head: string): Promise<void>;
-  onCheckout(projectId: string, changes: FileChange[], newSha: string, fileCount: number): void;
-  close(projectId: string): Promise<void>;
-  closeAll(): Promise<void>;
-  status(projectId: string): IndexStatus;
-  session(projectId: string, filePath: string): LanguageSession | null;
-  extension(projectId: string, filePath: string): LanguageExtension | null;
-  sessions(projectId: string): LanguageSession[];
-  languages(projectId: string): LanguageServerStatus[] | null;
-  lineIndex(projectId: string): LineIndexHandle | null;
-  currentSha(projectId: string): string | null;
-} = {
-  async open(projectId, repoRoot, files, head): Promise<void> {
+  async open(projectId: string, repoRoot: string, files: string[], head: string): Promise<void> {
     await Promise.all(
-      [...projects.keys()].filter((id) => id !== projectId).map((id) => indexer.close(id)),
+      [...this.projects.keys()].filter((id) => id !== projectId).map((id) => this.close(id)),
     );
-    await disposeSessions(projectId, projects.get(projectId)?.sessions ?? []);
-    await disposeLineIndex(projectId);
+    await disposeSessions(projectId, this.projects.get(projectId)?.sessions ?? []);
+    await this.disposeLineIndex(projectId);
     const state: ProjectState = {
       status: { state: 'indexing', phase: 'files', done: 0, total: files.length },
       languages: null,
@@ -146,11 +136,11 @@ export const indexer: {
       latest: null,
       initialHead: head,
     };
-    projects.set(projectId, state);
-    setStatus(projectId, { state: 'indexing', phase: 'files', done: 0, total: files.length });
+    this.projects.set(projectId, state);
+    this.setStatus(projectId, { state: 'indexing', phase: 'files', done: 0, total: files.length });
 
-    const extensions = await extensionsService.enabledLanguageExtensions();
-    if (!isCurrent(projectId, state)) return;
+    const extensions = await this.extensions.enabledLanguageExtensions();
+    if (!this.isCurrent(projectId, state)) return;
 
     const matching = extensions.filter((ext) => files.some((f) => isClaimedBy(ext, f)));
     state.languages = extensions.map((extension): LanguageServerStatus => ({
@@ -163,18 +153,18 @@ export const indexer: {
       repoRoot,
       files,
       (done, total) => {
-        if (isCurrent(projectId, state))
-          setStatus(projectId, { state: 'indexing', phase: 'files', done, total });
+        if (this.isCurrent(projectId, state))
+          this.setStatus(projectId, { state: 'indexing', phase: 'files', done, total });
       },
       () => {
-        if (isCurrent(projectId, state)) {
+        if (this.isCurrent(projectId, state)) {
           state.lineIndex = null;
           state.lineIndexUnavailable = true;
           state.pendingIndexChanges = [];
         }
       },
     );
-    if (!isCurrent(projectId, state)) {
+    if (!this.isCurrent(projectId, state)) {
       await lineIndex?.dispose();
       return;
     }
@@ -189,14 +179,14 @@ export const indexer: {
     if (matching.length === 0) {
       state.pendingSessionChanges = [];
       state.sessionUnavailable = true;
-      setStatus(projectId, { state: 'idle' });
+      this.setStatus(projectId, { state: 'idle' });
       return;
     }
 
-    setStatus(projectId, { state: 'indexing', phase: 'language', done: 0 });
+    this.setStatus(projectId, { state: 'indexing', phase: 'language', done: 0 });
     const results = await Promise.allSettled(
       matching.map((extension) =>
-        startLanguageSession(projectId, state, extension, repoRoot, files).then(
+        this.startLanguageSession(projectId, state, extension, repoRoot, files).then(
           (entry) => {
             setLanguageStatus(state, extension.id, { state: 'active' });
             return entry;
@@ -226,14 +216,14 @@ export const indexer: {
       );
     });
 
-    if (!isCurrent(projectId, state)) {
+    if (!this.isCurrent(projectId, state)) {
       await disposeSessions(projectId, started);
       return;
     }
     if (started.length === 0) {
       state.pendingSessionChanges = [];
       state.sessionUnavailable = true;
-      setStatus(projectId, {
+      this.setStatus(projectId, {
         state: 'error',
         message: `language session failed to start: ${failures.join('; ')}`,
       });
@@ -248,11 +238,11 @@ export const indexer: {
     for (const { extension } of started) {
       log.info('lsp', `projectId=${projectId} extension=${extension.id} session started`);
     }
-    setStatus(projectId, { state: 'idle' });
-  },
+    this.setStatus(projectId, { state: 'idle' });
+  }
 
-  onCheckout(projectId, changes, newSha, fileCount): void {
-    const state = projects.get(projectId);
+  onCheckout(projectId: string, changes: FileChange[], newSha: string, fileCount: number): void {
+    const state = this.projects.get(projectId);
     if (!state) return;
     state.latest = { sha: newSha, fileCount };
     if (state.sessions.length > 0) {
@@ -260,52 +250,52 @@ export const indexer: {
     } else if (!state.sessionUnavailable) state.pendingSessionChanges.push(...changes);
     if (state.lineIndex) state.lineIndex.applyChanges(changes);
     else if (!state.lineIndexUnavailable) state.pendingIndexChanges.push(...changes);
-    if (state.status.state === 'idle') setStatus(projectId, { state: 'idle' });
-  },
+    if (state.status.state === 'idle') this.setStatus(projectId, { state: 'idle' });
+  }
 
-  async close(projectId): Promise<void> {
-    await disposeSessions(projectId, projects.get(projectId)?.sessions ?? []).catch(() => {});
-    await disposeLineIndex(projectId).catch(() => {});
-    projects.delete(projectId);
-  },
+  async close(projectId: string): Promise<void> {
+    await disposeSessions(projectId, this.projects.get(projectId)?.sessions ?? []).catch(() => {});
+    await this.disposeLineIndex(projectId).catch(() => {});
+    this.projects.delete(projectId);
+  }
 
   async closeAll(): Promise<void> {
-    await Promise.all([...projects.keys()].map((id) => indexer.close(id)));
-  },
+    await Promise.all([...this.projects.keys()].map((id) => this.close(id)));
+  }
 
   status(projectId: string): IndexStatus {
-    return projects.get(projectId)?.status ?? { state: 'indexing', phase: 'files', done: 0 };
-  },
+    return this.projects.get(projectId)?.status ?? { state: 'indexing', phase: 'files', done: 0 };
+  }
 
   session(projectId: string, filePath: string): LanguageSession | null {
     return (
-      projects.get(projectId)?.sessions.find((entry) => isClaimedBy(entry.extension, filePath))
+      this.projects.get(projectId)?.sessions.find((entry) => isClaimedBy(entry.extension, filePath))
         ?.session ?? null
     );
-  },
+  }
 
   extension(projectId: string, filePath: string): LanguageExtension | null {
     return (
-      projects.get(projectId)?.sessions.find((entry) => isClaimedBy(entry.extension, filePath))
+      this.projects.get(projectId)?.sessions.find((entry) => isClaimedBy(entry.extension, filePath))
         ?.extension ?? null
     );
-  },
+  }
 
   sessions(projectId: string): LanguageSession[] {
-    return projects.get(projectId)?.sessions.map((entry) => entry.session) ?? [];
-  },
+    return this.projects.get(projectId)?.sessions.map((entry) => entry.session) ?? [];
+  }
 
   languages(projectId: string): LanguageServerStatus[] | null {
-    return projects.get(projectId)?.languages ?? null;
-  },
+    return this.projects.get(projectId)?.languages ?? null;
+  }
 
   lineIndex(projectId: string): LineIndexHandle | null {
-    return projects.get(projectId)?.lineIndex ?? null;
-  },
+    return this.projects.get(projectId)?.lineIndex ?? null;
+  }
 
   currentSha(projectId: string): string | null {
-    const state = projects.get(projectId);
+    const state = this.projects.get(projectId);
     if (!state) return null;
     return state.latest?.sha ?? state.initialHead;
-  },
-};
+  }
+}

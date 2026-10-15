@@ -4,7 +4,7 @@ import { __setUserDataDir } from '../support/electron';
 import { makeTmpDir, type TmpDir } from '../support/tmp';
 import * as settings from '../../store/settings';
 import * as extensionsStore from '../../store/extensions';
-import { ExtensionsService } from '../../services/extensions';
+import { makeExtensionsService } from '../support/extensionsService';
 import {
   DEMO_GRAMMAR_BODY,
   DEMO_LANG_BODY,
@@ -86,7 +86,7 @@ describe('store/settings and known extension files', () => {
     it('records a single kind in extensions-files.json', async () => {
       const builtin = join(userData.path, 'builtin');
       await writePackage(builtin, 'only-lang', DEMO_LANG_BODY.replace('demo-lang', 'only-lang'));
-      await new ExtensionsService(
+      await makeExtensionsService(
         () => join(userData.path, 'ext'),
         () => builtin,
       ).list();
@@ -97,7 +97,7 @@ describe('store/settings and known extension files', () => {
     it('records every kind scanned concurrently by list()', async () => {
       const builtin = join(userData.path, 'builtin');
       await writeBuiltins(builtin);
-      await new ExtensionsService(
+      await makeExtensionsService(
         () => join(userData.path, 'ext'),
         () => builtin,
       ).list();

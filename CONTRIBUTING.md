@@ -81,9 +81,9 @@ Each extension's entry module (`main` in its `package.json`, default
 `index.js`) must be a plain JS/ES module whose default export (or `extension`
 export) is the extension object. The main process scans the bundled and
 user-installed extension directories, checks `gepard.type` against the
-expected kind and validates the export; see `src/main/extensions/scanner.ts`
-and `src/main/extensions/registry.ts`. Extensions that fail validation are
-reported as failed rather than loaded.
+expected kind and validates the export; see `src/main/extensions/scanner.ts`.
+An extension that fails to scan or validate is reported with its error and is
+not loaded.
 
 ### LSP
 

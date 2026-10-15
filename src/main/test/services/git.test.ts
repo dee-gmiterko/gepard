@@ -3,7 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { GitService } from '../../services/git';
+import { gitService } from '../../di';
 import { nohooksDir, projectRepoDir } from '../../paths';
 import { __clearEmittedEvents, __setUserDataDir, emittedEvents } from '../support/electron';
 import { makeTmpDir, type TmpDir } from '../support/tmp';
@@ -71,7 +71,6 @@ describe('GitService (integration)', () => {
   let fixture: Fixture;
   const projectId = 'acme__widgets';
   const EMPTY_TREE_SHA = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
-  const gitService = new GitService();
 
   beforeAll(async () => {
     origin = await makeTmpDir('git-origin');

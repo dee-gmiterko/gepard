@@ -7,19 +7,17 @@ import {
   type OpenedProject,
   type Project,
 } from '@gepard/common';
-
 import { findProjectByName } from '../helpers/projects';
 import { instanceCommand, waitForInstance } from '../helpers/process/instance';
 import { ProjectLocks } from '../helpers/process/projectLock';
 import { formatCaughtError } from '../helpers/error';
-import { cli } from '../cli';
 import * as store from '../store/projects';
-import { indexer } from '../lsp/indexer';
+import type { IndexerService } from '../lsp/indexer';
 import { projectLocksDir, projectRepoDir } from '../paths';
 import { emit } from '../ipc/registry';
 import { notifyMainFailure } from '../notify';
 import { log } from '../log';
-import { gitService, type GitService } from './git';
+import type { GitService } from './git';
 
 function focusMainWindow(): void {
   const window = BrowserWindow.getAllWindows()[0];
@@ -35,6 +33,7 @@ export class LaunchService {
 
   constructor(
     private readonly git: GitService,
+    private readonly indexer: IndexerService,
     private readonly target: string | null,
   ) {}
 
@@ -91,7 +90,7 @@ export class LaunchService {
       store.getLastTargeting(projectId),
       store.getLayout(projectId),
     ]);
-    indexer.open(projectId, projectRepoDir(projectId), files, head).catch((e) => {
+    this.indexer.open(projectId, projectRepoDir(projectId), files, head).catch((e) => {
       const message = e instanceof Error ? e.message : String(e);
       log.error('launch', `indexer failed for ${projectId}: ${message}`);
       emit('index.status', { projectId, status: { state: 'error', message } });
@@ -140,5 +139,3 @@ export class LaunchService {
     return project.url;
   }
 }
-
-export const launchService = new LaunchService(gitService, cli.target);

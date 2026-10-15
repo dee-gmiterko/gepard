@@ -1,6 +1,7 @@
 import { AuthError, ConnectionError, ExecExitError } from '@gepard/common';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { connectivity, ConnectivityService } from '../../services/connectivity';
+import { connectivity } from '../../di';
+import { ConnectivityService } from '../../services/connectivity';
 import { __clearEmittedEvents, __setUserDataDir, emittedEvents } from '../support/electron';
 import { makeTmpDir } from '../support/tmp';
 

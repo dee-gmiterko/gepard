@@ -4,10 +4,6 @@ import {
   AppError,
   errorMessage,
   isErrnoException,
-  isGrammarExtension,
-  isLanguageExtension,
-  isLocaleExtension,
-  isThemeExtension,
   type ExtensionInfo,
   type GrammarExtension,
   type GrammarModule,
@@ -17,58 +13,18 @@ import {
   type ThemeExtension,
 } from '@gepard/common';
 import { dedupeBroken } from '../helpers/extension';
-import { KindRegistry, type KindSpec } from '../extensions/kindRegistry';
+import type { KindRegistry } from '../extensions/kindRegistry';
 import { readManifest } from '../extensions/scanner';
 import * as settingsStore from '../store/settings';
 
-const LSP_SPEC: KindSpec<LanguageExtension> = {
-  kind: 'lsp',
-  isValid: isLanguageExtension,
-  getId: (item) => item.id,
-  getDisplayName: (item) => item.displayName,
-};
-
-const GRAMMAR_SPEC: KindSpec<GrammarExtension> = {
-  kind: 'grammar',
-  isValid: isGrammarExtension,
-  getId: (item) => item.id,
-  getDisplayName: (item) => item.displayName,
-};
-
-const THEME_SPEC: KindSpec<ThemeExtension> = {
-  kind: 'theme',
-  isValid: isThemeExtension,
-  getId: (item) => item.id,
-  getDisplayName: (item) => item.name,
-};
-
-const LOCALE_SPEC: KindSpec<LocaleExtension> = {
-  kind: 'locale',
-  isValid: isLocaleExtension,
-  getId: (item) => item.id,
-  getDisplayName: (item) => item.displayName,
-};
-
-export interface InstallOptions {
-  dirName?: string;
-  replacePackage?: string;
-}
-
 export class ExtensionsService {
-  private readonly lsp: KindRegistry<LanguageExtension>;
-  private readonly grammar: KindRegistry<GrammarExtension>;
-  private readonly theme: KindRegistry<ThemeExtension>;
-  private readonly locale: KindRegistry<LocaleExtension>;
-
   constructor(
     readonly userDir: () => string,
-    builtinDir: () => string,
-  ) {
-    this.lsp = new KindRegistry(LSP_SPEC, userDir, builtinDir);
-    this.grammar = new KindRegistry(GRAMMAR_SPEC, userDir, builtinDir);
-    this.theme = new KindRegistry(THEME_SPEC, userDir, builtinDir);
-    this.locale = new KindRegistry(LOCALE_SPEC, userDir, builtinDir);
-  }
+    private readonly lsp: KindRegistry<LanguageExtension>,
+    private readonly grammar: KindRegistry<GrammarExtension>,
+    private readonly theme: KindRegistry<ThemeExtension>,
+    private readonly locale: KindRegistry<LocaleExtension>,
+  ) {}
 
   async list(): Promise<ExtensionInfo[]> {
     const lists = await Promise.all([
@@ -85,7 +41,11 @@ export class ExtensionsService {
     return this.list();
   }
 
-  async install(srcDir: string, options: InstallOptions = {}): Promise<ExtensionInfo[]> {
+  async install(
+    srcDir: string,
+    dirName?: string,
+    replacePackage?: string,
+  ): Promise<ExtensionInfo[]> {
     const name = path.basename(srcDir);
     let manifest: PackageManifest;
     try {
@@ -97,22 +57,28 @@ export class ExtensionsService {
       );
     }
     const type = manifest.gepard?.type;
-    if (![LSP_SPEC, GRAMMAR_SPEC, THEME_SPEC, LOCALE_SPEC].some((spec) => spec.kind === type)) {
+    if (
+      ![this.lsp, this.grammar, this.theme, this.locale].some((registry) => registry.kind === type)
+    ) {
       throw new AppError(
         'EXTENSION_INVALID_PACKAGE',
         `"${name}"'s package.json must set "gepard": { "type": "lsp" | "grammar" | "theme" | "locale" } (got ${JSON.stringify(type ?? null)})`,
       );
     }
-    await this.copyPackage(srcDir, options);
+    await this.copyPackage(srcDir, dirName, replacePackage);
     return this.list();
   }
 
-  private async copyPackage(srcDir: string, options: InstallOptions): Promise<void> {
+  private async copyPackage(
+    srcDir: string,
+    dirName: string | undefined,
+    replacePackage: string | undefined,
+  ): Promise<void> {
     const userDir = this.userDir();
-    const name = options.dirName ?? path.basename(srcDir);
+    const name = dirName ?? path.basename(srcDir);
     await mkdir(userDir, { recursive: true });
-    if (options.replacePackage !== undefined) {
-      await this.removePackage(userDir, options.replacePackage);
+    if (replacePackage !== undefined) {
+      await this.removePackage(userDir, replacePackage);
       await rm(path.join(userDir, name), { recursive: true, force: true });
       this.forget(path.join(userDir, name));
     }

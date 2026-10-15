@@ -1,6 +1,6 @@
 import { mkdir, rename, rm } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { gitClient, type GitClient } from '../clients/git';
+import type { GitClient } from '../clients/git';
 import { looksBinary } from '../helpers/binary';
 import { mimeForPath } from '../helpers/mime';
 import { assertInRepo } from '../helpers/repoPath';
@@ -20,7 +20,6 @@ import {
   parseBranchNames,
 } from '../helpers/git/gitParsing';
 import { emit } from '../ipc/registry';
-import { indexer as defaultIndexer } from '../lsp/indexer';
 import { nohooksDir, projectCloneTmpDir, projectRepoDir } from '../paths';
 import { isCloned } from '../store/projects';
 import { log } from '../log';
@@ -66,8 +65,8 @@ export class GitService {
   private statusCache: { key: string; entries: Promise<NameStatusEntry[]> } | null = null;
 
   constructor(
-    private readonly indexer: Indexer = defaultIndexer,
-    private readonly git: GitClient = gitClient,
+    private readonly indexer: Indexer,
+    private readonly git: GitClient,
   ) {}
 
   private enqueue<T>(projectId: string, fn: () => Promise<T>): Promise<T> {
@@ -561,5 +560,3 @@ export class GitService {
     return { branches: parseBranchNames(refsOut.stdout), defaultBranch };
   }
 }
-
-export const gitService = new GitService();
