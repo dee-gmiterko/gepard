@@ -48,6 +48,36 @@ export function parseRepositoryInput(text: string): RepositoryInput {
   return { owner: segments[0], repo: segments[1] };
 }
 
+export interface RepositorySource {
+  repository: string;
+  path: string | null;
+}
+
+// `owner/repo[/path/inside/repo]`, or a github.com URL (optionally a
+// `/tree/<branch>/<path>` link): the first two segments name the repository and
+// whatever follows is the extension path inside it.
+export function splitRepositorySource(text: string): RepositorySource {
+  const trimmed = text.trim();
+  const isUrl = /^https?:\/\//i.test(trimmed);
+  let segments: string[];
+  if (isUrl) {
+    try {
+      segments = new URL(trimmed).pathname.split('/').filter(Boolean);
+    } catch {
+      return { repository: trimmed, path: null };
+    }
+  } else {
+    segments = trimmed.split('/').filter(Boolean);
+  }
+  const rest = segments.slice(2);
+  if (isUrl && (rest[0] === 'tree' || rest[0] === 'blob')) rest.splice(0, 2);
+  const repo = isUrl ? segments[1]?.replace(/\.git$/, '') : segments[1];
+  const repository = isUrl
+    ? `${trimmed.replace(/^(https?:\/\/[^/]+).*$/i, '$1')}/${segments[0] ?? ''}/${repo ?? ''}`
+    : segments.slice(0, 2).join('/');
+  return { repository, path: rest.join('/') || null };
+}
+
 export function isRepositoryInput(text: string): boolean {
   try {
     parseRepositoryInput(text);

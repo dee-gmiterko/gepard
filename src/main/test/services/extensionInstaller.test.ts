@@ -8,7 +8,7 @@ import { GhClient } from '../../clients/gh';
 import type { run as execRun, runJson as execRunJson } from '../../helpers/process/exec';
 import { ExtensionCatalogService } from '../../services/extensionCatalog';
 import { ExtensionInstallerService } from '../../services/extensionInstaller';
-import { ReleaseDownloadService } from '../../services/releaseDownload';
+import { DownloadService } from '../../services/download';
 import { DEMO_LANG_BODY, writePackage } from '../support/extensionPackages';
 import { __setUserDataDir } from '../support/electron';
 import { makeTmpDir, type TmpDir } from '../support/tmp';
@@ -112,7 +112,7 @@ describe('ExtensionInstallerService', () => {
       extensions,
       new ExtensionCatalogService(CATALOG, extensions, target),
       github.client,
-      new ReleaseDownloadService(github.client, () => tmp.path),
+      new DownloadService(github.client, () => tmp.path),
       target,
     );
   }

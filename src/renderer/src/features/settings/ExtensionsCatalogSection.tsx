@@ -1,9 +1,8 @@
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage } from 'react-intl';
 import { List, ListRow } from '../../components/List';
 import { Message } from '../../components/Message';
 import { Section } from '../../components/Section';
 import { SectionHeading } from '../../components/SectionHeading';
-import { formatDescribedError } from '../../errors/errorMessage';
 import { useExtensionCatalog, useInstallExtension } from '../../queries/extensions';
 import { ExtensionsCatalogRow } from './ExtensionsCatalogRow';
 
@@ -27,7 +26,6 @@ const messages = defineMessages({
 });
 
 export function ExtensionsCatalogSection(): React.JSX.Element {
-  const intl = useIntl();
   const { data, isLoading, isError } = useExtensionCatalog();
   const install = useInstallExtension();
   const entries = data?.entries ?? [];
@@ -35,11 +33,6 @@ export function ExtensionsCatalogSection(): React.JSX.Element {
   return (
     <Section>
       <SectionHeading title={<FormattedMessage {...messages.catalogTitle} />} />
-      {install.isError && (
-        <Message tone="danger" layout="inline">
-          {formatDescribedError(intl, install.error)}
-        </Message>
-      )}
       <List>
         {isLoading ? (
           <ListRow $padding={2}>
