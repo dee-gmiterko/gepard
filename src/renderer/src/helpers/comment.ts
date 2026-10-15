@@ -140,3 +140,15 @@ export function prThreadsReferencingFile(
       ),
   );
 }
+
+export function draftKeyOf(
+  target:
+    | { kind: 'thread'; anchor: DraftAnchor }
+    | { kind: 'reply'; threadId: string }
+    | { kind: 'edit' },
+): string | null {
+  if (target.kind === 'reply') return `reply:${target.threadId}`;
+  if (target.kind === 'edit') return null;
+  const a = target.anchor;
+  return `thread:${[a.path, a.subjectType, a.side, a.line, a.startLine, a.startSide].join(':')}`;
+}

@@ -57,6 +57,18 @@ const messages = defineMessages({
     id: 'keyboard.toggleFullFileDiff',
     defaultMessage: 'Toggle showing the full file with changes instead of changes only',
   },
+  submitComment: {
+    id: 'keyboard.submitComment',
+    defaultMessage: 'Submit the comment being written',
+  },
+  findNext: {
+    id: 'keyboard.findNext',
+    defaultMessage: 'Go to the next match while finding in the active file',
+  },
+  findPrevious: {
+    id: 'keyboard.findPrevious',
+    defaultMessage: 'Go to the previous match while finding in the active file',
+  },
   quickSearchNavigate: {
     id: 'keyboard.quickSearchNavigate',
     defaultMessage: 'Go to file or symbol',
@@ -135,5 +147,23 @@ export const keyBindings: readonly KeyBinding[] = [
     key: `${MOD}+Shift+D`,
     label: messages.toggleFullFileDiff,
     run: (commands) => commands.toggleFullFileDiff(),
+  },
+  {
+    id: 'submitComment',
+    key: `${MOD}+Enter`,
+    label: messages.submitComment,
+    run: (commands) => commands.submitComment(),
+  },
+  {
+    id: 'findNext',
+    key: 'Enter',
+    label: messages.findNext,
+    run: (commands) => commands.findNext(),
+  },
+  {
+    id: 'findPrevious',
+    key: 'Shift+Enter',
+    label: messages.findPrevious,
+    run: (commands) => commands.findPrevious(),
   },
 ];

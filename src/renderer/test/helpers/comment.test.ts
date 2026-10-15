@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   codeViewCommentEntries,
+  draftKeyOf,
   diffViewCommentEntries,
   fileReference,
   prThreadsReferencingFile,
   sortThreadsChronologically,
 } from '../../src/helpers/comment';
 import { fullFileDiffMarks } from '../../src/helpers/diff';
-import type { Anchor, Comment, DiffRow, ReviewThread } from '@gepard/common';
+import type { Anchor, Comment, DiffRow, DraftAnchor, ReviewThread } from '@gepard/common';
 
 const HEAD = '1111111111111111111111111111111111111111';
 const OTHER = '2222222222222222222222222222222222222222';
@@ -330,5 +331,27 @@ describe('codeViewCommentEntries in a full-file diff', () => {
     expect(fullFileDiffMarks(rows).deletedBefore.get(2)).toEqual(['gone']);
     const entries = codeViewCommentEntries([left], 'a.ts', null, HEAD, rows);
     expect(entries).toEqual([{ docLine: 1, threads: [left], draft: null }]);
+  });
+});
+
+describe('draftKeyOf', () => {
+  it('keys a reply by its thread', () => {
+    expect(draftKeyOf({ kind: 'reply', threadId: 't1' })).toBe('reply:t1');
+  });
+
+  it('keys a new thread by its anchor', () => {
+    const anchor: DraftAnchor = {
+      path: 'a.ts',
+      subjectType: 'LINE',
+      side: 'RIGHT',
+      line: 4,
+      startLine: null,
+      startSide: null,
+    };
+    expect(draftKeyOf({ kind: 'thread', anchor })).toBe('thread:a.ts:LINE:RIGHT:4::');
+  });
+
+  it('does not keep drafts for edits', () => {
+    expect(draftKeyOf({ kind: 'edit' })).toBeNull();
   });
 });

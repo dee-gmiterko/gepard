@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { KeyBinding } from '../../src/keyboard/bindings';
-import { effectiveKey, isSubmitChord, keyChord, keyLabel, splitChord } from '../../src/helpers/key';
+import { effectiveKey, keyChord, keyLabel, splitChord } from '../../src/helpers/key';
 
 const event = (
   key: string,
@@ -58,19 +58,5 @@ describe('effectiveKey', () => {
     expect(effectiveKey(binding, { go: 'h' })).toBe('h');
     expect(effectiveKey(binding, {})).toBe('g');
     expect(effectiveKey(binding, undefined)).toBe('g');
-  });
-});
-
-describe('isSubmitChord', () => {
-  it('accepts Enter with Ctrl or Meta', () => {
-    expect(isSubmitChord(event('Enter', { ctrlKey: true }))).toBe(true);
-    expect(isSubmitChord(event('Enter', { metaKey: true }))).toBe(true);
-  });
-
-  it('rejects a plain Enter and Enter with other modifiers', () => {
-    expect(isSubmitChord(event('Enter'))).toBe(false);
-    expect(isSubmitChord(event('Enter', { shiftKey: true }))).toBe(false);
-    expect(isSubmitChord(event('Enter', { ctrlKey: true, altKey: true }))).toBe(false);
-    expect(isSubmitChord(event('a', { ctrlKey: true }))).toBe(false);
   });
 });

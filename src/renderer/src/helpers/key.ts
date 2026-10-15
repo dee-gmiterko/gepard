@@ -80,7 +80,3 @@ export function effectiveKey(
 ): string {
   return overrides?.[binding.id] ?? binding.key;
 }
-
-export function isSubmitChord(e: KeyChordSource): boolean {
-  return e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey;
-}

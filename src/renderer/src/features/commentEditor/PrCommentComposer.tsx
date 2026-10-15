@@ -5,7 +5,7 @@ import { Button } from '../../components/Button';
 import { ActionRow, Stack } from '../../components/Layout';
 import { TextArea } from '../../components/TextInput';
 import { useUpsertComment } from '../../queries/comments';
-import { isSubmitChord } from '../../helpers/key';
+import { useActionHandler } from '../../keyboard/actionHandlers';
 import { useTargetPr } from '../../state/hooks';
 
 const messages = defineMessages({
@@ -30,6 +30,7 @@ interface PrCommentComposerProps {
 export function PrCommentComposer({ references = [] }: PrCommentComposerProps): React.JSX.Element {
   const intl = useIntl();
   const [body, setBody] = useState('');
+  const [focused, setFocused] = useState(false);
   const upsert = useUpsertComment();
   const unassigned = useTargetPr() === null;
 
@@ -42,16 +43,15 @@ export function PrCommentComposer({ references = [] }: PrCommentComposerProps): 
     );
   }
 
+  useActionHandler('submitComment', () => !upsert.isPending && handleSubmit(), focused);
+
   return (
     <Stack>
       <TextArea
         value={body}
         onChange={(e) => setBody(e.target.value)}
-        onKeyDown={(e) => {
-          if (!isSubmitChord(e) || upsert.isPending) return;
-          e.preventDefault();
-          handleSubmit();
-        }}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         placeholder={intl.formatMessage(
           unassigned ? messages.unassignedPlaceholder : messages.placeholder,
         )}

@@ -388,3 +388,33 @@ describe('no-op transitions keep the same state', () => {
     expect(next.sidePanelFocusRequest).toBe(1);
   });
 });
+
+describe('comment drafts', () => {
+  it('stores an unfinished comment under its key', () => {
+    const next = uiReducer(state(), { type: 'commentDraft/set', key: 'thread:a.ts', body: 'wip' });
+    expect(next.commentDrafts).toEqual({ 'thread:a.ts': 'wip' });
+  });
+
+  it('keeps drafts of other keys apart', () => {
+    const s = state({ commentDrafts: { one: 'a' } });
+    const next = uiReducer(s, { type: 'commentDraft/set', key: 'two', body: 'b' });
+    expect(next.commentDrafts).toEqual({ one: 'a', two: 'b' });
+  });
+
+  it('removes the draft when the body becomes empty', () => {
+    const s = state({ commentDrafts: { one: 'a', two: 'b' } });
+    const next = uiReducer(s, { type: 'commentDraft/set', key: 'one', body: '' });
+    expect(next.commentDrafts).toEqual({ two: 'b' });
+  });
+
+  it('is a no-op when nothing changes', () => {
+    const s = state({ commentDrafts: { one: 'a' } });
+    expect(uiReducer(s, { type: 'commentDraft/set', key: 'one', body: 'a' })).toBe(s);
+    expect(uiReducer(s, { type: 'commentDraft/set', key: 'missing', body: '' })).toBe(s);
+  });
+
+  it('forgets drafts when the project is closed', () => {
+    const s = state({ commentDrafts: { one: 'a' } });
+    expect(uiReducer(s, { type: 'project/close' }).commentDrafts).toEqual({});
+  });
+});

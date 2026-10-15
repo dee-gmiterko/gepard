@@ -51,13 +51,9 @@ describe('find in file', () => {
 
     await user.keyboard('{Enter}');
     expect(await popup.findByText('2 of 3 · Line 2')).toBeVisible();
-    await user.keyboard('{F3}');
-    expect(await popup.findByText('3 of 3 · Line 3')).toBeVisible();
-    await user.keyboard('{Shift>}{F3}{/Shift}');
-    expect(await popup.findByText('2 of 3 · Line 2')).toBeVisible();
-    await user.keyboard('{ArrowUp}');
-    expect(await popup.findByText('1 of 3 · Line 1')).toBeVisible();
     await user.keyboard('{ArrowDown}');
+    expect(await popup.findByText('3 of 3 · Line 3')).toBeVisible();
+    await user.keyboard('{ArrowUp}');
     expect(await popup.findByText('2 of 3 · Line 2')).toBeVisible();
     await user.keyboard('{Shift>}{Enter}{/Shift}');
     expect(await popup.findByText('1 of 3 · Line 1')).toBeVisible();

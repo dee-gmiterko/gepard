@@ -116,7 +116,7 @@ describe('file comments panel', () => {
     const editor = panel.getByDisplayValue('comment on a');
     await user.clear(editor);
     await user.type(editor, 'reworded');
-    await user.keyboard('{Meta>}{Enter}{/Meta}');
+    await user.keyboard('{Control>}{Enter}{/Control}');
 
     await waitFor(() => expect(ipc.callsTo('comments.upsert')).toHaveLength(1));
     expect(ipc.callsTo('comments.upsert')[0]).toMatchObject({
@@ -160,5 +160,75 @@ describe('file comments panel', () => {
     panel = within(fileDetailsPanel());
     await panel.findByTitle('b.ts');
     expect(panel.queryByDisplayValue('draft for a')).not.toBeInTheDocument();
+  });
+
+  it('closes the new file comment editor with escape and restores the draft on reopening', async () => {
+    const rendered = renderPanel([]);
+    const { user, ipc } = rendered;
+    await openFile(rendered, 'a.ts');
+
+    const panel = within(fileDetailsPanel());
+    await user.click(await panel.findByRole('button', { name: 'New file comment' }));
+    await user.type(panel.getByPlaceholderText('Leave a comment…'), 'unfinished');
+    await user.keyboard('{Escape}');
+
+    expect(panel.queryByPlaceholderText('Leave a comment…')).not.toBeInTheDocument();
+    await user.click(await panel.findByRole('button', { name: 'New file comment' }));
+    expect(panel.getByPlaceholderText('Leave a comment…')).toHaveValue('unfinished');
+    expect(ipc.callsTo('comments.upsert')).toHaveLength(0);
+  });
+
+  it('keeps the unfinished draft per file across switching files', async () => {
+    const rendered = renderPanel([]);
+    const { user } = rendered;
+    await openFile(rendered, 'a.ts');
+
+    let panel = within(fileDetailsPanel());
+    await panel.findByTitle('a.ts');
+    await user.click(await panel.findByRole('button', { name: 'New file comment' }));
+    await user.type(panel.getByPlaceholderText('Leave a comment…'), 'draft for a');
+    await user.keyboard('{Escape}');
+
+    await openFile(rendered, 'b.ts');
+    panel = within(fileDetailsPanel());
+    await panel.findByTitle('b.ts');
+    await user.click(await panel.findByRole('button', { name: 'New file comment' }));
+    expect(panel.getByPlaceholderText('Leave a comment…')).toHaveValue('');
+    await user.keyboard('{Escape}');
+
+    await openFile(rendered, 'a.ts');
+    panel = within(fileDetailsPanel());
+    await panel.findByTitle('a.ts');
+    await user.click(await panel.findByRole('button', { name: 'New file comment' }));
+    expect(panel.getByPlaceholderText('Leave a comment…')).toHaveValue('draft for a');
+  });
+
+  it('discards the draft when cancelling', async () => {
+    const rendered = renderPanel([]);
+    const { user } = rendered;
+    await openFile(rendered, 'a.ts');
+
+    const panel = within(fileDetailsPanel());
+    await user.click(await panel.findByRole('button', { name: 'New file comment' }));
+    await user.type(panel.getByPlaceholderText('Leave a comment…'), 'dropped');
+    await user.click(panel.getByRole('button', { name: 'Cancel' }));
+
+    await user.click(await panel.findByRole('button', { name: 'New file comment' }));
+    expect(panel.getByPlaceholderText('Leave a comment…')).toHaveValue('');
+  });
+
+  it('clears the draft once the comment is submitted', async () => {
+    const rendered = renderPanel([]);
+    const { user, ipc } = rendered;
+    await openFile(rendered, 'a.ts');
+
+    const panel = within(fileDetailsPanel());
+    await user.click(await panel.findByRole('button', { name: 'New file comment' }));
+    await user.type(panel.getByPlaceholderText('Leave a comment…'), 'sent');
+    await user.click(panel.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => expect(ipc.callsTo('comments.upsert')).toHaveLength(1));
+
+    await user.click(await panel.findByRole('button', { name: 'New file comment' }));
+    expect(panel.getByPlaceholderText('Leave a comment…')).toHaveValue('');
   });
 });

@@ -173,7 +173,6 @@ export const FileDiff = z.discriminatedUnion('kind', [
     kind: z.literal('binary'),
     path: RepoPath,
     previousPath: RepoPath.nullable(),
-    // null: the file does not exist on that side; absent: the size was not reported.
     oldSize: z.int().nonnegative().nullable().optional(),
     newSize: z.int().nonnegative().nullable().optional(),
   }),
