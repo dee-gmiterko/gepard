@@ -5,6 +5,7 @@ import { prHeadLabel, type PrOverviewDetails, type PrSummary } from '@gepard/com
 import { Badge } from '../../../../components/Badge';
 import { Button } from '../../../../components/Button';
 import { Inline, Stack } from '../../../../components/Layout';
+import { Skeleton } from '../../../../components/Skeleton';
 import { SyncButton } from '../../sync/SyncButton';
 import { DecisionBadge } from '../shared/DecisionBadge';
 import { ForkBadge } from '../shared/ForkBadge';
@@ -49,14 +50,16 @@ function stateMessage(details: PrOverviewDetails | undefined): keyof typeof mess
 
 export function PrHeader({
   pr,
+  prError,
   details,
-  isLoading,
-  error,
+  isLoadingDetails,
+  detailsError,
 }: {
-  pr: PrSummary;
+  pr: PrSummary | null;
+  prError: Error | null;
   details: PrOverviewDetails | undefined;
-  isLoading: boolean;
-  error: Error | null;
+  isLoadingDetails: boolean;
+  detailsError: Error | null;
 }): React.JSX.Element {
   const actions = useOverviewActions();
   return (
@@ -71,12 +74,20 @@ export function PrHeader({
       </div>
       <HeaderRow>
         <Title>
-          <PrLabel number={pr.number} title={pr.title} truncate={false} />
+          {pr ? (
+            <PrLabel number={pr.number} title={pr.title} truncate={false} />
+          ) : (
+            <Skeleton width="50%" height="1.2em" />
+          )}
         </Title>
-        <Badge>
-          <FormattedMessage {...messages[stateMessage(details)]} />
-        </Badge>
-        {pr.isCrossRepository && <ForkBadge head={prHeadLabel(pr)} />}
+        {details ? (
+          <Badge>
+            <FormattedMessage {...messages[stateMessage(details)]} />
+          </Badge>
+        ) : (
+          isLoadingDetails && <Skeleton width="56px" height="1.2em" />
+        )}
+        {pr?.isCrossRepository && <ForkBadge head={prHeadLabel(pr)} />}
         <DecisionBadge decision={details?.reviewDecision ?? null} />
         <Button variant="primary" onClick={actions.openFiles}>
           <FormattedMessage {...messages.review} />
@@ -84,15 +95,23 @@ export function PrHeader({
         <SyncButton />
       </HeaderRow>
       <Inline $gap={2}>
-        <Muted>
-          <FormattedMessage
-            {...messages.byline}
-            values={{ author: pr.author.login, head: prHeadLabel(pr), base: pr.baseRefName }}
-          />
-        </Muted>
-        {details && <RelativeTime value={details.updatedAt} />}
+        {pr ? (
+          <Muted>
+            <FormattedMessage
+              {...messages.byline}
+              values={{ author: pr.author.login, head: prHeadLabel(pr), base: pr.baseRefName }}
+            />
+          </Muted>
+        ) : (
+          <Skeleton width="280px" />
+        )}
+        {details ? (
+          <RelativeTime value={details.updatedAt} />
+        ) : (
+          isLoadingDetails && <Skeleton width="72px" />
+        )}
       </Inline>
-      <QueryState isLoading={isLoading} error={error} />
+      <QueryState isLoading={false} error={prError ?? detailsError} />
     </Stack>
   );
 }

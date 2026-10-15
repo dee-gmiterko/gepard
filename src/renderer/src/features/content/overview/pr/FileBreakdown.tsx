@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import styled from 'styled-components';
-import { useCheckoutHead } from '../../../../state/hooks';
 import { useChangedFileOwners } from '../../../../queries/overview';
 import {
   groupByExtension,
@@ -34,23 +33,24 @@ const Columns = styled.div`
 
 export function FileBreakdown(): React.JSX.Element {
   const actions = useOverviewActions();
-  const checkoutHead = useCheckoutHead();
   const { files, isLoading, error } = useChangedFileList();
-  const ownersByPath = useChangedFileOwners().data;
+  const owners = useChangedFileOwners();
+  const ownersByPath = owners.data;
 
   const folders = useMemo(() => groupByFolder(files), [files]);
   const types = useMemo(() => groupByExtension(files), [files]);
-  const owners = useMemo(
+  const ownerGroups = useMemo(
     () => (ownersByPath ? groupByOwner(files, ownersByPath) : null),
     [files, ownersByPath],
   );
 
-  if (files.length === 0)
-    return <QueryState isLoading={isLoading || !checkoutHead} error={error} />;
+  if (error && files.length === 0) return <QueryState isLoading={false} error={error} />;
+
+  const ownersLoading = isLoading || owners.isLoading;
 
   return (
-    <Columns>
-      <Panel title={<FormattedMessage {...messages.folders} />}>
+    <Columns aria-busy={isLoading}>
+      <Panel title={<FormattedMessage {...messages.folders} />} isLoading={isLoading}>
         <GroupList
           groups={folders}
           label={(key) => key || <FormattedMessage {...messages.rootFolder} />}
@@ -59,7 +59,7 @@ export function FileBreakdown(): React.JSX.Element {
           }}
         />
       </Panel>
-      <Panel title={<FormattedMessage {...messages.types} />}>
+      <Panel title={<FormattedMessage {...messages.types} />} isLoading={isLoading}>
         <GroupList
           groups={types}
           label={(key) =>
@@ -70,15 +70,17 @@ export function FileBreakdown(): React.JSX.Element {
           }}
         />
       </Panel>
-      {owners && (
-        <Panel title={<FormattedMessage {...messages.owners} />}>
-          <GroupList
-            groups={owners}
-            label={(key) => (key === UNOWNED ? <FormattedMessage {...messages.unowned} /> : key)}
-          />
+      {(ownersLoading || ownerGroups) && (
+        <Panel title={<FormattedMessage {...messages.owners} />} isLoading={ownersLoading}>
+          {ownerGroups && (
+            <GroupList
+              groups={ownerGroups}
+              label={(key) => (key === UNOWNED ? <FormattedMessage {...messages.unowned} /> : key)}
+            />
+          )}
         </Panel>
       )}
-      <TopFilesPanel files={files} />
+      <TopFilesPanel files={files} isLoading={isLoading} />
     </Columns>
   );
 }

@@ -4,6 +4,7 @@ import {
   useMutationState,
   useQuery,
   useQueryClient,
+  type UseQueryResult,
 } from '@tanstack/react-query';
 import { invoke } from '../ipc/client';
 import { qk } from './keys';
@@ -88,13 +89,16 @@ export function useCheckoutTarget(): CheckoutTarget {
   return { checkout, pending };
 }
 
-export function useTargetedPr(): PrSummary | null {
+export function useTargetedPrQuery(): UseQueryResult<PrSummary> {
   const projectId = useProjectId() ?? '';
   const pr = useTargetPr();
-  const { data } = useQuery({
+  return useQuery({
     queryKey: qk.prSummary(projectId, pr ?? NaN),
     queryFn: pr === null ? skipToken : () => invoke('pr.view', { projectId, pr }),
     enabled: Boolean(projectId),
   });
-  return data ?? null;
+}
+
+export function useTargetedPr(): PrSummary | null {
+  return useTargetedPrQuery().data ?? null;
 }

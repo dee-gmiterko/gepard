@@ -3,6 +3,7 @@ import type { PrOverviewDetails } from '@gepard/common';
 import { Message } from '../../../../components/Message';
 import { latestReviewStates } from '../../../../helpers/overview';
 import { Panel } from '../shared/Panel';
+import { QueryState } from '../shared/QueryState';
 import { Table } from '../shared/overviewStyles';
 import { ReviewerRow } from './ReviewerRow';
 
@@ -20,7 +21,20 @@ const messages = defineMessages({
   requested: { id: 'content.overview.pr.requested', defaultMessage: 'Requested' },
 });
 
-export function ReviewersPanel({ details }: { details: PrOverviewDetails }): React.JSX.Element {
+export function ReviewersPanel({
+  details,
+  error,
+}: {
+  details: PrOverviewDetails | undefined;
+  error: Error | null;
+}): React.JSX.Element {
+  if (!details) {
+    return (
+      <Panel title={<FormattedMessage {...messages.title} />} isLoading={!error} skeletonRows={2}>
+        <QueryState isLoading={false} error={error} />
+      </Panel>
+    );
+  }
   const states = latestReviewStates(details.reviews);
   const reviewed = new Set(states.map((s) => s.author));
   const pending = details.reviewRequests.filter((r) => !reviewed.has(r));

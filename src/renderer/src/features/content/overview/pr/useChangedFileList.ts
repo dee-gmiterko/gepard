@@ -1,4 +1,5 @@
 import type { ChangedFile } from '@gepard/common';
+import { useCheckoutHead } from '../../../../state/hooks';
 import { useChangedFiles } from '../../../../queries/files';
 
 const NO_FILES: readonly ChangedFile[] = [];
@@ -8,6 +9,7 @@ export function useChangedFileList(): {
   isLoading: boolean;
   error: Error | null;
 } {
+  const checkoutHead = useCheckoutHead();
   const { data, isLoading, error } = useChangedFiles();
-  return { files: data ?? NO_FILES, isLoading, error };
+  return { files: data ?? NO_FILES, isLoading: isLoading || (!checkoutHead && !error), error };
 }

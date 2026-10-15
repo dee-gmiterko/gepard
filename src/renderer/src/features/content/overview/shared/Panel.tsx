@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import styled from 'styled-components';
 import { SectionHeading } from '../../../../components/SectionHeading';
+import { SkeletonRows } from './SkeletonRows';
 
 const Block = styled.section`
   display: flex;
@@ -12,16 +13,20 @@ const Block = styled.section`
 export function Panel({
   title,
   actions,
+  isLoading = false,
+  skeletonRows = 4,
   children,
 }: {
   title: ReactNode;
   actions?: ReactNode;
+  isLoading?: boolean;
+  skeletonRows?: number;
   children: ReactNode;
 }): React.JSX.Element {
   return (
     <Block>
       <SectionHeading title={title} actions={actions} />
-      {children}
+      {isLoading ? <SkeletonRows rows={skeletonRows} /> : children}
     </Block>
   );
 }
