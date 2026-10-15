@@ -30,7 +30,6 @@ import { Comment, CommentDraft, LocalViewedState, ReviewThread } from './schemas
 import { GroupedResult, Pos, SearchQuery, SymbolKind, WorkspaceSymbol } from './schemas/search';
 import {
   DefinitionResult,
-  ExtensionActivationFailure,
   ImportTargetResult,
   DocumentSymbolsResult,
   IndexStatus,
@@ -268,7 +267,6 @@ export const events = {
   'systemPreference.changed': SystemPreference,
   'app.error': z.object({ scope: z.string(), message: z.string() }),
   'connectivity.changed': z.object({ offline: z.boolean() }),
-  'extension.activationFailed': ExtensionActivationFailure,
 } as const satisfies Record<EventNameList, z.ZodType>;
 
 export type Channels = typeof channels;

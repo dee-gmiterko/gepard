@@ -4,7 +4,7 @@ import { __setUserDataDir } from '../support/electron';
 import { makeTmpDir, type TmpDir } from '../support/tmp';
 import * as settings from '../../store/settings';
 import * as extensionsStore from '../../store/extensions';
-import { ExtensionRegistry } from '../../extensions/registry';
+import { ExtensionsService } from '../../services/extensions';
 import {
   DEMO_GRAMMAR_BODY,
   DEMO_LANG_BODY,
@@ -68,19 +68,15 @@ describe('store/settings and known extension files', () => {
 
   describe('extension registry known files', () => {
     async function writeBuiltins(builtin: string): Promise<void> {
+      await writePackage(builtin, 'b-lang', DEMO_LANG_BODY.replace('demo-lang', 'b-lang'));
       await writePackage(
-        join(builtin, 'lsp'),
-        'b-lang',
-        DEMO_LANG_BODY.replace('demo-lang', 'b-lang'),
-      );
-      await writePackage(
-        join(builtin, 'themes'),
+        builtin,
         'b-theme',
         DEMO_THEME_BODY.replace("id: 'demo-theme'", "id: 'b-theme'"),
         { gepard: { type: 'theme' } },
       );
       await writePackage(
-        join(builtin, 'grammars'),
+        builtin,
         'b-grammar',
         DEMO_GRAMMAR_BODY.replace('demo-grammar', 'b-grammar'),
         { gepard: { type: 'grammar' } },
@@ -89,12 +85,11 @@ describe('store/settings and known extension files', () => {
 
     it('records a single kind in extensions-files.json', async () => {
       const builtin = join(userData.path, 'builtin');
-      await writePackage(
-        join(builtin, 'lsp'),
-        'only-lang',
-        DEMO_LANG_BODY.replace('demo-lang', 'only-lang'),
-      );
-      await new ExtensionRegistry(join(userData.path, 'ext'), builtin).list();
+      await writePackage(builtin, 'only-lang', DEMO_LANG_BODY.replace('demo-lang', 'only-lang'));
+      await new ExtensionsService(
+        () => join(userData.path, 'ext'),
+        () => builtin,
+      ).list();
       const ids = Object.values(await extensionsStore.getKnownFiles()).map((k) => k.id);
       expect(ids).toEqual(['only-lang']);
     });
@@ -102,7 +97,10 @@ describe('store/settings and known extension files', () => {
     it('records every kind scanned concurrently by list()', async () => {
       const builtin = join(userData.path, 'builtin');
       await writeBuiltins(builtin);
-      await new ExtensionRegistry(join(userData.path, 'ext'), builtin).list();
+      await new ExtensionsService(
+        () => join(userData.path, 'ext'),
+        () => builtin,
+      ).list();
       const ids = Object.values(await extensionsStore.getKnownFiles()).map((k) => k.id);
       expect(ids.sort()).toEqual(['b-grammar', 'b-lang', 'b-theme']);
     });

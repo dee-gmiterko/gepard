@@ -4,6 +4,7 @@ import {
   isLanguageExtension,
   isLocaleExtension,
   languageIdOf,
+  packageDirName,
 } from '../../helpers/extension';
 
 const languages = [
@@ -61,5 +62,13 @@ describe('isLocaleExtension', () => {
     expect(isLocaleExtension(null)).toBe(false);
     expect(isLocaleExtension({})).toBe(false);
     expect(isLocaleExtension('en')).toBe(false);
+  });
+});
+
+describe('packageDirName', () => {
+  it('flattens scoped names into a single safe directory name', () => {
+    expect(packageDirName('gepard-ext-x')).toBe('gepard-ext-x');
+    expect(packageDirName('@scope/ext')).toBe('scope-ext');
+    expect(packageDirName('../evil')).toBe('-evil');
   });
 });

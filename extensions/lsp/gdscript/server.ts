@@ -10,12 +10,15 @@ export async function open(
   sink: ExtensionEvents,
 ): Promise<LanguageSession> {
   await requireCommand('godot');
+
   const projectDir = await findProjectDir(project.root);
   if (!projectDir) {
     throw new Error(`no ${PROJECT_FILE} found under ${project.root}`);
   }
+
   const env = editorEnv(host.dataDir);
   await Promise.all(Object.values(env).map((dir) => mkdir(dir, { recursive: true })));
+
   return GodotSession.start(
     {
       command: 'godot',

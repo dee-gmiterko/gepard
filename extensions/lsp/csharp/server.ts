@@ -14,6 +14,7 @@ export async function open(
   sink: ExtensionEvents,
 ): Promise<LanguageSession> {
   await requireCommand('dotnet');
+
   const dir = await materializePayload(
     {
       vendorDir: path.join(
@@ -27,8 +28,10 @@ export async function open(
     },
     host.dataDir,
   );
+
   const logDir = path.join(host.dataDir, 'logs');
   await mkdir(logDir, { recursive: true });
+
   return RoslynSession.start(
     {
       command: 'dotnet',

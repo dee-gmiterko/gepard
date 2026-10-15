@@ -2,7 +2,6 @@ import { mkdir } from 'node:fs/promises';
 import {
   errorMessage,
   languageIdOf,
-  toIpcErrorShape,
   type IndexStatus,
   type LanguageServerStatus,
   type ExtensionEvents,
@@ -15,7 +14,7 @@ import { log } from '../log';
 import { isNotifiableLevel, notifyMainFailure } from '../notify';
 import { extensionDataDir } from '../paths';
 import { startLineIndex, type LineIndexHandle } from '../services/line-index-manager';
-import { extensionRegistry } from '../extensions/registry';
+import { extensionsService } from '../di';
 
 interface LanguageEntry {
   extension: LanguageExtension;
@@ -150,7 +149,7 @@ export const indexer: {
     projects.set(projectId, state);
     setStatus(projectId, { state: 'indexing', phase: 'files', done: 0, total: files.length });
 
-    const extensions = await extensionRegistry.enabledLanguageExtensions();
+    const extensions = await extensionsService.enabledLanguageExtensions();
     if (!isCurrent(projectId, state)) return;
 
     const matching = extensions.filter((ext) => files.some((f) => isClaimedBy(ext, f)));
@@ -202,18 +201,11 @@ export const indexer: {
             setLanguageStatus(state, extension.id, { state: 'active' });
             return entry;
           },
-          (error: unknown) => {
+          (error: Error) => {
             setLanguageStatus(state, extension.id, {
               state: 'failed',
               message: errorMessage(error),
             });
-            if (isCurrent(projectId, state)) {
-              emit('extension.activationFailed', {
-                extensionId: extension.id,
-                displayName: extension.displayName,
-                error: toIpcErrorShape(error),
-              });
-            }
             throw error;
           },
         ),

@@ -16,6 +16,7 @@
     "@vscode/ripgrep": "^1.18.0",
     "electron-log": "^5.4.4",
     "mime-types": "^3.0.2",
+    "tar": "^7.5.22",
     "vscode-jsonrpc": "^9.0.3",
     "yargs": "^18.2.0",
     "zod": "^4.6.5"

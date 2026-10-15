@@ -1,5 +1,5 @@
 import { defineMessages, type IntlShape, type MessageDescriptor } from 'react-intl';
-import { errorMessage, AppError, MissingDependencyError } from '@gepard/common';
+import { errorMessage, AppError } from '@gepard/common';
 
 const codeMessages = defineMessages({
   AUTH_REQUIRED: {
@@ -77,7 +77,7 @@ const codeMessages = defineMessages({
   MISSING_DEPENDENCY: {
     id: 'errors.code.missingDependency',
     defaultMessage:
-      '`{dependency}` is required but was not found. Install it and make sure it is on your PATH.',
+      'A required program was not found. Install it and make sure it is on your PATH.',
   },
   NOT_DELETABLE: {
     id: 'errors.code.notDeletable',
@@ -132,39 +132,23 @@ function isKnownCode(code: string): code is keyof typeof codeMessages {
   return Object.hasOwn(codeMessages, code);
 }
 
-export type ErrorValues = Record<string, string>;
-
 export interface DescribedError {
   message: string | MessageDescriptor;
-  values?: ErrorValues;
   detail?: string;
 }
 
 export function describeError(error: unknown): DescribedError {
-  if (error instanceof MissingDependencyError) {
-    return {
-      message: codeMessages.MISSING_DEPENDENCY,
-      values: { dependency: error.dependency },
-      detail: error.message,
-    };
-  }
   if (error instanceof AppError && isKnownCode(error.code)) {
     return { message: codeMessages[error.code], detail: error.message };
   }
   return { message: errorMessage(error) };
 }
 
-export function formatErrorText(
-  intl: IntlShape,
-  message: string | MessageDescriptor,
-  values?: ErrorValues,
-): string {
-  return typeof message === 'string' ? message : intl.formatMessage(message, values);
+export function formatErrorText(intl: IntlShape, message: string | MessageDescriptor): string {
+  return typeof message === 'string' ? message : intl.formatMessage(message);
 }
 
-export function errorText(message: string | MessageDescriptor, values?: ErrorValues): string {
+export function errorText(message: string | MessageDescriptor): string {
   if (typeof message === 'string') return message;
-  const text =
-    typeof message.defaultMessage === 'string' ? message.defaultMessage : (message.id ?? '');
-  return text.replace(/\{(\w+)\}/g, (placeholder, name: string) => values?.[name] ?? placeholder);
+  return typeof message.defaultMessage === 'string' ? message.defaultMessage : (message.id ?? '');
 }

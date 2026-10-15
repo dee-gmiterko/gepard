@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { AppError } from '../../errors';
-import { isGitHubRepoUrl, parseGitHubRepoUrl, parseRepositoryInput } from '../../helpers/repoUrl';
+import {
+  isGitHubRepoUrl,
+  parseGitHubRepoUrl,
+  parseRepositoryInput,
+  repositorySlug,
+} from '../../helpers/repoUrl';
 
 describe('parseGitHubRepoUrl', () => {
   it('extracts owner and repo, dropping a .git suffix', () => {
@@ -51,5 +56,11 @@ describe('parseRepositoryInput', () => {
     expect(() => parseRepositoryInput('a/b/c')).toThrow(AppError);
     expect(() => parseRepositoryInput('a/b c')).toThrow(AppError);
     expect(() => parseRepositoryInput('https://gitlab.com/a/b')).toThrow(AppError);
+  });
+});
+
+describe('repositorySlug', () => {
+  it('joins owner and repo', () => {
+    expect(repositorySlug({ owner: 'o', repo: 'r' })).toBe('o/r');
   });
 });

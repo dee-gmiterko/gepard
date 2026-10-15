@@ -76,14 +76,20 @@ describe('loadExtensionPackages', () => {
     expect(failed[0].error).toBe('module does not export a valid "lsp" extension');
   });
 
-  it('reports a package whose manifest "gepard.type" does not match the requested kind', async () => {
+  it('skips a package of another known kind and reports one with an unknown "gepard.type"', async () => {
     dir = await makeTmpDir('ext-scan-wrong-type');
     await writePackage(dir.path, 'a-theme', DEMO_LANG_BODY, { gepard: { type: 'theme' } });
+    await writePackage(dir.path, 'b-unknown', DEMO_LANG_BODY, { gepard: { type: 'nope' } });
 
-    const { loaded, failed } = await loadExtensionPackages(dir.path, 'lsp', isLanguageExtension);
+    const { loaded, failed, cache } = await loadExtensionPackages(
+      dir.path,
+      'lsp',
+      isLanguageExtension,
+    );
     expect(loaded).toEqual([]);
     expect(failed).toHaveLength(1);
     expect(failed[0].error).toContain('gepard.type');
+    expect(cache.size).toBe(2);
   });
 
   it('loads a grammar package, and rejects one whose languages have no extensions', async () => {
