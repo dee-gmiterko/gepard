@@ -5,6 +5,7 @@ import { Button } from '../../components/Button';
 import { ActionRow, Stack } from '../../components/Layout';
 import { TextArea } from '../../components/TextInput';
 import { useUpsertComment } from '../../queries/comments';
+import { isSubmitChord } from '../../helpers/key';
 import { useTargetPr } from '../../state/hooks';
 
 const messages = defineMessages({
@@ -46,6 +47,11 @@ export function PrCommentComposer({ references = [] }: PrCommentComposerProps): 
       <TextArea
         value={body}
         onChange={(e) => setBody(e.target.value)}
+        onKeyDown={(e) => {
+          if (!isSubmitChord(e) || upsert.isPending) return;
+          e.preventDefault();
+          handleSubmit();
+        }}
         placeholder={intl.formatMessage(
           unassigned ? messages.unassignedPlaceholder : messages.placeholder,
         )}

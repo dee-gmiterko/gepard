@@ -51,6 +51,37 @@ describe('file comments panel', () => {
     expect(await panel.findByText('needs a rename')).toBeInTheDocument();
   });
 
+  it('submits a new file comment with ctrl+enter', async () => {
+    const rendered = renderPanel([]);
+    const { user, ipc } = rendered;
+    await openFile(rendered, 'a.ts');
+
+    const panel = within(fileDetailsPanel());
+    await user.click(await panel.findByRole('button', { name: 'New file comment' }));
+    await user.type(panel.getByPlaceholderText('Leave a comment…'), 'needs a rename');
+    await user.keyboard('{Control>}{Enter}{/Control}');
+
+    await waitFor(() => expect(ipc.callsTo('comments.upsert')).toHaveLength(1));
+    expect(ipc.callsTo('comments.upsert')[0]).toMatchObject({
+      body: 'needs a rename',
+      anchor: { path: 'a.ts', subjectType: 'FILE', line: null },
+    });
+    expect(await panel.findByText('needs a rename')).toBeInTheDocument();
+  });
+
+  it('does not submit a file comment with a plain enter', async () => {
+    const rendered = renderPanel([]);
+    const { user, ipc } = rendered;
+    await openFile(rendered, 'a.ts');
+
+    const panel = within(fileDetailsPanel());
+    await user.click(await panel.findByRole('button', { name: 'New file comment' }));
+    await user.type(panel.getByPlaceholderText('Leave a comment…'), 'first line{Enter}second');
+
+    expect(panel.getByPlaceholderText('Leave a comment…')).toHaveValue('first line\nsecond');
+    expect(ipc.callsTo('comments.upsert')).toHaveLength(0);
+  });
+
   it('edits a comment in place', async () => {
     const rendered = renderPanel();
     const { user, ipc } = rendered;
@@ -72,6 +103,28 @@ describe('file comments panel', () => {
     });
     await waitFor(() => expect(panel.getAllByText('reworded').length).toBeGreaterThan(0));
     expect(panel.queryByText('comment on a')).not.toBeInTheDocument();
+  });
+
+  it('saves an edited comment with cmd+enter', async () => {
+    const rendered = renderPanel();
+    const { user, ipc } = rendered;
+    await openFile(rendered, 'a.ts');
+
+    const panel = within(fileDetailsPanel());
+    await user.click(await panel.findByRole('button', { name: /comment on a/ }));
+    await user.click(await panel.findByRole('button', { name: 'Edit comment' }));
+    const editor = panel.getByDisplayValue('comment on a');
+    await user.clear(editor);
+    await user.type(editor, 'reworded');
+    await user.keyboard('{Meta>}{Enter}{/Meta}');
+
+    await waitFor(() => expect(ipc.callsTo('comments.upsert')).toHaveLength(1));
+    expect(ipc.callsTo('comments.upsert')[0]).toMatchObject({
+      id: 'T1-c1',
+      threadId: 'T1',
+      body: 'reworded',
+    });
+    await waitFor(() => expect(panel.getAllByText('reworded').length).toBeGreaterThan(0));
   });
 
   it('deletes a comment after confirmation', async () => {
