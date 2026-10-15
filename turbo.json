@@ -27,6 +27,30 @@
       ],
       "outputs": ["out/**"]
     },
+    "//#extensions:bundle": {
+      "inputs": [
+        "scripts/bundle-extensions.ts",
+        "extensions/themes/*/**",
+        "extensions/locales/en/**"
+      ],
+      "outputs": ["src/app/extensions-dist/**"]
+    },
+    "package:unpack": {
+      "dependsOn": ["build", "//#extensions:bundle"],
+      "cache": false
+    },
+    "package:win": {
+      "dependsOn": ["build", "//#extensions:bundle"],
+      "cache": false
+    },
+    "package:mac": {
+      "dependsOn": ["build", "//#extensions:bundle"],
+      "cache": false
+    },
+    "package:linux": {
+      "dependsOn": ["build", "//#extensions:bundle"],
+      "cache": false
+    },
     "//#typecheck:scripts": {
       "inputs": ["scripts/**", "vitest.config.ts", "package.json"]
     },
