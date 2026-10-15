@@ -276,6 +276,8 @@
   "header.prTarget.unresolvedLabel": "#{number}",
   "header.progress": "{viewed} / {total} viewed",
   "header.projects": "Projects",
+  "header.syncButton.refresh": "Refresh",
+  "header.syncButton.refreshWithCount": "Refresh ({count} to sync)",
   "keyboard.acceptNext": "Mark viewed and go to next file",
   "keyboard.fullFileDiffOff": "Full file: off",
   "keyboard.fullFileDiffOn": "Full file: on",

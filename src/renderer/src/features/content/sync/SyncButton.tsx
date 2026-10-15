@@ -1,8 +1,9 @@
-import styled, { css, keyframes } from 'styled-components';
+import styled, { css } from 'styled-components';
 import { RefreshCw } from 'react-feather';
 import { defineMessages, FormattedMessage } from 'react-intl';
-import { usePendingCount, useSync } from '../../../queries/comments';
+import { useFullSync } from '../../../queries/comments';
 import { Button } from '../../../components/Button';
+import { spinningAnimation } from '../../../components/controlStyles';
 
 const messages = defineMessages({
   sync: {
@@ -15,29 +16,19 @@ const messages = defineMessages({
   },
 });
 
-const spin = keyframes`
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-`;
-
 const Spinning = styled(RefreshCw)<{ $spinning: boolean }>`
   ${({ $spinning }) =>
     $spinning &&
     css`
-      animation: ${spin} 0.8s linear infinite;
+      ${spinningAnimation}
     `}
 `;
 
 export function SyncButton({ block = false }: { block?: boolean }): React.JSX.Element {
-  const { mutate: runSync, isPending: syncing } = useSync();
-  const { data: pendingCount } = usePendingCount();
+  const { sync, syncing, pendingCount } = useFullSync();
 
   return (
-    <Button block={block} disabled={syncing} onClick={() => runSync('full')}>
+    <Button block={block} disabled={syncing} onClick={sync}>
       <Spinning size={14} $spinning={syncing} />
       {pendingCount ? (
         <FormattedMessage
