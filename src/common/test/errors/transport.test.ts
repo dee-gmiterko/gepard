@@ -6,7 +6,6 @@ import {
   ConnectionError,
   ExecExitError,
   IpcError,
-  MissingDependencyError,
   RateLimitError,
   RemoteNotFoundError,
   StaleShaError,
@@ -34,20 +33,6 @@ describe('toIpcErrorShape', () => {
     });
   });
 
-  it('recognizes a known kind thrown by another copy of this package', () => {
-    const foreign = Object.assign(new Error('godot: not found'), {
-      name: 'MissingDependencyError',
-      code: 'MISSING_DEPENDENCY',
-      details: { dependency: 'godot' },
-    });
-    expect(toIpcErrorShape(foreign)).toEqual({
-      kind: 'MissingDependencyError',
-      code: 'MISSING_DEPENDENCY',
-      message: 'godot: not found',
-      details: { dependency: 'godot' },
-    });
-  });
-
   it('maps anything else to INTERNAL', () => {
     expect(toIpcErrorShape(new Error('boom'))).toEqual({ code: 'INTERNAL', message: 'boom' });
     expect(toIpcErrorShape('boom')).toEqual({ code: 'INTERNAL', message: 'boom' });
@@ -62,7 +47,6 @@ describe('fromIpcErrorShape', () => {
     [new RateLimitError('slow down'), RateLimitError],
     [new RemoteNotFoundError('gone'), RemoteNotFoundError],
     [new StaleShaError('moved'), StaleShaError],
-    [new MissingDependencyError('java'), MissingDependencyError],
   ])('rebuilds %o as the class that was thrown', (thrown, cls) => {
     const rebuilt = fromIpcErrorShape(toIpcErrorShape(thrown), 'pr.list');
     expect(rebuilt).toBeInstanceOf(cls);
@@ -77,25 +61,6 @@ describe('fromIpcErrorShape', () => {
   it('keeps the details of a rebuilt error', () => {
     const shape = toIpcErrorShape(new ConnectionError('offline', { cmd: 'git' }));
     expect(fromIpcErrorShape(shape, 'projects.fetch').details).toEqual({ cmd: 'git' });
-  });
-
-  it('rebuilds a missing dependency with the dependency it names', () => {
-    const rebuilt = fromIpcErrorShape(toIpcErrorShape(new MissingDependencyError('java')), 'x');
-    expect(rebuilt).toBeInstanceOf(MissingDependencyError);
-    expect(rebuilt).toMatchObject({
-      dependency: 'java',
-      code: 'MISSING_DEPENDENCY',
-      message: 'java: not found',
-    });
-  });
-
-  it('falls back to IpcError for a missing dependency shape without details', () => {
-    const rebuilt = fromIpcErrorShape(
-      { kind: 'MissingDependencyError', code: 'MISSING_DEPENDENCY', message: 'gone' },
-      'x',
-    );
-    expect(rebuilt).toBeInstanceOf(IpcError);
-    expect(rebuilt).toMatchObject({ code: 'MISSING_DEPENDENCY', message: 'gone' });
   });
 
   it('falls back to IpcError for every other kind', () => {

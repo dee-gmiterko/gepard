@@ -117,12 +117,5 @@ Pure data: a UI translation with an id, display name and a map from source
 by `scripts/refresh-locales.ts`. Interface: `src/common/extensions/locale.ts`, backed by
 `src/common/ipc/schemas/locale.ts`.
 
-The TypeScript/JavaScript LSP extension (`extensions/lsp/typescript`)
-always runs its own pinned, native TypeScript
-language server - it deliberately does not detect or run a reviewed
-project's own in-repo TypeScript toolchain. Gepard is a review tool, not an
-editor, and reviewing shouldn't depend on the target project's toolchain
-being installed or even compatible.
-
 To add a new extension, add a new package under the matching `extensions/`
 directory, following an existing one as a template.

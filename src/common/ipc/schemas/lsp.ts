@@ -87,15 +87,3 @@ export const LanguageServerStatus = z.object({
   message: z.string().optional(),
 });
 export type LanguageServerStatus = z.infer<typeof LanguageServerStatus>;
-
-export const ExtensionActivationFailure = z.object({
-  extensionId: z.string(),
-  displayName: z.string(),
-  error: z.object({
-    kind: z.string().optional(),
-    code: z.string(),
-    message: z.string(),
-    details: z.unknown().optional(),
-  }),
-});
-export type ExtensionActivationFailure = z.infer<typeof ExtensionActivationFailure>;
