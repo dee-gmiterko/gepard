@@ -14,7 +14,9 @@ import { ActionRow, Stack } from '../../components/Layout';
 import { TextArea } from '../../components/TextInput';
 import type { CommentReference, DraftAnchor } from '@gepard/common';
 import type { RefAnchor } from '../../helpers/anchor';
-import { isSubmitChord } from '../../helpers/key';
+import { draftKeyOf } from '../../helpers/comment';
+import { useActionHandler } from '../../keyboard/actionHandlers';
+import { useUiDispatch, useUiStore } from '../../state/UiContext';
 
 const messages = defineMessages({
   placeholder: {
@@ -64,7 +66,20 @@ export function CommentEditor({
   onCancel,
 }: CommentEditorProps): React.JSX.Element {
   const intl = useIntl();
-  const [body, setBody] = useState(target.kind === 'edit' ? target.initialBody : '');
+  const draftKey = draftKeyOf(target);
+  const uiStore = useUiStore();
+  const dispatch = useUiDispatch();
+  const [focused, setFocused] = useState(false);
+  const [body, setBodyState] = useState(() =>
+    target.kind === 'edit'
+      ? target.initialBody
+      : ((draftKey && uiStore.getState().commentDrafts[draftKey]) ?? ''),
+  );
+
+  function setBody(value: string): void {
+    setBodyState(value);
+    if (draftKey) dispatch({ type: 'commentDraft/set', key: draftKey, body: value });
+  }
   const { data: annotations } = useFileAnnotations(
     target.kind === 'thread' && target.anchor.side === 'RIGHT' ? target.anchor.path : '',
   );
@@ -115,16 +130,22 @@ export function CommentEditor({
     });
   }
 
+  useActionHandler('submitComment', () => !upsert.isPending && handleSubmit(), focused);
+
   return (
     <Stack>
       <TextArea
         value={body}
         onChange={(e) => setBody(e.target.value)}
         onKeyDown={(e) => {
-          if (!isSubmitChord(e) || upsert.isPending) return;
-          e.preventDefault();
-          handleSubmit();
+          if (e.key === 'Escape' && onCancel) {
+            e.preventDefault();
+            e.stopPropagation();
+            onCancel();
+          }
         }}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         placeholder={intl.formatMessage(messages.placeholder)}
         rows={3}
       />
@@ -143,7 +164,12 @@ export function CommentEditor({
       />
       <ActionRow>
         {onCancel && (
-          <Button onClick={onCancel}>
+          <Button
+            onClick={() => {
+              if (draftKey) dispatch({ type: 'commentDraft/set', key: draftKey, body: '' });
+              onCancel();
+            }}
+          >
             <FormattedMessage {...messages.cancel} />
           </Button>
         )}

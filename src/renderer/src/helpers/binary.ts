@@ -1,14 +1,12 @@
-import { z } from 'zod';
-
-export const ByteUnit = z.enum(['byte', 'kilobyte', 'megabyte', 'gigabyte']);
-export type ByteUnit = z.infer<typeof ByteUnit>;
+const BYTE_UNITS = ['byte', 'kilobyte', 'megabyte', 'gigabyte'] as const;
+export type ByteUnit = (typeof BYTE_UNITS)[number];
 
 export function byteUnit(bytes: number): { value: number; unit: ByteUnit } {
   let value = bytes;
   let index = 0;
-  while (Math.abs(value) >= 1000 && index < ByteUnit.options.length - 1) {
+  while (Math.abs(value) >= 1000 && index < BYTE_UNITS.length - 1) {
     value /= 1000;
     index += 1;
   }
-  return { value, unit: ByteUnit.options[index] ?? 'byte' };
+  return { value, unit: BYTE_UNITS[index] ?? 'byte' };
 }

@@ -81,6 +81,7 @@ export interface UiState {
   revealLine: { line: number; side: DiffSide } | null;
   settingsOpen: boolean;
   quickSearch: QuickSearchMode | null;
+  commentDrafts: Record<string, string>;
 }
 
 export const initialUiState: UiState = {
@@ -100,6 +101,7 @@ export const initialUiState: UiState = {
   revealLine: null,
   settingsOpen: false,
   quickSearch: null,
+  commentDrafts: {},
 };
 
 export type UiAction =
@@ -140,6 +142,7 @@ export type UiAction =
   | { type: 'settings/setOpen'; open: boolean }
   | { type: 'quickSearch/open'; mode: QuickSearchMode }
   | { type: 'quickSearch/close' }
+  | { type: 'commentDraft/set'; key: string; body: string }
   | { type: 'viewed/mark'; paths: string[]; viewed: boolean; review: ReviewFiles }
   | { type: 'file/step'; direction: 1 | -1; review: ReviewFiles }
   | { type: 'review/acceptNext'; review: ReviewFiles }
@@ -303,6 +306,15 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
     case 'quickSearch/close':
       if (state.quickSearch === null) return state;
       return { ...state, quickSearch: null };
+    case 'commentDraft/set': {
+      if (action.body === '') {
+        if (!(action.key in state.commentDrafts)) return state;
+        const rest = Object.entries(state.commentDrafts).filter(([k]) => k !== action.key);
+        return { ...state, commentDrafts: Object.fromEntries(rest) };
+      }
+      if (state.commentDrafts[action.key] === action.body) return state;
+      return { ...state, commentDrafts: { ...state.commentDrafts, [action.key]: action.body } };
+    }
     case 'viewed/mark': {
       if (state.targeting.pr === null) return state;
       const { activeFile, layout } = state;

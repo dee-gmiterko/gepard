@@ -6,6 +6,7 @@ import { ErrorBoundary } from '../../src/errors/ErrorBoundary';
 import { IntlRoot } from '../../src/i18n/IntlRoot';
 import { createQueryClient } from '../../src/queries/createQueryClient';
 import { UiProvider } from '../../src/state/UiProvider';
+import { ActionHandlersProvider } from '../../src/keyboard/ActionHandlersProvider';
 import { ToastHost } from '../../src/state/ToastHost';
 import { AppThemeProvider } from '../../src/theme/ThemeProvider';
 import { createFakeIpc, type FakeIpc, type Handlers } from './fakeIpc';
@@ -28,8 +29,10 @@ export function renderWithProviders(
       <IntlRoot>
         <AppThemeProvider>
           <UiProvider>
-            <ToastHost />
-            <ErrorBoundary>{ui}</ErrorBoundary>
+            <ActionHandlersProvider>
+              <ToastHost />
+              <ErrorBoundary>{ui}</ErrorBoundary>
+            </ActionHandlersProvider>
           </UiProvider>
         </AppThemeProvider>
       </IntlRoot>

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import { UiProvider } from './state/UiProvider';
+import { ActionHandlersProvider } from './keyboard/ActionHandlersProvider';
 import { ToastHost } from './state/ToastHost';
 import { AppThemeProvider } from './theme/ThemeProvider';
 import { ErrorBoundary } from './errors/ErrorBoundary';
@@ -25,10 +26,12 @@ createRoot(rootElement).render(
       <IntlRoot>
         <AppThemeProvider>
           <UiProvider>
-            <ToastHost />
-            <ErrorBoundary>
-              <App />
-            </ErrorBoundary>
+            <ActionHandlersProvider>
+              <ToastHost />
+              <ErrorBoundary>
+                <App />
+              </ErrorBoundary>
+            </ActionHandlersProvider>
           </UiProvider>
         </AppThemeProvider>
       </IntlRoot>

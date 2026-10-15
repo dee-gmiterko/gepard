@@ -8,6 +8,7 @@ import { useViewed } from '../queries/comments';
 import { useTargetedFiles } from '../queries/files';
 import { useReviewActions } from '../queries/review';
 import { nextReviewFile } from '../helpers/targetedFiles';
+import { useRunActionHandler } from './actionHandlers';
 
 const messages = defineMessages({
   wrapOn: {
@@ -61,6 +62,9 @@ export interface Commands {
   toggleFullFileDiff: () => boolean;
   toggleRandomizeOrder: () => boolean;
   toggleIncrementalDiff: () => boolean;
+  submitComment: () => boolean;
+  findNext: () => boolean;
+  findPrevious: () => boolean;
 }
 
 export function useFileNavigation(): { canGoPrev: boolean; canGoNext: boolean } {
@@ -81,6 +85,7 @@ export function useCommands(): Commands {
   const dispatch = useUiDispatch();
   const { mutate: setLayout } = useSetLayout();
   const review = useReviewActions();
+  const runActionHandler = useRunActionHandler();
 
   return useMemo<Commands>(() => {
     const toggleLayout = (
@@ -132,6 +137,9 @@ export function useCommands(): Commands {
           (incremental) => ({ type: 'layout/setIncrementalDiff', incremental }),
           { on: messages.incrementalOn, off: messages.incrementalOff },
         ),
+      submitComment: () => runActionHandler('submitComment'),
+      findNext: () => runActionHandler('findNext'),
+      findPrevious: () => runActionHandler('findPrevious'),
     };
-  }, [store, dispatch, setLayout, review]);
+  }, [store, dispatch, setLayout, review, runActionHandler]);
 }
