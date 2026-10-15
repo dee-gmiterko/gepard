@@ -14,6 +14,7 @@ import { ActionRow, Stack } from '../../components/Layout';
 import { TextArea } from '../../components/TextInput';
 import type { CommentReference, DraftAnchor } from '@gepard/common';
 import type { RefAnchor } from '../../helpers/anchor';
+import { isSubmitChord } from '../../helpers/key';
 
 const messages = defineMessages({
   placeholder: {
@@ -119,6 +120,11 @@ export function CommentEditor({
       <TextArea
         value={body}
         onChange={(e) => setBody(e.target.value)}
+        onKeyDown={(e) => {
+          if (!isSubmitChord(e) || upsert.isPending) return;
+          e.preventDefault();
+          handleSubmit();
+        }}
         placeholder={intl.formatMessage(messages.placeholder)}
         rows={3}
       />
