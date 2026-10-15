@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
-import { isRepositoryInput } from '@gepard/common';
+import { isRepositoryInput, splitRepositorySource } from '@gepard/common';
 import { Button } from '../../components/Button';
 import { Message } from '../../components/Message';
 import { Section } from '../../components/Section';
 import { SectionHeading } from '../../components/SectionHeading';
 import { TextInput } from '../../components/TextInput';
-import { formatDescribedError } from '../../errors/errorMessage';
 import { useInstallExtension } from '../../queries/extensions';
 
 const messages = defineMessages({
@@ -22,23 +21,15 @@ const messages = defineMessages({
   repoHint: {
     id: 'settings.extensions.repo.hint',
     defaultMessage:
-      'Installs the extension archive attached to the latest release of a GitHub repository. For a repository with several extensions, give the path of the extension inside it.',
+      'Installs the extension archive attached to the latest release of a GitHub repository. For a repository with several extensions, add the path of the extension inside it after owner/repo.',
   },
-  repoRepository: {
-    id: 'settings.extensions.repo.repository',
-    defaultMessage: 'Repository (owner/repo)',
+  repoSource: {
+    id: 'settings.extensions.repo.source',
+    defaultMessage: 'Repository',
   },
-  repoPath: {
-    id: 'settings.extensions.repo.path',
-    defaultMessage: 'Path within the repository (optional)',
-  },
-  repoRepositoryPlaceholder: {
-    id: 'settings.extensions.repo.repositoryPlaceholder',
-    defaultMessage: 'owner/repo',
-  },
-  repoPathPlaceholder: {
-    id: 'settings.extensions.repo.pathPlaceholder',
-    defaultMessage: 'extensions/lsp/name',
+  repoSourcePlaceholder: {
+    id: 'settings.extensions.repo.sourcePlaceholder',
+    defaultMessage: 'owner/repo or owner/repo/extensions/lsp/name',
   },
   repoInstall: {
     id: 'settings.extensions.repo.install',
@@ -73,8 +64,8 @@ const FormActions = styled.div`
 export function ExtensionsRepositorySection(): React.JSX.Element {
   const intl = useIntl();
   const install = useInstallExtension();
-  const [repository, setRepository] = useState('');
-  const [path, setPath] = useState('');
+  const [source, setSource] = useState('');
+  const { repository, path } = splitRepositorySource(source);
   const valid = isRepositoryInput(repository);
 
   return (
@@ -88,26 +79,17 @@ export function ExtensionsRepositorySection(): React.JSX.Element {
           event.preventDefault();
           if (!valid || install.isPending) return;
           install.mutate(
-            { kind: 'github-release', repository: repository.trim(), path: path.trim() || null },
-            { onSuccess: () => setRepository('') },
+            { kind: 'github-release', repository, path },
+            { onSuccess: () => setSource('') },
           );
         }}
       >
         <FieldLabel>
-          <FormattedMessage {...messages.repoRepository} />
+          <FormattedMessage {...messages.repoSource} />
           <TextInput
-            value={repository}
-            onChange={(event) => setRepository(event.target.value)}
-            placeholder={intl.formatMessage(messages.repoRepositoryPlaceholder)}
-            spellCheck={false}
-          />
-        </FieldLabel>
-        <FieldLabel>
-          <FormattedMessage {...messages.repoPath} />
-          <TextInput
-            value={path}
-            onChange={(event) => setPath(event.target.value)}
-            placeholder={intl.formatMessage(messages.repoPathPlaceholder)}
+            value={source}
+            onChange={(event) => setSource(event.target.value)}
+            placeholder={intl.formatMessage(messages.repoSourcePlaceholder)}
             spellCheck={false}
           />
         </FieldLabel>
@@ -117,11 +99,6 @@ export function ExtensionsRepositorySection(): React.JSX.Element {
               {...(install.isPending ? messages.catalogInstalling : messages.repoInstall)}
             />
           </Button>
-          {install.isError && (
-            <Message tone="danger" layout="inline">
-              {formatDescribedError(intl, install.error)}
-            </Message>
-          )}
           {install.isSuccess && !install.isPending && (
             <Message layout="inline">
               <FormattedMessage {...messages.repoInstalled} />

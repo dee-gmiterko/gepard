@@ -5,30 +5,42 @@ import type { GhClient } from '../clients/gh';
 
 const DOWNLOAD_TIMEOUT_MS = 10 * 60_000;
 
-export class ReleaseDownloadService {
+export interface GitHubReleaseDownload {
+  kind: 'github-release';
+  repo: RepositoryInput;
+  tag: string;
+  assetName: string;
+}
+
+export type DownloadSource = GitHubReleaseDownload;
+
+export class DownloadService {
   constructor(
     private readonly gh: GhClient,
     private readonly tmpDir: () => string,
   ) {}
 
-  async withAsset<R>(
-    repo: RepositoryInput,
-    tag: string,
-    assetName: string,
-    use: (archive: string, workDir: string) => Promise<R>,
+  async withDownload<R>(
+    source: DownloadSource,
+    use: (file: string, workDir: string) => Promise<R>,
   ): Promise<R> {
-    const workDir = await mkdtemp(path.join(this.tmpDir(), 'gepard-ext-'));
+    const workDir = await mkdtemp(path.join(this.tmpDir(), 'gepard-download-'));
     try {
-      return await use(await this.download(repo, tag, assetName, workDir), workDir);
+      return await use(await this.fetch(source, workDir), workDir);
     } finally {
       await rm(workDir, { recursive: true, force: true });
     }
   }
 
-  private async download(
-    repo: RepositoryInput,
-    tag: string,
-    assetName: string,
+  private fetch(source: DownloadSource, destDir: string): Promise<string> {
+    switch (source.kind) {
+      case 'github-release':
+        return this.fetchGitHubRelease(source, destDir);
+    }
+  }
+
+  private async fetchGitHubRelease(
+    { repo, tag, assetName }: GitHubReleaseDownload,
     destDir: string,
   ): Promise<string> {
     await this.gh.run(

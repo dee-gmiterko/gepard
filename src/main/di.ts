@@ -5,7 +5,6 @@ import { GhClient } from './clients/gh';
 import { GitClient } from './clients/git';
 import { cli } from './cli';
 import { KIND_SPECS } from './extensions/kindSpecs';
-import { platformTarget } from './helpers/platform';
 import { run, runBuffer, runJson } from './helpers/process/exec';
 import { CommentsHandlers } from './ipc/handlers/comments';
 import { ConnectivityHandlers } from './ipc/handlers/connectivity';
@@ -28,6 +27,7 @@ import type { HandlerMap } from './ipc/registry';
 import { IndexerService } from './lsp/indexer';
 import { builtinExtensionsDir, extensionsRootDir } from './paths';
 import { ConnectivityService } from './services/connectivity';
+import { DownloadService } from './services/download';
 import { ExtensionCatalogService } from './services/extensionCatalog';
 import { ExtensionInstallerService } from './services/extensionInstaller';
 import { ExtensionScannerService } from './services/extensionScanner';
@@ -35,13 +35,14 @@ import { ExtensionsService } from './services/extensions';
 import { GhService } from './services/gh';
 import { GitService } from './services/git';
 import { LaunchService } from './services/launch';
-import { ReleaseDownloadService } from './services/releaseDownload';
 import { SyncService } from './services/sync';
 import { getProject } from './store/projects';
 
 export const connectivity = new ConnectivityService((offline) =>
   emit('connectivity.changed', { offline }),
 );
+
+const platformTarget = `${process.platform}-${process.arch}`;
 
 export const ghClient = new GhClient(connectivity, run, runJson);
 export const gitClient = new GitClient(connectivity, run, runBuffer);
@@ -57,19 +58,17 @@ export const extensionsService = new ExtensionsService(extensionsRootDir, extens
 export const extensionCatalogService = new ExtensionCatalogService(
   ExtensionCatalog.parse(catalogJson),
   extensionsService,
-  platformTarget(),
+  platformTarget,
 );
 
-export const releaseDownloadService = new ReleaseDownloadService(ghClient, () =>
-  app.getPath('temp'),
-);
+export const downloadService = new DownloadService(ghClient, () => app.getPath('temp'));
 
 export const extensionInstallerService = new ExtensionInstallerService(
   extensionsService,
   extensionCatalogService,
   ghClient,
-  releaseDownloadService,
-  platformTarget(),
+  downloadService,
+  platformTarget,
 );
 
 export const indexer = new IndexerService(extensionsService);

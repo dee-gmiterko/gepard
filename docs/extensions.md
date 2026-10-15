@@ -1,43 +1,43 @@
 # Extensions
 
-Extensions add languages, syntax highlighting, colour themes and UI translations to Gepard. Each extension is a self-contained package with its own manifest and dependencies. The host discovers packages in the bundled and user-installed extension directories, validates them and loads the valid ones. A package that fails to load is listed with its error and is otherwise ignored.
+Extensions add languages, syntax highlighting, colour themes and UI translations. Each is a self-contained package with its own manifest and dependencies. The host scans the bundled and user-installed extension directories once and loads valid packages; failures are listed with their error and otherwise ignored. Contracts are exported from `@gepard/common`.
 
 ## Kinds
 
-| Kind      | `gepard.type` | Contains | Contract                                                  |
-| --------- | ------------- | -------- | --------------------------------------------------------- |
-| LSP       | `lsp`         | code     | `LanguageExtension` (`@gepard/common`)                    |
-| Grammar   | `grammar`     | code     | `GrammarExtension` (`@gepard/common`)                     |
-| Theme     | `theme`       | data     | `ThemeExtension` (`@gepard/common`)                       |
-| Locale    | `locale`      | data     | `LocaleExtension` (`@gepard/common`)                      |
+| Kind    | `gepard.type` | Contains | Contract            |
+| ------- | ------------- | -------- | ------------------- |
+| LSP     | `lsp`         | code     | `LanguageExtension` |
+| Grammar | `grammar`     | code     | `GrammarExtension`  |
+| Theme   | `theme`       | data     | `ThemeExtension`    |
+| Locale  | `locale`      | data     | `LocaleExtension`   |
 
 ## Package
 
-The manifest is a `package.json`:
+The manifest is `package.json`:
 
 | Field                 | Meaning                                                                                              |
 | --------------------- | ---------------------------------------------------------------------------------------------------- |
-| `name`, `version`     | Package identity; `version` is shown in the UI. Installing from a release archive requires both.     |
+| `name`, `version`     | Identity; `version` is shown in the UI. Both required for release-archive installs.     |
 | `main`                | Entry module; must end in `.js`, `.mjs` or `.cjs`. Default `index.js`.                               |
-| `gepard.type`         | One of `lsp`, `grammar`, `theme`, `locale`; selects the kind the package is loaded as.               |
-| `gepard.displayName`  | Display name of the package's entry in the catalog of available extensions.                          |
-| `gepard.platforms`    | Optional list of supported platforms for the catalog; absent means all platforms.                    |
+| `gepard.type`         | Kind to load as. Missing or unknown fails the package.               |
+| `gepard.displayName`  | Catalog entry name.                          |
+| `gepard.platforms`    | Optional supported platforms for the catalog; absent means all.                    |
 
-Each package directory is scanned once. A missing or unknown `gepard.type` is reported as a failed package. The name shown for an installed extension comes from the extension object: `displayName`, or `name` for themes.
+The name shown for an installed extension comes from the extension object: `displayName`, or `name` for themes.
 
 ## Entry module
 
-The entry module is an ES or CommonJS module. The extension object is its default export, falling back to an `extension` export, falling back to the module namespace. The object is validated structurally against the kind's contract; if it does not match, the package is reported as not exporting a valid extension of that kind.
+The entry module is ESM or CommonJS. The extension object is the default export, else the `extension` export, else the module namespace, and is validated structurally against the kind's contract; a mismatch fails the package.
 
-`lsp` extensions bundle their code and dependencies into the entry module and may ship payload files (for example a language server binary) declared in the manifest's `files`, located relative to the entry module. `grammar` extensions bundle their code into the entry module but not CodeMirror or Lezer, which they receive through `api`. `theme` and `locale` extensions are plain modules with no code to run.
+`lsp` bundles code and dependencies into the entry module; payload files (e.g. a server binary) are declared in the manifest's `files` and resolved relative to the entry module. `grammar` bundles its code but not CodeMirror or Lezer, which arrive through `api`. `theme` and `locale` are plain data modules.
 
 ## Language declaration
 
 `lsp` and `grammar` extensions declare `languages`, a non-empty list of:
 
-- `name`: language name.
+- `name`
 - `extensions`: non-empty list of file extensions.
-- `filenames`: optional list of exact file names.
+- `filenames`: optional exact file names.
 
 ## LSP
 
@@ -56,11 +56,11 @@ interface LanguageExtension {
 }
 ```
 
-`open` is called once per opened project. `host.dataDir` is a writable directory private to the extension. `sink.status(...)` reports idle, indexing (with phase and progress) or error state; `sink.log(level, message)` forwards log lines.
+`open` runs once per opened project. `host.dataDir` is a writable directory private to the extension. `sink.status(...)` reports idle, indexing (phase, progress) or error; `sink.log(level, message)` forwards log lines.
 
-`LanguageSession` answers `lineSymbols` (file path and line), `definition` and `references` (file path and position), `documentSymbols` (file path) and `workspaceSymbols` (query and limit). Positions and ranges are line/column pairs. Query methods take an optional cancellation token. `filesChanged(changes)` is called with created, changed and deleted paths; `dispose()` must stop all server processes the session started.
+`LanguageSession` implements `lineSymbols` (path, line), `definition` and `references` (path, position), `documentSymbols` (path) and `workspaceSymbols` (query, limit). Positions and ranges are line/column pairs; queries take an optional cancellation token. `filesChanged(changes)` receives created, changed and deleted paths; `dispose()` must stop every server process the session started.
 
-`importResolution` (`extensions`, `indexFiles`, `emittedExtensions`) lets the host resolve relative import specifiers to files. `warmupFile` picks the file used to warm up the session from a list of project files.
+`importResolution` (`extensions`, `indexFiles`, `emittedExtensions`) lets the host resolve relative import specifiers. `warmupFile` picks the session warm-up file from the project's files.
 
 ## Grammar
 
@@ -73,19 +73,19 @@ interface GrammarExtension {
 }
 ```
 
-`support` is called per language on demand. The CodeMirror and Lezer building blocks (`StreamLanguage`, `LRLanguage`, `LanguageSupport`, `LRParser`, `styleTags`, `tags`) are passed in as `api`; the package must use them instead of bundling its own copy.
+`support` is called per language on demand. `api` provides `StreamLanguage`, `LRLanguage`, `LanguageSupport`, `LRParser`, `styleTags` and `tags`; use them rather than bundling CodeMirror or Lezer.
 
 ## Theme
 
-A data object: `id`, `name` (shown in the UI), `mode` (`light` or `dark`), optional `contrast` (`normal` or `high`), and required `shadow` (`popover`, `floating`), `colors` and `syntax`. Every value is a non-empty string and every key of `colors` and `syntax` is required; the key sets are defined by `themeExtensionSchema`.
+Data: `id`, `name`, `mode` (`light`|`dark`), optional `contrast` (`normal`|`high`), `shadow` (`popover`, `floating`), `colors`, `syntax`. Values are non-empty strings; all `colors` and `syntax` keys are required, as defined by `themeExtensionSchema`.
 
 ## Locale
 
-A data object: `id`, non-empty `displayName` and `messages`, a map from message id to translated string. Ids missing from the map fall back to the built-in English text.
+Data: `id`, non-empty `displayName`, `messages` (message id to string). Missing ids fall back to built-in English.
 
 ## Minimal extension
 
-A theme, locale or other data extension needs only a manifest and an entry module:
+Data extensions (theme shown) need only a manifest and an entry module:
 
 ```json
 {
@@ -150,4 +150,4 @@ export default {
 
 ## Distribution
 
-An extension is installed from a local package or from a GitHub release archive, and listed in the catalog of available extensions. Installed extensions are enabled or disabled individually in the settings.
+Install from a local package or a GitHub release archive; available extensions are listed in the catalog. Enable or disable each in settings.

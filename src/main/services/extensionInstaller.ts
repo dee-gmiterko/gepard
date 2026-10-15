@@ -18,16 +18,16 @@ import {
 import type { GhClient } from '../clients/gh';
 import { findPackageRoot, readManifest } from '../helpers/extension';
 import { extractTarGz } from '../helpers/tar';
+import type { DownloadService } from './download';
 import type { ExtensionCatalogService } from './extensionCatalog';
 import type { ExtensionsService } from './extensions';
-import type { ReleaseDownloadService } from './releaseDownload';
 
 export class ExtensionInstallerService {
   constructor(
     private readonly extensions: ExtensionsService,
     private readonly catalog: ExtensionCatalogService,
     private readonly gh: GhClient,
-    private readonly downloads: ReleaseDownloadService,
+    private readonly downloads: DownloadService,
     private readonly target: string,
   ) {}
 
@@ -99,29 +99,32 @@ export class ExtensionInstallerService {
     assetName: string,
     expectedName: string | null,
   ): Promise<ExtensionInfo[]> {
-    return this.downloads.withAsset(repo, tag, assetName, async (archive, workDir) => {
-      const extractDir = path.join(workDir, 'extract');
-      await extractTarGz(archive, extractDir);
-      const root = await findPackageRoot(extractDir);
-      const manifest = await readManifest(root).catch((e: unknown) => {
-        throw new AppError(
-          'EXTENSION_INVALID_PACKAGE',
-          `invalid package.json (${errorMessage(e)})`,
-        );
-      });
-      if (!manifest.name || !manifest.version) {
-        throw new AppError(
-          'EXTENSION_INVALID_PACKAGE',
-          'package.json must have a name and a version',
-        );
-      }
-      if (expectedName !== null && manifest.name !== expectedName) {
-        throw new AppError(
-          'EXTENSION_INVALID_PACKAGE',
-          `archive contains "${manifest.name}", expected "${expectedName}"`,
-        );
-      }
-      return this.extensions.install(root, packageDirName(manifest.name), manifest.name);
-    });
+    return this.downloads.withDownload(
+      { kind: 'github-release', repo, tag, assetName },
+      async (archive, workDir) => {
+        const extractDir = path.join(workDir, 'extract');
+        await extractTarGz(archive, extractDir);
+        const root = await findPackageRoot(extractDir);
+        const manifest = await readManifest(root).catch((e: unknown) => {
+          throw new AppError(
+            'EXTENSION_INVALID_PACKAGE',
+            `invalid package.json (${errorMessage(e)})`,
+          );
+        });
+        if (!manifest.name || !manifest.version) {
+          throw new AppError(
+            'EXTENSION_INVALID_PACKAGE',
+            'package.json must have a name and a version',
+          );
+        }
+        if (expectedName !== null && manifest.name !== expectedName) {
+          throw new AppError(
+            'EXTENSION_INVALID_PACKAGE',
+            `archive contains "${manifest.name}", expected "${expectedName}"`,
+          );
+        }
+        return this.extensions.install(root, packageDirName(manifest.name), manifest.name);
+      },
+    );
   }
 }

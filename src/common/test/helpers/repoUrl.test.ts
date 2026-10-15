@@ -4,6 +4,7 @@ import {
   isGitHubRepoUrl,
   parseGitHubRepoUrl,
   parseRepositoryInput,
+  splitRepositorySource,
   repositorySlug,
 } from '../../helpers/repoUrl';
 
@@ -62,5 +63,26 @@ describe('parseRepositoryInput', () => {
 describe('repositorySlug', () => {
   it('joins owner and repo', () => {
     expect(repositorySlug({ owner: 'o', repo: 'r' })).toBe('o/r');
+  });
+});
+
+describe('splitRepositorySource', () => {
+  it('splits owner/repo from the path inside it', () => {
+    expect(splitRepositorySource('a/b')).toEqual({ repository: 'a/b', path: null });
+    expect(splitRepositorySource(' a/b/extensions/lsp/ts/ ')).toEqual({
+      repository: 'a/b',
+      path: 'extensions/lsp/ts',
+    });
+  });
+
+  it('understands github URLs, including tree links', () => {
+    expect(splitRepositorySource('https://github.com/a/b.git')).toEqual({
+      repository: 'https://github.com/a/b',
+      path: null,
+    });
+    expect(splitRepositorySource('https://github.com/a/b/tree/main/x/y')).toEqual({
+      repository: 'https://github.com/a/b',
+      path: 'x/y',
+    });
   });
 });
