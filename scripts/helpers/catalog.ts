@@ -76,7 +76,3 @@ export function mergeReleaseManifest(
     .map(({ path: dir, manifest }): [string, string] => [dir, manifest.version]);
   return { ...existing, ...Object.fromEntries(added) };
 }
-
-export function render(value: unknown): string {
-  return `${JSON.stringify(value, null, 2)}\n`;
-}

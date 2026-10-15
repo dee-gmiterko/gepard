@@ -33,7 +33,7 @@
         "extensions/themes/*/**",
         "extensions/locales/en/**"
       ],
-      "outputs": ["src/app/extensions-dist/**"]
+      "outputs": ["dist/extensions/**"]
     },
     "package:unpack": {
       "dependsOn": ["build", "//#extensions:bundle"],

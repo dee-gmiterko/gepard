@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const OUT_DIR = path.join(ROOT_DIR, 'src/app/extensions-dist');
+const OUT_DIR = path.join(ROOT_DIR, 'dist/extensions');
 
 const BUNDLED_EXTENSIONS = [
   'extensions/themes/dark',

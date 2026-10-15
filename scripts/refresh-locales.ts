@@ -14,6 +14,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs';
+import { formatJson } from './helpers/format-json';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(__dirname, '..');
@@ -138,23 +139,16 @@ function readCatalogFile(file: string): LocaleCatalog {
   }
 }
 
-function readStaleFile(locale: string): string[] | null {
-  const staleFile = path.join(STALE_DIR, `${locale}.json`);
+function readFileOrNull(file: string): string | null {
   try {
-    return JSON.parse(readFileSync(staleFile, 'utf8')) as string[];
+    return readFileSync(file, 'utf8');
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
     throw error;
   }
 }
 
-function sameStaleIds(onDisk: string[] | null, staleIds: string[]): boolean {
-  if (onDisk === null) return staleIds.length === 0;
-  if (onDisk.length !== staleIds.length) return false;
-  return onDisk.every((id, i) => id === staleIds[i]);
-}
-
-function main({ check }: { check: boolean }): void {
+async function main({ check }: { check: boolean }): Promise<void> {
   const extracted = extractMessages();
   const localeDirs = readdirSync(LOCALES_DIR, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && entry.name !== '.stale')
@@ -164,12 +158,16 @@ function main({ check }: { check: boolean }): void {
   const refreshed = refreshCatalogs(extracted, localeFiles, readCatalogFile, localeFileOf);
 
   if (check) {
-    const outdated = refreshed.filter(({ file, locale, catalog, staleIds }) => {
-      const onDiskCatalog = readCatalogFile(file);
-      if (JSON.stringify(onDiskCatalog) !== JSON.stringify(catalog)) return true;
-      if (locale === SOURCE_LOCALE) return false;
-      return !sameStaleIds(readStaleFile(locale), staleIds);
-    });
+    const flags = await Promise.all(
+      refreshed.map(async ({ file, locale, catalog, staleIds }) => {
+        if (readFileOrNull(file) !== (await formatJson(catalog, file))) return true;
+        if (locale === SOURCE_LOCALE) return false;
+        const staleFile = path.join(STALE_DIR, `${locale}.json`);
+        const expected = staleIds.length > 0 ? await formatJson(staleIds, staleFile) : null;
+        return readFileOrNull(staleFile) !== expected;
+      }),
+    );
+    const outdated = refreshed.filter((_, i) => flags[i]);
 
     if (outdated.length > 0) {
       console.error(
@@ -185,12 +183,12 @@ function main({ check }: { check: boolean }): void {
   }
 
   for (const { file, locale, catalog, staleIds } of refreshed) {
-    writeFileSync(file, `${JSON.stringify(catalog, null, 2)}\n`);
+    writeFileSync(file, await formatJson(catalog, file));
     if (locale === SOURCE_LOCALE) continue;
     const staleFile = path.join(STALE_DIR, `${locale}.json`);
     if (staleIds.length > 0) {
       mkdirSync(STALE_DIR, { recursive: true });
-      writeFileSync(staleFile, `${JSON.stringify(staleIds, null, 2)}\n`);
+      writeFileSync(staleFile, await formatJson(staleIds, staleFile));
     } else {
       rmSync(staleFile, { force: true });
     }
@@ -216,5 +214,8 @@ if (isMain) {
     .strict()
     .parseSync();
 
-  main({ check: argv.check });
+  main({ check: argv.check }).catch((error: unknown) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
 }
