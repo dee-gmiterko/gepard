@@ -3,7 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { GitService } from '../../services/git';
+import { gitService } from '../../di';
 import { __setUserDataDir } from '../support/electron';
 import { makeTmpDir, type TmpDir } from '../support/tmp';
 
@@ -25,7 +25,7 @@ async function git(cwd: string, args: string[]): Promise<string> {
 describe('GitService file content and diff over unusual tree entries (integration)', () => {
   let origin: TmpDir;
   let userData: TmpDir;
-  const svc = new GitService();
+  const svc = gitService;
   const projectId = 'acme__files';
   const oids: Record<string, string> = {};
 

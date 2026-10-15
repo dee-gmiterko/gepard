@@ -3,8 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { GitService } from '../../../services/git';
-import { GhService } from '../../../services/gh';
+import { ghService, gitService } from '../../../di';
 import { createPrsHandlers } from '../../../ipc/handlers/prs';
 import { projectRepoDir } from '../../../paths';
 import { __setUserDataDir } from '../../support/electron';
@@ -62,7 +61,7 @@ describe('overview.owners against a real repository', () => {
     await git(repo, ['add', '.']);
     await git(repo, ['commit', '-m', 'change']);
     const head = await git(repo, ['rev-parse', 'HEAD']);
-    const handlers = createPrsHandlers(new GhService(), new GitService());
+    const handlers = createPrsHandlers(ghService, gitService);
     // The owners handler never reads the IPC event.
     /* eslint-disable @typescript-eslint/no-unsafe-assignment */
     return handlers['overview.owners'](

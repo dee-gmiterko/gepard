@@ -4,10 +4,12 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ExtensionCatalog, type GitHubReleaseSource } from '@gepard/common';
-import { GhClient, type GhExec } from '../../clients/gh';
+import { GhClient } from '../../clients/gh';
+import type { run as execRun, runJson as execRunJson } from '../../helpers/process/exec';
 import { ExtensionCatalogService } from '../../services/extensionCatalog';
 import { ExtensionInstallerService, type GitHubRelease } from '../../services/extensionInstaller';
-import { ExtensionsService } from '../../services/extensions';
+import type { ExtensionsService } from '../../services/extensions';
+import { makeExtensionsService } from '../support/extensionsService';
 import { DEMO_LANG_BODY, writePackage } from '../support/extensionPackages';
 import { __setUserDataDir } from '../support/electron';
 import { makeTmpDir, type TmpDir } from '../support/tmp';
@@ -65,17 +67,15 @@ class FakeGitHub {
   readonly downloads: string[] = [];
   readonly calls: string[][] = [];
 
-  readonly client = new GhClient({ onRemoteResult: () => undefined }, this.exec());
+  private readonly run: typeof execRun = async (_cmd, args) => {
+    this.calls.push(args);
+    return { stdout: await this.handle(args), stderr: '', exitCode: 0 };
+  };
 
-  private exec(): GhExec {
-    const run: GhExec['run'] = async (_cmd, args) => {
-      this.calls.push(args);
-      return { stdout: await this.handle(args), stderr: '', exitCode: 0 };
-    };
-    const runJson: GhExec['runJson'] = async (schema, cmd, args, opts) =>
-      schema.parse(JSON.parse((await run(cmd, args, opts)).stdout));
-    return { run, runJson };
-  }
+  private readonly runJson: typeof execRunJson = async (schema, cmd, args, opts) =>
+    schema.parse(JSON.parse((await this.run(cmd, args, opts)).stdout));
+
+  readonly client = new GhClient({ onRemoteResult: () => undefined }, this.run, this.runJson);
 
   private async handle(args: string[]): Promise<string> {
     if (args[0] === 'api' && args[1].endsWith('/releases?per_page=100')) {
@@ -149,7 +149,7 @@ describe('ExtensionInstallerService', () => {
     userExtensions = join(userData, 'extensions');
     const builtins = join(tmp.path, 'builtins');
     await mkdir(builtins, { recursive: true });
-    extensions = new ExtensionsService(
+    extensions = makeExtensionsService(
       () => userExtensions,
       () => builtins,
     );

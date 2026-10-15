@@ -25,7 +25,7 @@ const mocks = vi.hoisted(
   }),
 );
 
-vi.mock('../../../lsp/indexer', () => ({
+vi.mock('../../../di', () => ({
   indexer: {
     currentSha: () => mocks.currentSha,
     sessions: () => mocks.sessions,

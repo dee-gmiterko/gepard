@@ -1,5 +1,4 @@
 import { ConnectionError } from '@gepard/common';
-import { emit } from '../ipc/registry';
 import { log } from '../log';
 
 export interface RemoteObserver {
@@ -9,10 +8,7 @@ export interface RemoteObserver {
 export class ConnectivityService implements RemoteObserver {
   private offline = false;
 
-  constructor(
-    private readonly publish: (offline: boolean) => void = (offline) =>
-      emit('connectivity.changed', { offline }),
-  ) {}
+  constructor(private readonly publish: (offline: boolean) => void) {}
 
   isOffline(): boolean {
     return this.offline;
@@ -30,5 +26,3 @@ export class ConnectivityService implements RemoteObserver {
     else if (error instanceof ConnectionError) this.setOffline(true, error.message);
   }
 }
-
-export const connectivity = new ConnectivityService();

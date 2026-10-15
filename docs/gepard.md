@@ -13,10 +13,10 @@
 - Scripts (media/locale refresh, ...) are Typescript, run directly with `tsx`, no build step; package itself is ESM
 
 ### Extensions
-- Extensions are independent packages with their own manifest (`gepard.type`) and dependencies, of four kinds: language servers (`extensions/lsp/<name>`), grammars (`extensions/grammars/<name>`: file types mapped to a CodeMirror language, built against the app's CodeMirror through a passed-in api), themes (`extensions/themes/<name>`) and locales (`extensions/locales/<name>`).
+- Extensions are independent packages with their own manifest and dependencies, of four kinds: language servers, grammars (file types mapped to a CodeMirror language, built against the app's CodeMirror through a passed-in api), themes and locales.
 - Every extension is released and versioned on its own, with one tarball per supported platform. The packaged app bundles the themes and the English locale from the workspace and offers all other extensions for installation from Settings. A catalog compiled into the app lists every extension in the repository. In development every extension in the repository loads as a built-in.
 - The TypeScript/JavaScript language server extension runs its own native TypeScript language server and never detects the reviewed project's toolchain.
-- Themes and the English locale are extensions, not hardcoded in the app. Before the theme list has loaded the renderer uses a fallback theme template; message default texts live in the code, so no locale catalog is needed at startup.
+- Themes and the English locale are extensions, not hardcoded in the app.
 
 #### Extension requirements
 - Kinds: language server, grammar, theme, locale.
@@ -38,8 +38,8 @@
 	- Language - single select: Follow system (OS/browser-detected), plus each installed locale extension by display name; persisted selection wins over OS detection, applied live without restart.
 	- Controls - list of the current global keyboard shortcuts (command name + effective key), sourced from the same binding table the shortcuts run from, so the list can't drift from actual behavior. Each shortcut can be rebound: click `Rebind`, press the new key, the override is persisted and takes effect immediately, no restart; a `Reset` button clears a customized binding back to its default. If a rebind lands on a key another binding also effectively uses, both rows show a visible conflict note (not a hard block - the earlier-listed binding wins at runtime).
 	- Extensions - list of installed extensions (built-in and external), each showing kind (language server/grammar/theme/locale), source (built-in/external) badge and an enable/disable checkbox; `Add extension` opens a file picker to install an extension package from disk; shows the install directory path, each extension's version and per-extension load errors.
-	- Available extensions - the catalog of all extensions: each entry shows kind, latest version, installed version, and an `Install` or `Update` button; built-in entries and entries without a build for the current platform are labelled instead. Installing downloads the release tarball for the current platform, replaces any older installed version of the same extension and takes effect without restart.
-	- Install from GitHub - `owner/repo` (or GitHub URL) plus an optional path inside the repository; installs the latest release matching the platform. Installing from a local package file is also supported.
+	- Available extensions - the catalog of all extensions: each entry shows display name, kind, description and, when installed, the installed version. Entries not yet installed have an `Install` button, which installs the newest release for the current platform without restart. Built-in entries, already installed entries and entries without a build for the current platform are labelled instead.
+	- Install from GitHub - `owner/repo` (or GitHub URL) plus an optional path inside the repository; installs the newest published release matching the platform. Installing from a local package file is also supported.
 
 ### Main window
 - Window: a new window opens maximized; title is `Gepard`, or `Gepard - <project name>` while a project is open.

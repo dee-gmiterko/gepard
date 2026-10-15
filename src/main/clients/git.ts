@@ -1,6 +1,11 @@
-import { run, runBuffer, type RunBufferResult, type RunResult } from '../helpers/process/exec';
+import type {
+  run as runProcess,
+  runBuffer as runBufferProcess,
+  RunBufferResult,
+  RunResult,
+} from '../helpers/process/exec';
 import { classifyRemoteFailure } from './gitError';
-import { connectivity, type RemoteObserver } from '../services/connectivity';
+import type { RemoteObserver } from '../services/connectivity';
 
 // `GIT_TERMINAL_PROMPT=0` makes git fail instead of prompting for credentials.
 const GIT_ENV: NodeJS.ProcessEnv = { ...process.env, GIT_TERMINAL_PROMPT: '0' };
@@ -42,12 +47,11 @@ export interface GitCloneOptions {
   onStderrLine?: (line: string) => void;
 }
 
-export type GitExec = Pick<typeof import('../helpers/process/exec'), 'run' | 'runBuffer'>;
-
 export class GitClient {
   constructor(
-    private readonly observer: RemoteObserver = connectivity,
-    private readonly exec: GitExec = { run, runBuffer },
+    private readonly observer: RemoteObserver,
+    private readonly execRun: typeof runProcess,
+    private readonly execRunBuffer: typeof runBufferProcess,
   ) {}
 
   private async observe<T>(args: string[], call: Promise<T>): Promise<T> {
@@ -66,7 +70,7 @@ export class GitClient {
   run(repoRoot: string, args: string[], opts: GitRunOptions = {}): Promise<RunResult> {
     return this.observe(
       args,
-      this.exec.run('git', [...GH_CREDENTIAL_ARGS, ...args], {
+      this.execRun('git', [...GH_CREDENTIAL_ARGS, ...args], {
         cwd: repoRoot,
         env: GIT_ENV,
         timeoutMs: GIT_TIMEOUT_MS,
@@ -78,7 +82,7 @@ export class GitClient {
   buffer(repoRoot: string, args: string[]): Promise<RunBufferResult> {
     return this.observe(
       args,
-      this.exec.runBuffer('git', [...GH_CREDENTIAL_ARGS, ...args], {
+      this.execRunBuffer('git', [...GH_CREDENTIAL_ARGS, ...args], {
         cwd: repoRoot,
         env: GIT_ENV,
         timeoutMs: GIT_TIMEOUT_MS,
@@ -108,8 +112,6 @@ export class GitClient {
       url,
       dir,
     ];
-    return this.observe(args, this.exec.run('git', args, { env: GIT_ENV, onStderrLine }));
+    return this.observe(args, this.execRun('git', args, { env: GIT_ENV, onStderrLine }));
   }
 }
-
-export const gitClient = new GitClient();

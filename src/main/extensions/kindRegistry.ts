@@ -43,6 +43,10 @@ export class KindRegistry<T> {
     private readonly builtinDir: () => string,
   ) {}
 
+  get kind(): ExtensionKind {
+    return this.spec.kind;
+  }
+
   private async rescan(enabledMap: settingsStore.ExtensionsState): Promise<void> {
     const knownDirs = await extensionsStore.getKnownFiles();
     const knownMap = new Map(Object.entries(knownDirs));

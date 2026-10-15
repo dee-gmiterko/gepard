@@ -1,8 +1,5 @@
 import type { HandlerMap } from './registry';
-import { ghService } from '../services/gh';
-import { gitService } from '../services/git';
-import { syncService } from '../services/sync';
-import { launchService } from '../services/launch';
+import { ghService, gitService, launchService, syncService } from '../di';
 import { createProjectsHandlers } from './handlers/projects';
 import { createLaunchHandlers } from './handlers/launch';
 import { createPrsHandlers } from './handlers/prs';

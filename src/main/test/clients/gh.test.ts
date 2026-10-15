@@ -8,7 +8,8 @@ import {
 } from '@gepard/common';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { GhClient, type GhExec } from '../../clients/gh';
+import { GhClient } from '../../clients/gh';
+import type { run as execRun, runJson as execRunJson } from '../../helpers/process/exec';
 import type { RemoteObserver } from '../../services/connectivity';
 
 interface Recorded {
@@ -32,18 +33,27 @@ function recorder(): RemoteObserver & { results: Recorded[] } {
   };
 }
 
+interface GhExec {
+  run: typeof execRun;
+  runJson: typeof execRunJson;
+}
+
 function fakeExec(stdout: string | Error): GhExec & { spawned: Spawned[] } {
   const spawned: Spawned[] = [];
-  const run: GhExec['run'] = (cmd, args, opts = {}) => {
+  const run: typeof execRun = (cmd, args, opts = {}) => {
     spawned.push({ cmd, args, opts });
     if (stdout instanceof Error) return Promise.reject(stdout);
     return Promise.resolve({ stdout, stderr: '', exitCode: 0 });
   };
-  const runJson: GhExec['runJson'] = async (schema, cmd, args, opts) => {
+  const runJson: typeof execRunJson = async (schema, cmd, args, opts) => {
     const { stdout: text } = await run(cmd, args, opts);
     return schema.parse(JSON.parse(text));
   };
   return { run, runJson, spawned };
+}
+
+function clientOf(observer: RemoteObserver, exec: GhExec): GhClient {
+  return new GhClient(observer, exec.run, exec.runJson);
 }
 
 function ghFailure(stderr: string): ExecExitError {
@@ -51,16 +61,18 @@ function ghFailure(stderr: string): ExecExitError {
 }
 
 async function failureOf(stderr: string): Promise<unknown> {
-  return new GhClient(recorder(), fakeExec(ghFailure(stderr))).run(['api', 'user']).then(
-    () => undefined,
-    (e: unknown) => e,
-  );
+  return clientOf(recorder(), fakeExec(ghFailure(stderr)))
+    .run(['api', 'user'])
+    .then(
+      () => undefined,
+      (e: unknown) => e,
+    );
 }
 
 describe('GhClient', () => {
   it('spawns gh with a non-interactive environment and the default timeout', async () => {
     const exec = fakeExec('ok');
-    const client = new GhClient(recorder(), exec);
+    const client = clientOf(recorder(), exec);
     await client.run(['api', 'user']);
     expect(exec.spawned).toHaveLength(1);
     expect(exec.spawned[0].cmd).toBe('gh');
@@ -71,7 +83,7 @@ describe('GhClient', () => {
 
   it('reports a success to the observer', async () => {
     const observer = recorder();
-    const client = new GhClient(observer, fakeExec('{"login":"me"}'));
+    const client = clientOf(observer, fakeExec('{"login":"me"}'));
     await expect(client.json(z.object({ login: z.string() }), ['api', 'user'])).resolves.toEqual({
       login: 'me',
     });
@@ -83,7 +95,7 @@ describe('GhClient', () => {
     const cause = ghFailure(
       'error connecting to api.github.com\ncheck your internet connection or https://githubstatus.com',
     );
-    const client = new GhClient(observer, fakeExec(cause));
+    const client = clientOf(observer, fakeExec(cause));
     const failure = client.run(['api', 'user']);
     await expect(failure).rejects.toBeInstanceOf(ConnectionError);
     await expect(failure).rejects.toMatchObject({
@@ -99,21 +111,19 @@ describe('GhClient', () => {
   it('passes unrecognised failures through unchanged', async () => {
     const observer = recorder();
     const failure = ghFailure('gh: Resource not accessible by integration (HTTP 403)');
-    const client = new GhClient(observer, fakeExec(failure));
+    const client = clientOf(observer, fakeExec(failure));
     await expect(client.run(['api', 'x'])).rejects.toBe(failure);
     expect(observer.results).toEqual([{ ok: false, error: failure }]);
   });
 
   it('leaves a missing gh binary alone', async () => {
     const spawn = new ExecSpawnError({ code: 'ENOENT', message: 'spawn gh ENOENT' }, 'gh', [], '');
-    await expect(new GhClient(recorder(), fakeExec(spawn)).run(['api', 'user'])).rejects.toBe(
-      spawn,
-    );
+    await expect(clientOf(recorder(), fakeExec(spawn)).run(['api', 'user'])).rejects.toBe(spawn);
   });
 
   it('sends graphql queries over stdin and surfaces graphql errors', async () => {
     const exec = fakeExec('{"data":null,"errors":[{"message":"nope"}]}');
-    const client = new GhClient(recorder(), exec);
+    const client = clientOf(recorder(), exec);
     const schema = z.object({
       data: z.unknown(),
       errors: z.array(z.object({ message: z.string() })).optional(),
