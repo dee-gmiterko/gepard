@@ -73,8 +73,7 @@
         "//#typecheck:scripts",
         "//#lint:scripts",
         "//#format:check:scripts",
-        "//#locales:check",
-        "//#barrels:check"
+        "//#locales:check"
       ]
     },
     "//#format:scripts": {
