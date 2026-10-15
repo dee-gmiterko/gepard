@@ -1,28 +1,40 @@
 import { dialog } from 'electron';
 import type { HandlerMap } from '../registry';
-import { extensionCatalogService, extensionInstallerService, extensionsService } from '../../di';
+import type { ExtensionCatalogService } from '../../services/extensionCatalog';
+import type { ExtensionInstallerService } from '../../services/extensionInstaller';
+import type { ExtensionsService } from '../../services/extensions';
 
-export const extensionsHandlers: Pick<
-  HandlerMap,
-  | 'extensions.list'
-  | 'extensions.setEnabled'
-  | 'extensions.install'
-  | 'extensions.dir'
-  | 'extensions.catalog'
-> = {
-  'extensions.list': () => extensionsService.list(),
-  'extensions.setEnabled': ({ id, enabled }) => extensionsService.setEnabled(id, enabled),
-  'extensions.dir': () => extensionsService.userDir(),
+export class ExtensionsHandlers {
+  constructor(
+    private readonly extensions: ExtensionsService,
+    private readonly catalog: ExtensionCatalogService,
+    private readonly installer: ExtensionInstallerService,
+  ) {}
 
-  'extensions.install': async (source, { window }) => {
-    if (source.kind === 'github-release') return extensionInstallerService.install(source);
-    const options = { title: source.dialogTitle, properties: ['openDirectory' as const] };
-    const { canceled, filePaths } = window
-      ? await dialog.showOpenDialog(window, options)
-      : await dialog.showOpenDialog(options);
-    if (canceled || filePaths.length === 0) return extensionsService.list();
-    return extensionsService.install(filePaths[0]);
-  },
+  toHandlerMap(): Pick<
+    HandlerMap,
+    | 'extensions.list'
+    | 'extensions.setEnabled'
+    | 'extensions.install'
+    | 'extensions.dir'
+    | 'extensions.catalog'
+  > {
+    return {
+      'extensions.list': () => this.extensions.list(),
+      'extensions.setEnabled': ({ id, enabled }) => this.extensions.setEnabled(id, enabled),
+      'extensions.dir': () => this.extensions.userDir(),
 
-  'extensions.catalog': async () => ({ entries: await extensionCatalogService.status() }),
-};
+      'extensions.install': async (source, { window }) => {
+        if (source.kind === 'github-release') return this.installer.install(source);
+        const options = { title: source.dialogTitle, properties: ['openDirectory' as const] };
+        const { canceled, filePaths } = window
+          ? await dialog.showOpenDialog(window, options)
+          : await dialog.showOpenDialog(options);
+        if (canceled || filePaths.length === 0) return this.extensions.list();
+        return this.extensions.install(filePaths[0]);
+      },
+
+      'extensions.catalog': async () => ({ entries: await this.catalog.status() }),
+    };
+  }
+}

@@ -25,31 +25,28 @@ const PACKAGES: ExtensionPackage[] = [
 describe('buildCatalog', () => {
   it('lists every extension with its repository, path and tree sha and omits platforms when unrestricted', () => {
     const catalog = buildCatalog(PACKAGES, 'o/r', (dir) => `sha:${dir}`);
-    expect(catalog).toEqual({
-      schemaVersion: 1,
-      extensions: [
-        {
-          name: 'gepard-ext-typescript',
-          repository: 'o/r',
-          path: 'extensions/lsp/typescript',
-          displayName: 'TypeScript',
-          kind: 'lsp',
-          description: 'TypeScript LSP',
-          platforms: ['linux-x64'],
-          sha: 'sha:extensions/lsp/typescript',
-        },
-        {
-          name: 'gepard-theme-dark',
-          repository: 'o/r',
-          path: 'extensions/themes/dark',
-          displayName: 'gepard-theme-dark',
-          kind: 'theme',
-          description: '',
-          sha: 'sha:extensions/themes/dark',
-        },
-      ],
-    });
-    expect(Object.keys(catalog.extensions[1])).not.toContain('platforms');
+    expect(catalog).toEqual([
+      {
+        name: 'gepard-ext-typescript',
+        repository: 'o/r',
+        path: 'extensions/lsp/typescript',
+        displayName: 'TypeScript',
+        kind: 'lsp',
+        description: 'TypeScript LSP',
+        platforms: ['linux-x64'],
+        sha: 'sha:extensions/lsp/typescript',
+      },
+      {
+        name: 'gepard-theme-dark',
+        repository: 'o/r',
+        path: 'extensions/themes/dark',
+        displayName: 'gepard-theme-dark',
+        kind: 'theme',
+        description: '',
+        sha: 'sha:extensions/themes/dark',
+      },
+    ]);
+    expect(Object.keys(catalog[1])).not.toContain('platforms');
   });
 });
 

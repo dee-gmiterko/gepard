@@ -1,6 +1,13 @@
-import { readdir } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import * as path from 'node:path';
-import { AppError, type ExtensionInfo } from '@gepard/common';
+import { AppError, packageManifestSchema, type PackageManifest } from '@gepard/common';
+
+export async function readManifest(pkgDir: string): Promise<PackageManifest> {
+  const raw = await readFile(path.join(pkgDir, 'package.json'), 'utf8');
+  const parsed = packageManifestSchema.safeParse(JSON.parse(raw));
+  if (!parsed.success) throw new Error('package.json is not an object');
+  return parsed.data;
+}
 
 export async function findPackageRoot(dir: string): Promise<string> {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -12,15 +19,4 @@ export async function findPackageRoot(dir: string): Promise<string> {
     if (inner.some((e) => e.isFile() && e.name === 'package.json')) return nested;
   }
   throw new AppError('EXTENSION_INVALID_ARCHIVE', 'archive does not contain a package.json');
-}
-
-// Every kind scans the shared extensions folder, so a broken package is reported once per kind.
-export function dedupeBroken(list: readonly ExtensionInfo[]): ExtensionInfo[] {
-  const seen = new Set<string>();
-  return list.filter((ext) => {
-    if (ext.error === undefined) return true;
-    if (seen.has(ext.id)) return false;
-    seen.add(ext.id);
-    return true;
-  });
 }

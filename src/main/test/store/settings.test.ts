@@ -4,13 +4,15 @@ import { __setUserDataDir } from '../support/electron';
 import { makeTmpDir, type TmpDir } from '../support/tmp';
 import * as settings from '../../store/settings';
 import * as extensionsStore from '../../store/extensions';
-import { makeExtensionsService } from '../support/extensionsService';
 import {
   DEMO_GRAMMAR_BODY,
   DEMO_LANG_BODY,
   DEMO_THEME_BODY,
   writePackage,
 } from '../support/extensionPackages';
+import { KIND_SPECS } from '../../extensions/kindSpecs';
+import { ExtensionScannerService } from '../../services/extensionScanner';
+import { ExtensionsService } from '../../services/extensions';
 
 describe('store/settings and known extension files', () => {
   let userData: TmpDir;
@@ -85,10 +87,11 @@ describe('store/settings and known extension files', () => {
 
     it('records a single kind in extensions-files.json', async () => {
       const builtin = join(userData.path, 'builtin');
+      const userDir = (): string => join(userData.path, 'ext');
       await writePackage(builtin, 'only-lang', DEMO_LANG_BODY.replace('demo-lang', 'only-lang'));
-      await makeExtensionsService(
-        () => join(userData.path, 'ext'),
-        () => builtin,
+      await new ExtensionsService(
+        userDir,
+        new ExtensionScannerService(userDir, () => builtin, KIND_SPECS),
       ).list();
       const ids = Object.values(await extensionsStore.getKnownFiles()).map((k) => k.id);
       expect(ids).toEqual(['only-lang']);
@@ -96,10 +99,11 @@ describe('store/settings and known extension files', () => {
 
     it('records every kind scanned concurrently by list()', async () => {
       const builtin = join(userData.path, 'builtin');
+      const userDir = (): string => join(userData.path, 'ext');
       await writeBuiltins(builtin);
-      await makeExtensionsService(
-        () => join(userData.path, 'ext'),
-        () => builtin,
+      await new ExtensionsService(
+        userDir,
+        new ExtensionScannerService(userDir, () => builtin, KIND_SPECS),
       ).list();
       const ids = Object.values(await extensionsStore.getKnownFiles()).map((k) => k.id);
       expect(ids.sort()).toEqual(['b-grammar', 'b-lang', 'b-theme']);

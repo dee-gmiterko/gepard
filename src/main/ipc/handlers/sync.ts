@@ -3,25 +3,33 @@ import type { GhService } from '../../services/gh';
 import type { SyncService } from '../../services/sync';
 import { countPendingChanges } from '../../helpers/github/reviewMapping';
 import * as review from '../../store/review';
-import { indexer } from '../../di';
+import type { IndexerService } from '../../lsp/indexer';
 
-export function createSyncHandlers(
-  gh: GhService,
-  syncService: SyncService,
-): Pick<HandlerMap, 'sync.run' | 'sync.pendingCount' | 'index.get' | 'index.languages'> {
-  return {
-    'sync.run': async ({ projectId, pr, commit, mode }) => {
-      const { owner, repo } = await gh.repoRefFor(projectId);
-      return syncService.runSync(projectId, pr, { owner, repo }, commit, mode);
-    },
+export class SyncHandlers {
+  constructor(
+    private readonly gh: GhService,
+    private readonly sync: SyncService,
+    private readonly indexer: IndexerService,
+  ) {}
 
-    'sync.pendingCount': async ({ projectId, pr }) => {
-      const store = await review.loadReview(projectId, pr);
-      return countPendingChanges(store);
-    },
+  toHandlerMap(): Pick<
+    HandlerMap,
+    'sync.run' | 'sync.pendingCount' | 'index.get' | 'index.languages'
+  > {
+    return {
+      'sync.run': async ({ projectId, pr, commit, mode }) => {
+        const { owner, repo } = await this.gh.repoRefFor(projectId);
+        return this.sync.runSync(projectId, pr, { owner, repo }, commit, mode);
+      },
 
-    'index.get': ({ projectId }) => indexer.status(projectId),
+      'sync.pendingCount': async ({ projectId, pr }) => {
+        const store = await review.loadReview(projectId, pr);
+        return countPendingChanges(store);
+      },
 
-    'index.languages': ({ projectId }) => indexer.languages(projectId),
-  };
+      'index.get': ({ projectId }) => this.indexer.status(projectId),
+
+      'index.languages': ({ projectId }) => this.indexer.languages(projectId),
+    };
+  }
 }

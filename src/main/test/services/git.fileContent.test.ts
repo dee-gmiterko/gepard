@@ -25,7 +25,6 @@ async function git(cwd: string, args: string[]): Promise<string> {
 describe('GitService file content and diff over unusual tree entries (integration)', () => {
   let origin: TmpDir;
   let userData: TmpDir;
-  const svc = gitService;
   const projectId = 'acme__files';
   const oids: Record<string, string> = {};
 
@@ -50,7 +49,7 @@ describe('GitService file content and diff over unusual tree entries (integratio
     await mkdir(join(o, 'x'));
     await writeFile(join(o, 'x', 'y.txt'), 'y\n');
     oids.dir = await commit('replace file x by directory x');
-    await svc.cloneProject(projectId, `file://${o}`);
+    await gitService.cloneProject(projectId, `file://${o}`);
   }, 30_000);
 
   afterAll(async () => {
@@ -60,39 +59,41 @@ describe('GitService file content and diff over unusual tree entries (integratio
 
   describe('fileContentAt', () => {
     it('reads a text file', async () => {
-      expect(await svc.fileContentAt(projectId, oids.file, 'x')).toMatchObject({
+      expect(await gitService.fileContentAt(projectId, oids.file, 'x')).toMatchObject({
         kind: 'text',
         text: 'plain file\n',
       });
     });
 
     it('reports a binary file as binary', async () => {
-      expect((await svc.fileContentAt(projectId, oids.file, 'bin.dat')).kind).toBe('binary');
+      expect((await gitService.fileContentAt(projectId, oids.file, 'bin.dat')).kind).toBe('binary');
     });
 
     it('reports a nonexistent path as missing', async () => {
-      expect((await svc.fileContentAt(projectId, oids.file, 'nope.txt')).kind).toBe('missing');
+      expect((await gitService.fileContentAt(projectId, oids.file, 'nope.txt')).kind).toBe(
+        'missing',
+      );
     });
 
     it('does not reject for a path that is a directory at that commit', async () => {
-      const res = await svc.fileContentAt(projectId, oids.dir, 'x');
+      const res = await gitService.fileContentAt(projectId, oids.dir, 'x');
       expect(['missing', 'binary']).toContain(res.kind);
     });
   });
 
   describe('fileDiff', () => {
     it('diffs a modified text file', async () => {
-      expect((await svc.fileDiff(projectId, oids.file, oids.edited, 'x')).kind).toBe('text');
+      expect((await gitService.fileDiff(projectId, oids.file, oids.edited, 'x')).kind).toBe('text');
     });
 
     it('reports a path absent on both sides as missing', async () => {
-      expect((await svc.fileDiff(projectId, oids.file, oids.edited, 'nope.txt')).kind).toBe(
+      expect((await gitService.fileDiff(projectId, oids.file, oids.edited, 'nope.txt')).kind).toBe(
         'missing',
       );
     });
 
     it('does not reject when a file was replaced by a directory', async () => {
-      const res = await svc.fileDiff(projectId, oids.edited, oids.dir, 'x');
+      const res = await gitService.fileDiff(projectId, oids.edited, oids.dir, 'x');
       expect(res.kind).toBeDefined();
     });
   });

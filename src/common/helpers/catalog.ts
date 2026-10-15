@@ -16,7 +16,7 @@ export function findCatalogEntry(
 ): CatalogEntry | null {
   if (dir === null) return null;
   return (
-    catalog.extensions.find(
+    catalog.find(
       (entry) => entry.repository === repositorySlug(repo) && normalizeRepoPath(entry.path) === dir,
     ) ?? null
   );

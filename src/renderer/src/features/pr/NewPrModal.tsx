@@ -8,7 +8,7 @@ import { Select } from '../../components/Select';
 import { TextArea, TextInput } from '../../components/TextInput';
 import { ActionRow, Stack } from '../../components/Layout';
 import { useBranches, useCreatePr } from '../../queries/prs';
-import { describeError, formatErrorText } from '../../errors/errorMessage';
+import { formatDescribedError } from '../../errors/errorMessage';
 import type { PrSummary } from '@gepard/common';
 
 const messages = defineMessages({
@@ -178,7 +178,7 @@ export function NewPrModal({ onClose, onCreated }: NewPrModalProps): React.JSX.E
         </Field>
         {createPr.isError && (
           <Message tone="danger" layout="inline">
-            {formatErrorText(intl, describeError(createPr.error).message)}
+            {formatDescribedError(intl, createPr.error)}
           </Message>
         )}
       </Stack>

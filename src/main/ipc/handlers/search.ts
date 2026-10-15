@@ -6,7 +6,7 @@ import { applyPage, EMPTY_PAGE, type PageSourceFile } from '../../helpers/search
 import { pageOptions, searchRunKey, toResult } from '../../helpers/search/query';
 import { identifierAt } from '../../helpers/string';
 import { resolveInRepo } from '../../helpers/repoPath';
-import { indexer } from '../../di';
+import type { IndexerService } from '../../lsp/indexer';
 import {
   type ChannelOutput,
   type ChannelParsedInput,
@@ -21,205 +21,215 @@ import { projectRepoDir } from '../../paths';
 
 const KIND_FILTER_POOL_FACTOR = 10;
 
-function requireCurrentSha(projectId: string, sha: string): void {
-  const current = indexer.currentSha(projectId);
-  if (current !== null && current !== sha) {
-    throw new StaleShaError(
-      `Requested sha ${sha} does not match the checked-out head ${current}; the project was checked out to a different target since this request was made`,
-    );
+export type SearchIndexer = Pick<
+  IndexerService,
+  'currentSha' | 'session' | 'sessions' | 'lineIndex' | 'extension'
+>;
+
+export class SearchHandlers {
+  constructor(private readonly indexer: SearchIndexer) {}
+
+  private requireCurrentSha(projectId: string, sha: string): void {
+    const current = this.indexer.currentSha(projectId);
+    if (current !== null && current !== sha) {
+      throw new StaleShaError(
+        `Requested sha ${sha} does not match the checked-out head ${current}; the project was checked out to a different target since this request was made`,
+      );
+    }
   }
-}
 
-// Sessions read the file from the worktree, which lacks files the checked-out PR deletes
-// and paths still selected from a previous target.
-async function findSession(projectId: string, filePath: string): Promise<LanguageSession | null> {
-  const session = indexer.session(projectId, filePath);
-  if (!session) return null;
-  const onDisk = await access(resolveInRepo(projectRepoDir(projectId), filePath)).then(
-    () => true,
-    () => false,
-  );
-  return onDisk ? session : null;
-}
-
-export function runSearch(
-  input: ChannelParsedInput<'search.run'>,
-): Promise<ChannelOutput<'search.run'>> {
-  return withLatestWins(searchRunKey(input), async ({ signal, token }) => {
-    requireCurrentSha(input.projectId, input.sha);
-    const repoRoot = projectRepoDir(input.projectId);
-    const opts = pageOptions(input);
-    const targeted = input.scope === 'targeted';
-    const inScope = targeted ? makeTargetMatcher(input.targetedPaths) : null;
-    const scoped = <T extends { path: string }>(files: T[]): T[] =>
-      inScope ? files.filter((f) => inScope(f.path)) : files;
-
-    if (input.kind === 'references') {
-      const session = await findSession(input.projectId, input.at.path);
-      const raw = session ? await session.references(input.at.path, input.at.pos, token) : [];
-      return toResult(input, applyPage(scoped(raw), opts));
-    }
-
-    if (targeted && input.targetedPaths.length === 0) return toResult(input, EMPTY_PAGE);
-    const paths = targeted ? input.targetedPaths : undefined;
-
-    if (input.kind === 'pattern' || input.kind === 'regex') {
-      // The word index only knows exact spellings, so it can answer case-sensitive lookups alone.
-      const lineIndex =
-        input.kind === 'pattern' && input.word && input.caseSensitive
-          ? indexer.lineIndex(input.projectId)
-          : null;
-      if (input.kind === 'pattern' && lineIndex && /^[A-Za-z0-9_]+$/.test(input.text)) {
-        const hits = await lineIndex.queryWord(input.text);
-        return toResult(input, applyPage(scoped(hits), opts));
-      }
-      const page = await ripgrepSearchPage({
-        cwd: repoRoot,
-        pattern: input.text,
-        fixedString: input.kind === 'pattern',
-        word: input.kind === 'pattern' ? input.word : undefined,
-        caseSensitive: input.caseSensitive,
-        paths,
-        signal,
-        ...opts,
-      });
-      return toResult(input, {
-        ...page,
-        files: page.files.map((f) => ({ ...f, moreMatches: f.moreMatches ?? false })),
-      });
-    }
-
-    const trimmed = input.text.trim();
-    const lineIndex = indexer.lineIndex(input.projectId);
-    if (lineIndex) {
-      const hits = await lineIndex.queryExactLine(trimmed, input.origin);
-      return toResult(input, applyPage(scoped(hits), opts));
-    }
-    const all = await ripgrepSearch({
-      cwd: repoRoot,
-      pattern: trimmed,
-      fixedString: true,
-      paths,
-      signal,
-    });
-    const exact: PageSourceFile[] = all
-      .map((f) => ({
-        path: f.path,
-        matches: f.matches.filter(
-          (m) =>
-            m.preview.trim() === trimmed &&
-            !(f.path === input.origin.path && m.line === input.origin.line),
-        ),
-      }))
-      .filter((f) => f.matches.length > 0);
-    return toResult(input, applyPage(exact, opts));
-  });
-}
-
-export function lineSymbols(
-  input: ChannelParsedInput<'symbols.line'>,
-): Promise<ChannelOutput<'symbols.line'>> {
-  return withLatestWins(
-    `symbols.line:${input.projectId}:${input.path}:${input.line}`,
-    async ({ token }) => {
-      requireCurrentSha(input.projectId, input.sha);
-      const session = await findSession(input.projectId, input.path);
-      const symbols = session ? await session.lineSymbols(input.path, input.line, token) : [];
-      return { path: input.path, line: input.line, symbols };
-    },
-  );
-}
-
-export function definitionAt(
-  input: ChannelParsedInput<'symbols.definition'>,
-): Promise<ChannelOutput<'symbols.definition'>> {
-  return withLatestWins(
-    `symbols.definition:${input.projectId}:${input.path}:${input.pos.line}:${input.pos.col}`,
-    async ({ token }) => {
-      requireCurrentSha(input.projectId, input.sha);
-      const session = await findSession(input.projectId, input.path);
-      const repoRoot = projectRepoDir(input.projectId);
-      let symbol: string;
-      try {
-        const text = await readFile(resolveInRepo(repoRoot, input.path), 'utf8');
-        const lineText = text.split('\n')[input.pos.line - 1] ?? '';
-        symbol = identifierAt(lineText, input.pos.col);
-      } catch {
-        symbol = '';
-      }
-      const definitions = session ? await session.definition(input.path, input.pos, token) : [];
-      return { symbol, definitions };
-    },
-  );
-}
-
-export function importTarget(
-  input: ChannelParsedInput<'symbols.import'>,
-): Promise<ChannelOutput<'symbols.import'>> {
-  requireCurrentSha(input.projectId, input.sha);
-  const rules = indexer.extension(input.projectId, input.path)?.importResolution;
-  if (!rules) return Promise.resolve({ path: null });
-  const repoRoot = projectRepoDir(input.projectId);
-  const isFile = (path: string): Promise<boolean> =>
-    stat(resolveInRepo(repoRoot, path)).then(
-      (s) => s.isFile(),
+  // Sessions read the file from the worktree, which lacks files the checked-out PR deletes
+  // and paths still selected from a previous target.
+  private async findSession(projectId: string, filePath: string): Promise<LanguageSession | null> {
+    const session = this.indexer.session(projectId, filePath);
+    if (!session) return null;
+    const onDisk = await access(resolveInRepo(projectRepoDir(projectId), filePath)).then(
+      () => true,
       () => false,
     );
-  return resolveImportSpecifier(input.path, input.specifier, rules, isFile).then((path) => ({
-    path,
-  }));
-}
+    return onDisk ? session : null;
+  }
 
-export function workspaceSymbols(
-  input: ChannelParsedInput<'symbols.workspace'>,
-): Promise<ChannelOutput<'symbols.workspace'>> {
-  return withLatestWins(`symbols.workspace:${input.projectId}`, async ({ token }) => {
-    requireCurrentSha(input.projectId, input.sha);
-    const sessions = indexer.sessions(input.projectId);
-    if (sessions.length === 0) return [];
-    const limit = input.limit ?? 50;
-    const kinds = input.kinds ? new Set(input.kinds) : null;
-    // Sessions cap their own results before the kind filter runs, so ask them for a wider pool.
-    const sessionLimit = kinds ? Math.max(limit * KIND_FILTER_POOL_FACTOR, limit) : limit;
-    const settled = await Promise.allSettled(
-      sessions.map((session) => session.workspaceSymbols(input.query, sessionLimit, token)),
+  runSearch(input: ChannelParsedInput<'search.run'>): Promise<ChannelOutput<'search.run'>> {
+    return withLatestWins(searchRunKey(input), async ({ signal, token }) => {
+      this.requireCurrentSha(input.projectId, input.sha);
+      const repoRoot = projectRepoDir(input.projectId);
+      const opts = pageOptions(input);
+      const targeted = input.scope === 'targeted';
+      const inScope = targeted ? makeTargetMatcher(input.targetedPaths) : null;
+      const scoped = <T extends { path: string }>(files: T[]): T[] =>
+        inScope ? files.filter((f) => inScope(f.path)) : files;
+
+      if (input.kind === 'references') {
+        const session = await this.findSession(input.projectId, input.at.path);
+        const raw = session ? await session.references(input.at.path, input.at.pos, token) : [];
+        return toResult(input, applyPage(scoped(raw), opts));
+      }
+
+      if (targeted && input.targetedPaths.length === 0) return toResult(input, EMPTY_PAGE);
+      const paths = targeted ? input.targetedPaths : undefined;
+
+      if (input.kind === 'pattern' || input.kind === 'regex') {
+        // The word index only knows exact spellings, so it can answer case-sensitive lookups alone.
+        const lineIndex =
+          input.kind === 'pattern' && input.word && input.caseSensitive
+            ? this.indexer.lineIndex(input.projectId)
+            : null;
+        if (input.kind === 'pattern' && lineIndex && /^[A-Za-z0-9_]+$/.test(input.text)) {
+          const hits = await lineIndex.queryWord(input.text);
+          return toResult(input, applyPage(scoped(hits), opts));
+        }
+        const page = await ripgrepSearchPage({
+          cwd: repoRoot,
+          pattern: input.text,
+          fixedString: input.kind === 'pattern',
+          word: input.kind === 'pattern' ? input.word : undefined,
+          caseSensitive: input.caseSensitive,
+          paths,
+          signal,
+          ...opts,
+        });
+        return toResult(input, {
+          ...page,
+          files: page.files.map((f) => ({ ...f, moreMatches: f.moreMatches ?? false })),
+        });
+      }
+
+      const trimmed = input.text.trim();
+      const lineIndex = this.indexer.lineIndex(input.projectId);
+      if (lineIndex) {
+        const hits = await lineIndex.queryExactLine(trimmed, input.origin);
+        return toResult(input, applyPage(scoped(hits), opts));
+      }
+      const all = await ripgrepSearch({
+        cwd: repoRoot,
+        pattern: trimmed,
+        fixedString: true,
+        paths,
+        signal,
+      });
+      const exact: PageSourceFile[] = all
+        .map((f) => ({
+          path: f.path,
+          matches: f.matches.filter(
+            (m) =>
+              m.preview.trim() === trimmed &&
+              !(f.path === input.origin.path && m.line === input.origin.line),
+          ),
+        }))
+        .filter((f) => f.matches.length > 0);
+      return toResult(input, applyPage(exact, opts));
+    });
+  }
+
+  lineSymbols(input: ChannelParsedInput<'symbols.line'>): Promise<ChannelOutput<'symbols.line'>> {
+    return withLatestWins(
+      `symbols.line:${input.projectId}:${input.path}:${input.line}`,
+      async ({ token }) => {
+        this.requireCurrentSha(input.projectId, input.sha);
+        const session = await this.findSession(input.projectId, input.path);
+        const symbols = session ? await session.lineSymbols(input.path, input.line, token) : [];
+        return { path: input.path, line: input.line, symbols };
+      },
     );
-    const fulfilled = settled.filter(
-      (r): r is PromiseFulfilledResult<WorkspaceSymbol[]> => r.status === 'fulfilled',
+  }
+
+  definitionAt(
+    input: ChannelParsedInput<'symbols.definition'>,
+  ): Promise<ChannelOutput<'symbols.definition'>> {
+    return withLatestWins(
+      `symbols.definition:${input.projectId}:${input.path}:${input.pos.line}:${input.pos.col}`,
+      async ({ token }) => {
+        this.requireCurrentSha(input.projectId, input.sha);
+        const session = await this.findSession(input.projectId, input.path);
+        const repoRoot = projectRepoDir(input.projectId);
+        let symbol: string;
+        try {
+          const text = await readFile(resolveInRepo(repoRoot, input.path), 'utf8');
+          const lineText = text.split('\n')[input.pos.line - 1] ?? '';
+          symbol = identifierAt(lineText, input.pos.col);
+        } catch {
+          symbol = '';
+        }
+        const definitions = session ? await session.definition(input.path, input.pos, token) : [];
+        return { symbol, definitions };
+      },
     );
-    const [first] = settled;
-    if (fulfilled.length === 0 && first?.status === 'rejected') throw first.reason;
-    const merged = fulfilled.flatMap((r) => r.value);
-    return (kinds ? merged.filter((s) => kinds.has(s.kind)) : merged).slice(0, limit);
-  });
-}
+  }
 
-export function documentSymbols(
-  input: ChannelParsedInput<'symbols.document'>,
-): Promise<ChannelOutput<'symbols.document'>> {
-  return withLatestWins(`symbols.document:${input.projectId}:${input.path}`, async ({ token }) => {
-    requireCurrentSha(input.projectId, input.sha);
-    const session = await findSession(input.projectId, input.path);
-    const symbols = session
-      ? navigationSymbols(await session.documentSymbols(input.path, token))
-      : [];
-    return { path: input.path, symbols };
-  });
-}
+  importTarget(
+    input: ChannelParsedInput<'symbols.import'>,
+  ): Promise<ChannelOutput<'symbols.import'>> {
+    this.requireCurrentSha(input.projectId, input.sha);
+    const rules = this.indexer.extension(input.projectId, input.path)?.importResolution;
+    if (!rules) return Promise.resolve({ path: null });
+    const repoRoot = projectRepoDir(input.projectId);
+    const isFile = (path: string): Promise<boolean> =>
+      stat(resolveInRepo(repoRoot, path)).then(
+        (s) => s.isFile(),
+        () => false,
+      );
+    return resolveImportSpecifier(input.path, input.specifier, rules, isFile).then((path) => ({
+      path,
+    }));
+  }
 
-export const searchHandlers: Pick<
-  HandlerMap,
-  | 'search.run'
-  | 'symbols.line'
-  | 'symbols.definition'
-  | 'symbols.import'
-  | 'symbols.workspace'
-  | 'symbols.document'
-> = {
-  'search.run': runSearch,
-  'symbols.line': lineSymbols,
-  'symbols.definition': definitionAt,
-  'symbols.import': importTarget,
-  'symbols.workspace': workspaceSymbols,
-  'symbols.document': documentSymbols,
-};
+  workspaceSymbols(
+    input: ChannelParsedInput<'symbols.workspace'>,
+  ): Promise<ChannelOutput<'symbols.workspace'>> {
+    return withLatestWins(`symbols.workspace:${input.projectId}`, async ({ token }) => {
+      this.requireCurrentSha(input.projectId, input.sha);
+      const sessions = this.indexer.sessions(input.projectId);
+      if (sessions.length === 0) return [];
+      const limit = input.limit ?? 50;
+      const kinds = input.kinds ? new Set(input.kinds) : null;
+      // Sessions cap their own results before the kind filter runs, so ask them for a wider pool.
+      const sessionLimit = kinds ? Math.max(limit * KIND_FILTER_POOL_FACTOR, limit) : limit;
+      const settled = await Promise.allSettled(
+        sessions.map((session) => session.workspaceSymbols(input.query, sessionLimit, token)),
+      );
+      const fulfilled = settled.filter(
+        (r): r is PromiseFulfilledResult<WorkspaceSymbol[]> => r.status === 'fulfilled',
+      );
+      const [first] = settled;
+      if (fulfilled.length === 0 && first?.status === 'rejected') throw first.reason;
+      const merged = fulfilled.flatMap((r) => r.value);
+      return (kinds ? merged.filter((s) => kinds.has(s.kind)) : merged).slice(0, limit);
+    });
+  }
+
+  documentSymbols(
+    input: ChannelParsedInput<'symbols.document'>,
+  ): Promise<ChannelOutput<'symbols.document'>> {
+    return withLatestWins(
+      `symbols.document:${input.projectId}:${input.path}`,
+      async ({ token }) => {
+        this.requireCurrentSha(input.projectId, input.sha);
+        const session = await this.findSession(input.projectId, input.path);
+        const symbols = session
+          ? navigationSymbols(await session.documentSymbols(input.path, token))
+          : [];
+        return { path: input.path, symbols };
+      },
+    );
+  }
+
+  toHandlerMap(): Pick<
+    HandlerMap,
+    | 'search.run'
+    | 'symbols.line'
+    | 'symbols.definition'
+    | 'symbols.import'
+    | 'symbols.workspace'
+    | 'symbols.document'
+  > {
+    return {
+      'search.run': (input) => this.runSearch(input),
+      'symbols.line': (input) => this.lineSymbols(input),
+      'symbols.definition': (input) => this.definitionAt(input),
+      'symbols.import': (input) => this.importTarget(input),
+      'symbols.workspace': (input) => this.workspaceSymbols(input),
+      'symbols.document': (input) => this.documentSymbols(input),
+    };
+  }
+}

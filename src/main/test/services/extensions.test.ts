@@ -1,7 +1,5 @@
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { ExtensionsService } from '../../services/extensions';
-import { makeExtensionsService } from '../support/extensionsService';
 import * as settingsStore from '../../store/settings';
 import {
   DEMO_GRAMMAR_BODY,
@@ -11,6 +9,9 @@ import {
 } from '../support/extensionPackages';
 import { __setUserDataDir } from '../support/electron';
 import { makeTmpDir, type TmpDir } from '../support/tmp';
+import { KIND_SPECS } from '../../extensions/kindSpecs';
+import { ExtensionScannerService } from '../../services/extensionScanner';
+import { ExtensionsService } from '../../services/extensions';
 
 function themeBody(id: string, name: string, mode: 'light' | 'dark'): string {
   return DEMO_THEME_BODY.replace("id: 'demo-theme'", `id: '${id}'`)
@@ -56,9 +57,13 @@ describe('ExtensionsService', () => {
   let builtinRoot: string;
 
   function newService(): ExtensionsService {
-    return makeExtensionsService(
+    return new ExtensionsService(
       () => extRoot,
-      () => builtinRoot,
+      new ExtensionScannerService(
+        () => extRoot,
+        () => builtinRoot,
+        KIND_SPECS,
+      ),
     );
   }
 

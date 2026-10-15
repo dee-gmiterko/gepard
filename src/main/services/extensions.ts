@@ -5,35 +5,88 @@ import {
   errorMessage,
   isErrnoException,
   type ExtensionInfo,
-  type GrammarExtension,
+  type ExtensionKind,
   type GrammarModule,
   type LanguageExtension,
-  type LocaleExtension,
   type PackageManifest,
+  type LocaleExtension,
   type ThemeExtension,
 } from '@gepard/common';
-import { dedupeBroken } from '../helpers/extension';
-import type { KindRegistry } from '../extensions/kindRegistry';
-import { readManifest } from '../extensions/scanner';
+import {
+  GRAMMAR_SPEC,
+  KIND_SPECS,
+  LOCALE_SPEC,
+  LSP_SPEC,
+  THEME_SPEC,
+  type KindSpec,
+} from '../extensions/kindSpecs';
+import { readManifest } from '../helpers/extension';
 import * as settingsStore from '../store/settings';
+import {
+  loadedOf,
+  type ExtensionScannerService,
+  type LoadedExtensionPackage,
+  type ScannedPackage,
+} from './extensionScanner';
+
+const FALLBACK_KIND: ExtensionKind = 'lsp';
+
+function describePackage(pkg: ScannedPackage): ExtensionInfo {
+  switch (pkg.status) {
+    case 'loaded':
+      return {
+        id: pkg.id,
+        displayName: pkg.displayName,
+        kind: pkg.kind,
+        source: pkg.source,
+        enabled: true,
+        packageName: pkg.manifest.name,
+        version: pkg.manifest.version,
+      };
+    case 'disabled':
+      return {
+        id: pkg.id,
+        displayName: pkg.displayName,
+        kind: pkg.kind,
+        source: pkg.source,
+        enabled: false,
+        packageName: pkg.manifest.name,
+        version: pkg.manifest.version,
+      };
+    case 'failed':
+      return {
+        id: pkg.dir,
+        displayName: path.basename(pkg.dir),
+        kind: pkg.kind ?? FALLBACK_KIND,
+        source: pkg.source,
+        enabled: false,
+        error: pkg.error,
+      };
+  }
+}
 
 export class ExtensionsService {
   constructor(
     readonly userDir: () => string,
-    private readonly lsp: KindRegistry<LanguageExtension>,
-    private readonly grammar: KindRegistry<GrammarExtension>,
-    private readonly theme: KindRegistry<ThemeExtension>,
-    private readonly locale: KindRegistry<LocaleExtension>,
+    private readonly scanner: ExtensionScannerService,
   ) {}
 
   async list(): Promise<ExtensionInfo[]> {
-    const lists = await Promise.all([
-      this.lsp.list(),
-      this.grammar.list(),
-      this.theme.list(),
-      this.locale.list(),
-    ]);
-    return dedupeBroken(lists.flat());
+    const enabledMap = await settingsStore.getEnabledMap();
+    const packages = await this.scanner.scan(enabledMap);
+    return packages.map((pkg) =>
+      pkg.status === 'loaded'
+        ? { ...describePackage(pkg), enabled: enabledMap[pkg.id] ?? true }
+        : describePackage(pkg),
+    );
+  }
+
+  private async enabledPackages<T>(spec: KindSpec<T>): Promise<LoadedExtensionPackage<T>[]> {
+    const enabledMap = await settingsStore.getEnabledMap();
+    const packages = await this.scanner.scan(enabledMap);
+    return loadedOf(packages, spec).filter(
+      ({ extension }) => enabledMap[spec.getId(extension)] ?? true,
+    );
   }
 
   async setEnabled(id: string, enabled: boolean): Promise<ExtensionInfo[]> {
@@ -57,9 +110,7 @@ export class ExtensionsService {
       );
     }
     const type = manifest.gepard?.type;
-    if (
-      ![this.lsp, this.grammar, this.theme, this.locale].some((registry) => registry.kind === type)
-    ) {
+    if (!KIND_SPECS.some((spec) => spec.kind === type)) {
       throw new AppError(
         'EXTENSION_INVALID_PACKAGE',
         `"${name}"'s package.json must set "gepard": { "type": "lsp" | "grammar" | "theme" | "locale" } (got ${JSON.stringify(type ?? null)})`,
@@ -131,18 +182,15 @@ export class ExtensionsService {
   }
 
   private forget(dir: string): void {
-    this.lsp.forget(dir);
-    this.grammar.forget(dir);
-    this.theme.forget(dir);
-    this.locale.forget(dir);
+    this.scanner.forget(dir);
   }
 
   async enabledLanguageExtensions(): Promise<LanguageExtension[]> {
-    return this.lsp.enabledExtensions();
+    return (await this.enabledPackages(LSP_SPEC)).map(({ extension }) => extension);
   }
 
   async enabledGrammars(): Promise<GrammarModule[]> {
-    const packages = await this.grammar.enabledPackages();
+    const packages = await this.enabledPackages(GRAMMAR_SPEC);
     return Promise.all(
       packages.map(async ({ extension, dir }) => {
         const manifest = await readManifest(dir);
@@ -158,10 +206,10 @@ export class ExtensionsService {
   }
 
   async enabledThemeTemplates(): Promise<ThemeExtension[]> {
-    return this.theme.enabledExtensions();
+    return (await this.enabledPackages(THEME_SPEC)).map(({ extension }) => extension);
   }
 
   async enabledLocales(): Promise<LocaleExtension[]> {
-    return this.locale.enabledExtensions();
+    return (await this.enabledPackages(LOCALE_SPEC)).map(({ extension }) => extension);
   }
 }

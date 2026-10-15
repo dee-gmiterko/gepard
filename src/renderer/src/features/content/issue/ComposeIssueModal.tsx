@@ -8,7 +8,7 @@ import { Modal } from '../../../components/Modal';
 import { TextArea, TextInput } from '../../../components/TextInput';
 import { ActionRow, Stack } from '../../../components/Layout';
 import { useCreateIssue } from '../../../queries/comments';
-import { describeError, formatErrorText } from '../../../errors/errorMessage';
+import { formatDescribedError } from '../../../errors/errorMessage';
 
 const messages = defineMessages({
   title: {
@@ -120,7 +120,7 @@ export function ComposeIssueModal({
         </Message>
         {createIssue.isError && (
           <Message tone="danger" layout="inline">
-            {formatErrorText(intl, describeError(createIssue.error).message)}
+            {formatDescribedError(intl, createIssue.error)}
           </Message>
         )}
       </Stack>

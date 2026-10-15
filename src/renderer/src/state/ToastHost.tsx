@@ -22,7 +22,7 @@ export function ToastHost(): React.JSX.Element {
           toast: {
             id: crypto.randomUUID(),
             tone: error.tone ?? 'danger',
-            message: formatErrorText(intl, error.message),
+            message: formatErrorText(intl, error.message, error.values),
             detail: error.detail,
           },
         });

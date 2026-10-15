@@ -1,12 +1,30 @@
-import { FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { List, ListRow } from '../../components/List';
 import { Message } from '../../components/Message';
 import { Section } from '../../components/Section';
 import { SectionHeading } from '../../components/SectionHeading';
-import { describeError, formatErrorText } from '../../errors/errorMessage';
+import { formatDescribedError } from '../../errors/errorMessage';
 import { useExtensionCatalog, useInstallExtension } from '../../queries/extensions';
 import { ExtensionsCatalogRow } from './ExtensionsCatalogRow';
-import { messages } from './ExtensionsMessages';
+
+const messages = defineMessages({
+  catalogTitle: {
+    id: 'settings.extensions.catalog.title',
+    defaultMessage: 'Available extensions',
+  },
+  catalogLoading: {
+    id: 'settings.extensions.catalog.loading',
+    defaultMessage: 'Loading available extensions…',
+  },
+  catalogFailed: {
+    id: 'settings.extensions.catalog.failed',
+    defaultMessage: 'Failed to load the list of available extensions.',
+  },
+  catalogEmpty: {
+    id: 'settings.extensions.catalog.empty',
+    defaultMessage: 'No extensions are available.',
+  },
+});
 
 export function ExtensionsCatalogSection(): React.JSX.Element {
   const intl = useIntl();
@@ -19,7 +37,7 @@ export function ExtensionsCatalogSection(): React.JSX.Element {
       <SectionHeading title={<FormattedMessage {...messages.catalogTitle} />} />
       {install.isError && (
         <Message tone="danger" layout="inline">
-          {formatErrorText(intl, describeError(install.error).message)}
+          {formatDescribedError(intl, install.error)}
         </Message>
       )}
       <List>

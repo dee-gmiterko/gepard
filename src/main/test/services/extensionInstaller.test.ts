@@ -3,43 +3,42 @@ import { copyFile, mkdir, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ExtensionCatalog, type GitHubReleaseSource } from '@gepard/common';
+import { ExtensionCatalog, type GitHubRelease, type GitHubReleaseSource } from '@gepard/common';
 import { GhClient } from '../../clients/gh';
 import type { run as execRun, runJson as execRunJson } from '../../helpers/process/exec';
 import { ExtensionCatalogService } from '../../services/extensionCatalog';
-import { ExtensionInstallerService, type GitHubRelease } from '../../services/extensionInstaller';
-import type { ExtensionsService } from '../../services/extensions';
-import { makeExtensionsService } from '../support/extensionsService';
+import { ExtensionInstallerService } from '../../services/extensionInstaller';
+import { ReleaseDownloadService } from '../../services/releaseDownload';
 import { DEMO_LANG_BODY, writePackage } from '../support/extensionPackages';
 import { __setUserDataDir } from '../support/electron';
 import { makeTmpDir, type TmpDir } from '../support/tmp';
+import { KIND_SPECS } from '../../extensions/kindSpecs';
+import { ExtensionScannerService } from '../../services/extensionScanner';
+import { ExtensionsService } from '../../services/extensions';
 
 const execFileAsync = promisify(execFile);
 
-const CATALOG = ExtensionCatalog.parse({
-  schemaVersion: 1,
-  extensions: [
-    {
-      name: 'gepard-ext-demo',
-      repository: 'dee-gmiterko/gepard',
-      path: 'extensions/lsp/demo',
-      displayName: 'Demo',
-      kind: 'lsp',
-      description: 'demo',
-      sha: 'a'.repeat(40),
-    },
-    {
-      name: 'gepard-ext-native',
-      repository: 'dee-gmiterko/gepard',
-      path: 'extensions/lsp/native',
-      displayName: 'Native',
-      kind: 'lsp',
-      description: 'native',
-      platforms: ['linux-x64'],
-      sha: 'b'.repeat(40),
-    },
-  ],
-});
+const CATALOG = ExtensionCatalog.parse([
+  {
+    name: 'gepard-ext-demo',
+    repository: 'dee-gmiterko/gepard',
+    path: 'extensions/lsp/demo',
+    displayName: 'Demo',
+    kind: 'lsp',
+    description: 'demo',
+    sha: 'a'.repeat(40),
+  },
+  {
+    name: 'gepard-ext-native',
+    repository: 'dee-gmiterko/gepard',
+    path: 'extensions/lsp/native',
+    displayName: 'Native',
+    kind: 'lsp',
+    description: 'native',
+    platforms: ['linux-x64'],
+    sha: 'b'.repeat(40),
+  },
+]);
 
 const DEMO: GitHubReleaseSource = {
   kind: 'github-release',
@@ -113,8 +112,8 @@ describe('ExtensionInstallerService', () => {
       extensions,
       new ExtensionCatalogService(CATALOG, extensions, target),
       github.client,
+      new ReleaseDownloadService(github.client, () => tmp.path),
       target,
-      () => tmp.path,
     );
   }
 
@@ -149,9 +148,13 @@ describe('ExtensionInstallerService', () => {
     userExtensions = join(userData, 'extensions');
     const builtins = join(tmp.path, 'builtins');
     await mkdir(builtins, { recursive: true });
-    extensions = makeExtensionsService(
+    extensions = new ExtensionsService(
       () => userExtensions,
-      () => builtins,
+      new ExtensionScannerService(
+        () => userExtensions,
+        () => builtins,
+        KIND_SPECS,
+      ),
     );
     github = new FakeGitHub();
     installer = makeInstaller();

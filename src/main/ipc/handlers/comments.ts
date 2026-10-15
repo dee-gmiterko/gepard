@@ -18,45 +18,47 @@ async function resolvePrId(
   return prId;
 }
 
-export function createCommentsHandlers(
-  git: GitService,
-): Pick<
-  HandlerMap,
-  'comments.list' | 'comments.upsert' | 'comments.delete' | 'viewed.list' | 'viewed.set'
-> {
-  return {
-    'comments.list': ({ projectId, pr }) => review.listThreads(projectId, pr),
+export class CommentsHandlers {
+  constructor(private readonly git: GitService) {}
 
-    'comments.upsert': async (draft) => {
-      const { projectId, pr, id, threadId, anchor, general, body, references, prId } = draft;
-      const isNewThread = id === null && threadId === null && (anchor !== null || general);
+  toHandlerMap(): Pick<
+    HandlerMap,
+    'comments.list' | 'comments.upsert' | 'comments.delete' | 'viewed.list' | 'viewed.set'
+  > {
+    return {
+      'comments.list': ({ projectId, pr }) => review.listThreads(projectId, pr),
 
-      let ctx: review.UpsertContext = { prId: '', commitOid: '' };
-      if (isNewThread) {
-        const resolvedPrId =
-          pr === null ? review.UNASSIGNED_PR_ID : await resolvePrId(projectId, pr, prId);
-        const commitOid = anchor !== null ? (await git.workingTree(projectId)).head : '';
-        ctx = { prId: resolvedPrId, commitOid };
-      }
+      'comments.upsert': async (draft) => {
+        const { projectId, pr, id, threadId, anchor, general, body, references, prId } = draft;
+        const isNewThread = id === null && threadId === null && (anchor !== null || general);
 
-      return review.upsertLocalComment(projectId, pr, ctx, {
-        id,
-        threadId,
-        anchor,
-        general,
-        body,
-        references,
-      });
-    },
+        let ctx: review.UpsertContext = { prId: '', commitOid: '' };
+        if (isNewThread) {
+          const resolvedPrId =
+            pr === null ? review.UNASSIGNED_PR_ID : await resolvePrId(projectId, pr, prId);
+          const commitOid = anchor !== null ? (await this.git.workingTree(projectId)).head : '';
+          ctx = { prId: resolvedPrId, commitOid };
+        }
 
-    'comments.delete': ({ projectId, pr, commentId }) =>
-      review.deleteLocalComment(projectId, pr, commentId),
+        return review.upsertLocalComment(projectId, pr, ctx, {
+          id,
+          threadId,
+          anchor,
+          general,
+          body,
+          references,
+        });
+      },
 
-    'viewed.list': ({ projectId, pr }) => review.listViewed(projectId, pr),
+      'comments.delete': ({ projectId, pr, commentId }) =>
+        review.deleteLocalComment(projectId, pr, commentId),
 
-    'viewed.set': async ({ projectId, pr, paths, viewed, prId, sha }) => {
-      const resolvedPrId = await resolvePrId(projectId, pr, prId);
-      return review.setLocalViewed(projectId, pr, resolvedPrId, paths, viewed, sha);
-    },
-  };
+      'viewed.list': ({ projectId, pr }) => review.listViewed(projectId, pr),
+
+      'viewed.set': async ({ projectId, pr, paths, viewed, prId, sha }) => {
+        const resolvedPrId = await resolvePrId(projectId, pr, prId);
+        return review.setLocalViewed(projectId, pr, resolvedPrId, paths, viewed, sha);
+      },
+    };
+  }
 }

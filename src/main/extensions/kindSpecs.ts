@@ -3,12 +3,19 @@ import {
   isLanguageExtension,
   isLocaleExtension,
   isThemeExtension,
+  type ExtensionKind,
   type GrammarExtension,
   type LanguageExtension,
   type LocaleExtension,
   type ThemeExtension,
 } from '@gepard/common';
-import type { KindSpec } from './kindRegistry';
+
+export interface KindSpec<T> {
+  kind: ExtensionKind;
+  isValid(value: unknown): value is T;
+  getId(item: T): string;
+  getDisplayName(item: T): string;
+}
 
 export const LSP_SPEC: KindSpec<LanguageExtension> = {
   kind: 'lsp',
@@ -37,3 +44,10 @@ export const LOCALE_SPEC: KindSpec<LocaleExtension> = {
   getId: (item) => item.id,
   getDisplayName: (item) => item.displayName,
 };
+
+export const KIND_SPECS: readonly KindSpec<unknown>[] = [
+  LSP_SPEC,
+  GRAMMAR_SPEC,
+  THEME_SPEC,
+  LOCALE_SPEC,
+];

@@ -1,15 +1,54 @@
 import { useState } from 'react';
 import styled from 'styled-components';
-import { FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { isRepositoryInput } from '@gepard/common';
 import { Button } from '../../components/Button';
 import { Message } from '../../components/Message';
 import { Section } from '../../components/Section';
 import { SectionHeading } from '../../components/SectionHeading';
 import { TextInput } from '../../components/TextInput';
-import { describeError, formatErrorText } from '../../errors/errorMessage';
+import { formatDescribedError } from '../../errors/errorMessage';
 import { useInstallExtension } from '../../queries/extensions';
-import { messages } from './ExtensionsMessages';
+
+const messages = defineMessages({
+  catalogInstalling: {
+    id: 'settings.extensions.catalog.installing',
+    defaultMessage: 'Installing…',
+  },
+  repoTitle: {
+    id: 'settings.extensions.repo.title',
+    defaultMessage: 'Install from GitHub',
+  },
+  repoHint: {
+    id: 'settings.extensions.repo.hint',
+    defaultMessage:
+      'Installs the extension archive attached to the latest release of a GitHub repository. For a repository with several extensions, give the path of the extension inside it.',
+  },
+  repoRepository: {
+    id: 'settings.extensions.repo.repository',
+    defaultMessage: 'Repository (owner/repo)',
+  },
+  repoPath: {
+    id: 'settings.extensions.repo.path',
+    defaultMessage: 'Path within the repository (optional)',
+  },
+  repoRepositoryPlaceholder: {
+    id: 'settings.extensions.repo.repositoryPlaceholder',
+    defaultMessage: 'owner/repo',
+  },
+  repoPathPlaceholder: {
+    id: 'settings.extensions.repo.pathPlaceholder',
+    defaultMessage: 'extensions/lsp/name',
+  },
+  repoInstall: {
+    id: 'settings.extensions.repo.install',
+    defaultMessage: 'Install from repository',
+  },
+  repoInstalled: {
+    id: 'settings.extensions.repo.installed',
+    defaultMessage: 'Extension installed.',
+  },
+});
 
 const Form = styled.form`
   display: flex;
@@ -80,7 +119,7 @@ export function ExtensionsRepositorySection(): React.JSX.Element {
           </Button>
           {install.isError && (
             <Message tone="danger" layout="inline">
-              {formatErrorText(intl, describeError(install.error).message)}
+              {formatDescribedError(intl, install.error)}
             </Message>
           )}
           {install.isSuccess && !install.isPending && (

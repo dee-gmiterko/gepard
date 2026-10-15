@@ -13,8 +13,5 @@ export const CatalogEntry = z.object({
 });
 export type CatalogEntry = z.infer<typeof CatalogEntry>;
 
-export const ExtensionCatalog = z.object({
-  schemaVersion: z.literal(1),
-  extensions: z.array(CatalogEntry),
-});
+export const ExtensionCatalog = z.array(CatalogEntry);
 export type ExtensionCatalog = z.infer<typeof ExtensionCatalog>;

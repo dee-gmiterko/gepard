@@ -1,4 +1,4 @@
-import { defineMessages, type IntlShape, type MessageDescriptor } from 'react-intl';
+import { createIntl, defineMessages, type IntlShape, type MessageDescriptor } from 'react-intl';
 import { errorMessage, AppError } from '@gepard/common';
 
 const codeMessages = defineMessages({
@@ -76,8 +76,7 @@ const codeMessages = defineMessages({
   },
   MISSING_DEPENDENCY: {
     id: 'errors.code.missingDependency',
-    defaultMessage:
-      'A required program was not found. Install it and make sure it is on your PATH.',
+    defaultMessage: '{dependency} was not found. Install it and make sure it is on your PATH.',
   },
   NOT_DELETABLE: {
     id: 'errors.code.notDeletable',
@@ -132,23 +131,48 @@ function isKnownCode(code: string): code is keyof typeof codeMessages {
   return Object.hasOwn(codeMessages, code);
 }
 
+export type ErrorValues = Record<string, string | number>;
+
 export interface DescribedError {
   message: string | MessageDescriptor;
+  values?: ErrorValues;
   detail?: string;
+}
+
+function messageValues(details: unknown): ErrorValues | undefined {
+  if (typeof details !== 'object' || details === null) return undefined;
+  const values: ErrorValues = {};
+  for (const [key, value] of Object.entries(details)) {
+    if (typeof value === 'string' || typeof value === 'number') values[key] = value;
+  }
+  return values;
 }
 
 export function describeError(error: unknown): DescribedError {
   if (error instanceof AppError && isKnownCode(error.code)) {
-    return { message: codeMessages[error.code], detail: error.message };
+    return {
+      message: codeMessages[error.code],
+      values: messageValues(error.details),
+      detail: error.message,
+    };
   }
   return { message: errorMessage(error) };
 }
 
-export function formatErrorText(intl: IntlShape, message: string | MessageDescriptor): string {
-  return typeof message === 'string' ? message : intl.formatMessage(message);
+export function formatErrorText(
+  intl: IntlShape,
+  message: string | MessageDescriptor,
+  values?: ErrorValues,
+): string {
+  return typeof message === 'string' ? message : intl.formatMessage(message, values);
 }
 
-export function errorText(message: string | MessageDescriptor): string {
+export function formatDescribedError(intl: IntlShape, error: unknown): string {
+  const { message, values } = describeError(error);
+  return formatErrorText(intl, message, values);
+}
+
+export function errorText(message: string | MessageDescriptor, values?: ErrorValues): string {
   if (typeof message === 'string') return message;
-  return typeof message.defaultMessage === 'string' ? message.defaultMessage : (message.id ?? '');
+  return createIntl({ locale: 'en', onError: () => {} }).formatMessage(message, values);
 }

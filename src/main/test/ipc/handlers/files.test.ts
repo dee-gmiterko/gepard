@@ -5,7 +5,7 @@ import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { channels } from '@gepard/common';
-import { createFilesHandlers } from '../../../ipc/handlers/files';
+import { FilesHandlers } from '../../../ipc/handlers/files';
 import { gitService } from '../../../di';
 import { __setUserDataDir } from '../../support/electron';
 import { makeTmpDir, type TmpDir } from '../../support/tmp';
@@ -29,8 +29,7 @@ async function git(cwd: string, args: string[]): Promise<string> {
 describe('files.content over the real IPC contract and handler (integration)', () => {
   let origin: TmpDir;
   let userData: TmpDir;
-  const svc = gitService;
-  const handlers = createFilesHandlers(svc);
+  const handlers = new FilesHandlers(gitService).toHandlerMap();
   const projectId = 'acme__ipc';
   let sha: string;
 
@@ -51,7 +50,7 @@ describe('files.content over the real IPC contract and handler (integration)', (
     await git(o, ['add', '-A']);
     await git(o, ['commit', '-m', 'init']);
     sha = await git(o, ['rev-parse', 'HEAD']);
-    await svc.cloneProject(projectId, `file://${o}`);
+    await gitService.cloneProject(projectId, `file://${o}`);
   }, 30_000);
 
   afterAll(async () => {
