@@ -133,7 +133,12 @@ export type ImageData = z.infer<typeof ImageData>;
 export const FileContent = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('text'), path: RepoPath, sha: Sha, text: z.string() }),
   z.object({ kind: z.literal('image'), path: RepoPath, sha: Sha, image: ImageData }),
-  z.object({ kind: z.literal('binary'), path: RepoPath, sha: Sha }),
+  z.object({
+    kind: z.literal('binary'),
+    path: RepoPath,
+    sha: Sha,
+    size: z.int().nonnegative().optional(),
+  }),
   z.object({ kind: z.literal('missing'), path: RepoPath, sha: Sha }),
 ]);
 export type FileContent = z.infer<typeof FileContent>;
@@ -164,7 +169,14 @@ export const FileDiff = z.discriminatedUnion('kind', [
     before: ImageData.nullable(),
     after: ImageData.nullable(),
   }),
-  z.object({ kind: z.literal('binary'), path: RepoPath, previousPath: RepoPath.nullable() }),
+  z.object({
+    kind: z.literal('binary'),
+    path: RepoPath,
+    previousPath: RepoPath.nullable(),
+    // null: the file does not exist on that side; absent: the size was not reported.
+    oldSize: z.int().nonnegative().nullable().optional(),
+    newSize: z.int().nonnegative().nullable().optional(),
+  }),
   z.object({ kind: z.literal('missing'), path: RepoPath }),
 ]);
 export type FileDiff = z.infer<typeof FileDiff>;

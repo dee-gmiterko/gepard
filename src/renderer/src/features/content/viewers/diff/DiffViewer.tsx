@@ -1,6 +1,7 @@
 import { defineMessages, FormattedMessage } from 'react-intl';
 import { useFileDiff } from '../../../../queries/files';
 import { Message } from '../../../../components/Message';
+import { BinaryDiffViewer } from '../binary/BinaryDiffViewer';
 import { ImageDiffViewer } from '../imageDiff/ImageDiffViewer';
 import { MissingViewer } from '../missing/MissingViewer';
 import { DiffCodeViewer } from './DiffCodeViewer';
@@ -9,10 +10,6 @@ const messages = defineMessages({
   loading: {
     id: 'content.viewer.loading',
     defaultMessage: 'Loading…',
-  },
-  binaryNotShown: {
-    id: 'content.viewer.binaryNotShown',
-    defaultMessage: 'Binary file not shown',
   },
   renamedWithoutChanges: {
     id: 'content.diffViewer.renamedWithoutChanges',
@@ -42,9 +39,12 @@ export function DiffViewer({ path }: { path: string }): React.JSX.Element {
       return <MissingViewer path={path} />;
     case 'binary':
       return (
-        <Message layout="center">
-          <FormattedMessage {...messages.binaryNotShown} />
-        </Message>
+        <BinaryDiffViewer
+          path={path}
+          previousPath={data.previousPath}
+          oldSize={data.oldSize}
+          newSize={data.newSize}
+        />
       );
     case 'image':
       return <ImageDiffViewer path={path} before={data.before} after={data.after} />;

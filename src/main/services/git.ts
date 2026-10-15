@@ -439,6 +439,11 @@ export class GitService {
     }
   }
 
+  private async blobSize(repoRoot: string, ref: string): Promise<number> {
+    const { stdout } = await this.git.run(repoRoot, ['cat-file', '-s', ref]);
+    return Number.parseInt(stdout.trim(), 10);
+  }
+
   async fileContentAt(projectId: string, sha: string, path: string): Promise<FileContent> {
     const repoRoot = projectRepoDir(projectId);
     assertInRepo(repoRoot, path);
@@ -447,7 +452,7 @@ export class GitService {
     const buf = await this.readBlobBuffer(repoRoot, ref);
     const mime = mimeForPath(path);
     if (mime) return { kind: 'image', path, sha, image: { mime, base64: buf.toString('base64') } };
-    if (looksBinary(buf)) return { kind: 'binary', path, sha };
+    if (looksBinary(buf)) return { kind: 'binary', path, sha, size: buf.length };
     return { kind: 'text', path, sha, text: buf.toString('utf8') };
   }
 
@@ -518,7 +523,13 @@ export class GitService {
       return { kind: 'image', path, previousPath, before, after };
     }
 
-    if (looksBinary(probeBuf)) return { kind: 'binary', path, previousPath };
+    if (looksBinary(probeBuf)) {
+      const [oldSize, newSize] = await Promise.all([
+        existsBase ? this.blobSize(repoRoot, `${base}:${oldPath}`) : Promise.resolve(null),
+        existsHead ? this.blobSize(repoRoot, `${head}:${path}`) : Promise.resolve(null),
+      ]);
+      return { kind: 'binary', path, previousPath, oldSize, newSize };
+    }
 
     const diffArgs = ['diff', '-U3', '--no-color'];
     if (previousPath) diffArgs.push('-M', '-C', base, head, '--', oldPath, path);

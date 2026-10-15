@@ -23,6 +23,7 @@ import { Message } from '../../../../components/Message';
 import { CommentPortalHost } from '../CommentPortalHost';
 import { useGotoDefinition, useOpenLocation, useSymbolPortals } from '../useSymbolNavigation';
 import { useViewerAnnotations } from '../useViewerAnnotations';
+import { BinaryViewer } from '../binary/BinaryViewer';
 import { ImageViewer } from '../image/ImageViewer';
 import { MissingViewer } from '../missing/MissingViewer';
 import { SymbolPopupHost } from './SymbolPopup';
@@ -31,10 +32,6 @@ const messages = defineMessages({
   loading: {
     id: 'content.viewer.loading',
     defaultMessage: 'Loading…',
-  },
-  binaryNotShown: {
-    id: 'content.viewer.binaryNotShown',
-    defaultMessage: 'Binary file not shown',
   },
 });
 
@@ -60,11 +57,7 @@ export function CodeViewer({
     case 'image':
       return <ImageViewer path={path} image={data.image} />;
     case 'binary':
-      return (
-        <Message layout="center">
-          <FormattedMessage {...messages.binaryNotShown} />
-        </Message>
-      );
+      return <BinaryViewer path={path} size={data.size} />;
     case 'text':
       return <CodeText path={path} text={data.text} diffRows={diffRows} />;
   }
