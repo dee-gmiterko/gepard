@@ -15,20 +15,21 @@ Extensions add languages, syntax highlighting, colour themes and UI translations
 
 The manifest is a `package.json`:
 
-| Field                 | Meaning                                                                 |
-| --------------------- | ----------------------------------------------------------------------- |
-| `name`, `version`     | Package identity; `version` is shown and compared for updates.          |
-| `main`                | Entry module; must end in `.js`, `.mjs` or `.cjs`. Default `index.js`.  |
-| `gepard.type`         | One of `lsp`, `grammar`, `theme`, `locale`.                             |
-| `gepard.displayName`  | Name shown in the UI.                                                   |
+| Field                 | Meaning                                                                                              |
+| --------------------- | ---------------------------------------------------------------------------------------------------- |
+| `name`, `version`     | Package identity; `version` is shown in the UI. Installing from a release archive requires both.     |
+| `main`                | Entry module; must end in `.js`, `.mjs` or `.cjs`. Default `index.js`.                               |
+| `gepard.type`         | One of `lsp`, `grammar`, `theme`, `locale`; selects the kind the package is loaded as.               |
+| `gepard.displayName`  | Display name of the package's entry in the catalog of available extensions.                          |
+| `gepard.platforms`    | Optional list of supported platforms for the catalog; absent means all platforms.                    |
 
-A package whose `gepard.type` is another valid kind is skipped by that kind's scan; a missing or unknown type is an error.
+Each package directory is scanned once. A missing or unknown `gepard.type` is reported as a failed package. The name shown for an installed extension comes from the extension object: `displayName`, or `name` for themes.
 
 ## Entry module
 
 The entry module is an ES or CommonJS module. The extension object is its default export, falling back to an `extension` export, falling back to the module namespace. The object is validated structurally against the kind's contract; if it does not match, the package is reported as not exporting a valid extension of that kind.
 
-Code extensions (`lsp`, `grammar`) must be a single self-contained file: bundle all dependencies into the entry module. Data extensions (`theme`, `locale`) are plain modules with no code to run.
+`lsp` extensions bundle their code and dependencies into the entry module and may ship payload files (for example a language server binary) declared in the manifest's `files`, located relative to the entry module. `grammar` extensions bundle their code into the entry module but not CodeMirror or Lezer, which they receive through `api`. `theme` and `locale` extensions are plain modules with no code to run.
 
 ## Language declaration
 
@@ -57,7 +58,7 @@ interface LanguageExtension {
 
 `open` is called once per opened project. `host.dataDir` is a writable directory private to the extension. `sink.status(...)` reports idle, indexing (with phase and progress) or error state; `sink.log(level, message)` forwards log lines.
 
-`LanguageSession` answers, per file path and position, `lineSymbols`, `definition`, `references`, `documentSymbols`, and, per query, `workspaceSymbols`. Positions and ranges are line/column pairs. Query methods take an optional cancellation token. `filesChanged(changes)` is called with created, changed and deleted paths; `dispose()` must stop all server processes the session started.
+`LanguageSession` answers `lineSymbols` (file path and line), `definition` and `references` (file path and position), `documentSymbols` (file path) and `workspaceSymbols` (query and limit). Positions and ranges are line/column pairs. Query methods take an optional cancellation token. `filesChanged(changes)` is called with created, changed and deleted paths; `dispose()` must stop all server processes the session started.
 
 `importResolution` (`extensions`, `indexFiles`, `emittedExtensions`) lets the host resolve relative import specifiers to files. `warmupFile` picks the file used to warm up the session from a list of project files.
 
@@ -76,11 +77,11 @@ interface GrammarExtension {
 
 ## Theme
 
-A data object: `id`, `name`, `mode` (`light` or `dark`), optional `contrast` (`normal` or `high`), `shadow` (`popover`, `floating`), `colors` and `syntax`. Every colour key is required and a non-empty string; the key sets are defined by `themeExtensionSchema`.
+A data object: `id`, `name` (shown in the UI), `mode` (`light` or `dark`), optional `contrast` (`normal` or `high`), and required `shadow` (`popover`, `floating`), `colors` and `syntax`. Every value is a non-empty string and every key of `colors` and `syntax` is required; the key sets are defined by `themeExtensionSchema`.
 
 ## Locale
 
-A data object: `id`, `displayName` and `messages`, a map from message id to translated string. Ids missing from the map fall back to the built-in English text.
+A data object: `id`, non-empty `displayName` and `messages`, a map from message id to translated string. Ids missing from the map fall back to the built-in English text.
 
 ## Minimal extension
 
