@@ -1,8 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { ExtensionInfo } from '@gepard/common';
-import { dedupeBroken, findPackageRoot } from '../../helpers/extension';
+import { findPackageRoot } from '../../helpers/extension';
 import { makeTmpDir } from '../support/tmp';
 
 describe('findPackageRoot', () => {
@@ -21,25 +20,5 @@ describe('findPackageRoot', () => {
     } finally {
       await tmp.cleanup();
     }
-  });
-});
-
-describe('dedupeBroken', () => {
-  it('keeps one entry per broken package and every healthy one', () => {
-    const ok = (id: string): ExtensionInfo => ({
-      id,
-      displayName: id,
-      kind: 'lsp',
-      source: { kind: 'local' },
-      enabled: true,
-    });
-    const broken = (kind: ExtensionInfo['kind']): ExtensionInfo => ({
-      ...ok('/ext/bad'),
-      kind,
-      enabled: false,
-      error: 'boom',
-    });
-    const list = dedupeBroken([ok('a'), broken('lsp'), broken('theme'), ok('b'), broken('locale')]);
-    expect(list.map((e) => e.id)).toEqual(['a', '/ext/bad', 'b']);
   });
 });

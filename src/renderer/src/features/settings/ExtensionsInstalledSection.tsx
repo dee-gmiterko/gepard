@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 import { Plus } from 'react-feather';
-import { FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { Button } from '../../components/Button';
 import { Caption } from '../../components/Caption';
 import { List, ListRow } from '../../components/List';
@@ -14,7 +14,37 @@ import {
   useSetExtensionEnabled,
 } from '../../queries/extensions';
 import { ExtensionsRow } from './ExtensionsRow';
-import { messages } from './ExtensionsMessages';
+
+const messages = defineMessages({
+  title: {
+    id: 'settings.extensions.title',
+    defaultMessage: 'Extensions',
+  },
+  addExtension: {
+    id: 'settings.extensions.addExtension',
+    defaultMessage: 'Add extension',
+  },
+  installedIn: {
+    id: 'settings.extensions.installedIn',
+    defaultMessage: 'Installed extensions live in {dir}',
+  },
+  loading: {
+    id: 'settings.extensions.loading',
+    defaultMessage: 'Loading extensions…',
+  },
+  failed: {
+    id: 'settings.extensions.failed',
+    defaultMessage: 'Failed to load extensions.',
+  },
+  empty: {
+    id: 'settings.extensions.empty',
+    defaultMessage: 'No extensions found.',
+  },
+  installDialogTitle: {
+    id: 'settings.extensions.installDialogTitle',
+    defaultMessage: 'Add extension package',
+  },
+});
 
 const DirCaption = styled(Caption)`
   display: block;

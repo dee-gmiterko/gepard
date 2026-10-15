@@ -1,3 +1,13 @@
+import { z } from 'zod';
+
+export const GitHubRelease = z.looseObject({
+  tag_name: z.string(),
+  draft: z.boolean().default(false),
+  prerelease: z.boolean().default(false),
+  assets: z.array(z.looseObject({ name: z.string() })).default([]),
+});
+export type GitHubRelease = z.infer<typeof GitHubRelease>;
+
 export function releaseTagPrefix(packageName: string): string {
   return `${packageName}-v`;
 }

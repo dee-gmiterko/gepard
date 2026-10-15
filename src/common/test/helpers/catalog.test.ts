@@ -13,10 +13,7 @@ const ENTRY: CatalogEntry = {
   sha: 'a'.repeat(40),
 };
 
-const CATALOG: ExtensionCatalog = {
-  schemaVersion: 1,
-  extensions: [ENTRY, { ...ENTRY, name: 'other-x', repository: 'p/q' }],
-};
+const CATALOG: ExtensionCatalog = [ENTRY, { ...ENTRY, name: 'other-x', repository: 'p/q' }];
 
 describe('catalogAssetPlatform', () => {
   it('resolves the platform of a catalog entry, any when none are listed', () => {

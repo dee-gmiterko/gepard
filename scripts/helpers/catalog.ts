@@ -21,10 +21,7 @@ export interface CatalogEntry {
   sha: string;
 }
 
-export interface Catalog {
-  schemaVersion: 1;
-  extensions: CatalogEntry[];
-}
+export type Catalog = CatalogEntry[];
 
 export type ReleaseConfig = Record<string, unknown> & {
   packages: Record<string, Record<string, unknown>>;
@@ -37,19 +34,16 @@ export function buildCatalog(
   repository: string,
   shaOf: (dir: string) => string,
 ): Catalog {
-  return {
-    schemaVersion: 1,
-    extensions: packages.map(({ path: dir, manifest }) => ({
-      name: manifest.name,
-      repository,
-      path: dir,
-      displayName: manifest.gepard.displayName ?? manifest.name,
-      kind: manifest.gepard.type,
-      description: manifest.description ?? '',
-      ...(manifest.gepard.platforms?.length ? { platforms: manifest.gepard.platforms } : {}),
-      sha: shaOf(dir),
-    })),
-  };
+  return packages.map(({ path: dir, manifest }) => ({
+    name: manifest.name,
+    repository,
+    path: dir,
+    displayName: manifest.gepard.displayName ?? manifest.name,
+    kind: manifest.gepard.type,
+    description: manifest.description ?? '',
+    ...(manifest.gepard.platforms?.length ? { platforms: manifest.gepard.platforms } : {}),
+    sha: shaOf(dir),
+  }));
 }
 
 export function buildReleaseConfig(

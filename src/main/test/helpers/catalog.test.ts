@@ -8,30 +8,27 @@ import catalogJson from '../../../../extensions/catalog.json';
 
 const EXTENSIONS_DIR = join(import.meta.dirname, '..', '..', '..', '..', 'extensions');
 
-const CATALOG = ExtensionCatalog.parse({
-  schemaVersion: 1,
-  extensions: [
-    {
-      name: 'gepard-ext-typescript',
-      repository: 'dee-gmiterko/gepard',
-      path: 'extensions/lsp/typescript',
-      displayName: 'TypeScript',
-      kind: 'lsp',
-      description: '',
-      platforms: ['linux-x64', 'darwin-arm64'],
-      sha: 'a'.repeat(40),
-    },
-    {
-      name: 'gepard-ext-python',
-      repository: 'dee-gmiterko/gepard',
-      path: 'extensions/lsp/python',
-      displayName: 'Python',
-      kind: 'lsp',
-      description: '',
-      sha: 'b'.repeat(40),
-    },
-  ],
-});
+const CATALOG = ExtensionCatalog.parse([
+  {
+    name: 'gepard-ext-typescript',
+    repository: 'dee-gmiterko/gepard',
+    path: 'extensions/lsp/typescript',
+    displayName: 'TypeScript',
+    kind: 'lsp',
+    description: '',
+    platforms: ['linux-x64', 'darwin-arm64'],
+    sha: 'a'.repeat(40),
+  },
+  {
+    name: 'gepard-ext-python',
+    repository: 'dee-gmiterko/gepard',
+    path: 'extensions/lsp/python',
+    displayName: 'Python',
+    kind: 'lsp',
+    description: '',
+    sha: 'b'.repeat(40),
+  },
+]);
 
 function installed(
   packageName: string,
@@ -64,10 +61,8 @@ describe('catalog', () => {
       )
       .sort();
     const catalog = ExtensionCatalog.parse(catalogJson);
-    expect(catalog.extensions.map((e) => e.name).sort()).toEqual(names);
-    expect(new Set(catalog.extensions.map((e) => e.repository))).toEqual(
-      new Set(['dee-gmiterko/gepard']),
-    );
+    expect(catalog.map((e) => e.name).sort()).toEqual(names);
+    expect(new Set(catalog.map((e) => e.repository))).toEqual(new Set(['dee-gmiterko/gepard']));
   });
 });
 

@@ -158,16 +158,18 @@ async function main({ check }: { check: boolean }): Promise<void> {
   const refreshed = refreshCatalogs(extracted, localeFiles, readCatalogFile, localeFileOf);
 
   if (check) {
-    const flags = await Promise.all(
-      refreshed.map(async ({ file, locale, catalog, staleIds }) => {
-        if (readFileOrNull(file) !== (await formatJson(catalog, file))) return true;
-        if (locale === SOURCE_LOCALE) return false;
-        const staleFile = path.join(STALE_DIR, `${locale}.json`);
-        const expected = staleIds.length > 0 ? await formatJson(staleIds, staleFile) : null;
-        return readFileOrNull(staleFile) !== expected;
-      }),
-    );
-    const outdated = refreshed.filter((_, i) => flags[i]);
+    const outdated: typeof refreshed = [];
+    for (const entry of refreshed) {
+      const { file, locale, catalog, staleIds } = entry;
+      if (readFileOrNull(file) !== (await formatJson(catalog, file))) {
+        outdated.push(entry);
+        continue;
+      }
+      if (locale === SOURCE_LOCALE) continue;
+      const staleFile = path.join(STALE_DIR, `${locale}.json`);
+      const expected = staleIds.length > 0 ? await formatJson(staleIds, staleFile) : null;
+      if (readFileOrNull(staleFile) !== expected) outdated.push(entry);
+    }
 
     if (outdated.length > 0) {
       console.error(

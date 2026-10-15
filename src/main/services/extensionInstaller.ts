@@ -1,10 +1,10 @@
-import { mkdtemp, rm, stat } from 'node:fs/promises';
 import * as path from 'node:path';
 import { z } from 'zod';
 import {
   AppError,
   catalogAssetPlatform,
   errorMessage,
+  GitHubRelease,
   normalizeRepoPath,
   packageDirName,
   parseRepositoryInput,
@@ -16,29 +16,19 @@ import {
   type RepositoryInput,
 } from '@gepard/common';
 import type { GhClient } from '../clients/gh';
-import { findPackageRoot } from '../helpers/extension';
+import { findPackageRoot, readManifest } from '../helpers/extension';
 import { extractTarGz } from '../helpers/tar';
-import { readManifest } from '../extensions/scanner';
 import type { ExtensionCatalogService } from './extensionCatalog';
 import type { ExtensionsService } from './extensions';
-
-export const GitHubRelease = z.looseObject({
-  tag_name: z.string(),
-  draft: z.boolean().default(false),
-  prerelease: z.boolean().default(false),
-  assets: z.array(z.looseObject({ name: z.string() })).default([]),
-});
-export type GitHubRelease = z.infer<typeof GitHubRelease>;
-
-const DOWNLOAD_TIMEOUT_MS = 10 * 60_000;
+import type { ReleaseDownloadService } from './releaseDownload';
 
 export class ExtensionInstallerService {
   constructor(
     private readonly extensions: ExtensionsService,
     private readonly catalog: ExtensionCatalogService,
     private readonly gh: GhClient,
+    private readonly downloads: ReleaseDownloadService,
     private readonly target: string,
-    private readonly tmpDir: () => string,
   ) {}
 
   async install(source: GitHubReleaseSource): Promise<ExtensionInfo[]> {
@@ -103,46 +93,14 @@ export class ExtensionInstallerService {
     return manifest.name;
   }
 
-  private async downloadAsset(
-    repo: RepositoryInput,
-    tag: string,
-    assetName: string,
-    destDir: string,
-  ): Promise<string> {
-    await this.gh.run(
-      [
-        'release',
-        'download',
-        tag,
-        '--repo',
-        repositorySlug(repo),
-        '--pattern',
-        assetName,
-        '--dir',
-        destDir,
-        '--clobber',
-      ],
-      { timeoutMs: DOWNLOAD_TIMEOUT_MS },
-    );
-    const file = path.join(destDir, assetName);
-    try {
-      await stat(file);
-    } catch {
-      throw new AppError('EXTENSION_RELEASE_NOT_FOUND', `${tag} has no asset named ${assetName}`);
-    }
-    return file;
-  }
-
   private async installRelease(
     repo: RepositoryInput,
     tag: string,
     assetName: string,
     expectedName: string | null,
   ): Promise<ExtensionInfo[]> {
-    const tmp = await mkdtemp(path.join(this.tmpDir(), 'gepard-ext-'));
-    try {
-      const archive = await this.downloadAsset(repo, tag, assetName, tmp);
-      const extractDir = path.join(tmp, 'extract');
+    return this.downloads.withAsset(repo, tag, assetName, async (archive, workDir) => {
+      const extractDir = path.join(workDir, 'extract');
       await extractTarGz(archive, extractDir);
       const root = await findPackageRoot(extractDir);
       const manifest = await readManifest(root).catch((e: unknown) => {
@@ -163,9 +121,7 @@ export class ExtensionInstallerService {
           `archive contains "${manifest.name}", expected "${expectedName}"`,
         );
       }
-      return await this.extensions.install(root, packageDirName(manifest.name), manifest.name);
-    } finally {
-      await rm(tmp, { recursive: true, force: true });
-    }
+      return this.extensions.install(root, packageDirName(manifest.name), manifest.name);
+    });
   }
 }

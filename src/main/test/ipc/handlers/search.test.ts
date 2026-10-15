@@ -7,6 +7,8 @@ import {
   type LanguageSession,
   type WorkspaceSymbol,
 } from '@gepard/common';
+import { SearchHandlers } from '../../../ipc/handlers/search';
+import type { LineIndexHandle } from '../../../services/line-index-manager';
 import { __setUserDataDir } from '../../support/electron';
 import { fakeLanguageSession } from '../../support/session';
 import { makeTmpDir, type TmpDir } from '../../support/tmp';
@@ -14,8 +16,8 @@ import { makeTmpDir, type TmpDir } from '../../support/tmp';
 const mocks = vi.hoisted(
   (): {
     currentSha: string | null;
-    lineIndex: unknown;
-    session: unknown;
+    lineIndex: LineIndexHandle | null;
+    session: LanguageSession | null;
     sessions: LanguageSession[];
   } => ({
     currentSha: null,
@@ -25,17 +27,23 @@ const mocks = vi.hoisted(
   }),
 );
 
-vi.mock('../../../di', () => ({
-  indexer: {
-    currentSha: () => mocks.currentSha,
-    sessions: () => mocks.sessions,
-    session: () => mocks.session,
-    lineIndex: () => mocks.lineIndex,
-  },
-}));
+const handlers = new SearchHandlers({
+  currentSha: () => mocks.currentSha,
+  sessions: () => mocks.sessions,
+  session: () => mocks.session,
+  lineIndex: () => mocks.lineIndex,
+  extension: () => null,
+});
 
-const { runSearch, workspaceSymbols, lineSymbols, definitionAt, documentSymbols } =
-  await import('../../../ipc/handlers/search');
+function fakeLineIndex(overrides: Partial<LineIndexHandle> = {}): LineIndexHandle {
+  return {
+    queryExactLine: vi.fn(() => Promise.resolve([])),
+    queryWord: vi.fn(() => Promise.resolve([])),
+    applyChanges: vi.fn(),
+    dispose: vi.fn(() => Promise.resolve()),
+    ...overrides,
+  };
+}
 
 const SHA = 'a'.repeat(40);
 const PROJECT = 'owner__repo';
@@ -57,7 +65,7 @@ function run(raw: Record<string, unknown>): Promise<GroupedResult> {
     text: 'needle',
     ...raw,
   });
-  return runSearch(input);
+  return handlers.runSearch(input);
 }
 
 const paths = (r: GroupedResult): string[] => r.files.map((f) => f.path);
@@ -253,10 +261,10 @@ describe('search.run', () => {
 
     beforeEach(() => {
       queryWord.mockClear();
-      mocks.lineIndex = {
+      mocks.lineIndex = fakeLineIndex({
         queryWord,
         queryExactLine: vi.fn(() => Promise.resolve(indexed)),
-      };
+      });
     });
 
     const word = { text: 'needle', word: true, caseSensitive: true };
@@ -310,7 +318,7 @@ describe('search.run', () => {
       const queryExactLine = vi.fn(() =>
         Promise.resolve([{ path: 'z.ts', matches: [hit(1, 'const x = 1;')] }]),
       );
-      mocks.lineIndex = { queryExactLine, queryWord: vi.fn() };
+      mocks.lineIndex = fakeLineIndex({ queryExactLine });
       const origin = { path: 'exact.ts', line: 1 };
       const result = await run({ kind: 'exactLine', text: '  const x = 1;  ', origin });
       expect(queryExactLine).toHaveBeenCalledWith('const x = 1;', origin);
@@ -337,14 +345,14 @@ describe('search.run', () => {
     const at = { path: 'x.ts', pos: { line: 1, col: 1 } };
 
     it('pages the references the language server returns', async () => {
-      mocks.session = { references: vi.fn(() => Promise.resolve(referenced)) };
+      mocks.session = fakeLanguageSession({ references: vi.fn(() => Promise.resolve(referenced)) });
       const result = await run({ kind: 'references', text: 'sym', at, limit: 2 });
       expect(paths(result)).toEqual(['x.ts', 'y.ts']);
       expect(result).toMatchObject({ hasMore: true, nextOffset: 2 });
     });
 
     it('applies the targeted scope', async () => {
-      mocks.session = { references: vi.fn(() => Promise.resolve(referenced)) };
+      mocks.session = fakeLanguageSession({ references: vi.fn(() => Promise.resolve(referenced)) });
       const result = await run({
         kind: 'references',
         text: 'sym',
@@ -362,7 +370,7 @@ describe('search.run', () => {
 
     it('is empty, without asking the session, when the file is not in the worktree', async () => {
       const references = vi.fn(() => Promise.resolve(referenced));
-      mocks.session = { references };
+      mocks.session = fakeLanguageSession({ references });
       const result = await run({
         kind: 'references',
         text: 'sym',
@@ -404,7 +412,7 @@ function sessionReturning(result: Promise<WorkspaceSymbol[]>): LanguageSession {
 }
 
 function query(limit?: number, kinds?: WorkspaceSymbol['kind'][]): Promise<WorkspaceSymbol[]> {
-  return workspaceSymbols({ projectId: 'p', sha: 'sha', query: 'q', limit, kinds });
+  return handlers.workspaceSymbols({ projectId: 'p', sha: 'sha', query: 'q', limit, kinds });
 }
 
 describe('symbols.workspace across sessions', () => {
@@ -500,12 +508,15 @@ describe('symbols for a file missing from the worktree', () => {
   });
 
   it('returns no document symbols', async () => {
-    await expect(documentSymbols(input)).resolves.toEqual({ path: 'deleted.ts', symbols: [] });
+    await expect(handlers.documentSymbols(input)).resolves.toEqual({
+      path: 'deleted.ts',
+      symbols: [],
+    });
     expect(documentSymbolsFn).not.toHaveBeenCalled();
   });
 
   it('returns no line symbols', async () => {
-    await expect(lineSymbols({ ...input, line: 1 })).resolves.toEqual({
+    await expect(handlers.lineSymbols({ ...input, line: 1 })).resolves.toEqual({
       path: 'deleted.ts',
       line: 1,
       symbols: [],
@@ -514,7 +525,7 @@ describe('symbols for a file missing from the worktree', () => {
   });
 
   it('returns no definitions', async () => {
-    await expect(definitionAt({ ...input, pos: { line: 1, col: 1 } })).resolves.toEqual({
+    await expect(handlers.definitionAt({ ...input, pos: { line: 1, col: 1 } })).resolves.toEqual({
       symbol: '',
       definitions: [],
     });
@@ -524,7 +535,7 @@ describe('symbols for a file missing from the worktree', () => {
   it('still asks the session once the file exists', async () => {
     await writeRepoFile('present.ts', 'export const a = 1;\n');
     documentSymbolsFn.mockResolvedValue([]);
-    await documentSymbols({ ...input, path: 'present.ts' });
+    await handlers.documentSymbols({ ...input, path: 'present.ts' });
     expect(documentSymbolsFn).toHaveBeenCalledWith('present.ts', expect.anything());
   });
 });

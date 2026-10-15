@@ -236,7 +236,7 @@
   "errors.code.graphqlError": "GitHub's API returned an error.",
   "errors.code.internal": "Something went wrong.",
   "errors.code.invalidProjectId": "This project is invalid.",
-  "errors.code.missingDependency": "A required program was not found. Install it and make sure it is on your PATH.",
+  "errors.code.missingDependency": "{dependency} was not found. Install it and make sure it is on your PATH.",
   "errors.code.notDeletable": "This comment can't be deleted.",
   "errors.code.notEditable": "This comment can't be edited.",
   "errors.code.notFound": "Not found.",

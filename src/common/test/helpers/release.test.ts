@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pickReleaseAsset, releaseTagPrefix } from '../../helpers/release';
+import { GitHubRelease, pickReleaseAsset, releaseTagPrefix } from '../../helpers/release';
 
 describe('releaseTagPrefix', () => {
   it('prefixes the tags of one package', () => {
@@ -21,5 +21,17 @@ describe('pickReleaseAsset', () => {
     expect(pickReleaseAsset(['gepard-ext-x-1.0.0-rc-1.tgz'], 'linux-x64')).toBe(
       'gepard-ext-x-1.0.0-rc-1.tgz',
     );
+  });
+});
+
+describe('GitHubRelease', () => {
+  it('defaults the flags and assets and rejects a release without a tag', () => {
+    expect(GitHubRelease.parse({ tag_name: 'x-v1.0.0' })).toEqual({
+      tag_name: 'x-v1.0.0',
+      draft: false,
+      prerelease: false,
+      assets: [],
+    });
+    expect(() => GitHubRelease.parse({ draft: true })).toThrow();
   });
 });

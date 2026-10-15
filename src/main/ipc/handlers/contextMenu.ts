@@ -5,11 +5,15 @@ import {
   showFileViewMenu,
 } from '../../contextMenu';
 
-export const contextMenuHandlers: Pick<
-  HandlerMap,
-  'contextMenu.setLabels' | 'contextMenu.setLineTarget' | 'contextMenu.showFileView'
-> = {
-  'contextMenu.setLabels': (labels) => setContextMenuLabels(labels),
-  'contextMenu.setLineTarget': (target) => setContextMenuLineTarget(target),
-  'contextMenu.showFileView': (request, { window }) => showFileViewMenu(window, request),
-};
+export class ContextMenuHandlers {
+  toHandlerMap(): Pick<
+    HandlerMap,
+    'contextMenu.setLabels' | 'contextMenu.setLineTarget' | 'contextMenu.showFileView'
+  > {
+    return {
+      'contextMenu.setLabels': (labels) => setContextMenuLabels(labels),
+      'contextMenu.setLineTarget': (target) => setContextMenuLineTarget(target),
+      'contextMenu.showFileView': (request, { window }) => showFileViewMenu(window, request),
+    };
+  }
+}

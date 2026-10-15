@@ -1,4 +1,4 @@
-import { FormattedMessage } from 'react-intl';
+import { defineMessages, FormattedMessage } from 'react-intl';
 import type { CatalogEntryStatus } from '@gepard/common';
 import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
@@ -6,7 +6,41 @@ import { Caption } from '../../components/Caption';
 import { ListRow, RowTitle } from '../../components/List';
 import { Stack, Inline } from '../../components/Layout';
 import { catalogAction } from '../../helpers/extensionCatalog';
-import { actionMessages, kindMessages, messages } from './ExtensionsMessages';
+import { ExtensionKindBadge } from './ExtensionKindBadge';
+
+const messages = defineMessages({
+  builtin: {
+    id: 'settings.extensions.builtin',
+    defaultMessage: 'Built-in',
+  },
+  catalogInstalled: {
+    id: 'settings.extensions.catalog.installed',
+    defaultMessage: 'Installed v{version}',
+  },
+  catalogInstall: {
+    id: 'settings.extensions.catalog.install',
+    defaultMessage: 'Install',
+  },
+  catalogUpToDate: {
+    id: 'settings.extensions.catalog.upToDate',
+    defaultMessage: 'Up to date',
+  },
+  catalogUnsupported: {
+    id: 'settings.extensions.catalog.unsupported',
+    defaultMessage: 'Not available for this platform',
+  },
+  catalogInstalling: {
+    id: 'settings.extensions.catalog.installing',
+    defaultMessage: 'Installing…',
+  },
+});
+
+const actionMessages = {
+  install: messages.catalogInstall,
+  upToDate: messages.catalogUpToDate,
+  builtin: messages.builtin,
+  unsupported: messages.catalogUnsupported,
+} as const;
 
 export function ExtensionsCatalogRow({
   entry,
@@ -25,9 +59,7 @@ export function ExtensionsCatalogRow({
       <Stack $gap={1}>
         <Inline $gap={2}>
           <RowTitle $size="sm">{entry.displayName}</RowTitle>
-          <Badge $tone="muted">
-            <FormattedMessage {...kindMessages[entry.kind]} />
-          </Badge>
+          <ExtensionKindBadge kind={entry.kind} />
           {entry.installedVersion !== null && (
             <Caption>
               <FormattedMessage

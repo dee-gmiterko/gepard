@@ -10,7 +10,7 @@ export function catalogStatus(
   installed: readonly ExtensionInfo[],
   target: string,
 ): CatalogEntryStatus[] {
-  return catalog.extensions.map((entry): CatalogEntryStatus => {
+  return catalog.map((entry): CatalogEntryStatus => {
     const match =
       installed.find((ext) => ext.packageName === entry.name && ext.source.kind === 'builtin') ??
       installed.find((ext) => ext.packageName === entry.name);

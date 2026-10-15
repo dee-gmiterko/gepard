@@ -1,6 +1,10 @@
 import type { HandlerMap } from '../registry';
-import { connectivity } from '../../di';
+import type { ConnectivityService } from '../../services/connectivity';
 
-export const connectivityHandlers: Pick<HandlerMap, 'connectivity.get'> = {
-  'connectivity.get': () => ({ offline: connectivity.isOffline() }),
-};
+export class ConnectivityHandlers {
+  constructor(private readonly connectivity: ConnectivityService) {}
+
+  toHandlerMap(): Pick<HandlerMap, 'connectivity.get'> {
+    return { 'connectivity.get': () => ({ offline: this.connectivity.isOffline() }) };
+  }
+}

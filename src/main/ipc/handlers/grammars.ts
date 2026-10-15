@@ -1,6 +1,10 @@
 import type { HandlerMap } from '../registry';
-import { extensionsService } from '../../di';
+import type { ExtensionsService } from '../../services/extensions';
 
-export const grammarsHandlers: Pick<HandlerMap, 'grammars.list'> = {
-  'grammars.list': () => extensionsService.enabledGrammars(),
-};
+export class GrammarsHandlers {
+  constructor(private readonly extensions: ExtensionsService) {}
+
+  toHandlerMap(): Pick<HandlerMap, 'grammars.list'> {
+    return { 'grammars.list': () => this.extensions.enabledGrammars() };
+  }
+}

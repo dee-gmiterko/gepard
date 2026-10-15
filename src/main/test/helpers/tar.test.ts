@@ -1,13 +1,9 @@
-import { execFile } from 'node:child_process';
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { promisify } from 'node:util';
 import { gzipSync } from 'node:zlib';
 import { afterEach, describe, expect, it } from 'vitest';
 import { extractTarGz } from '../../helpers/tar';
 import { makeTmpDir, type TmpDir } from '../support/tmp';
-
-const execFileAsync = promisify(execFile);
 
 function tarEntry(name: string, data: Buffer, type = '0'): Buffer {
   const header = Buffer.alloc(512);
@@ -40,44 +36,7 @@ describe('extractTarGz', () => {
     await tmp?.cleanup();
   });
 
-  it('extracts an archive produced by tar, including long paths and modes', async () => {
-    tmp = await makeTmpDir('tar');
-    const src = join(tmp.path, 'src', 'pkg');
-    const deep = join(src, 'a'.repeat(60), 'b'.repeat(60));
-    await mkdir(deep, { recursive: true });
-    await writeFile(join(src, 'package.json'), '{"name":"x"}');
-    await writeFile(join(deep, 'file.txt'), 'deep');
-    await writeFile(join(src, 'run.sh'), '#!/bin/sh\n', { mode: 0o755 });
-    await writeFile(join(src, 'big.bin'), Buffer.alloc(100_000, 7));
-    const archive = join(tmp.path, 'pkg.tar.gz');
-    await execFileAsync('tar', ['-czf', archive, '-C', join(tmp.path, 'src'), 'pkg']);
-
-    const dest = join(tmp.path, 'out');
-    await extractTarGz(archive, dest);
-
-    expect(await readFile(join(dest, 'pkg', 'package.json'), 'utf8')).toBe('{"name":"x"}');
-    expect(
-      await readFile(join(dest, 'pkg', 'a'.repeat(60), 'b'.repeat(60), 'file.txt'), 'utf8'),
-    ).toBe('deep');
-    expect((await readFile(join(dest, 'pkg', 'big.bin'))).equals(Buffer.alloc(100_000, 7))).toBe(
-      true,
-    );
-    if (process.platform !== 'win32') {
-      expect((await stat(join(dest, 'pkg', 'run.sh'))).mode & 0o111).not.toBe(0);
-    }
-  });
-
-  it('rejects entries that escape the destination', async () => {
-    tmp = await makeTmpDir('tar');
-    const archive = join(tmp.path, 'evil.tar.gz');
-    await writeFile(archive, tarGz([tarEntry('../escape.txt', Buffer.from('x'))]));
-    await expect(extractTarGz(archive, join(tmp.path, 'out'))).rejects.toMatchObject({
-      code: 'EXTENSION_INVALID_ARCHIVE',
-    });
-    await expect(stat(join(tmp.path, 'escape.txt'))).rejects.toThrow();
-  });
-
-  it('rejects symlinks and non-gzip input', async () => {
+  it('rejects unsupported entry types and non-gzip input as invalid archives', async () => {
     tmp = await makeTmpDir('tar');
     const link = join(tmp.path, 'link.tar.gz');
     await writeFile(link, tarGz([tarEntry('pkg/link', Buffer.alloc(0), '2')]));

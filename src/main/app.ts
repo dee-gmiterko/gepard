@@ -1,14 +1,13 @@
 import { app, BrowserWindow, nativeTheme } from 'electron';
 import { electronApp, optimizer } from '@electron-toolkit/utils';
 import { registerHandlers, emit } from './ipc/registry';
-import { handlers } from './ipc/handlers';
 import { createMainWindow } from './window';
 import { log } from './log';
 import { markRendererReady, notifyMainFailure } from './notify';
 import { formatCaughtError } from './helpers/error';
 import { startPortalThemeSync } from './helpers/portalTheme';
 import { systemPreference } from './helpers/systemPreference';
-import { indexer, launchService } from './di';
+import { handlers, indexer, launchService } from './di';
 
 const QUIT_CLOSE_TIMEOUT_MS = 1_000;
 

@@ -28,11 +28,7 @@
       "outputs": ["out/**"]
     },
     "//#extensions:bundle": {
-      "inputs": [
-        "scripts/bundle-extensions.ts",
-        "extensions/themes/*/**",
-        "extensions/locales/en/**"
-      ],
+      "inputs": ["scripts/bundle-extensions.ts", "extensions/themes/*/**", "extensions/locales/**"],
       "outputs": ["dist/extensions/**"]
     },
     "package:unpack": {

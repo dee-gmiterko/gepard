@@ -65,57 +65,6 @@ for quick local testing of a packaged app without generating installers.
 
 ## Extensions
 
-Extensions are independent packages, each with its own `package.json` and
-its own dependencies, living under the repo root:
-
-- `extensions/lsp/<name>` - a language server extension.
-- `extensions/grammars/<name>` - a syntax highlighting extension.
-- `extensions/themes/<name>` - a colour theme extension.
-- `extensions/locales/<name>` - a UI translation extension.
-
-All of these directories are yarn workspaces (see `package.json`'s
-`workspaces` field), and each extension's manifest declares its kind via a
-`gepard.type` field (`"lsp"`, `"grammar"`, `"theme"` or `"locale"`).
-
-Each extension's entry module (`main` in its `package.json`, default
-`index.js`) must be a plain JS/ES module whose default export (or `extension`
-export) is the extension object. The main process scans the bundled and
-user-installed extension directories, checks `gepard.type` against the
-expected kind and validates the export; see `src/main/extensions/scanner.ts`.
-An extension that fails to scan or validate is reported with its error and is
-not loaded.
-
-### LSP
-
-Provides code intelligence for one language family. The extension claims
-files by declaring the languages it serves (name and file extensions); for each opened project it starts
-a session that answers symbol, definition, reference and workspace-symbol
-queries and is told about file changes. Sessions report indexing status and
-logs back through the host's sink and own their server process. Interface:
-`src/common/extensions/lsp.ts`.
-
-### Grammar
-
-Provides syntax highlighting for the renderer. The extension declares the
-languages it handles (name plus file extensions) and builds a CodeMirror
-language on demand from the CodeMirror and Lezer modules the app hands it, so
-the package must be a single self-contained module that never bundles
-CodeMirror itself. Interface: `src/common/extensions/grammar.ts`; example:
-`extensions/grammars/godot`.
-
-### Theme
-
-Pure data: a colour theme declaring its mode (light or dark), optionally its
-contrast (normal or high) and a complete set of UI colour values. It contains
-no code to run. Interface:
-`src/common/extensions/theme.ts`, backed by `src/common/ipc/schemas/theme.ts`.
-
-### Locale
-
-Pure data: a UI translation with an id, display name and a map from source
-(English) message strings to translations. Catalogs are generated and checked
-by `scripts/refresh-locales.ts`. Interface: `src/common/extensions/locale.ts`, backed by
-`src/common/ipc/schemas/locale.ts`.
-
-To add a new extension, add a new package under the matching `extensions/`
-directory, following an existing one as a template.
+Extensions are independent packages, each with its own manifest and
+dependencies, and are yarn workspaces. See [docs/extensions.md](docs/extensions.md) for the interfaces and
+how to write one.

@@ -3,54 +3,59 @@ import type { HandlerMap } from '../registry';
 import * as store from '../../store/projects';
 import type { GhService } from '../../services/gh';
 import type { GitService } from '../../services/git';
-import { indexer } from '../../di';
+import type { IndexerService } from '../../lsp/indexer';
 
-export function createProjectsHandlers(
-  gh: GhService,
-  git: GitService,
-): Pick<
-  HandlerMap,
-  | 'app.viewer'
-  | 'app.viewerRepos'
-  | 'projects.list'
-  | 'projects.add'
-  | 'projects.setTargeting'
-  | 'projects.setLayout'
-  | 'projects.remove'
-  | 'projects.fetch'
-  | 'clone.start'
-> {
-  return {
-    'app.viewer': () => gh.viewer(),
+export class ProjectsHandlers {
+  constructor(
+    private readonly gh: GhService,
+    private readonly git: GitService,
+    private readonly indexer: IndexerService,
+  ) {}
 
-    'app.viewerRepos': () => gh.listViewerRepos(),
+  toHandlerMap(): Pick<
+    HandlerMap,
+    | 'app.viewer'
+    | 'app.viewerRepos'
+    | 'projects.list'
+    | 'projects.add'
+    | 'projects.setTargeting'
+    | 'projects.setLayout'
+    | 'projects.remove'
+    | 'projects.fetch'
+    | 'clone.start'
+  > {
+    return {
+      'app.viewer': () => this.gh.viewer(),
 
-    'projects.list': () => store.listProjects(),
+      'app.viewerRepos': () => this.gh.listViewerRepos(),
 
-    'projects.add': ({ url }) => store.addProject(url),
+      'projects.list': () => store.listProjects(),
 
-    'projects.setTargeting': ({ projectId, targeting }) =>
-      store.setLastTargeting(projectId, targeting),
+      'projects.add': ({ url }) => store.addProject(url),
 
-    'projects.setLayout': ({ projectId, layout }) => store.setLayout(projectId, layout),
+      'projects.setTargeting': ({ projectId, targeting }) =>
+        store.setLastTargeting(projectId, targeting),
 
-    'projects.remove': async ({ projectId }) => {
-      await indexer.close(projectId);
-      await store.removeProject(projectId);
-    },
+      'projects.setLayout': ({ projectId, layout }) => store.setLayout(projectId, layout),
 
-    'projects.fetch': async ({ projectId }) => {
-      const project = await store.getProject(projectId);
-      if (!project) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${projectId}`);
-      if (!project.cloned)
-        throw new AppError('PROJECT_NOT_CLONED', `project ${projectId} is not cloned yet`);
-      await git.fetchOrigin(projectId);
-    },
+      'projects.remove': async ({ projectId }) => {
+        await this.indexer.close(projectId);
+        await store.removeProject(projectId);
+      },
 
-    'clone.start': async ({ projectId }) => {
-      const project = await store.getProject(projectId);
-      if (!project) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${projectId}`);
-      git.cloneProject(projectId, project.url).catch(() => undefined);
-    },
-  };
+      'projects.fetch': async ({ projectId }) => {
+        const project = await store.getProject(projectId);
+        if (!project) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${projectId}`);
+        if (!project.cloned)
+          throw new AppError('PROJECT_NOT_CLONED', `project ${projectId} is not cloned yet`);
+        await this.git.fetchOrigin(projectId);
+      },
+
+      'clone.start': async ({ projectId }) => {
+        const project = await store.getProject(projectId);
+        if (!project) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${projectId}`);
+        this.git.cloneProject(projectId, project.url).catch(() => undefined);
+      },
+    };
+  }
 }
