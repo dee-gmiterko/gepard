@@ -7,7 +7,6 @@ out
 .vscode
 *.tsbuildinfo
 .turbo
-extensions-dist
 
 .yarn/*
 !.yarn/patches

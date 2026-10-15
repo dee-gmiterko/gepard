@@ -56,7 +56,7 @@ export function extensionsRootDir(): string {
 export function builtinExtensionsDir(): string {
   return app.isPackaged
     ? join(process.resourcesPath, 'extensions')
-    : join(app.getAppPath(), 'extensions-dist');
+    : join(app.getAppPath(), '../../dist/extensions');
 }
 
 export function extensionDataDir(id: string): string {

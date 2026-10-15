@@ -5,11 +5,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs';
+import { formatJson } from './helpers/format-json';
 import {
   buildCatalog,
   buildReleaseConfig,
   mergeReleaseManifest,
-  render,
   type ExtensionManifest,
   type ExtensionPackage,
   type ReleaseConfig,
@@ -69,21 +69,25 @@ function treeSha(dir: string): string {
   }
 }
 
-function main({ check }: { check: boolean }): void {
+async function main({ check }: { check: boolean }): Promise<void> {
   const packages = listExtensionPackages();
-  const outputs = [
-    { file: CATALOG_FILE, content: render(buildCatalog(packages, repositorySlug(), treeSha)) },
-    {
-      file: RELEASE_CONFIG_FILE,
-      content: render(buildReleaseConfig(readJson<ReleaseConfig>(RELEASE_CONFIG_FILE), packages)),
-    },
-    {
-      file: RELEASE_MANIFEST_FILE,
-      content: render(
-        mergeReleaseManifest(readJson<ReleaseManifest>(RELEASE_MANIFEST_FILE), packages),
-      ),
-    },
+  const values: Array<[string, unknown]> = [
+    [CATALOG_FILE, buildCatalog(packages, repositorySlug(), treeSha)],
+    [
+      RELEASE_CONFIG_FILE,
+      buildReleaseConfig(readJson<ReleaseConfig>(RELEASE_CONFIG_FILE), packages),
+    ],
+    [
+      RELEASE_MANIFEST_FILE,
+      mergeReleaseManifest(readJson<ReleaseManifest>(RELEASE_MANIFEST_FILE), packages),
+    ],
   ];
+  const outputs = await Promise.all(
+    values.map(async ([file, value]) => ({
+      file,
+      content: await formatJson(value, path.join(ROOT_DIR, file)),
+    })),
+  );
 
   if (check) {
     const outdated = outputs.filter(
@@ -116,5 +120,8 @@ if (isMain) {
     .strict()
     .parseSync();
 
-  main({ check: argv.check });
+  main({ check: argv.check }).catch((error: unknown) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
 }
