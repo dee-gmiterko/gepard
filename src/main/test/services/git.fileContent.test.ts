@@ -49,6 +49,12 @@ describe('GitService file content and diff over unusual tree entries (integratio
     await mkdir(join(o, 'x'));
     await writeFile(join(o, 'x', 'y.txt'), 'y\n');
     oids.dir = await commit('replace file x by directory x');
+    await writeFile(join(o, 'bin.dat'), Buffer.from([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
+    oids.binEdited = await commit('grow bin.dat');
+    await git(o, ['rm', '-q', 'bin.dat']);
+    oids.binRemoved = await commit('remove bin.dat');
+    await writeFile(join(o, 'bin.dat'), Buffer.from([0, 9, 8, 7]));
+    oids.binReadded = await commit('re-add bin.dat');
     await gitService.cloneProject(projectId, `file://${o}`);
   }, 30_000);
 
@@ -65,8 +71,13 @@ describe('GitService file content and diff over unusual tree entries (integratio
       });
     });
 
-    it('reports a binary file as binary', async () => {
-      expect((await gitService.fileContentAt(projectId, oids.file, 'bin.dat')).kind).toBe('binary');
+    it('reports a binary file as binary with its byte size', async () => {
+      expect(await gitService.fileContentAt(projectId, oids.file, 'bin.dat')).toEqual({
+        kind: 'binary',
+        path: 'bin.dat',
+        sha: oids.file,
+        size: 6,
+      });
     });
 
     it('reports a nonexistent path as missing', async () => {
@@ -84,6 +95,25 @@ describe('GitService file content and diff over unusual tree entries (integratio
   describe('fileDiff', () => {
     it('diffs a modified text file', async () => {
       expect((await gitService.fileDiff(projectId, oids.file, oids.edited, 'x')).kind).toBe('text');
+    });
+
+    it('reports the byte sizes of both sides of a modified binary file', async () => {
+      expect(await gitService.fileDiff(projectId, oids.dir, oids.binEdited, 'bin.dat')).toEqual({
+        kind: 'binary',
+        path: 'bin.dat',
+        previousPath: null,
+        oldSize: 6,
+        newSize: 10,
+      });
+    });
+
+    it('reports a null size for the missing side of a deleted or added binary file', async () => {
+      expect(
+        await gitService.fileDiff(projectId, oids.binEdited, oids.binRemoved, 'bin.dat'),
+      ).toMatchObject({ kind: 'binary', oldSize: 10, newSize: null });
+      expect(
+        await gitService.fileDiff(projectId, oids.binRemoved, oids.binReadded, 'bin.dat'),
+      ).toMatchObject({ kind: 'binary', oldSize: null, newSize: 4 });
     });
 
     it('reports a path absent on both sides as missing', async () => {
