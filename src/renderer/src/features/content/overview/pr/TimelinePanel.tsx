@@ -10,6 +10,7 @@ import {
   groupTimelineByDay,
 } from '../../../../helpers/overview';
 import { Panel } from '../shared/Panel';
+import { SkeletonRows } from '../shared/SkeletonRows';
 import { TimelineDay } from './TimelineDay';
 
 const messages = defineMessages({
@@ -20,32 +21,38 @@ export function TimelinePanel({
   pr,
   details,
 }: {
-  pr: PrSummary;
+  pr: PrSummary | null;
   details: PrOverviewDetails | undefined;
 }): React.JSX.Element {
-  const commits = usePrCommits().data;
-  const threads = useComments().data;
+  const commitsQuery = usePrCommits();
+  const commentsQuery = useComments();
+  const commits = commitsQuery.data;
+  const threads = commentsQuery.data;
+  const isLoading = !pr || commitsQuery.isLoading || commentsQuery.isLoading || !details;
   const days = useMemo(
     () =>
-      groupTimelineByDay(
-        groupTimeline(
-          buildTimelineEvents({
-            author: pr.author.login,
-            createdAt: pr.createdAt,
-            commits: commits ?? [],
-            threads: threads ?? [],
-            details: details ?? null,
-          }),
-        ),
-      ),
+      pr
+        ? groupTimelineByDay(
+            groupTimeline(
+              buildTimelineEvents({
+                author: pr.author.login,
+                createdAt: pr.createdAt,
+                commits: commits ?? [],
+                threads: threads ?? [],
+                details: details ?? null,
+              }),
+            ),
+          )
+        : [],
     [pr, commits, threads, details],
   );
   return (
     <Panel title={<FormattedMessage {...messages.title} />}>
-      <Stack $gap={4}>
+      <Stack $gap={4} aria-busy={isLoading}>
         {days.map((day) => (
           <TimelineDay key={day.day} day={day} />
         ))}
+        {isLoading && <SkeletonRows rows={3} />}
       </Stack>
     </Panel>
   );

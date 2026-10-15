@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { Surface } from '../../../../components/Surface';
 import { Markdown } from '../../../../components/Markdown';
 import { Panel } from '../shared/Panel';
+import { QueryState } from '../shared/QueryState';
 import { Muted } from '../shared/overviewStyles';
 
 const messages = defineMessages({
@@ -19,10 +20,21 @@ const Scroll = styled(Surface).attrs({ $elevation: 'flat' })`
   padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[3]};
 `;
 
-export function DescriptionPanel({ body }: { body: string }): React.JSX.Element {
+export function DescriptionPanel({
+  body,
+  error,
+}: {
+  body: string | undefined;
+  error: Error | null;
+}): React.JSX.Element {
   return (
-    <Panel title={<FormattedMessage {...messages.title} />}>
-      {body.trim() ? (
+    <Panel
+      title={<FormattedMessage {...messages.title} />}
+      isLoading={body === undefined && !error}
+    >
+      {body === undefined ? (
+        <QueryState isLoading={false} error={error} />
+      ) : body.trim() ? (
         <Scroll>
           <Markdown>{body}</Markdown>
         </Scroll>

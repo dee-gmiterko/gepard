@@ -14,12 +14,22 @@ const messages = defineMessages({
 
 const LIMIT = 5;
 
-export function TopFilesPanel({ files }: { files: readonly ChangedFile[] }): React.JSX.Element {
+export function TopFilesPanel({
+  files,
+  isLoading = false,
+}: {
+  files: readonly ChangedFile[];
+  isLoading?: boolean;
+}): React.JSX.Element {
   const actions = useOverviewActions();
   const viewedPaths = useViewedPaths();
   const top = useMemo(() => topChangedFiles(files, LIMIT), [files]);
   return (
-    <Panel title={<FormattedMessage {...messages.title} />}>
+    <Panel
+      title={<FormattedMessage {...messages.title} />}
+      isLoading={isLoading}
+      skeletonRows={LIMIT}
+    >
       <Table>
         {top.map((f) => (
           <TopFileRow

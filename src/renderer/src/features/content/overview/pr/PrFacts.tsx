@@ -2,8 +2,9 @@ import { defineMessages, FormattedMessage } from 'react-intl';
 import styled from 'styled-components';
 import type { PrSummary } from '@gepard/common';
 import { Inline } from '../../../../components/Layout';
+import { Skeleton } from '../../../../components/Skeleton';
 import { Surface } from '../../../../components/Surface';
-import { useComments } from '../../../../queries/comments';
+import { useComments, useViewed } from '../../../../queries/comments';
 import { usePrCommits } from '../../../../queries/prs';
 import { FileCount } from '../shared/FileCount';
 import { Lines } from '../shared/Lines';
@@ -35,11 +36,14 @@ const Box = styled(Surface).attrs({ $elevation: 'flat' })`
   font-size: ${({ theme }) => theme.font.size.sm};
 `;
 
-export function PrFacts({ pr }: { pr: PrSummary }): React.JSX.Element {
+export function PrFacts({ pr }: { pr: PrSummary | null }): React.JSX.Element {
   const actions = useOverviewActions();
-  const { files } = useChangedFileList();
-  const commits = usePrCommits().data;
-  const threads = useComments().data ?? [];
+  const { files, isLoading: filesLoading } = useChangedFileList();
+  const commitsQuery = usePrCommits();
+  const commentsQuery = useComments();
+  const viewedQuery = useViewed();
+  const commits = commitsQuery.data;
+  const threads = commentsQuery.data ?? [];
   const viewedPaths = useViewedPaths();
 
   const additions = files.reduce((sum, f) => sum + f.additions, 0);
@@ -52,33 +56,53 @@ export function PrFacts({ pr }: { pr: PrSummary }): React.JSX.Element {
   const unresolved = threads.filter((t) => !t.isResolved && t.anchor.subjectType !== 'PR').length;
 
   return (
-    <Box>
+    <Box aria-busy={filesLoading || commitsQuery.isLoading || commentsQuery.isLoading}>
       <Inline $gap={2}>
-        <Lines additions={additions} deletions={deletions} />
-        <Muted>
-          <FileCount files={files.length || pr.changedFiles} />
-        </Muted>
+        {filesLoading ? (
+          <Skeleton width="96px" />
+        ) : (
+          <Lines additions={additions} deletions={deletions} />
+        )}
+        {filesLoading && !pr ? (
+          <Skeleton width="56px" />
+        ) : (
+          <Muted>
+            <FileCount files={files.length || (pr?.changedFiles ?? 0)} />
+          </Muted>
+        )}
       </Inline>
-      <Muted>
-        <FormattedMessage {...messages.commits} values={{ count: commits?.length ?? 0 }} />
-      </Muted>
-      <LinkButton onClick={actions.openComments}>
-        <Num>
-          <FormattedMessage {...messages.comments} values={{ total: commentTotal }} />
-          <FormattedMessage {...messages.unresolved} values={{ count: unresolved }} />
-        </Num>
-      </LinkButton>
-      <LinkButton onClick={actions.openFiles}>
-        <Inline $gap={2}>
-          <ProgressBar value={viewedCount} max={files.length} />
+      {commitsQuery.isLoading ? (
+        <Skeleton width="72px" />
+      ) : (
+        <Muted>
+          <FormattedMessage {...messages.commits} values={{ count: commits?.length ?? 0 }} />
+        </Muted>
+      )}
+      {commentsQuery.isLoading ? (
+        <Skeleton width="128px" />
+      ) : (
+        <LinkButton onClick={actions.openComments}>
           <Num>
-            <FormattedMessage
-              {...messages.progress}
-              values={{ done: viewedCount, total: files.length }}
-            />
+            <FormattedMessage {...messages.comments} values={{ total: commentTotal }} />
+            <FormattedMessage {...messages.unresolved} values={{ count: unresolved }} />
           </Num>
-        </Inline>
-      </LinkButton>
+        </LinkButton>
+      )}
+      {filesLoading || viewedQuery.isLoading ? (
+        <Skeleton width="160px" />
+      ) : (
+        <LinkButton onClick={actions.openFiles}>
+          <Inline $gap={2}>
+            <ProgressBar value={viewedCount} max={files.length} />
+            <Num>
+              <FormattedMessage
+                {...messages.progress}
+                values={{ done: viewedCount, total: files.length }}
+              />
+            </Num>
+          </Inline>
+        </LinkButton>
+      )}
     </Box>
   );
 }
