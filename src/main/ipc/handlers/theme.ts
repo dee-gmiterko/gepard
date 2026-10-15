@@ -1,6 +1,6 @@
 import type { HandlerMap } from '../registry';
 import { getTemplateId, setTemplateId } from '../../store/settings';
-import { extensionRegistry } from '../../extensions/registry';
+import { extensionsService } from '../../di';
 
 export const themeHandlers: Pick<
   HandlerMap,
@@ -9,7 +9,7 @@ export const themeHandlers: Pick<
   'theme.getTemplateId': () => getTemplateId(),
   'theme.setTemplateId': ({ templateId }) => setTemplateId(templateId),
   'themes.list': async () =>
-    (await extensionRegistry.enabledThemeTemplates()).map(
+    (await extensionsService.enabledThemeTemplates()).map(
       ({ id, name, mode, contrast, shadow, colors, syntax }) => ({
         id,
         name,

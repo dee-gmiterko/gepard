@@ -1,14 +1,5 @@
 import * as path from 'node:path';
-import { cp, mkdir, readdir, rm } from 'node:fs/promises';
-import {
-  errorMessage,
-  isErrnoException,
-  type ExtensionInfo,
-  type ExtensionKind,
-  type ExtensionSource,
-  AppError,
-} from '@gepard/common';
-import { builtinExtensionsDir, userExtensionsDir, type ExtensionKindDir } from '../paths';
+import type { ExtensionInfo, ExtensionKind, ExtensionSource } from '@gepard/common';
 import * as extensionsStore from '../store/extensions';
 import * as settingsStore from '../store/settings';
 import {
@@ -19,14 +10,13 @@ import {
   type LoadedExtensionPackage,
   type ScanCache,
   type Sourced,
-} from '../extensions/scanner';
+} from './scanner';
 
 const BUILTIN: ExtensionSource = { kind: 'builtin' };
 const LOCAL: ExtensionSource = { kind: 'local' };
 
 export interface KindSpec<T> {
   kind: ExtensionKind;
-  dirName: ExtensionKindDir;
   isValid: (value: unknown) => value is T;
   getId: (item: T) => string;
   getDisplayName: (item: T) => string;
@@ -39,11 +29,6 @@ interface KnownExtension<T> {
   version?: string;
 }
 
-export interface InstallOptions {
-  dirName?: string;
-  replacePackage?: string;
-}
-
 export class KindRegistry<T> {
   private builtin: LoadedExtensionPackage<T>[] = [];
   private external: LoadedExtensionPackage<T>[] = [];
@@ -54,24 +39,16 @@ export class KindRegistry<T> {
 
   constructor(
     private readonly spec: KindSpec<T>,
-    private readonly overrideUserDir?: string,
-    private readonly overrideBuiltinDir?: string,
+    private readonly userDir: () => string,
+    private readonly builtinDir: () => string,
   ) {}
-
-  private get userDir(): string {
-    return this.overrideUserDir ?? userExtensionsDir(this.spec.dirName);
-  }
-
-  private get builtinDir(): string {
-    return this.overrideBuiltinDir ?? builtinExtensionsDir(this.spec.dirName);
-  }
 
   private async rescan(enabledMap: settingsStore.ExtensionsState): Promise<void> {
     const knownDirs = await extensionsStore.getKnownFiles();
     const knownMap = new Map(Object.entries(knownDirs));
 
     const builtinResult = await loadExtensionPackages(
-      this.builtinDir,
+      this.builtinDir(),
       this.spec.kind,
       this.spec.isValid,
       this.builtinScanCache,
@@ -79,7 +56,7 @@ export class KindRegistry<T> {
       (id) => enabledMap[id] ?? true,
     );
     const externalResult = await loadExtensionPackages(
-      this.userDir,
+      this.userDir(),
       this.spec.kind,
       this.spec.isValid,
       this.externalScanCache,
@@ -113,8 +90,13 @@ export class KindRegistry<T> {
       const id = this.spec.getId(extension);
       const displayName = this.spec.getDisplayName(extension);
       const prev = known[dir];
-      if (!prev || prev.id !== id || prev.displayName !== displayName) {
-        next[dir] = { id, displayName };
+      if (
+        !prev ||
+        prev.id !== id ||
+        prev.displayName !== displayName ||
+        prev.kind !== this.spec.kind
+      ) {
+        next[dir] = { id, displayName, kind: this.spec.kind };
         changed = true;
       }
     }
@@ -172,59 +154,8 @@ export class KindRegistry<T> {
     return [...known, ...broken, ...disabled];
   }
 
-  private async removeExternalPackage(packageName: string): Promise<void> {
-    let names: string[];
-    try {
-      names = (await readdir(this.userDir, { withFileTypes: true }))
-        .filter((e) => e.isDirectory())
-        .map((e) => e.name);
-    } catch (e) {
-      if (isErrnoException(e) && e.code === 'ENOENT') return;
-      throw e;
-    }
-    for (const name of names) {
-      const dir = path.join(this.userDir, name);
-      let installedName: string | undefined;
-      try {
-        installedName = (await readManifest(dir)).name;
-      } catch {
-        continue;
-      }
-      if (installedName !== packageName) continue;
-      try {
-        await rm(dir, { recursive: true, force: true });
-      } catch (e) {
-        throw new AppError(
-          'EXTENSION_IN_USE',
-          `"${name}" could not be removed (${errorMessage(e)}); restart Gepard and try again.`,
-        );
-      }
-      this.externalScanCache.delete(dir);
-    }
-  }
-
-  async install(srcDir: string, options: InstallOptions = {}): Promise<void> {
-    const name = options.dirName ?? path.basename(srcDir);
-    await mkdir(this.userDir, { recursive: true });
-    if (options.replacePackage !== undefined) {
-      await this.removeExternalPackage(options.replacePackage);
-      await rm(path.join(this.userDir, name), { recursive: true, force: true });
-    }
-    try {
-      await cp(srcDir, path.join(this.userDir, name), {
-        recursive: true,
-        errorOnExist: true,
-        force: false,
-      });
-    } catch (e) {
-      if (isErrnoException(e) && e.code === 'ERR_FS_CP_EEXIST') {
-        throw new AppError(
-          'EXTENSION_ALREADY_EXISTS',
-          `An extension named "${name}" already exists.`,
-        );
-      }
-      throw e;
-    }
+  forget(dir: string): void {
+    this.externalScanCache.delete(dir);
   }
 
   async enabledPackages(): Promise<LoadedExtensionPackage<T>[]> {

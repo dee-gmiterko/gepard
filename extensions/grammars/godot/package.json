@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Bundled Godot grammar extension for Gepard (GDScript, scene and resource files, shaders).",
+  "description": "Syntax highlighting for GDScript, Godot scene and resource files and shaders.",
   "main": "dist/index.js",
   "files": [
     "dist",

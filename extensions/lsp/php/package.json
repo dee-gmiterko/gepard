@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Code intelligence for PHP projects (PHPantom, downloaded on first use).",
+  "description": "Code intelligence for PHP projects (PHPantom).",
   "main": "dist/index.js",
   "files": [
     "dist"

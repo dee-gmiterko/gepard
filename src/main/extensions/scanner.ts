@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
   errorMessage,
+  ExtensionKind,
   extensionModuleSchema,
   isErrnoException,
   packageManifestSchema,
@@ -42,6 +43,7 @@ export type Sourced<T> = T & { source: ExtensionSource };
 export type ScanEntry<T> =
   | { extension: T; manifest: PackageManifest }
   | { error: string }
+  | { skipped: true }
   | { disabled: extensionsStore.KnownFile };
 
 export type ScanCache<T> = Map<string, ScanEntry<T>>;
@@ -88,13 +90,23 @@ export async function loadExtensionPackages<T>(
       loaded.push({ extension: prior.extension, dir: pkgDir, manifest: prior.manifest });
       continue;
     }
+    if (prior && 'skipped' in prior) {
+      cache.set(pkgDir, prior);
+      continue;
+    }
     if (prior && 'error' in prior) {
       cache.set(pkgDir, prior);
       failed.push({ dir: pkgDir, error: prior.error });
       continue;
     }
 
-    const known = prior && 'disabled' in prior ? prior.disabled : knownDirs.get(pkgDir);
+    const knownEntry = knownDirs.get(pkgDir);
+    const known =
+      prior && 'disabled' in prior
+        ? prior.disabled
+        : knownEntry && (knownEntry.kind ?? kind) === kind
+          ? knownEntry
+          : undefined;
     if (known && !isEnabled(known.id)) {
       const entry: ScanEntry<T> = { disabled: known };
       cache.set(pkgDir, entry);
@@ -104,7 +116,12 @@ export async function loadExtensionPackages<T>(
 
     try {
       const manifest = await readManifest(pkgDir);
-      if (manifest.gepard?.type !== kind) {
+      const type = manifest.gepard?.type;
+      if (type !== kind) {
+        if (ExtensionKind.safeParse(type).success) {
+          cache.set(pkgDir, { skipped: true });
+          continue;
+        }
         throw new Error(
           `package.json "gepard.type" is ${JSON.stringify(manifest.gepard?.type ?? null)}, expected ${JSON.stringify(kind)}`,
         );

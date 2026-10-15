@@ -42,12 +42,10 @@ export const CatalogEntryStatus = z.object({
   description: z.string(),
   repository: z.string(),
   path: z.string(),
-  latestVersion: z.string(),
   sha: z.string(),
   supported: z.boolean(),
   installedVersion: z.string().nullable(),
   installedSource: ExtensionSource.nullable(),
-  updateAvailable: z.boolean(),
 });
 export type CatalogEntryStatus = z.infer<typeof CatalogEntryStatus>;
 

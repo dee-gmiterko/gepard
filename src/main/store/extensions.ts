@@ -1,9 +1,14 @@
 import { z } from 'zod';
+import { ExtensionKind } from '@gepard/common';
 import { extensionsFilesJsonPath, writeLockPath } from '../paths';
 import { withFileLock } from '../helpers/fileLock';
 import { readJsonFile, writeJsonFile } from '../helpers/jsonFile';
 
-const KnownFile = z.object({ id: z.string(), displayName: z.string() });
+const KnownFile = z.object({
+  id: z.string(),
+  displayName: z.string(),
+  kind: ExtensionKind.optional(),
+});
 export type KnownFile = z.infer<typeof KnownFile>;
 
 const KnownFilesState = z.record(z.string(), KnownFile);

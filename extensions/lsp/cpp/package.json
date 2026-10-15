@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Code intelligence for C and C++ projects (clangd, downloaded on first use).",
+  "description": "Code intelligence for C and C++ projects (clangd).",
   "main": "dist/index.js",
   "files": [
     "dist"

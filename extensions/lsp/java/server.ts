@@ -25,6 +25,7 @@ export async function open(
   sink: ExtensionEvents,
 ): Promise<LanguageSession> {
   await requireCommand('java');
+
   const dir = await materializePayload(
     {
       vendorDir: path.join(
@@ -36,6 +37,7 @@ export async function open(
     },
     host.dataDir,
   );
+
   const launcher = await launcherJar(path.join(dir, 'plugins'));
   return JdtlsSession.start(
     {

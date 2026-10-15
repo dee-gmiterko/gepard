@@ -1,6 +1,5 @@
 import { app } from 'electron';
 import { join } from 'node:path';
-import { z } from 'zod';
 import { ProjectId, AppError } from '@gepard/common';
 
 export function userDataDir(): string {
@@ -50,22 +49,14 @@ export function projectReviewDir(id: string): string {
   return join(projectDir(id), 'review');
 }
 
-export const ExtensionKindDir = z.enum(['lsp', 'grammars', 'themes', 'locales']);
-export type ExtensionKindDir = z.infer<typeof ExtensionKindDir>;
-
 export function extensionsRootDir(): string {
   return join(userDataDir(), 'extensions');
 }
 
-export function userExtensionsDir(kind: ExtensionKindDir): string {
-  return join(extensionsRootDir(), kind);
-}
-
-export function builtinExtensionsDir(kind: ExtensionKindDir): string {
-  const root = app.isPackaged
+export function builtinExtensionsDir(): string {
+  return app.isPackaged
     ? join(process.resourcesPath, 'extensions')
-    : join(app.getAppPath(), '..', '..', 'extensions');
-  return join(root, kind);
+    : join(app.getAppPath(), 'extensions-dist');
 }
 
 export function extensionDataDir(id: string): string {

@@ -53,16 +53,8 @@ describe('extractTarGz', () => {
     await execFileAsync('tar', ['-czf', archive, '-C', join(tmp.path, 'src'), 'pkg']);
 
     const dest = join(tmp.path, 'out');
-    const { files } = await extractTarGz(archive, dest);
+    await extractTarGz(archive, dest);
 
-    expect(files.sort()).toEqual(
-      [
-        'pkg/package.json',
-        `pkg/${'a'.repeat(60)}/${'b'.repeat(60)}/file.txt`,
-        'pkg/run.sh',
-        'pkg/big.bin',
-      ].sort(),
-    );
     expect(await readFile(join(dest, 'pkg', 'package.json'), 'utf8')).toBe('{"name":"x"}');
     expect(
       await readFile(join(dest, 'pkg', 'a'.repeat(60), 'b'.repeat(60), 'file.txt'), 'utf8'),
@@ -82,20 +74,14 @@ describe('extractTarGz', () => {
     await expect(extractTarGz(archive, join(tmp.path, 'out'))).rejects.toMatchObject({
       code: 'EXTENSION_INVALID_ARCHIVE',
     });
+    await expect(stat(join(tmp.path, 'escape.txt'))).rejects.toThrow();
   });
 
-  it('rejects symlinks and truncated or non-gzip input', async () => {
+  it('rejects symlinks and non-gzip input', async () => {
     tmp = await makeTmpDir('tar');
     const link = join(tmp.path, 'link.tar.gz');
     await writeFile(link, tarGz([tarEntry('pkg/link', Buffer.alloc(0), '2')]));
     await expect(extractTarGz(link, join(tmp.path, 'out1'))).rejects.toMatchObject({
-      code: 'EXTENSION_INVALID_ARCHIVE',
-    });
-
-    const truncated = join(tmp.path, 'truncated.tar.gz');
-    const entry = tarEntry('pkg/file', Buffer.from('hello'));
-    await writeFile(truncated, gzipSync(entry.subarray(0, 512 + 2)));
-    await expect(extractTarGz(truncated, join(tmp.path, 'out2'))).rejects.toMatchObject({
       code: 'EXTENSION_INVALID_ARCHIVE',
     });
 

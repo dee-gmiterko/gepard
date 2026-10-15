@@ -4,7 +4,7 @@ import {
   buildReleaseConfig,
   mergeReleaseManifest,
   type ExtensionPackage,
-} from '../refresh-catalog';
+} from '../helpers/catalog';
 
 const PACKAGES: ExtensionPackage[] = [
   {
@@ -23,32 +23,33 @@ const PACKAGES: ExtensionPackage[] = [
 ];
 
 describe('buildCatalog', () => {
-  it('lists every extension with its tree sha and omits platforms when unrestricted', () => {
+  it('lists every extension with its repository, path and tree sha and omits platforms when unrestricted', () => {
     const catalog = buildCatalog(PACKAGES, 'o/r', (dir) => `sha:${dir}`);
     expect(catalog).toEqual({
       schemaVersion: 1,
-      repository: 'o/r',
-      extensions: {
-        'gepard-ext-typescript': {
+      extensions: [
+        {
+          name: 'gepard-ext-typescript',
+          repository: 'o/r',
+          path: 'extensions/lsp/typescript',
           displayName: 'TypeScript',
           kind: 'lsp',
           description: 'TypeScript LSP',
-          path: 'extensions/lsp/typescript',
-          version: '0.1.0',
           platforms: ['linux-x64'],
           sha: 'sha:extensions/lsp/typescript',
         },
-        'gepard-theme-dark': {
+        {
+          name: 'gepard-theme-dark',
+          repository: 'o/r',
+          path: 'extensions/themes/dark',
           displayName: 'gepard-theme-dark',
           kind: 'theme',
           description: '',
-          path: 'extensions/themes/dark',
-          version: '0.2.0',
           sha: 'sha:extensions/themes/dark',
         },
-      },
+      ],
     });
-    expect(Object.keys(catalog.extensions['gepard-theme-dark'])).not.toContain('platforms');
+    expect(Object.keys(catalog.extensions[1])).not.toContain('platforms');
   });
 });
 
@@ -72,13 +73,6 @@ describe('buildReleaseConfig', () => {
     expect(config.packages['extensions/themes/dark']).toEqual({
       component: 'gepard-theme-dark',
       'include-component-in-tag': true,
-      'extra-files': [
-        {
-          type: 'json',
-          path: '/extensions/catalog.json',
-          jsonpath: "$.extensions['gepard-theme-dark'].version",
-        },
-      ],
     });
   });
 });

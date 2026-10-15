@@ -32,3 +32,10 @@ export function languageIdOf(
       language.extensions.some((extension) => fileName.endsWith(`.${extension}`)),
   )?.name;
 }
+
+export function packageDirName(packageName: string): string {
+  return packageName
+    .replace(/^@/, '')
+    .replace(/[\\/]+/g, '-')
+    .replace(/^\.+/, '');
+}

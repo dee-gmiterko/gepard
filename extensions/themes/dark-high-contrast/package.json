@@ -2,7 +2,7 @@
   "name": "gepard-theme-dark-high-contrast",
   "version": "0.1.0",
   "private": true,
-  "description": "Built-in dark high contrast theme extension for Gepard.",
+  "description": "Dark high contrast colour theme.",
   "main": "index.mjs",
   "files": [
     "index.mjs"

@@ -1,28 +1,28 @@
-import { readFile } from 'node:fs/promises';
+import { cp, mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import * as path from 'node:path';
 import {
+  AppError,
   errorMessage,
+  isErrnoException,
   isGrammarExtension,
   isLanguageExtension,
   isLocaleExtension,
   isThemeExtension,
-  type PackageManifest,
   type ExtensionInfo,
-  type GrammarModule,
   type GrammarExtension,
-  type ThemeExtension,
-  type LocaleExtension,
+  type GrammarModule,
   type LanguageExtension,
-  AppError,
+  type LocaleExtension,
+  type PackageManifest,
+  type ThemeExtension,
 } from '@gepard/common';
-import { type ExtensionKindDir } from '../paths';
+import { dedupeBroken } from '../helpers/extension';
+import { KindRegistry, type KindSpec } from '../extensions/kindRegistry';
+import { readManifest } from '../extensions/scanner';
 import * as settingsStore from '../store/settings';
-import { KindRegistry, type InstallOptions, type KindSpec } from '../helpers/kindRegistry';
-import { readManifest } from './scanner';
 
 const LSP_SPEC: KindSpec<LanguageExtension> = {
   kind: 'lsp',
-  dirName: 'lsp',
   isValid: isLanguageExtension,
   getId: (item) => item.id,
   getDisplayName: (item) => item.displayName,
@@ -30,7 +30,6 @@ const LSP_SPEC: KindSpec<LanguageExtension> = {
 
 const GRAMMAR_SPEC: KindSpec<GrammarExtension> = {
   kind: 'grammar',
-  dirName: 'grammars',
   isValid: isGrammarExtension,
   getId: (item) => item.id,
   getDisplayName: (item) => item.displayName,
@@ -38,7 +37,6 @@ const GRAMMAR_SPEC: KindSpec<GrammarExtension> = {
 
 const THEME_SPEC: KindSpec<ThemeExtension> = {
   kind: 'theme',
-  dirName: 'themes',
   isValid: isThemeExtension,
   getId: (item) => item.id,
   getDisplayName: (item) => item.name,
@@ -46,41 +44,40 @@ const THEME_SPEC: KindSpec<ThemeExtension> = {
 
 const LOCALE_SPEC: KindSpec<LocaleExtension> = {
   kind: 'locale',
-  dirName: 'locales',
   isValid: isLocaleExtension,
   getId: (item) => item.id,
   getDisplayName: (item) => item.displayName,
 };
 
-export class ExtensionRegistry {
+export interface InstallOptions {
+  dirName?: string;
+  replacePackage?: string;
+}
+
+export class ExtensionsService {
   private readonly lsp: KindRegistry<LanguageExtension>;
   private readonly grammar: KindRegistry<GrammarExtension>;
   private readonly theme: KindRegistry<ThemeExtension>;
   private readonly locale: KindRegistry<LocaleExtension>;
 
-  constructor(overrideUserRootDir?: string, overrideBuiltinRootDir?: string) {
-    const override = (root: string | undefined, dirName: ExtensionKindDir): string | undefined =>
-      root ? path.join(root, dirName) : undefined;
-    const registryFor = <T>(spec: KindSpec<T>): KindRegistry<T> =>
-      new KindRegistry(
-        spec,
-        override(overrideUserRootDir, spec.dirName),
-        override(overrideBuiltinRootDir, spec.dirName),
-      );
-    this.lsp = registryFor(LSP_SPEC);
-    this.grammar = registryFor(GRAMMAR_SPEC);
-    this.theme = registryFor(THEME_SPEC);
-    this.locale = registryFor(LOCALE_SPEC);
+  constructor(
+    readonly userDir: () => string,
+    builtinDir: () => string,
+  ) {
+    this.lsp = new KindRegistry(LSP_SPEC, userDir, builtinDir);
+    this.grammar = new KindRegistry(GRAMMAR_SPEC, userDir, builtinDir);
+    this.theme = new KindRegistry(THEME_SPEC, userDir, builtinDir);
+    this.locale = new KindRegistry(LOCALE_SPEC, userDir, builtinDir);
   }
 
   async list(): Promise<ExtensionInfo[]> {
-    const [lsp, grammar, theme, locale] = await Promise.all([
+    const lists = await Promise.all([
       this.lsp.list(),
       this.grammar.list(),
       this.theme.list(),
       this.locale.list(),
     ]);
-    return [...lsp, ...grammar, ...theme, ...locale];
+    return dedupeBroken(lists.flat());
   }
 
   async setEnabled(id: string, enabled: boolean): Promise<ExtensionInfo[]> {
@@ -100,21 +97,78 @@ export class ExtensionRegistry {
       );
     }
     const type = manifest.gepard?.type;
-    if (type === LSP_SPEC.kind) {
-      await this.lsp.install(srcDir, options);
-    } else if (type === GRAMMAR_SPEC.kind) {
-      await this.grammar.install(srcDir, options);
-    } else if (type === THEME_SPEC.kind) {
-      await this.theme.install(srcDir, options);
-    } else if (type === LOCALE_SPEC.kind) {
-      await this.locale.install(srcDir, options);
-    } else {
+    if (![LSP_SPEC, GRAMMAR_SPEC, THEME_SPEC, LOCALE_SPEC].some((spec) => spec.kind === type)) {
       throw new AppError(
         'EXTENSION_INVALID_PACKAGE',
         `"${name}"'s package.json must set "gepard": { "type": "lsp" | "grammar" | "theme" | "locale" } (got ${JSON.stringify(type ?? null)})`,
       );
     }
+    await this.copyPackage(srcDir, options);
     return this.list();
+  }
+
+  private async copyPackage(srcDir: string, options: InstallOptions): Promise<void> {
+    const userDir = this.userDir();
+    const name = options.dirName ?? path.basename(srcDir);
+    await mkdir(userDir, { recursive: true });
+    if (options.replacePackage !== undefined) {
+      await this.removePackage(userDir, options.replacePackage);
+      await rm(path.join(userDir, name), { recursive: true, force: true });
+      this.forget(path.join(userDir, name));
+    }
+    try {
+      await cp(srcDir, path.join(userDir, name), {
+        recursive: true,
+        errorOnExist: true,
+        force: false,
+      });
+    } catch (e) {
+      if (isErrnoException(e) && e.code === 'ERR_FS_CP_EEXIST') {
+        throw new AppError(
+          'EXTENSION_ALREADY_EXISTS',
+          `An extension named "${name}" already exists.`,
+        );
+      }
+      throw e;
+    }
+  }
+
+  private async removePackage(userDir: string, packageName: string): Promise<void> {
+    let names: string[];
+    try {
+      names = (await readdir(userDir, { withFileTypes: true }))
+        .filter((e) => e.isDirectory())
+        .map((e) => e.name);
+    } catch (e) {
+      if (isErrnoException(e) && e.code === 'ENOENT') return;
+      throw e;
+    }
+    for (const name of names) {
+      const dir = path.join(userDir, name);
+      let installedName: string | undefined;
+      try {
+        installedName = (await readManifest(dir)).name;
+      } catch {
+        continue;
+      }
+      if (installedName !== packageName) continue;
+      try {
+        await rm(dir, { recursive: true, force: true });
+      } catch (e) {
+        throw new AppError(
+          'EXTENSION_IN_USE',
+          `"${name}" could not be removed (${errorMessage(e)}); restart Gepard and try again.`,
+        );
+      }
+      this.forget(dir);
+    }
+  }
+
+  private forget(dir: string): void {
+    this.lsp.forget(dir);
+    this.grammar.forget(dir);
+    this.theme.forget(dir);
+    this.locale.forget(dir);
   }
 
   async enabledLanguageExtensions(): Promise<LanguageExtension[]> {
@@ -145,5 +199,3 @@ export class ExtensionRegistry {
     return this.locale.enabledExtensions();
   }
 }
-
-export const extensionRegistry = new ExtensionRegistry();

@@ -5,6 +5,16 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs';
+import {
+  buildCatalog,
+  buildReleaseConfig,
+  mergeReleaseManifest,
+  render,
+  type ExtensionManifest,
+  type ExtensionPackage,
+  type ReleaseConfig,
+  type ReleaseManifest,
+} from './helpers/catalog';
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const EXTENSIONS_DIR = 'extensions';
@@ -12,100 +22,8 @@ const CATALOG_FILE = 'extensions/catalog.json';
 const RELEASE_CONFIG_FILE = 'release-please-config.json';
 const RELEASE_MANIFEST_FILE = '.release-please-manifest.json';
 
-export interface ExtensionManifest {
-  name: string;
-  version: string;
-  description?: string;
-  gepard: { type: string; displayName?: string; platforms?: string[] };
-}
-
-export interface ExtensionPackage {
-  path: string;
-  manifest: ExtensionManifest;
-}
-
-export interface CatalogEntry {
-  displayName: string;
-  kind: string;
-  description: string;
-  path: string;
-  version: string;
-  platforms?: string[];
-  sha: string;
-}
-
-export interface Catalog {
-  schemaVersion: 1;
-  repository: string;
-  extensions: Record<string, CatalogEntry>;
-}
-
-export type ReleaseConfig = Record<string, unknown> & {
-  packages: Record<string, Record<string, unknown>>;
-};
-
-export type ReleaseManifest = Record<string, string>;
-
-export function buildCatalog(
-  packages: ExtensionPackage[],
-  repository: string,
-  shaOf: (dir: string) => string,
-): Catalog {
-  const extensions: Record<string, CatalogEntry> = {};
-  for (const { path: dir, manifest } of packages) {
-    extensions[manifest.name] = {
-      displayName: manifest.gepard.displayName ?? manifest.name,
-      kind: manifest.gepard.type,
-      description: manifest.description ?? '',
-      path: dir,
-      version: manifest.version,
-      ...(manifest.gepard.platforms?.length ? { platforms: manifest.gepard.platforms } : {}),
-      sha: shaOf(dir),
-    };
-  }
-  return { schemaVersion: 1, repository, extensions };
-}
-
-export function buildReleaseConfig(
-  existing: ReleaseConfig,
-  packages: ExtensionPackage[],
-): ReleaseConfig {
-  const kept = Object.entries(existing.packages).filter(
-    ([dir]) => !dir.startsWith(`${EXTENSIONS_DIR}/`),
-  );
-  const generated = packages.map(({ path: dir, manifest }): [string, Record<string, unknown>] => [
-    dir,
-    {
-      component: manifest.name,
-      'include-component-in-tag': true,
-      'extra-files': [
-        {
-          type: 'json',
-          path: `/${CATALOG_FILE}`,
-          jsonpath: `$.extensions['${manifest.name}'].version`,
-        },
-      ],
-    },
-  ]);
-  return { ...existing, packages: Object.fromEntries([...kept, ...generated]) };
-}
-
-export function mergeReleaseManifest(
-  existing: ReleaseManifest,
-  packages: ExtensionPackage[],
-): ReleaseManifest {
-  const added = packages
-    .filter(({ path: dir }) => !(dir in existing))
-    .map(({ path: dir, manifest }): [string, string] => [dir, manifest.version]);
-  return { ...existing, ...Object.fromEntries(added) };
-}
-
 function readJson<T>(file: string): T {
   return JSON.parse(readFileSync(path.join(ROOT_DIR, file), 'utf8')) as T;
-}
-
-function render(value: unknown): string {
-  return `${JSON.stringify(value, null, 2)}\n`;
 }
 
 function listExtensionPackages(): ExtensionPackage[] {

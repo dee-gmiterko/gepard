@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { ExtensionRegistry } from '../../extensions/registry';
+import { ExtensionsService } from '../../services/extensions';
 import * as settingsStore from '../../store/settings';
 import {
   DEMO_GRAMMAR_BODY,
@@ -25,27 +25,21 @@ const BUILTIN_LOCALE_BODY = `module.exports = {
 
 async function writeBuiltins(root: string): Promise<void> {
   await writePackage(
-    join(root, 'lsp'),
+    root,
     'builtin-lang',
     DEMO_LANG_BODY.replace('demo-lang', 'builtin-lang').replace('Demo Lang', 'Built-in Lang'),
   );
-  await writePackage(
-    join(root, 'themes'),
-    'builtin-light',
-    themeBody('builtin-light', 'Built-in Light', 'light'),
-    { gepard: { type: 'theme' } },
-  );
-  await writePackage(
-    join(root, 'themes'),
-    'builtin-dark',
-    themeBody('builtin-dark', 'Built-in Dark', 'dark'),
-    { gepard: { type: 'theme' } },
-  );
-  await writePackage(join(root, 'locales'), 'builtin-en', BUILTIN_LOCALE_BODY, {
+  await writePackage(root, 'builtin-light', themeBody('builtin-light', 'Built-in Light', 'light'), {
+    gepard: { type: 'theme' },
+  });
+  await writePackage(root, 'builtin-dark', themeBody('builtin-dark', 'Built-in Dark', 'dark'), {
+    gepard: { type: 'theme' },
+  });
+  await writePackage(root, 'builtin-en', BUILTIN_LOCALE_BODY, {
     gepard: { type: 'locale' },
   });
   await writePackage(
-    join(root, 'grammars'),
+    root,
     'builtin-grammar',
     DEMO_GRAMMAR_BODY.replace('demo-grammar', 'builtin-grammar').replace(
       'Demo Grammar',
@@ -55,18 +49,25 @@ async function writeBuiltins(root: string): Promise<void> {
   );
 }
 
-describe('ExtensionRegistry', () => {
+describe('ExtensionsService', () => {
   let userData: TmpDir;
   let extRoot: string;
   let builtinRoot: string;
 
-  async function setup(prefix: string): Promise<ExtensionRegistry> {
+  function newService(): ExtensionsService {
+    return new ExtensionsService(
+      () => extRoot,
+      () => builtinRoot,
+    );
+  }
+
+  async function setup(prefix: string): Promise<ExtensionsService> {
     userData = await makeTmpDir(prefix);
     __setUserDataDir(userData.path);
     extRoot = join(userData.path, 'extensions');
     builtinRoot = join(userData.path, 'builtin');
     await writeBuiltins(builtinRoot);
-    return new ExtensionRegistry(extRoot, builtinRoot);
+    return newService();
   }
 
   afterEach(async () => {
@@ -154,16 +155,16 @@ describe('ExtensionRegistry', () => {
       packageName: 'builtin-dark',
     });
 
-    const reopened = new ExtensionRegistry(extRoot, builtinRoot);
+    const reopened = newService();
     expect((await reopened.enabledThemeTemplates()).map((t) => t.id)).toEqual(['builtin-light']);
     expect((await reopened.enabledLanguageExtensions()).map((e) => e.id)).toEqual(['builtin-lang']);
     expect((await settingsStore.getEnabledMap())['builtin-dark']).toBe(false);
   });
 
-  it('picks up an external package of either kind dropped into its own extensions/<kind> directory', async () => {
+  it('picks up an external package of either kind dropped into the extensions directory', async () => {
     const registry = await setup('ext-registry-external');
-    await writePackage(join(extRoot, 'lsp'), 'demo', DEMO_LANG_BODY);
-    await writePackage(join(extRoot, 'themes'), 'demo-theme', DEMO_THEME_BODY, {
+    await writePackage(extRoot, 'demo', DEMO_LANG_BODY);
+    await writePackage(extRoot, 'demo-theme', DEMO_THEME_BODY, {
       gepard: { type: 'theme' },
     });
 
@@ -203,7 +204,7 @@ describe('ExtensionRegistry', () => {
 
   it('lists a broken external package as an unresolvable, disabled entry without affecting the others', async () => {
     const registry = await setup('ext-registry-broken');
-    await writePackage(join(extRoot, 'lsp'), 'broken', `throw new Error('nope')`);
+    await writePackage(extRoot, 'broken', `throw new Error('nope')`);
 
     const list = await registry.list();
 
@@ -214,7 +215,7 @@ describe('ExtensionRegistry', () => {
     expect(brokenEntry?.error).toContain('nope');
   });
 
-  it('installs a package folder into the extensions/<kind> directory matching its manifest', async () => {
+  it('installs a package folder into the extensions directory', async () => {
     const registry = await setup('ext-registry-install');
     const source = await makeTmpDir('ext-registry-install-src');
     try {
@@ -302,7 +303,7 @@ describe('ExtensionRegistry', () => {
     ]);
 
     await writePackage(
-      join(extRoot, 'lsp'),
+      extRoot,
       'late',
       `module.exports = {
       id: 'late-lang',

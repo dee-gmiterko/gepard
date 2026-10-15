@@ -1,37 +1,40 @@
 {
   "schemaVersion": 1,
-  "repository": "dee-gmiterko/gepard",
-  "extensions": {
-    "gepard-grammar-godot": {
+  "extensions": [
+    {
+      "name": "gepard-grammar-godot",
+      "repository": "dee-gmiterko/gepard",
+      "path": "extensions/grammars/godot",
       "displayName": "Godot",
       "kind": "grammar",
-      "description": "Bundled Godot grammar extension for Gepard (GDScript, scene and resource files, shaders).",
-      "path": "extensions/grammars/godot",
-      "version": "0.1.0",
+      "description": "Syntax highlighting for GDScript, Godot scene and resource files and shaders.",
       "sha": "c3db41d09b221a8ca13644a48613aee2fc09a66f"
     },
-    "gepard-locale-en": {
+    {
+      "name": "gepard-locale-en",
+      "repository": "dee-gmiterko/gepard",
+      "path": "extensions/locales/en",
       "displayName": "English",
       "kind": "locale",
-      "description": "Built-in English locale extension for Gepard.",
-      "path": "extensions/locales/en",
-      "version": "0.1.0",
+      "description": "English UI translation.",
       "sha": "976dc88f4225f602c7e33d3dfeab0310ef2b08a6"
     },
-    "gepard-ext-cpp": {
+    {
+      "name": "gepard-ext-cpp",
+      "repository": "dee-gmiterko/gepard",
+      "path": "extensions/lsp/cpp",
       "displayName": "C/C++",
       "kind": "lsp",
-      "description": "Code intelligence for C and C++ projects (clangd, downloaded on first use).",
-      "path": "extensions/lsp/cpp",
-      "version": "0.1.0",
+      "description": "Code intelligence for C and C++ projects (clangd).",
       "sha": "d00f6ab35c2647498b73bad4854af11337bcb931"
     },
-    "gepard-ext-csharp": {
+    {
+      "name": "gepard-ext-csharp",
+      "repository": "dee-gmiterko/gepard",
+      "path": "extensions/lsp/csharp",
       "displayName": "C#",
       "kind": "lsp",
       "description": "Code intelligence for C# projects (Roslyn language server).",
-      "path": "extensions/lsp/csharp",
-      "version": "0.1.0",
       "platforms": [
         "linux-x64",
         "linux-arm64",
@@ -42,44 +45,49 @@
       ],
       "sha": "1aa70834f28f005643a1f982f5abfd59178c7e3f"
     },
-    "gepard-ext-gdscript": {
+    {
+      "name": "gepard-ext-gdscript",
+      "repository": "dee-gmiterko/gepard",
+      "path": "extensions/lsp/gdscript",
       "displayName": "GDScript",
       "kind": "lsp",
       "description": "Code intelligence for Godot projects (headless Godot editor language server).",
-      "path": "extensions/lsp/gdscript",
-      "version": "0.1.0",
       "sha": "7e8b857b02064786d896da3b6e479273e12e2535"
     },
-    "gepard-ext-java": {
+    {
+      "name": "gepard-ext-java",
+      "repository": "dee-gmiterko/gepard",
+      "path": "extensions/lsp/java",
       "displayName": "Java",
       "kind": "lsp",
       "description": "Code intelligence for Java projects (Eclipse JDT Language Server).",
-      "path": "extensions/lsp/java",
-      "version": "0.1.0",
       "sha": "64e57b9bbbe1e6afd4600b2fdf4f1f855899c755"
     },
-    "gepard-ext-php": {
+    {
+      "name": "gepard-ext-php",
+      "repository": "dee-gmiterko/gepard",
+      "path": "extensions/lsp/php",
       "displayName": "PHP",
       "kind": "lsp",
-      "description": "Code intelligence for PHP projects (PHPantom, downloaded on first use).",
-      "path": "extensions/lsp/php",
-      "version": "0.1.0",
+      "description": "Code intelligence for PHP projects (PHPantom).",
       "sha": "e7509e6264604660d5967edf1eb03008dcaf33b7"
     },
-    "gepard-ext-python": {
+    {
+      "name": "gepard-ext-python",
+      "repository": "dee-gmiterko/gepard",
+      "path": "extensions/lsp/python",
       "displayName": "Python",
       "kind": "lsp",
       "description": "Code intelligence for Python projects (Pyright).",
-      "path": "extensions/lsp/python",
-      "version": "0.1.0",
       "sha": "8f8ac08d852bcb31251fa095458c8f0f8a665c78"
     },
-    "gepard-ext-typescript": {
+    {
+      "name": "gepard-ext-typescript",
+      "repository": "dee-gmiterko/gepard",
+      "path": "extensions/lsp/typescript",
       "displayName": "TypeScript and JavaScript",
       "kind": "lsp",
       "description": "Code intelligence for TypeScript and JavaScript projects (native TypeScript language server).",
-      "path": "extensions/lsp/typescript",
-      "version": "0.1.0",
       "platforms": [
         "linux-x64",
         "linux-arm64",
@@ -90,37 +98,41 @@
       ],
       "sha": "ddd5d72ea58548a5a0a1a6205007a196566d274d"
     },
-    "gepard-theme-dark": {
+    {
+      "name": "gepard-theme-dark",
+      "repository": "dee-gmiterko/gepard",
+      "path": "extensions/themes/dark",
       "displayName": "Dark",
       "kind": "theme",
-      "description": "Built-in dark theme extension for Gepard.",
-      "path": "extensions/themes/dark",
-      "version": "0.1.0",
+      "description": "Dark colour theme.",
       "sha": "f8359ad2e466b945a0bb403ea420898881be346a"
     },
-    "gepard-theme-dark-high-contrast": {
+    {
+      "name": "gepard-theme-dark-high-contrast",
+      "repository": "dee-gmiterko/gepard",
+      "path": "extensions/themes/dark-high-contrast",
       "displayName": "Dark - High contrast",
       "kind": "theme",
-      "description": "Built-in dark high contrast theme extension for Gepard.",
-      "path": "extensions/themes/dark-high-contrast",
-      "version": "0.1.0",
+      "description": "Dark high contrast colour theme.",
       "sha": "c2b6a2e66cf79523978ff50be8232deb8380e2ea"
     },
-    "gepard-theme-light": {
+    {
+      "name": "gepard-theme-light",
+      "repository": "dee-gmiterko/gepard",
+      "path": "extensions/themes/light",
       "displayName": "Light",
       "kind": "theme",
-      "description": "Built-in light theme extension for Gepard.",
-      "path": "extensions/themes/light",
-      "version": "0.1.0",
+      "description": "Light colour theme.",
       "sha": "1ad919f7eb329e887e19b314a6de35767383377b"
     },
-    "gepard-theme-light-high-contrast": {
+    {
+      "name": "gepard-theme-light-high-contrast",
+      "repository": "dee-gmiterko/gepard",
+      "path": "extensions/themes/light-high-contrast",
       "displayName": "Light - High contrast",
       "kind": "theme",
-      "description": "Built-in light high contrast theme extension for Gepard.",
-      "path": "extensions/themes/light-high-contrast",
-      "version": "0.1.0",
+      "description": "Light high contrast colour theme.",
       "sha": "af822d2e57cb9578d18a768c422586398fdbcea1"
     }
-  }
+  ]
 }

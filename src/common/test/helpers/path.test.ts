@@ -1,6 +1,6 @@
 import * as path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { comparePaths, toPosix } from '../../helpers/path';
+import { comparePaths, normalizeRepoPath, toPosix } from '../../helpers/path';
 
 describe('toPosix', () => {
   it('joins platform segments with forward slashes', () => {
@@ -43,5 +43,14 @@ describe('comparePaths', () => {
 
   it('compares by code unit, not by locale', () => {
     expect(comparePaths('B.ts', 'a.ts')).toBeLessThan(0);
+  });
+});
+
+describe('normalizeRepoPath', () => {
+  it('trims slashes and rejects traversal', () => {
+    expect(normalizeRepoPath(' /extensions/lsp/csharp/ ')).toBe('extensions/lsp/csharp');
+    expect(normalizeRepoPath('')).toBeNull();
+    expect(normalizeRepoPath(null)).toBeNull();
+    expect(() => normalizeRepoPath('../x')).toThrow(/invalid repository path/);
   });
 });

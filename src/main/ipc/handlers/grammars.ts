@@ -1,6 +1,6 @@
 import type { HandlerMap } from '../registry';
-import { extensionRegistry } from '../../extensions/registry';
+import { extensionsService } from '../../di';
 
 export const grammarsHandlers: Pick<HandlerMap, 'grammars.list'> = {
-  'grammars.list': () => extensionRegistry.enabledGrammars(),
+  'grammars.list': () => extensionsService.enabledGrammars(),
 };

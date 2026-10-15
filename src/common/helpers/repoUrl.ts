@@ -56,3 +56,7 @@ export function isRepositoryInput(text: string): boolean {
     return false;
   }
 }
+
+export function repositorySlug({ owner, repo }: RepositoryInput): string {
+  return `${owner}/${repo}`;
+}
