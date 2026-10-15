@@ -4,7 +4,7 @@ import { describeTarget } from './keyTargets';
 import { isInteractiveControlTarget, isTextEntryTarget } from '../helpers/eventTarget';
 import { keyBindings } from './bindings';
 import { useKeybindingOverrides } from '../queries/keybindings';
-import { effectiveKey, keyChord } from '../helpers/key';
+import { bindingMatches, keyChord } from '../helpers/key';
 
 export function useGlobalKeys(): void {
   const commands = useCommands();
@@ -15,13 +15,12 @@ export function useGlobalKeys(): void {
       if (e.defaultPrevented || e.isComposing) return;
       if (e.target instanceof Element && e.target.closest('dialog[open]')) return;
       const target = describeTarget(e.target);
-      const typing = !(e.ctrlKey || e.altKey || e.metaKey);
-      if (typing && target && isTextEntryTarget(target)) return;
       const chord = keyChord(e);
-      if (chord === ' ' && target && isInteractiveControlTarget(target)) return;
-
-      const binding = keyBindings.find((b) => effectiveKey(b, overrides) === chord);
+      const binding = keyBindings.find((b) => bindingMatches(b, chord, overrides));
       if (!binding) return;
+      const typing = !(e.ctrlKey || e.altKey || e.metaKey);
+      if (typing && !binding.inTextEntry && target && isTextEntryTarget(target)) return;
+      if (chord === ' ' && target && isInteractiveControlTarget(target)) return;
       if (binding.run(commands)) e.preventDefault();
     }
 

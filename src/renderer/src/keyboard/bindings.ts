@@ -8,7 +8,9 @@ const MOD: Modifier =
 export interface KeyBinding {
   id: string;
   key: string;
+  alternateKeys?: readonly string[];
   label: MessageDescriptor;
+  inTextEntry?: boolean;
   run: (commands: Commands) => boolean;
 }
 
@@ -157,13 +159,17 @@ export const keyBindings: readonly KeyBinding[] = [
   {
     id: 'findNext',
     key: 'Enter',
+    alternateKeys: ['F3', 'ArrowDown'],
     label: messages.findNext,
+    inTextEntry: true,
     run: (commands) => commands.findNext(),
   },
   {
     id: 'findPrevious',
     key: 'Shift+Enter',
+    alternateKeys: ['Shift+F3', 'ArrowUp'],
     label: messages.findPrevious,
+    inTextEntry: true,
     run: (commands) => commands.findPrevious(),
   },
 ];

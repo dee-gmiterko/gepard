@@ -16,9 +16,8 @@ import {
   type TextMatch,
 } from '../../helpers/match';
 import { useActionHandler } from '../../keyboard/actionHandlers';
-import { keyBindings } from '../../keyboard/bindings';
 import { useKeybindingOverrides } from '../../queries/keybindings';
-import { effectiveKey, keyLabel } from '../../helpers/key';
+import { bindingKeyLabel } from '../../helpers/key';
 import { QuickSearchStatus } from './QuickSearchStatus';
 import { useQuickSearchAutoFocus } from './useQuickSearchAutoFocus';
 
@@ -87,39 +86,15 @@ export function QuickSearchFindInFile({ onClose }: { onClose: () => void }): Rea
 
   const { data: overrides } = useKeybindingOverrides();
 
-  function stepBinding(chord: string): string | undefined {
-    return keyBindings.find(
-      (b) =>
-        (b.id === 'findNext' || b.id === 'findPrevious') && effectiveKey(b, overrides) === chord,
-    )?.id;
-  }
-
   function onKeyDown(e: KeyboardEvent<HTMLInputElement>): void {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      onClose();
-      editor?.view.focus();
-    } else if (stepBinding(keyChord(e))) {
-      e.preventDefault();
-      step(stepBinding(keyChord(e)) === 'findNext' ? 1 : -1);
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      step(1);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      step(-1);
-    }
+    if (e.key !== 'Escape') return;
+    e.preventDefault();
+    onClose();
+    editor?.view.focus();
   }
 
   useActionHandler('findNext', () => step(1));
   useActionHandler('findPrevious', () => step(-1));
-
-  const stepKeys = Object.fromEntries(
-    ['findNext', 'findPrevious'].map((id) => {
-      const binding = keyBindings.find((b) => b.id === id);
-      return [id, binding ? keyLabel(effectiveKey(binding, overrides)) : ''];
-    }),
-  );
 
   const line = editor && match ? editor.doc.lineAt(match.from).number : null;
   const index = match ? offsets.indexOf(match.from) : -1;
@@ -173,7 +148,10 @@ export function QuickSearchFindInFile({ onClose }: { onClose: () => void }): Rea
           ) : (
             <FormattedMessage
               {...messages.findHint}
-              values={{ next: stepKeys.findNext, previous: stepKeys.findPrevious }}
+              values={{
+                next: bindingKeyLabel('findNext', overrides),
+                previous: bindingKeyLabel('findPrevious', overrides),
+              }}
             />
           )}
         </QuickSearchStatus>

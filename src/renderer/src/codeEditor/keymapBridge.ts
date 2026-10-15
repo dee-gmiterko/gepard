@@ -2,7 +2,7 @@ import { Prec, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { keyBindings } from '../keyboard/bindings';
 import type { Commands } from '../keyboard/useCommands';
-import { effectiveKey, keyChord, type KeybindingOverrides } from '../helpers/key';
+import { bindingMatches, keyChord, type KeybindingOverrides } from '../helpers/key';
 
 // CodeMirror handles keys in its contentEditable before they reach a window
 // keydown listener.
@@ -16,7 +16,7 @@ export function keymapBridge(
       keydown: (e) => {
         if (e.isComposing) return false;
         const chord = keyChord(e);
-        const binding = keyBindings.find((b) => effectiveKey(b, getOverrides()) === chord);
+        const binding = keyBindings.find((b) => bindingMatches(b, chord, getOverrides()));
         return binding ? binding.run(getCommands()) : false;
       },
     }),
