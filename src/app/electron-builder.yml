@@ -26,7 +26,7 @@ files:
 # Electron cannot execute binaries from inside an asar archive.
 asarUnpack:
   - '**/@vscode/ripgrep-*/bin/**'
-# Released extension tarballs unpacked by scripts/bundle-extensions.ts before the build.
+# Built-in extensions copied to extensions-dist/<package name> by scripts/bundle-extensions.ts.
 extraResources:
   - from: extensions-dist
     to: extensions
