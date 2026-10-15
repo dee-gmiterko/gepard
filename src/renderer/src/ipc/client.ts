@@ -7,12 +7,13 @@ import {
   type InvokeArgs,
   fromIpcErrorShape,
 } from '@gepard/common';
+import { ipcBridge } from './bridge';
 
 export async function invoke<C extends ChannelName>(
   channel: C,
   ...args: InvokeArgs<C>
 ): Promise<ChannelOutput<C>> {
-  const res = await window.ipc.invoke(channel, args[0]);
+  const res = await ipcBridge().invoke(channel, args[0]);
   if (!res.ok) throw fromIpcErrorShape(res.error, channel);
   return res.value;
 }
@@ -21,7 +22,7 @@ export function subscribe<E extends EventName>(
   event: E,
   cb: (payload: EventPayload<E>) => void,
 ): () => void {
-  return window.ipc.on(event, cb);
+  return ipcBridge().on(event, cb);
 }
 
 export function useIpcEvent<E extends EventName>(

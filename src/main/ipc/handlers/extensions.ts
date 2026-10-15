@@ -1,4 +1,4 @@
-import { dialog } from 'electron';
+import { FolderPickerUnavailableError } from '@gepard/common';
 import type { HandlerMap } from '../registry';
 import type { ExtensionCatalogService } from '../../services/extensionCatalog';
 import type { ExtensionInstallerService } from '../../services/extensionInstaller';
@@ -24,8 +24,10 @@ export class ExtensionsHandlers {
       'extensions.setEnabled': ({ id, enabled }) => this.extensions.setEnabled(id, enabled),
       'extensions.dir': () => this.extensions.userDir(),
 
-      'extensions.install': async (source, { window }) => {
+      'extensions.install': async (source, { window, remote }) => {
         if (source.kind === 'github-release') return this.installer.install(source);
+        if (remote) throw new FolderPickerUnavailableError(this.extensions.userDir());
+        const { dialog } = await import('electron');
         const options = { title: source.dialogTitle, properties: ['openDirectory' as const] };
         const { canceled, filePaths } = window
           ? await dialog.showOpenDialog(window, options)

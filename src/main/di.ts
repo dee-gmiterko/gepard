@@ -1,4 +1,4 @@
-import { app } from 'electron';
+import { tmpdir } from 'node:os';
 import { ExtensionCatalog } from '@gepard/common';
 import catalogJson from '../../extensions/catalog.json';
 import { GhClient } from './clients/gh';
@@ -61,7 +61,7 @@ export const extensionCatalogService = new ExtensionCatalogService(
   platformTarget,
 );
 
-export const downloadService = new DownloadService(ghClient, () => app.getPath('temp'));
+export const downloadService = new DownloadService(ghClient, tmpdir);
 
 export const extensionInstallerService = new ExtensionInstallerService(
   extensionsService,

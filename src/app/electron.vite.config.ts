@@ -8,6 +8,7 @@ export default defineConfig({
       rollupOptions: {
         input: {
           index: resolve('../main/index.ts'),
+          server: resolve('../main/server/index.ts'),
           'line-index-worker': resolve('../main/services/line-index-worker.ts'),
         },
       },

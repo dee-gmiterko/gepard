@@ -1,5 +1,4 @@
 import { spawn } from 'node:child_process';
-import { app, BrowserWindow } from 'electron';
 import {
   AppError,
   isGitHubRepoUrl,
@@ -13,21 +12,14 @@ import { ProjectLocks } from '../helpers/process/projectLock';
 import { formatCaughtError } from '../helpers/error';
 import * as store from '../store/projects';
 import type { IndexerService } from '../lsp/indexer';
-import { projectLocksDir, projectRepoDir } from '../paths';
+import { appPath, projectLocksDir, projectRepoDir } from '../paths';
 import { emit } from '../ipc/registry';
 import { notifyMainFailure } from '../notify';
 import { log } from '../log';
 import type { GitService } from './git';
 
-function focusMainWindow(): void {
-  const window = BrowserWindow.getAllWindows()[0];
-  if (!window || window.isDestroyed()) return;
-  if (window.isMinimized()) window.restore();
-  window.show();
-  window.focus();
-}
-
 export class LaunchService {
+  focus: () => void = () => undefined;
   private projectLocks: ProjectLocks | null = null;
   private started: Promise<OpenedProject | null> | null = null;
 
@@ -39,7 +31,7 @@ export class LaunchService {
 
   // Created lazily: the userData path is only valid once app.setName has run.
   private get locks(): ProjectLocks {
-    this.projectLocks ??= new ProjectLocks(projectLocksDir(), focusMainWindow);
+    this.projectLocks ??= new ProjectLocks(projectLocksDir(), () => this.focus());
     return this.projectLocks;
   }
 
@@ -123,7 +115,7 @@ export class LaunchService {
     const target = projectId === null ? null : await this.projectUrl(projectId);
     const { command, args } = instanceCommand(target, {
       execPath: process.execPath,
-      appPath: app.getAppPath(),
+      appPath: appPath(),
       defaultApp: Boolean(process.defaultApp),
       appImage: process.env['APPIMAGE'],
     });

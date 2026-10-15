@@ -1,12 +1,14 @@
 import { app, BrowserWindow, nativeTheme } from 'electron';
 import { electronApp, optimizer } from '@electron-toolkit/utils';
-import { registerHandlers, emit } from './ipc/registry';
-import { createMainWindow } from './window';
+import { registerHandlers } from './ipc/electron';
+import { emit } from './ipc/registry';
+import { createMainWindow, focusMainWindow } from './window';
 import { log } from './log';
 import { markRendererReady, notifyMainFailure } from './notify';
 import { formatCaughtError } from './helpers/error';
-import { startPortalThemeSync } from './helpers/portalTheme';
-import { systemPreference } from './helpers/systemPreference';
+import { portalContrast, portalReducedMotion, startPortalThemeSync } from './helpers/portalTheme';
+import { setSystemPreferenceSource, systemPreference } from './helpers/systemPreference';
+import { setUserDataDir } from './paths';
 import { handlers, indexer, launchService } from './di';
 
 const QUIT_CLOSE_TIMEOUT_MS = 1_000;
@@ -15,6 +17,7 @@ export function bootstrap(): void {
   // Electron derives the userData path from the app name at the first
   // `app.getPath()` call.
   app.setName('gepard');
+  setUserDataDir(app.getPath('userData'));
 
   process.on('uncaughtException', (err) => {
     notifyMainFailure('app', `uncaughtException: ${formatCaughtError(err)}`);
@@ -46,6 +49,15 @@ export function bootstrap(): void {
       });
 
       registerHandlers(handlers);
+      launchService.focus = focusMainWindow;
+      setSystemPreferenceSource(() => ({
+        mode: nativeTheme.shouldUseDarkColors ? 'dark' : 'light',
+        contrast:
+          nativeTheme.shouldUseHighContrastColors || portalContrast() === 'high'
+            ? 'high'
+            : 'normal',
+        reducedMotion: portalReducedMotion(),
+      }));
 
       const emitSystemPreferenceChanged = (): void =>
         emit('systemPreference.changed', systemPreference());
