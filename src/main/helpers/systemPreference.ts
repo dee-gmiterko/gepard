@@ -1,12 +1,15 @@
-import { nativeTheme } from 'electron';
 import type { SystemPreference } from '@gepard/common';
-import { portalContrast, portalReducedMotion } from './portalTheme';
+
+let source: () => SystemPreference = () => ({
+  mode: 'light',
+  contrast: 'normal',
+  reducedMotion: false,
+});
+
+export function setSystemPreferenceSource(next: () => SystemPreference): void {
+  source = next;
+}
 
 export function systemPreference(): SystemPreference {
-  return {
-    mode: nativeTheme.shouldUseDarkColors ? 'dark' : 'light',
-    contrast:
-      nativeTheme.shouldUseHighContrastColors || portalContrast() === 'high' ? 'high' : 'normal',
-    reducedMotion: portalReducedMotion(),
-  };
+  return source();
 }

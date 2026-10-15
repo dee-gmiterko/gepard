@@ -6,6 +6,7 @@
     "helpers",
     "ipc",
     "lsp",
+    "server",
     "services",
     "store",
     "test",

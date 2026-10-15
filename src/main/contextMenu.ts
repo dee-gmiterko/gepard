@@ -1,4 +1,4 @@
-import { clipboard, Menu, type BrowserWindow, type WebContents } from 'electron';
+import type { BrowserWindow, WebContents } from 'electron';
 import type {
   ContextMenuLabels,
   ContextMenuLineTarget,
@@ -37,29 +37,33 @@ export function installContextMenu(webContents: WebContents): void {
   webContents.on('context-menu', (_event, params) => {
     const target = takeLineTarget();
     if (labels === null || !hasTextualContent(params, target)) return;
-    const template = buildContextMenuTemplate(params, labels, target, {
-      replaceMisspelling: (word) => webContents.replaceMisspelling(word),
-      addToDictionary: (word) => {
-        webContents.session.addWordToSpellCheckerDictionary(word);
-      },
-      copyText: (text) => {
-        clipboard
-          .writeText(text)
-          .catch((err: unknown) =>
-            notifyMainFailure('contextMenu', `clipboard write failed: ${formatCaughtError(err)}`),
-          );
-      },
+    const current = labels;
+    void import('electron').then(({ clipboard, Menu }) => {
+      const template = buildContextMenuTemplate(params, current, target, {
+        replaceMisspelling: (word) => webContents.replaceMisspelling(word),
+        addToDictionary: (word) => {
+          webContents.session.addWordToSpellCheckerDictionary(word);
+        },
+        copyText: (text) => {
+          clipboard
+            .writeText(text)
+            .catch((err: unknown) =>
+              notifyMainFailure('contextMenu', `clipboard write failed: ${formatCaughtError(err)}`),
+            );
+        },
+      });
+      Menu.buildFromTemplate(template).popup();
     });
-    Menu.buildFromTemplate(template).popup();
   });
 }
 
-export function showFileViewMenu(
+export async function showFileViewMenu(
   window: BrowserWindow | null,
   request: FileViewMenuRequest,
 ): Promise<FileViewMenuPick | null> {
-  if (labels === null || window === null) return Promise.resolve(null);
+  if (labels === null || window === null) return null;
   const current = labels;
+  const { Menu } = await import('electron');
   return new Promise((resolve) => {
     const template = buildFileViewMenuTemplate(request, current, resolve);
     Menu.buildFromTemplate(template).popup({

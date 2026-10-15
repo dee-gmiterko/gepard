@@ -62,12 +62,7 @@ describe('overview.owners against a real repository', () => {
     await git(repo, ['commit', '-m', 'change']);
     const head = await git(repo, ['rev-parse', 'HEAD']);
     const handlers = new PrsHandlers(ghService, gitService).toHandlerMap();
-    // The owners handler never reads the IPC event.
-    /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-    return handlers['overview.owners'](
-      { projectId, base, head },
-      { event: Object.create(null), window: null },
-    );
+    return handlers['overview.owners']({ projectId, base, head }, { window: null, remote: false });
   }
 
   it('maps changed files to owners from .github/CODEOWNERS', async () => {

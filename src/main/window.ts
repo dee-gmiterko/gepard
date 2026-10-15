@@ -22,6 +22,14 @@ function reportLoadFailure(err: unknown): void {
   notifyMainFailure('window', `load failed: ${formatCaughtError(err)}`);
 }
 
+export function focusMainWindow(): void {
+  const window = BrowserWindow.getAllWindows()[0];
+  if (!window || window.isDestroyed()) return;
+  if (window.isMinimized()) window.restore();
+  window.show();
+  window.focus();
+}
+
 export function createMainWindow(): BrowserWindow {
   const devServerUrl = is.dev ? process.env['ELECTRON_RENDERER_URL'] : undefined;
   const indexHtmlPath = join(__dirname, '../renderer/index.html');

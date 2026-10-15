@@ -61,9 +61,7 @@ describe('files.content over the real IPC contract and handler (integration)', (
   it('serves a plain nested path end to end', async () => {
     const parsed = validate('src/a.ts');
     if (!parsed.success) throw new Error('expected the contract to accept the path');
-    // The content handler never reads the IPC event.
-    /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-    const ctx = { event: Object.create(null), window: null };
+    const ctx = { window: null, remote: false };
     expect(await handlers['files.content'](parsed.data, ctx)).toMatchObject({
       kind: 'text',
       text: 'export const a = 1;\n',
@@ -73,8 +71,7 @@ describe('files.content over the real IPC contract and handler (integration)', (
   it.each(['../a', 'src/../../a', '/etc/passwd', ''])('rejects %j', async (p) => {
     const parsed = validate(p);
     if (!parsed.success) return;
-    /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-    const ctx = { event: Object.create(null), window: null };
+    const ctx = { window: null, remote: false };
     await expect(handlers['files.content'](parsed.data, ctx)).rejects.toMatchObject({
       code: 'INVALID_PATH',
     });

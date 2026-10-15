@@ -52,6 +52,11 @@ const codeMessages = defineMessages({
     id: 'errors.code.extensionUnsupportedPlatform',
     defaultMessage: "This extension isn't available for this platform.",
   },
+  FOLDER_PICKER_UNAVAILABLE: {
+    id: 'errors.code.folderPickerUnavailable',
+    defaultMessage:
+      'Folders can only be picked in the desktop app. Copy the extension into {directory} instead.',
+  },
   FORBIDDEN: { id: 'errors.code.forbidden', defaultMessage: "This action isn't allowed." },
   GH_PARSE_ERROR: {
     id: 'errors.code.ghParseError',
@@ -77,6 +82,10 @@ const codeMessages = defineMessages({
   MISSING_DEPENDENCY: {
     id: 'errors.code.missingDependency',
     defaultMessage: '{dependency} was not found. Install it and make sure it is on your PATH.',
+  },
+  NEW_WINDOW_UNAVAILABLE: {
+    id: 'errors.code.newWindowUnavailable',
+    defaultMessage: 'Opening a new window is only available in the desktop app.',
   },
   NOT_DELETABLE: {
     id: 'errors.code.notDeletable',

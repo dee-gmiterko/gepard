@@ -1,9 +1,23 @@
-import { app } from 'electron';
 import { join } from 'node:path';
 import { ProjectId, AppError } from '@gepard/common';
 
+export const packaged = __dirname.includes('app.asar');
+
+let dataDir: string | null = null;
+
+export function setUserDataDir(dir: string): void {
+  dataDir = dir;
+}
+
 export function userDataDir(): string {
-  return app.getPath('userData');
+  if (dataDir === null) throw new Error('user data dir is not set');
+  return dataDir;
+}
+
+const APP_ROOT_FROM_MAIN_OUTPUT = join('..', '..');
+
+export function appPath(): string {
+  return join(__dirname, APP_ROOT_FROM_MAIN_OUTPUT);
 }
 
 export function nohooksDir(): string {
@@ -54,9 +68,9 @@ export function extensionsRootDir(): string {
 }
 
 export function builtinExtensionsDir(): string {
-  return app.isPackaged
-    ? join(process.resourcesPath, 'extensions')
-    : join(app.getAppPath(), '../../dist/extensions');
+  return packaged
+    ? join(appPath(), '..', 'extensions')
+    : join(appPath(), '..', '..', 'dist', 'extensions');
 }
 
 export function extensionDataDir(id: string): string {
