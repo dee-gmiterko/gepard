@@ -26,6 +26,19 @@ function occurrences(haystack: string, needle: string): number[] {
   return out;
 }
 
+function needleFor(text: string, query: string): string {
+  return text.toLowerCase().length === text.length ? query.toLowerCase() : query;
+}
+
+export function matchOffsets(
+  text: string,
+  query: string,
+  folded: string = foldCase(text),
+): number[] {
+  if (query.length === 0) return [];
+  return occurrences(folded, needleFor(text, query));
+}
+
 function fuzzyLineMatch(text: string, query: string): TextMatch | null {
   let best: { score: number; from: number; to: number } | null = null;
   let lineStart = 0;
@@ -50,7 +63,7 @@ export function findBestMatch(
   folded: string = foldCase(text),
 ): TextMatch | null {
   if (query.length === 0) return null;
-  const needle = text.toLowerCase().length === text.length ? query.toLowerCase() : query;
+  const needle = needleFor(text, query);
   const hits = occurrences(folded, needle);
   if (hits.length === 0) return fuzzyLineMatch(text, query);
   let best: { at: number; score: number; distance: number } | null = null;
@@ -74,7 +87,7 @@ export function nextMatch(
   folded: string = foldCase(text),
 ): TextMatch | null {
   if (query.length === 0) return null;
-  const needle = text.toLowerCase().length === text.length ? query.toLowerCase() : query;
+  const needle = needleFor(text, query);
   let at: number;
   if (direction === 1) {
     at = folded.indexOf(needle, current.from + 1);

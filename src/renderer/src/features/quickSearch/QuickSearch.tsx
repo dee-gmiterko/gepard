@@ -10,14 +10,23 @@ import { useOutsideClick } from '../../hooks/useOutsideClick';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useActiveEditor } from '../../codeEditor/activeEditor';
 import { revealDocRange } from '../../codeEditor/reveal';
+import { ChevronDown, ChevronUp } from 'react-feather';
 import { Surface } from '../../components/Surface';
+import { IconButton } from '../../components/IconButton';
+import { Inline } from '../../components/Layout';
 import { TextInput } from '../../components/TextInput';
 import { HighlightedText } from '../../components/HighlightedText';
 import { PathLabel } from '../../components/PathLabel';
 import { Caption } from '../../components/Caption';
 import { Message } from '../../components/Message';
 import { listReset } from '../../components/List';
-import { findBestMatch, foldCase, nextMatch, type TextMatch } from '../../helpers/match';
+import {
+  findBestMatch,
+  foldCase,
+  matchOffsets,
+  nextMatch,
+  type TextMatch,
+} from '../../helpers/match';
 import { rankNavigation, type NavigationMatch } from '../../helpers/navigation';
 import { DefinitionSymbolKind, type WorkspaceSymbol } from '@gepard/common';
 
@@ -41,11 +50,23 @@ const messages = defineMessages({
   },
   findHint: {
     id: 'quickSearch.find.hint',
-    defaultMessage: 'Enter: next match, Shift+Enter: previous, Esc: close.',
+    defaultMessage: 'Enter or F3: next match, Shift+Enter or Shift+F3: previous, Esc: close.',
   },
   findLine: {
     id: 'quickSearch.find.line',
     defaultMessage: 'Line {line}',
+  },
+  findPosition: {
+    id: 'quickSearch.find.position',
+    defaultMessage: '{index} of {total} · Line {line}',
+  },
+  findPrevious: {
+    id: 'quickSearch.find.previous',
+    defaultMessage: 'Previous match',
+  },
+  findNext: {
+    id: 'quickSearch.find.next',
+    defaultMessage: 'Next match',
   },
   navigatePlaceholder: {
     id: 'quickSearch.navigate.placeholder',
@@ -98,6 +119,10 @@ const Popup = styled(Surface).attrs({ $elevation: 'floating' as const })`
 
 const Status = styled(Caption)`
   padding: 0 ${({ theme }) => theme.space[1]};
+`;
+
+const StepButton = styled(IconButton)`
+  flex-shrink: 0;
 `;
 
 const Options = styled.ul`
@@ -165,47 +190,82 @@ function FindInFile({ onClose }: { onClose: () => void }): React.JSX.Element {
   const doc = useMemo(() => editor?.doc.toString() ?? '', [editor]);
   const folded = useMemo(() => foldCase(doc), [doc]);
   const best = useMemo(() => findBestMatch(doc, text, anchor, folded), [doc, text, anchor, folded]);
+  const offsets = useMemo(() => matchOffsets(doc, text, folded), [doc, text, folded]);
   const match = stepped ?? best;
 
   useEffect(() => {
     if (editor && match) revealDocRange(editor.view, match.from, match.to);
   }, [editor, match]);
 
+  function step(direction: 1 | -1): void {
+    if (!match) return;
+    const next = nextMatch(doc, text, match, direction, folded);
+    if (next) setStepped(next);
+  }
+
   function onKeyDown(e: KeyboardEvent<HTMLInputElement>): void {
     if (e.key === 'Escape') {
       e.preventDefault();
       onClose();
       editor?.view.focus();
-    } else if (e.key === 'Enter' && match) {
+    } else if (e.key === 'Enter' || e.key === 'F3') {
       e.preventDefault();
-      const next = nextMatch(doc, text, match, e.shiftKey ? -1 : 1, folded);
-      if (next) setStepped(next);
+      step(e.shiftKey ? -1 : 1);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      step(1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      step(-1);
     }
   }
 
   const line = editor && match ? editor.doc.lineAt(match.from).number : null;
+  const index = match ? offsets.indexOf(match.from) : -1;
+  const canStep = offsets.length > 1;
 
   return (
     <>
-      <TextInput
-        ref={inputRef}
-        type="text"
-        value={text}
-        placeholder={intl.formatMessage(messages.findPlaceholder)}
-        disabled={!editor}
-        onChange={(e) => {
-          setText(e.target.value);
-          setStepped(null);
-        }}
-        onKeyDown={onKeyDown}
-      />
+      <Inline $gap={1}>
+        <TextInput
+          ref={inputRef}
+          type="text"
+          value={text}
+          placeholder={intl.formatMessage(messages.findPlaceholder)}
+          disabled={!editor}
+          onChange={(e) => {
+            setText(e.target.value);
+            setStepped(null);
+          }}
+          onKeyDown={onKeyDown}
+        />
+        <StepButton
+          icon={ChevronUp}
+          label={intl.formatMessage(messages.findPrevious)}
+          disabled={!canStep}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => step(-1)}
+        />
+        <StepButton
+          icon={ChevronDown}
+          label={intl.formatMessage(messages.findNext)}
+          disabled={!canStep}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => step(1)}
+        />
+      </Inline>
       {!editor ? (
         <Message layout="inline" tone="subtle">
           <FormattedMessage {...messages.findNoEditor} />
         </Message>
       ) : (
         <Status>
-          {line !== null ? (
+          {line !== null && index !== -1 ? (
+            <FormattedMessage
+              {...messages.findPosition}
+              values={{ index: index + 1, total: offsets.length, line }}
+            />
+          ) : line !== null ? (
             <FormattedMessage {...messages.findLine} values={{ line }} />
           ) : text ? (
             <FormattedMessage {...messages.noMatches} />

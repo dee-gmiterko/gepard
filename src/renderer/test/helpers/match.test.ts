@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findBestMatch, foldCase, nextMatch } from '../../src/helpers/match';
+import { findBestMatch, foldCase, matchOffsets, nextMatch } from '../../src/helpers/match';
 
 const text = 'const Total = 1;\nlet subtotal = total + 2;\nreturn total;\n';
 const at = (needle: string, nth = 0): number => {
@@ -112,5 +112,21 @@ describe('case-insensitive matching', () => {
     expect(foldCase(text)).toBe(text);
     expect(findBestMatch(text, 'foo', 0)).toEqual({ from: 4, to: 7 });
     expect(nextMatch('foo İ foo', 'foo', { from: 0, to: 3 }, 1)).toEqual({ from: 6, to: 9 });
+  });
+});
+
+describe('matchOffsets', () => {
+  it('lists every case-insensitive occurrence in document order', () => {
+    expect(matchOffsets(text, 'total')).toEqual([
+      at('Total'),
+      at('total', 0),
+      at('total', 1),
+      at('total', 2),
+    ]);
+  });
+
+  it('is empty for an empty query or a query without occurrences', () => {
+    expect(matchOffsets(text, '')).toEqual([]);
+    expect(matchOffsets(text, 'sbttl')).toEqual([]);
   });
 });
