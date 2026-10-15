@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { KeyBinding } from '../keyboard/bindings';
+import { keyBindings, type KeyBinding } from '../keyboard/bindings';
 
 export const Modifier = z.enum(['Ctrl', 'Alt', 'Meta', 'Shift']);
 export type Modifier = z.infer<typeof Modifier>;
@@ -79,4 +79,19 @@ export function effectiveKey(
   overrides: KeybindingOverrides | undefined,
 ): string {
   return overrides?.[binding.id] ?? binding.key;
+}
+
+export function bindingMatches(
+  binding: KeyBinding,
+  chord: string,
+  overrides: KeybindingOverrides | undefined,
+): boolean {
+  return (
+    effectiveKey(binding, overrides) === chord || Boolean(binding.alternateKeys?.includes(chord))
+  );
+}
+
+export function bindingKeyLabel(id: string, overrides: KeybindingOverrides | undefined): string {
+  const binding = keyBindings.find((b) => b.id === id);
+  return binding ? keyLabel(effectiveKey(binding, overrides)) : '';
 }

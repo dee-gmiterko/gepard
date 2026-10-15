@@ -59,6 +59,19 @@ describe('find in file', () => {
     expect(await popup.findByText('1 of 3 · Line 1')).toBeVisible();
   });
 
+  it('steps through the matches with F3 and Shift+F3', async () => {
+    const { rendered, popup } = await openFindInFile();
+    const { user } = rendered;
+    await popup.findByText('1 of 3 · Line 1');
+
+    await user.keyboard('{F3}');
+    expect(await popup.findByText('2 of 3 · Line 2')).toBeVisible();
+    await user.keyboard('{F3}');
+    expect(await popup.findByText('3 of 3 · Line 3')).toBeVisible();
+    await user.keyboard('{Shift>}{F3}{/Shift}');
+    expect(await popup.findByText('2 of 3 · Line 2')).toBeVisible();
+  });
+
   it('disables the arrow buttons when there is nothing to step to', async () => {
     const { rendered, popup } = await openFindInFile();
     const { user } = rendered;
