@@ -7,16 +7,16 @@
 ### Tech
 - electron desktop app
 - `gh` command used to interact with PRs over json<->zod schemas interface
-- React 19 dom, Vite, Typescript, Tanstack queries and mutations (hooks), a zustand UI store (`createUiStore`, one per `UiProvider`, driven by the `uiReducer` through a plain `dispatch`) holding the ui state, read through narrow selector hooks
+- React 19 dom, Vite, Typescript, Tanstack queries and mutations (hooks), a zustand UI store holding the ui state, read through narrow selector hooks
 - @codemirror editor for code and diff view (read only); both views can wrap long lines, and a changed file can show changes only or the full file with its changes highlighted (project-level flags, persisted with the layout, toggled by a shortcut or the file controls `…` menu, with the new state announced in the header status message)
 - Localization: all UI text is localizable, English default; a script refreshes every locale from the source strings
 - Scripts (media/locale refresh, ...) are Typescript, run directly with `tsx`, no build step; package itself is ESM
 
 ### Extensions
-- Independent packages, outside the main app bundle's own deps: `extensions/lsp/<name>` (language servers), `extensions/grammars/<name>` (syntax highlighting: file types mapped to a CodeMirror language, built against the app's own CodeMirror through a passed-in api), `extensions/themes/<name>` (colour themes), `extensions/locales/<name>` (UI translations) - each its own manifest (`gepard.type`) and own dependencies.
-- Every extension is released on its own (`<package name>-v<version>` tags, one `npm pack` tarball per platform, `-<platform>` suffix when platform-specific); the packaged app bundles the themes and the English locale from their releases (`yarn extensions:bundle`) and the rest are installed from Settings. `extensions/catalog.json` lists every extension in the repository and is compiled into the main process (see `docs/releases.md`). In development every extension in the repo loads as a built-in.
-- Typescript/JavaScript LSP extension ships its own native TypeScript LSP inside its package (no workspace-toolchain detection - this is a review tool, not an editor).
-- Themes (light/dark, built in) and locales (English, built in) are also shipped this way, not hardcoded in the app; the renderer bakes only a fallback theme template, used before the IPC-fetched theme list has loaded (message default texts live in the code, so no locale catalog is needed at bootstrap).
+- Extensions are independent packages with their own manifest (`gepard.type`) and dependencies, of four kinds: language servers (`extensions/lsp/<name>`), grammars (`extensions/grammars/<name>`: file types mapped to a CodeMirror language, built against the app's CodeMirror through a passed-in api), themes (`extensions/themes/<name>`) and locales (`extensions/locales/<name>`).
+- Every extension is released and versioned on its own, with one tarball per supported platform. The packaged app bundles the themes and the English locale from the workspace and offers all other extensions for installation from Settings. A catalog compiled into the app lists every extension in the repository. In development every extension in the repository loads as a built-in.
+- The TypeScript/JavaScript language server extension runs its own native TypeScript language server and never detects the reviewed project's toolchain.
+- Themes and the English locale are extensions, not hardcoded in the app. Before the theme list has loaded the renderer uses a fallback theme template; message default texts live in the code, so no locale catalog is needed at startup.
 
 #### Extension requirements
 - Kinds: language server, grammar, theme, locale.
@@ -36,10 +36,10 @@
 - Sections:
 	- Theme - single select: Follow system, Light, Dark, Light - High contrast, Dark - High contrast, plus any installed theme extensions. Follow system picks light or dark from the OS colour scheme and the high contrast variant when the OS asks for more contrast.
 	- Language - single select: Follow system (OS/browser-detected), plus each installed locale extension by display name; persisted selection wins over OS detection, applied live without restart.
-	- Controls - list of the current global keyboard shortcuts (command name + effective key), sourced from the same binding table `useGlobalKeys` runs, so the list can't drift from actual behavior. Each shortcut can be rebound: click `Rebind`, press the new key, the override is persisted and takes effect immediately, no restart; a `Reset` button clears a customized binding back to its default. If a rebind lands on a key another binding also effectively uses, both rows show a visible conflict note (not a hard block - the earlier-listed binding wins at runtime).
+	- Controls - list of the current global keyboard shortcuts (command name + effective key), sourced from the same binding table the shortcuts run from, so the list can't drift from actual behavior. Each shortcut can be rebound: click `Rebind`, press the new key, the override is persisted and takes effect immediately, no restart; a `Reset` button clears a customized binding back to its default. If a rebind lands on a key another binding also effectively uses, both rows show a visible conflict note (not a hard block - the earlier-listed binding wins at runtime).
 	- Extensions - list of installed extensions (built-in and external), each showing kind (language server/grammar/theme/locale), source (built-in/external) badge and an enable/disable checkbox; `Add extension` opens a file picker to install an extension package from disk; shows the install directory path, each extension's version and per-extension load errors.
-	- Available extensions - the compiled-in `extensions/catalog.json`: each entry shows kind, latest version, installed version, and an `Install` or `Update` button; built-in entries and entries without a build for the current platform are labelled instead. The main process downloads the release tarball, extracts it and installs it as `<name>-<version>`, replacing any older version of the same package.
-	- Install from GitHub - `owner/repo` (or GitHub URL) plus an optional path inside the repository; installs the latest release tarball matching the platform (tag prefix `<package name>-v` when a path is given). Both go through the single `extensions.install` IPC call with a `github-release` or `local` source.
+	- Available extensions - the catalog of all extensions: each entry shows kind, latest version, installed version, and an `Install` or `Update` button; built-in entries and entries without a build for the current platform are labelled instead. Installing downloads the release tarball for the current platform, replaces any older installed version of the same extension and takes effect without restart.
+	- Install from GitHub - `owner/repo` (or GitHub URL) plus an optional path inside the repository; installs the latest release matching the platform. Installing from a local package file is also supported.
 
 ### Main window
 - Window: a new window opens maximized; title is `Gepard`, or `Gepard - <project name>` while a project is open.
@@ -67,7 +67,7 @@
 		- Draggable; position persisted per project, kept clamped inside the viewer area.
 	- Right panel (file comments sidebar): closeable, right-hand side, resizable the same way as the side panel (drag edge, width persisted per project); replaces the old floating comments overlay.
 		- Opened/closed via the toggle button in the header (moved there from the file controls floating panel).
-		- Bottom section: a symbols tree for the active file, LSP-backed via a `symbols.document` IPC call (`LanguageSession.documentSymbols`, `textDocument/documentSymbol`) - shows the document's symbol hierarchy (name + kind), nested when the LSP replies hierarchically; clicking a symbol jumps to its line in the active file (same `file/open`/reveal-line mechanism as comment threads and search results).
+		- Bottom section: a symbols tree for the active file, provided by the language server extension - shows the document's symbol hierarchy (name + kind), nested when the LSP replies hierarchically; clicking a symbol jumps to its line in the active file (same navigation as comment threads and search results).
 		- For a file outside the pull request's diff the panel shows the PR comments that reference the file plus a PR comment composer; the comment gets a reference to the file's first line.
 	- Overview tab (first, default): shows the project state while no PR is targeted and the pull request state otherwise. It gives a quick summary of what is under review.
 	- Comments tab: chronological view of all threads and replies; a composer below the list adds a new PR comment (PR-level, no file/line anchor).
