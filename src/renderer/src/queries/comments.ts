@@ -178,3 +178,13 @@ export function usePendingCount() {
     enabled: Boolean(projectId) && Number.isFinite(pr),
   });
 }
+
+export function useFullSync(): {
+  sync: () => void;
+  syncing: boolean;
+  pendingCount: number | undefined;
+} {
+  const { mutate, isPending } = useSync();
+  const { data } = usePendingCount();
+  return { sync: () => mutate('full'), syncing: isPending, pendingCount: data };
+}

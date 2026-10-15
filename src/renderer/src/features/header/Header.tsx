@@ -6,6 +6,7 @@ import { PathTarget } from './PathTarget';
 import { useTargetingEffects } from './useTargetingEffects';
 import { HeaderLogo } from './HeaderLogo';
 import { HeaderStatus } from './HeaderStatus';
+import { HeaderSyncButton } from './HeaderSyncButton';
 import { Sidebar } from 'react-feather';
 import { IconButton } from '../../components/IconButton';
 import { Inline } from '../../components/Layout';
@@ -66,6 +67,7 @@ export function Header(): React.JSX.Element {
         </Inline>
       </Group>
       <HeaderStatus pending={pending} />
+      <HeaderSyncButton />
       <IconButton
         icon={Sidebar}
         active={layout.fileCommentsPanelOpen}
