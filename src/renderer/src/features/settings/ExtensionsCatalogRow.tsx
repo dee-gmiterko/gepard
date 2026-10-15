@@ -10,7 +10,7 @@ import { ExtensionKindBadge } from './ExtensionKindBadge';
 
 const messages = defineMessages({
   builtin: {
-    id: 'settings.extensions.builtin',
+    id: 'settings.extensions.catalog.builtin',
     defaultMessage: 'Built-in',
   },
   catalogInstalled: {

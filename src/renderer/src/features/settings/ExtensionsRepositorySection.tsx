@@ -12,7 +12,7 @@ import { useInstallExtension } from '../../queries/extensions';
 
 const messages = defineMessages({
   catalogInstalling: {
-    id: 'settings.extensions.catalog.installing',
+    id: 'settings.extensions.repo.installing',
     defaultMessage: 'Installing…',
   },
   repoTitle: {
