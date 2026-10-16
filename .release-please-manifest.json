@@ -1,16 +1,3 @@
 {
-  ".": "0.1.2",
-  "extensions/lsp/typescript": "0.1.0",
-  "extensions/lsp/python": "0.1.0",
-  "extensions/lsp/java": "0.1.0",
-  "extensions/lsp/csharp": "0.1.0",
-  "extensions/lsp/cpp": "0.1.0",
-  "extensions/lsp/php": "0.1.0",
-  "extensions/lsp/gdscript": "0.1.0",
-  "extensions/grammars/godot": "0.1.0",
-  "extensions/locales/en": "0.1.0",
-  "extensions/themes/dark": "0.1.0",
-  "extensions/themes/dark-high-contrast": "0.1.0",
-  "extensions/themes/light": "0.1.0",
-  "extensions/themes/light-high-contrast": "0.1.0"
+  ".": "0.1.2"
 }

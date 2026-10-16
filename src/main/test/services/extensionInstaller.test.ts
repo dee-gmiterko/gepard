@@ -186,7 +186,7 @@ describe('ExtensionInstallerService', () => {
       '--pattern',
       'gepard-ext-demo-0.2.0.tgz',
       '--dir',
-      expect.stringContaining(join(tmp.path, 'gepard-ext-')),
+      expect.stringContaining(join(tmp.path, 'gepard-download-')),
       '--clobber',
     ]);
     expect(list).toEqual([
@@ -199,7 +199,7 @@ describe('ExtensionInstallerService', () => {
       }),
     ]);
     expect(await readdir(userExtensions)).toEqual(['gepard-ext-demo']);
-    expect(await readdir(tmp.path)).not.toContain(expect.stringMatching(/^gepard-ext-/));
+    expect(await readdir(tmp.path)).not.toContain(expect.stringMatching(/^gepard-download-/));
   });
 
   it('downloads the platform tarball of a platform-specific entry', async () => {

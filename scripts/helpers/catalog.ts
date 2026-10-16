@@ -27,8 +27,6 @@ export type ReleaseConfig = Record<string, unknown> & {
   packages: Record<string, Record<string, unknown>>;
 };
 
-export type ReleaseManifest = Record<string, string>;
-
 export function buildCatalog(
   packages: ExtensionPackage[],
   repository: string,
@@ -59,14 +57,4 @@ export function buildReleaseConfig(
     },
   ]);
   return { ...existing, packages: Object.fromEntries([...kept, ...generated]) };
-}
-
-export function mergeReleaseManifest(
-  existing: ReleaseManifest,
-  packages: ExtensionPackage[],
-): ReleaseManifest {
-  const added = packages
-    .filter(({ path: dir }) => !(dir in existing))
-    .map(({ path: dir, manifest }): [string, string] => [dir, manifest.version]);
-  return { ...existing, ...Object.fromEntries(added) };
 }

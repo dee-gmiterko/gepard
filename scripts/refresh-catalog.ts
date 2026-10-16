@@ -9,18 +9,15 @@ import { formatJson } from './helpers/format-json';
 import {
   buildCatalog,
   buildReleaseConfig,
-  mergeReleaseManifest,
   type ExtensionManifest,
   type ExtensionPackage,
   type ReleaseConfig,
-  type ReleaseManifest,
 } from './helpers/catalog';
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const EXTENSIONS_DIR = 'extensions';
 const CATALOG_FILE = 'extensions/catalog.json';
 const RELEASE_CONFIG_FILE = 'release-please-config.json';
-const RELEASE_MANIFEST_FILE = '.release-please-manifest.json';
 
 function readJson<T>(file: string): T {
   return JSON.parse(readFileSync(path.join(ROOT_DIR, file), 'utf8')) as T;
@@ -76,10 +73,6 @@ async function main({ check }: { check: boolean }): Promise<void> {
     [
       RELEASE_CONFIG_FILE,
       buildReleaseConfig(readJson<ReleaseConfig>(RELEASE_CONFIG_FILE), packages),
-    ],
-    [
-      RELEASE_MANIFEST_FILE,
-      mergeReleaseManifest(readJson<ReleaseManifest>(RELEASE_MANIFEST_FILE), packages),
     ],
   ];
   const outputs = await Promise.all(
