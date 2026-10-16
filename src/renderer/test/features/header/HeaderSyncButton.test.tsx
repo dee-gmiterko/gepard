@@ -22,6 +22,15 @@ describe('header refresh button', () => {
     expect(screen.getByText('3')).toBeVisible();
   });
 
+  it('caps the badge at 99+ while keeping the real count in the label', async () => {
+    const world = createWorld({ prs: [pr(7, 'Speed up the indexer')], targeting: { pr: 7 } });
+    world.handlers['sync.pendingCount'] = () => 150;
+    renderWithProviders(<App />, world.handlers);
+
+    await screen.findByRole('button', { name: 'Refresh (150 to sync)' });
+    expect(screen.getByText('99+')).toBeVisible();
+  });
+
   it('shows no badge when nothing is waiting to sync', async () => {
     const world = createWorld({ prs: [pr(7, 'Speed up the indexer')], targeting: { pr: 7 } });
     renderWithProviders(<App />, world.handlers);
