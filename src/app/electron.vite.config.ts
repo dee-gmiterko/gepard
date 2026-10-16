@@ -7,8 +7,7 @@ export default defineConfig({
     build: {
       rollupOptions: {
         input: {
-          index: resolve('../main/index.ts'),
-          server: resolve('../main/server/index.ts'),
+          index: resolve('../electron/index.ts'),
           'line-index-worker': resolve('../main/services/line-index-worker.ts'),
         },
       },

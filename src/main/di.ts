@@ -1,7 +1,6 @@
 import { tmpdir } from 'node:os';
 import { ExtensionCatalog } from '@gepard/common';
 import catalogJson from '../../extensions/catalog.json';
-import type { Cli } from './cli';
 import type { Paths } from './paths';
 import type { LoggerService } from './log';
 import { FileLoggerService } from './services/logger';
@@ -9,6 +8,7 @@ import { IpcEventService } from './ipc/events';
 import { LatestWinsService } from './ipc/cancellation';
 import type { HandlerMap } from './ipc/dispatch';
 import type { FolderPicker } from './native';
+import type { InstanceLauncher } from './instanceLauncher';
 import type { ContextMenuPort } from './contextMenuPort';
 import { NotifyService } from './notify';
 import { run, runBuffer, runJson } from './helpers/process/exec';
@@ -71,8 +71,15 @@ export interface Core {
   launch: LaunchService;
 }
 
-export function composeCore(paths: Paths, cli: Cli, focusWindow: () => void): Core {
-  const logger = new FileLoggerService(paths);
+export interface CoreHost {
+  target: string | null;
+  logToConsole: boolean;
+  instances: (logger: LoggerService) => InstanceLauncher;
+  focusWindow: () => void;
+}
+
+export function composeCore(paths: Paths, host: CoreHost): Core {
+  const logger = new FileLoggerService(paths, host.logToConsole);
   const events = new IpcEventService();
   const notify = new NotifyService(logger, events);
   const latestWins = new LatestWinsService();
@@ -115,10 +122,11 @@ export function composeCore(paths: Paths, cli: Cli, focusWindow: () => void): Co
     indexer,
     events,
     notify,
-    cli.target,
+    host.target,
     paths,
     logger,
-    focusWindow,
+    host.instances(logger),
+    host.focusWindow,
   );
   return {
     paths,

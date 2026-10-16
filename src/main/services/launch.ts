@@ -1,4 +1,3 @@
-import { spawn } from 'node:child_process';
 import {
   AppError,
   isGitHubRepoUrl,
@@ -7,13 +6,13 @@ import {
   type Project,
 } from '@gepard/common';
 import { findProjectByName } from '../helpers/projects';
-import { instanceCommand, waitForInstance } from '../helpers/process/instance';
 import { ProjectLocks } from '../helpers/process/projectLock';
 import { formatCaughtError } from '../helpers/error';
 import type { ProjectStore } from '../store/projects';
 import type { IndexerService } from '../lsp/indexer';
 import type { Paths } from '../paths';
 import type { LoggerService } from '../log';
+import type { InstanceLauncher } from '../instanceLauncher';
 import type { IpcEventService } from '../ipc/events';
 import type { NotifyService } from '../notify';
 import type { GitService } from './git';
@@ -31,6 +30,7 @@ export class LaunchService {
     private readonly target: string | null,
     private readonly paths: Paths,
     private readonly logger: LoggerService,
+    private readonly instances: InstanceLauncher,
     focusWindow: () => void,
   ) {
     this.locks = new ProjectLocks(paths.projectLocksDir(), focusWindow);
@@ -114,17 +114,7 @@ export class LaunchService {
       );
     }
     const target = projectId === null ? null : await this.projectUrl(projectId);
-    const { command, args } = instanceCommand(target, {
-      execPath: process.execPath,
-      appPath: this.paths.appPath,
-      defaultApp: Boolean(process.defaultApp),
-      appImage: process.env['APPIMAGE'],
-    });
-    this.logger.info('launch', `detached instance: ${command} ${args.join(' ')}`);
-    const child = spawn(command, args, { detached: true, stdio: ['ignore', 'pipe', 'ignore'] });
-    child.unref();
-    if (!(await waitForInstance(child)))
-      this.logger.warn('launch', `no window reported: ${command}`);
+    await this.instances.launch(target);
   }
 
   private async projectUrl(projectId: string): Promise<string> {

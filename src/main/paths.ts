@@ -19,8 +19,7 @@ export function resolveUserDataDir(
 export class Paths {
   constructor(
     private readonly userDataDir: string,
-    readonly appPath: string,
-    readonly packaged: boolean,
+    private readonly builtinExtensions: string,
   ) {}
 
   nohooksDir(): string {
@@ -67,9 +66,7 @@ export class Paths {
   }
 
   builtinExtensionsDir(): string {
-    return this.packaged
-      ? join(this.appPath, '..', 'extensions')
-      : join(this.appPath, '..', '..', 'dist', 'extensions');
+    return this.builtinExtensions;
   }
 
   extensionDataDir(id: string): string {

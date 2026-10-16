@@ -21,6 +21,7 @@ import { defineMessages, useIntl } from 'react-intl';
 import { useUiDispatch } from '../../../state/UiContext';
 import { useAcceptedFiles, useActiveFile, useLayout, useTargetPr } from '../../../state/hooks';
 import { invoke } from '../../../ipc/client';
+import { hostCapabilities } from '../../../ipc/host';
 import { reportQueryError } from '../../../errors/report';
 import { useSetLayout } from '../../../queries/projects';
 import { useViewed } from '../../../queries/comments';
@@ -385,13 +386,15 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
               {intl.formatMessage(messages.viewed)}
             </ViewedLabel>
           )}
-          <MenuToggle
-            icon={MoreHorizontal}
-            size={14}
-            label={intl.formatMessage(messages.viewOptions)}
-            aria-haspopup="menu"
-            onClick={(e) => openViewOptions(e.currentTarget)}
-          />
+          {hostCapabilities().contextMenu && (
+            <MenuToggle
+              icon={MoreHorizontal}
+              size={14}
+              label={intl.formatMessage(messages.viewOptions)}
+              aria-haspopup="menu"
+              onClick={(e) => openViewOptions(e.currentTarget)}
+            />
+          )}
           <IconButton
             icon={Sidebar}
             size={14}

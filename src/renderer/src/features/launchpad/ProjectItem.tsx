@@ -11,6 +11,7 @@ import { Inline } from '../../components/Layout';
 import { ListRow, RowTitle } from '../../components/List';
 import { reportQueryError } from '../../errors/report';
 import { useIpcEvent } from '../../ipc/client';
+import { hostCapabilities } from '../../ipc/host';
 import { qk } from '../../queries/keys';
 import {
   useCloneStart,
@@ -226,7 +227,10 @@ export function ProjectItem({ project, autoClone }: ProjectItemProps): React.JSX
   }, [autoClone, project.cloned, project.id, cloneStart]);
 
   function handleOpen(e: MouseEvent): void {
-    openProject({ projectId: project.id, detached: e.ctrlKey || e.metaKey });
+    openProject({
+      projectId: project.id,
+      detached: hostCapabilities().detachedWindows && (e.ctrlKey || e.metaKey),
+    });
   }
 
   function handleRemove(): void {

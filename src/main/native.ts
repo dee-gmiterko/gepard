@@ -1,17 +1,8 @@
-import type { BrowserWindow, MenuItemConstructorOptions } from 'electron';
-
-export interface PopupOptions {
-  window: BrowserWindow;
-  x: number;
-  y: number;
-  callback: () => void;
+// Identifies a window of the host without exposing the host's own window type.
+export interface WindowHandle {
+  readonly id: number;
 }
 
 export interface FolderPicker {
-  pickFolder(window: BrowserWindow | null, title: string): Promise<string | null>;
-}
-
-export interface NativeMenu {
-  popupMenu(template: MenuItemConstructorOptions[], options?: PopupOptions): void;
-  writeClipboard(text: string): Promise<void>;
+  pickFolder(window: WindowHandle | null, title: string): Promise<string | null>;
 }

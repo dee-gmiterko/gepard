@@ -13,7 +13,7 @@ describe('resolveUserDataDir', () => {
 });
 
 describe('Paths', () => {
-  const paths = new Paths('/data', '/app/out', false);
+  const paths = new Paths('/data', '/builtin');
 
   it('derives locations from the base directory it was constructed with', () => {
     expect(paths.settingsJsonPath()).toBe('/data/settings.json');
@@ -21,9 +21,8 @@ describe('Paths', () => {
     expect(paths.logsDir()).toBe('/data/logs');
   });
 
-  it('resolves built-in extensions relative to the app path', () => {
-    expect(paths.builtinExtensionsDir()).toBe('/dist/extensions');
-    expect(new Paths('/data', '/r/app.asar', true).builtinExtensionsDir()).toBe('/r/extensions');
+  it('uses the built-in extensions directory it was constructed with', () => {
+    expect(paths.builtinExtensionsDir()).toBe('/builtin');
   });
 
   it('rejects invalid project ids', () => {

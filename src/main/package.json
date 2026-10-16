@@ -11,15 +11,12 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@electron-toolkit/utils": "^4.0.0",
     "@gepard/common": "workspace:^",
     "@vscode/ripgrep": "^1.18.0",
     "electron-log": "^5.4.4",
     "mime-types": "^3.0.2",
     "tar": "^7.5.22",
     "vscode-jsonrpc": "^9.0.3",
-    "ws": "^8.22.0",
-    "yargs": "^18.2.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -27,14 +24,13 @@
     "@gepard/eslint-config": "workspace:^",
     "@types/mime-types": "^3.0.1",
     "@types/node": "^26.6.4",
-    "@types/ws": "^8.18.2",
-    "@types/yargs": "^17.0.35",
-    "electron": "^44.5.1",
-    "electron-vite": "^5.0.0",
     "eslint": "^10.11.0",
     "prettier": "^3.9.9",
     "typescript": "^7.0.2",
     "vite": "^8.3.2",
     "vitest": "^5.0.3"
+  },
+  "exports": {
+    "./*": "./*.ts"
   }
 }

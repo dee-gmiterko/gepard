@@ -63,7 +63,7 @@ describe('files.content over the real IPC contract and handler (integration)', (
   it('serves a plain nested path end to end', async () => {
     const parsed = validate('src/a.ts');
     if (!parsed.success) throw new Error('expected the contract to accept the path');
-    const ctx = { window: null, remote: false };
+    const ctx = { window: null };
     expect(await handlers['files.content'](parsed.data, ctx)).toMatchObject({
       kind: 'text',
       text: 'export const a = 1;\n',
@@ -73,7 +73,7 @@ describe('files.content over the real IPC contract and handler (integration)', (
   it.each(['../a', 'src/../../a', '/etc/passwd', ''])('rejects %j', async (p) => {
     const parsed = validate(p);
     if (!parsed.success) return;
-    const ctx = { window: null, remote: false };
+    const ctx = { window: null };
     await expect(handlers['files.content'](parsed.data, ctx)).rejects.toMatchObject({
       code: 'INVALID_PATH',
     });

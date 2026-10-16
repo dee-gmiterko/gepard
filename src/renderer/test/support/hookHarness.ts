@@ -9,7 +9,7 @@ import { createFakeIpc, type FakeIpc, type Handlers } from './fakeIpc';
 export function installIpc(handlers: Handlers): FakeIpc {
   const ipc = createFakeIpc(handlers);
   Object.defineProperty(globalThis, 'window', {
-    value: { ipc: ipc.bridge },
+    value: { gepard: { host: 'desktop', ipc: ipc.bridge } },
     configurable: true,
     writable: true,
   });
