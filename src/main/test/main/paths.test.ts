@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Paths, resolveUserDataDir } from '../paths';
+import { Paths, resolveUserDataDir } from '../../main/paths';
 
 describe('resolveUserDataDir', () => {
   it('follows the Electron userData location per platform', () => {

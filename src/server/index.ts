@@ -1,3 +1,3 @@
-import { startServer } from './start';
+import { bootstrap } from './server/app';
 
-startServer();
+bootstrap();

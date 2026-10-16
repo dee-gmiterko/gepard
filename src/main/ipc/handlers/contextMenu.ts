@@ -1,5 +1,5 @@
 import type { HandlerMap } from '../dispatch';
-import type { ContextMenuPort } from '../../contextMenuPort';
+import type { ContextMenuPort } from '../../ports/contextMenuPort';
 
 export class ContextMenuHandlers {
   constructor(private readonly contextMenu: ContextMenuPort) {}

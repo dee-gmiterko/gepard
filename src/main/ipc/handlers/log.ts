@@ -1,5 +1,5 @@
 import type { HandlerMap } from '../dispatch';
-import type { LoggerService } from '../../log';
+import type { LoggerService } from '../../main/log';
 import { oneLine } from '../../helpers/string';
 
 export class LogHandlers {

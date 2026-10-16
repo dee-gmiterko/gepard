@@ -1,5 +1,5 @@
 import type { HandlerMap } from '../dispatch';
-import type { FolderPicker } from '../../native';
+import type { FolderPicker } from '../../ports/native';
 import type { ExtensionCatalogService } from '../../services/extensionCatalog';
 import type { ExtensionInstallerService } from '../../services/extensionInstaller';
 import type { ExtensionsService } from '../../services/extensions';

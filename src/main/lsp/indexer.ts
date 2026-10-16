@@ -10,9 +10,9 @@ import {
   type LanguageSession,
 } from '@gepard/common';
 import type { IpcEventService } from '../ipc/events';
-import type { Paths } from '../paths';
-import type { LoggerService } from '../log';
-import { isNotifiableLevel, type NotifyService } from '../notify';
+import type { Paths } from '../main/paths';
+import type { LoggerService } from '../main/log';
+import { isNotifiableLevel, type NotifyService } from '../main/notify';
 import { startLineIndex, type LineIndexHandle } from '../services/line-index-manager';
 import type { ExtensionsService } from '../services/extensions';
 

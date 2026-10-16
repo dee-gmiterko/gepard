@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseCli } from '../cli';
+import { parseCli } from '../../server/cli';
 
 describe('parseCli', () => {
   it('reads the host and port positionals', () => {

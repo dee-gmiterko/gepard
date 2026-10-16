@@ -3,6 +3,6 @@ import type { IpcBridge } from '@gepard/common';
 
 declare global {
   interface Window {
-    gepard?: { host: 'desktop'; ipc: IpcBridge };
+    gepard: { host: 'desktop' | 'browser'; ipc: IpcBridge };
   }
 }

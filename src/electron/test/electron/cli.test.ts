@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseCli } from '../cli';
+import { parseCli } from '../../electron/cli';
 
 describe('parseCli', () => {
   it('reads the positional argument as the launch target', () => {

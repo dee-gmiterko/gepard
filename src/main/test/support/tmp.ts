@@ -1,8 +1,8 @@
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Paths } from '../../paths';
-import type { LoggerService } from '../../log';
+import { Paths } from '../../main/paths';
+import type { LoggerService } from '../../main/log';
 import type { IpcEventService } from '../../ipc/events';
 
 export interface TmpDir {

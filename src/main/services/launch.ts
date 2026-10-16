@@ -10,11 +10,11 @@ import { ProjectLocks } from '../helpers/process/projectLock';
 import { formatCaughtError } from '../helpers/error';
 import type { ProjectStore } from '../store/projects';
 import type { IndexerService } from '../lsp/indexer';
-import type { Paths } from '../paths';
-import type { LoggerService } from '../log';
-import type { InstanceLauncher } from '../instanceLauncher';
+import type { Paths } from '../main/paths';
+import type { LoggerService } from '../main/log';
+import type { InstanceLauncher } from '../ports/instanceLauncher';
 import type { IpcEventService } from '../ipc/events';
-import type { NotifyService } from '../notify';
+import type { NotifyService } from '../main/notify';
 import type { GitService } from './git';
 
 export class LaunchService {

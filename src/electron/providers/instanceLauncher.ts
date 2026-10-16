@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
-import type { InstanceLauncher } from '@gepard/main/instanceLauncher';
-import type { LoggerService } from '@gepard/main/log';
-import { instanceCommand, waitForInstance } from './instance';
+import type { InstanceLauncher } from '@gepard/main/ports/instanceLauncher';
+import type { LoggerService } from '@gepard/main/main/log';
+import { instanceCommand, waitForInstance } from '../electron/instance';
 
 export class ElectronInstanceLauncher implements InstanceLauncher {
   constructor(

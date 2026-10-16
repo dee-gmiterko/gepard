@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AppErrorGate } from '../notify';
+import { AppErrorGate } from '../../main/notify';
 
 describe('AppErrorGate', () => {
   const payload = (n: number): { scope: string; message: string } => ({

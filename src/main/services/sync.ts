@@ -1,6 +1,6 @@
 import { AppError, generalCommentAnchor, RemoteNotFoundError } from '@gepard/common';
 import type { SyncMode } from '@gepard/common';
-import type { LoggerService } from '../log';
+import type { LoggerService } from '../main/log';
 import type { GhService } from './gh';
 import type { GitService } from './git';
 import type { ReviewStore, ReviewStoreFile } from '../store/review';

@@ -1,7 +1,7 @@
 import { spawn, execFile, type ChildProcess } from 'node:child_process';
 import { nativeTheme } from 'electron';
 import type { ThemeContrast } from '@gepard/common';
-import type { LoggerService } from '@gepard/main/log';
+import type { LoggerService } from '@gepard/main/main/log';
 
 const PORTAL_DEST = 'org.freedesktop.portal.Desktop';
 const PORTAL_PATH = '/org/freedesktop/portal/desktop';

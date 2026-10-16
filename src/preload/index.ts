@@ -1,3 +1,3 @@
-import { exposeIpcBridge } from './ipcBridge';
+import { exposeIpcBridge } from './preload/ipcBridge';
 
 exposeIpcBridge();

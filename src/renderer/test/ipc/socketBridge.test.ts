@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createSocketBridge, type BridgeSocket } from '../../src/ipc/socketBridge';
-import { socketUrl } from '../../src/ipc/bridge';
+import { createSocketBridge, socketUrl, type BridgeSocket } from '../../src/ipc/socketBridge';
 
 class FakeSocket implements BridgeSocket {
   readonly sent: string[] = [];

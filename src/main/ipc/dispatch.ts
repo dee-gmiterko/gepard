@@ -8,7 +8,7 @@ import {
   type ChannelOutput,
   type Envelope,
 } from '@gepard/common';
-import type { WindowHandle } from '../native';
+import type { WindowHandle } from '../ports/native';
 
 export interface HandlerCtx {
   window: WindowHandle | null;

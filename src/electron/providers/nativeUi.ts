@@ -1,5 +1,5 @@
 import { BrowserWindow, clipboard, dialog, Menu, type MenuItemConstructorOptions } from 'electron';
-import type { FolderPicker, WindowHandle } from '@gepard/main/native';
+import type { FolderPicker, WindowHandle } from '@gepard/main/ports/native';
 
 export interface PopupOptions {
   window: BrowserWindow;

@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import electronLog from 'electron-log/node';
-import type { LoggerService } from '../log';
-import type { Paths } from '../paths';
+import type { LoggerService } from '../main/log';
+import type { Paths } from '../main/paths';
 
 const MAX_LOG_FILE_BYTES = 5 * 1024 * 1024;
 

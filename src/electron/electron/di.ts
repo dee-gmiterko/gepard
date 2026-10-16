@@ -1,15 +1,15 @@
 import { join } from 'node:path';
 import { app } from 'electron';
-import { composeCore, composeHandlers, type Core } from '@gepard/main/di';
-import { Paths, resolveUserDataDir } from '@gepard/main/paths';
+import { composeCore, composeHandlers, type Core } from '@gepard/main/main/di';
+import { Paths, resolveUserDataDir } from '@gepard/main/main/paths';
 import { IpcDispatchService } from '@gepard/main/ipc/dispatch';
 import { SystemPreferenceService } from '@gepard/main/services/systemPreference';
 import type { Cli } from './cli';
-import { ContextMenuService } from './contextMenu';
-import { ElectronInstanceLauncher } from './instanceLauncher';
-import { ElectronNativeUi } from './nativeUi';
-import { ElectronSystemPreferenceSource } from './systemPreference';
-import { PortalTheme } from './portalTheme';
+import { ContextMenuService } from '../providers/contextMenu';
+import { ElectronInstanceLauncher } from '../providers/instanceLauncher';
+import { ElectronNativeUi } from '../providers/nativeUi';
+import { ElectronSystemPreferenceSource } from '../providers/systemPreference';
+import { PortalTheme } from '../providers/portalTheme';
 import { MainWindowService, focusMainWindow } from './window';
 
 export interface ElectronComposition {

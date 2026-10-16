@@ -7,6 +7,7 @@ import {
   type EventPayload,
   type IpcBridge,
   parseSocketServerMessage,
+  SOCKET_PATH,
   serializeInvoke,
   toIpcErrorShape,
 } from '@gepard/common';
@@ -31,6 +32,10 @@ const DISCONNECTED: Envelope<never> = {
   ok: false,
   error: toIpcErrorShape(new ConnectionError('The connection to the Gepard server was lost.')),
 };
+
+export function socketUrl(location: { protocol: string; host: string }): string {
+  return `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}${SOCKET_PATH}`;
+}
 
 export function createSocketBridge(url: string, options: SocketBridgeOptions = {}): IpcBridge {
   const connect: BridgeSocketFactory = options.connect ?? ((target) => new WebSocket(target));

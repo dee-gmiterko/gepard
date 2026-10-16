@@ -7,7 +7,7 @@ import { ConnectivityService } from '../../services/connectivity';
 import { FileLockService } from '../../services/fileLock';
 import { IpcEventService } from '../../ipc/events';
 import { ProjectStore } from '../../store/projects';
-import type { Paths } from '../../paths';
+import type { Paths } from '../../main/paths';
 import { silentLogger } from './tmp';
 
 export interface GitFixtureServices {

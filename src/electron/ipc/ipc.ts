@@ -1,5 +1,5 @@
 import { BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron';
-import { handleOf } from '../nativeUi';
+import { handleOf } from '../providers/nativeUi';
 import { ChannelNameList, type Envelope } from '@gepard/common';
 import type { IpcDispatchService } from '@gepard/main/ipc/dispatch';
 import type { IpcEventService } from '@gepard/main/ipc/events';

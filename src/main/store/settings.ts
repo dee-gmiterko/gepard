@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Paths } from '../paths';
+import type { Paths } from '../main/paths';
 import type { FileLockService } from '../services/fileLock';
 import { readJsonFile, writeJsonFile } from '../helpers/jsonFile';
 

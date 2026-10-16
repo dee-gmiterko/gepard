@@ -1,5 +1,5 @@
 import type { FileViewMenuPick } from '@gepard/common';
-import type { ContextMenuPort } from '@gepard/main/contextMenuPort';
+import type { ContextMenuPort } from '@gepard/main/ports/contextMenuPort';
 
 export class NoContextMenu implements ContextMenuPort {
   setLabels(): void {
