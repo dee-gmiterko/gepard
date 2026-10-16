@@ -29,12 +29,10 @@ function builtinExtensionsDir(appPath: string): string {
 
 export function composeElectron(cli: Cli): ElectronComposition {
   const appPath = app.getAppPath();
-  const paths = new Paths(
-    resolveUserDataDir(process.platform, process.env),
-    builtinExtensionsDir(appPath),
-  );
+  const paths = new Paths(resolveUserDataDir(process.platform, process.env));
   const core = composeCore(paths, {
     target: cli.target,
+    builtinExtensionsDir: builtinExtensionsDir(appPath),
     logToConsole: !app.isPackaged,
     instances: (logger) => new ElectronInstanceLauncher(logger, appPath),
     focusWindow: focusMainWindow,

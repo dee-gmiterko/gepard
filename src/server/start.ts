@@ -3,14 +3,12 @@ import { join } from 'node:path';
 import { composeCore, composeHandlers } from '@gepard/main/di';
 import { Paths, resolveUserDataDir } from '@gepard/main/paths';
 import { IpcDispatchService } from '@gepard/main/ipc/dispatch';
-import {
-  DefaultSystemPreferenceSource,
-  SystemPreferenceService,
-} from '@gepard/main/services/systemPreference';
+import { SystemPreferenceService } from '@gepard/main/services/systemPreference';
 import { parseProcessCli } from './cli';
 import { createIpcServer } from './server';
 import { createStaticHandler } from './static';
 import { ServerFolderPicker } from './folderPicker';
+import { DefaultSystemPreferenceSource } from './systemPreference';
 import { NoContextMenu } from './noContextMenu';
 import { NoInstanceLauncher } from './noInstanceLauncher';
 
@@ -18,12 +16,10 @@ const BUILTIN_EXTENSIONS_FROM_OUTPUT = join('..', '..', '..', 'dist', 'extension
 
 export function startServer(): void {
   const { host, port } = parseProcessCli();
-  const paths = new Paths(
-    resolveUserDataDir(process.platform, process.env),
-    join(__dirname, BUILTIN_EXTENSIONS_FROM_OUTPUT),
-  );
+  const paths = new Paths(resolveUserDataDir(process.platform, process.env));
   const core = composeCore(paths, {
     target: null,
+    builtinExtensionsDir: join(import.meta.dirname, BUILTIN_EXTENSIONS_FROM_OUTPUT),
     logToConsole: true,
     instances: () => new NoInstanceLauncher(),
     focusWindow: () => undefined,
@@ -37,7 +33,7 @@ export function startServer(): void {
     ),
   );
   createIpcServer(createServer(), {
-    serveStatic: createStaticHandler(join(__dirname, 'renderer')),
+    serveStatic: createStaticHandler(join(import.meta.dirname, 'renderer')),
     dispatch: dispatch.bind({ window: null }),
     subscribe: (sink) => core.events.subscribe(sink),
     onConnection: () => core.notify.rendererReady(),

@@ -31,7 +31,7 @@ describe('store/settings and known extension files', () => {
       settings,
       new ExtensionScannerService(
         userData.paths.extensionsRootDir(),
-        userData.paths.builtinExtensionsDir(),
+        userData.builtinDir,
         KIND_SPECS,
         extensionsStore,
       ),
@@ -102,7 +102,7 @@ describe('store/settings and known extension files', () => {
     }
 
     it('records a single kind in extensions-files.json', async () => {
-      const builtin = userData.paths.builtinExtensionsDir();
+      const builtin = userData.builtinDir;
       await writePackage(builtin, 'only-lang', DEMO_LANG_BODY.replace('demo-lang', 'only-lang'));
       await newService().list();
       const ids = Object.values(await extensionsStore.getKnownFiles()).map((k) => k.id);
@@ -110,7 +110,7 @@ describe('store/settings and known extension files', () => {
     });
 
     it('records every kind scanned concurrently by list()', async () => {
-      const builtin = userData.paths.builtinExtensionsDir();
+      const builtin = userData.builtinDir;
       await writeBuiltins(builtin);
       await newService().list();
       const ids = Object.values(await extensionsStore.getKnownFiles()).map((k) => k.id);

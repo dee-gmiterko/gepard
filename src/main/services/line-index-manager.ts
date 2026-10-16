@@ -11,7 +11,7 @@ import type {
 // (package.json "type": "module" makes Node treat it as ESM); only preload
 // output is forced to .mjs, since Electron picks preload's module system by
 // file extension rather than by package.json.
-const WORKER_ENTRY = join(__dirname, 'line-index-worker.js');
+const WORKER_ENTRY = join(import.meta.dirname, 'line-index-worker.js');
 
 export interface LineIndexHandle {
   queryExactLine(

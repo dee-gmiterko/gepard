@@ -64,7 +64,7 @@ describe('ExtensionsService', () => {
       settingsStore,
       new ExtensionScannerService(
         extRoot,
-        userData.paths.builtinExtensionsDir(),
+        userData.builtinDir,
         KIND_SPECS,
         new ExtensionsStore(userData.paths, locks),
       ),
@@ -74,7 +74,7 @@ describe('ExtensionsService', () => {
   async function setup(): Promise<ExtensionsService> {
     userData = await makeUserData();
     extRoot = userData.paths.extensionsRootDir();
-    await writeBuiltins(userData.paths.builtinExtensionsDir());
+    await writeBuiltins(userData.builtinDir);
     return newService();
   }
 

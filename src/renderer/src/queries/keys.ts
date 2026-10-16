@@ -11,6 +11,7 @@ export const qk = {
   grammars: () => [...qk.all, 'grammars'] as const,
   logPath: () => [...qk.all, 'logPath'] as const,
   connectivity: () => [...qk.all, 'connectivity'] as const,
+  systemPreference: () => [...qk.all, 'systemPreference'] as const,
   themeTemplate: () => [...qk.all, 'themeTemplate'] as const,
   themes: () => [...qk.all, 'themes'] as const,
   locales: () => [...qk.all, 'locales'] as const,
