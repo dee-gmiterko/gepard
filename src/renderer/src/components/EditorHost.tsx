@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 
-export const NARROW_EDITOR_WIDTH = '420px';
+export const NARROW_EDITOR_WIDTH = '900px';
 
 export const EditorHost = styled.div`
   height: 100%;
