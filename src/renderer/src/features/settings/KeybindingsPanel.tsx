@@ -115,7 +115,7 @@ export function KeybindingsPanel(): React.JSX.Element {
   }
 
   return (
-    <Section>
+    <Section $flush>
       <SectionHeading title={<FormattedMessage {...messages.title} />} />
       <Hint>
         <FormattedMessage {...messages.hint} />

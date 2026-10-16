@@ -133,13 +133,14 @@ const Tab = styled.button<{ $active: boolean }>`
     color: ${({ theme }) => theme.colors.fg};
   }
 
-  svg {
-    flex-shrink: 0;
-  }
-
   @container settings (max-width: 560px) {
     justify-content: center;
   }
+`;
+
+const TabIcon = styled.span`
+  display: inline-flex;
+  flex-shrink: 0;
 `;
 
 const TabLabel = styled.span`
@@ -158,10 +159,6 @@ const Page = styled.div`
   max-width: 1100px;
   margin: 0 auto;
   padding: ${({ theme }) => theme.space[5]} ${({ theme }) => theme.space[4]};
-
-  > section:first-child {
-    margin-top: 0;
-  }
 `;
 
 export interface SettingsOverlayProps {
@@ -263,7 +260,9 @@ export function SettingsOverlay({ onClose }: SettingsOverlayProps): React.JSX.El
                   $active={selected}
                   onClick={() => setActiveTab(tab.id)}
                 >
-                  <tab.icon size={16} />
+                  <TabIcon>
+                    <tab.icon size={16} />
+                  </TabIcon>
                   <TabLabel>{label}</TabLabel>
                 </Tab>
               );

@@ -69,7 +69,7 @@ export function ExtensionsRepositorySection(): React.JSX.Element {
   const valid = isRepositoryInput(repository);
 
   return (
-    <Section>
+    <Section $flush>
       <SectionHeading title={<FormattedMessage {...messages.repoTitle} />} />
       <Message tone="subtle" layout="inline">
         <FormattedMessage {...messages.repoHint} />

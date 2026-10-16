@@ -33,7 +33,7 @@ export function ExtensionsCatalogSection(): React.JSX.Element {
   );
 
   return (
-    <Section>
+    <Section $flush>
       <SectionHeading title={<FormattedMessage {...messages.catalogTitle} />} />
       <List>
         {isLoading ? (

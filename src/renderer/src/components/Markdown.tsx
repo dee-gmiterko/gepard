@@ -41,16 +41,6 @@ const Prose = styled.div`
     font-size: ${({ theme }) => theme.font.size.sm};
   }
 
-  img {
-    max-width: 100%;
-  }
-
-  table {
-    display: block;
-    max-width: 100%;
-    overflow: auto;
-  }
-
   pre code {
     display: block;
     padding: ${({ theme }) => theme.space[2]};
@@ -65,6 +55,18 @@ const Prose = styled.div`
     color: ${({ theme }) => theme.colors.fgMuted};
   }
 `;
+
+const ProseImage = styled.img`
+  max-width: 100%;
+`;
+
+const ProseTable = styled.table`
+  display: block;
+  max-width: 100%;
+  overflow: auto;
+`;
+
+const OVERRIDES = { img: { component: ProseImage }, table: { component: ProseTable } };
 
 const InlineProse = styled.span`
   color: inherit;
@@ -82,7 +84,9 @@ export function Markdown({ children, inline = false }: MarkdownProps): React.JSX
   const Wrapper = inline ? InlineProse : Prose;
   return (
     <Wrapper>
-      <MarkdownToJsx options={{ disableParsingRawHTML: true, forceInline: inline }}>
+      <MarkdownToJsx
+        options={{ disableParsingRawHTML: true, forceInline: inline, overrides: OVERRIDES }}
+      >
         {children}
       </MarkdownToJsx>
     </Wrapper>

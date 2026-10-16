@@ -95,6 +95,14 @@ export const RowGrid = styled.div<{ $columns?: string; $head?: boolean }>`
         `}
 `;
 
+export const WideOnly = styled.div`
+  display: contents;
+
+  @container overview (max-width: 720px) {
+    display: none;
+  }
+`;
+
 export const Cell = styled.div`
   display: flex;
   flex-direction: column;
