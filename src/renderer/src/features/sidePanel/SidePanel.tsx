@@ -127,6 +127,7 @@ export function SidePanel(): React.JSX.Element {
       width={layout.sidePanelWidth}
       min={MIN_WIDTH}
       max={MAX_WIDTH}
+      maxShare={0.4}
       edge="right"
       onCommit={commitWidth}
     >
