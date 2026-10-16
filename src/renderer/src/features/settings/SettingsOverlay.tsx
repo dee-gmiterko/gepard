@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import styled from 'styled-components';
-import { X } from 'react-feather';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { Command, Globe, Package, Droplet, X } from 'react-feather';
+import { defineMessages, FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl';
+import { activeToggleBackground, focusVisible } from '../../components/controlStyles';
 import { IconButton } from '../../components/IconButton';
 import { SectionHeading } from '../../components/SectionHeading';
 import { ThemePanel } from './ThemePanel';
@@ -18,7 +19,49 @@ const messages = defineMessages({
     id: 'settings.close',
     defaultMessage: 'Close settings',
   },
+  tablist: {
+    id: 'settings.tablist',
+    defaultMessage: 'Settings sections',
+  },
+  tabTheme: {
+    id: 'settings.tabs.theme',
+    defaultMessage: 'Theme',
+  },
+  tabLanguage: {
+    id: 'settings.tabs.language',
+    defaultMessage: 'Language',
+  },
+  tabControls: {
+    id: 'settings.tabs.controls',
+    defaultMessage: 'Controls',
+  },
+  tabExtensions: {
+    id: 'settings.tabs.extensions',
+    defaultMessage: 'Extensions',
+  },
 });
+
+type SettingsTab = 'theme' | 'language' | 'controls' | 'extensions';
+
+const TABS: {
+  id: SettingsTab;
+  label: MessageDescriptor;
+  icon: typeof X;
+  screen: () => React.JSX.Element;
+}[] = [
+  { id: 'theme', label: messages.tabTheme, icon: Droplet, screen: ThemePanel },
+  { id: 'language', label: messages.tabLanguage, icon: Globe, screen: LocalePanel },
+  { id: 'controls', label: messages.tabControls, icon: Command, screen: KeybindingsPanel },
+  { id: 'extensions', label: messages.tabExtensions, icon: Package, screen: ExtensionsPanel },
+];
+
+function tabId(id: SettingsTab): string {
+  return `settings-tab-${id}`;
+}
+
+function panelId(id: SettingsTab): string {
+  return `settings-panel-${id}`;
+}
 
 const Overlay = styled.dialog`
   position: fixed;
@@ -48,13 +91,77 @@ const OverlayHeader = styled.div`
 const OverlayBody = styled.div`
   flex: 1;
   min-height: 0;
+  container: settings / inline-size;
+`;
+
+const Layout = styled.div`
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  height: 100%;
+
+  @container settings (max-width: 560px) {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+`;
+
+const TabList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.space[1]};
+  padding: ${({ theme }) => theme.space[3]} ${({ theme }) => theme.space[2]};
+  border-right: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.bgSubtle};
+  overflow: auto;
+`;
+
+const Tab = styled.button<{ $active: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[2]};
+  padding: ${({ theme }) => theme.space[2]};
+  border: none;
+  border-radius: ${({ theme }) => theme.radius.sm};
+  font: inherit;
+  font-size: ${({ theme }) => theme.font.size.sm};
+  text-align: left;
+  color: ${({ $active, theme }) => ($active ? theme.colors.fg : theme.colors.fgMuted)};
+  cursor: pointer;
+  ${activeToggleBackground}
+  ${focusVisible}
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.fg};
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  @container settings (max-width: 560px) {
+    justify-content: center;
+  }
+`;
+
+const TabLabel = styled.span`
+  @container settings (max-width: 560px) {
+    display: none;
+  }
+`;
+
+const Screen = styled.div`
+  container: settingsScreen / inline-size;
+  min-width: 0;
   overflow: auto;
 `;
 
 const Page = styled.div`
-  max-width: 720px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: ${({ theme }) => theme.space[5]} ${({ theme }) => theme.space[4]};
+
+  > section:first-child {
+    margin-top: 0;
+  }
 `;
 
 export interface SettingsOverlayProps {
@@ -69,6 +176,36 @@ export function SettingsOverlay({ onClose }: SettingsOverlayProps): React.JSX.El
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
+
+  const [activeTab, setActiveTab] = useState<SettingsTab>('theme');
+  const tabRefs = useRef<Partial<Record<SettingsTab, HTMLButtonElement | null>>>({});
+
+  function handleTabKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
+    const index = TABS.findIndex((tab) => tab.id === activeTab);
+    let next: number;
+    switch (event.key) {
+      case 'ArrowDown':
+      case 'ArrowRight':
+        next = (index + 1) % TABS.length;
+        break;
+      case 'ArrowUp':
+      case 'ArrowLeft':
+        next = (index - 1 + TABS.length) % TABS.length;
+        break;
+      case 'Home':
+        next = 0;
+        break;
+      case 'End':
+        next = TABS.length - 1;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    const target = TABS[next].id;
+    setActiveTab(target);
+    tabRefs.current[target]?.focus();
+  }
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -99,12 +236,52 @@ export function SettingsOverlay({ onClose }: SettingsOverlayProps): React.JSX.El
         />
       </OverlayHeader>
       <OverlayBody>
-        <Page>
-          <ThemePanel />
-          <LocalePanel />
-          <KeybindingsPanel />
-          <ExtensionsPanel />
-        </Page>
+        <Layout>
+          <TabList
+            role="tablist"
+            aria-orientation="vertical"
+            aria-label={intl.formatMessage(messages.tablist)}
+            onKeyDown={handleTabKeyDown}
+          >
+            {TABS.map((tab) => {
+              const selected = activeTab === tab.id;
+              const label = intl.formatMessage(tab.label);
+              return (
+                <Tab
+                  key={tab.id}
+                  ref={(node) => {
+                    tabRefs.current[tab.id] = node;
+                  }}
+                  type="button"
+                  id={tabId(tab.id)}
+                  role="tab"
+                  aria-selected={selected}
+                  aria-controls={panelId(tab.id)}
+                  aria-label={label}
+                  title={label}
+                  tabIndex={selected ? 0 : -1}
+                  $active={selected}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  <tab.icon size={16} />
+                  <TabLabel>{label}</TabLabel>
+                </Tab>
+              );
+            })}
+          </TabList>
+          {TABS.filter((tab) => tab.id === activeTab).map((tab) => (
+            <Screen
+              key={tab.id}
+              id={panelId(tab.id)}
+              role="tabpanel"
+              aria-labelledby={tabId(tab.id)}
+            >
+              <Page>
+                <tab.screen />
+              </Page>
+            </Screen>
+          ))}
+        </Layout>
       </OverlayBody>
     </Overlay>
   );
