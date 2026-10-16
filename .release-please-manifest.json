@@ -10,5 +10,6 @@
   "extensions/lsp/java": "1.0.0",
   "extensions/themes/light-high-contrast": "1.0.0",
   "extensions/themes/light": "1.0.0",
-  "extensions/lsp/csharp": "1.0.0"
+  "extensions/lsp/csharp": "1.0.0",
+  "extensions/lsp/php": "1.0.0"
 }
