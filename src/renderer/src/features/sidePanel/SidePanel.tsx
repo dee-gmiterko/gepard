@@ -15,6 +15,8 @@ import { LanguageServersButton } from './LanguageServersButton';
 
 const MIN_WIDTH = 220;
 const MAX_WIDTH = 640;
+const RAIL_WIDTH = 32;
+const COLLAPSED_WIDTH = RAIL_WIDTH + 1;
 
 const messages = defineMessages({
   tablist: {
@@ -52,7 +54,7 @@ const Panel = styled(ResizablePanel)`
   container: sidebar / inline-size;
   z-index: ${({ theme }) => theme.z.popover};
   display: grid;
-  grid-template-columns: 32px 1fr;
+  grid-template-columns: ${RAIL_WIDTH}px 1fr;
   grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   border-right: 1px solid ${({ theme }) => theme.colors.border};
@@ -130,6 +132,7 @@ export function SidePanel(): React.JSX.Element {
       max={MAX_WIDTH}
       maxShare={0.4}
       edge="right"
+      collapsedWidth={sidePanelTab === null ? COLLAPSED_WIDTH : undefined}
       onCommit={commitWidth}
     >
       <TabRail>
@@ -146,7 +149,13 @@ export function SidePanel(): React.JSX.Element {
                 icon={tab.icon}
                 label={intl.formatMessage(tab.label)}
                 active={selected}
-                onClick={() => dispatch({ type: 'sidePanel/setTab', tab: tab.id, focus: true })}
+                onClick={() =>
+                  dispatch(
+                    selected
+                      ? { type: 'sidePanel/setTab', tab: null }
+                      : { type: 'sidePanel/setTab', tab: tab.id, focus: true },
+                  )
+                }
               />
             );
           })}

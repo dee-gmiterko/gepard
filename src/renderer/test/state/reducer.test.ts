@@ -5,6 +5,34 @@ function state(overrides: Partial<UiState> = {}): UiState {
   return { ...initialUiState, ...overrides };
 }
 
+describe('side panel tab', () => {
+  it('unselects the tab when set to null and keeps the focus request unchanged', () => {
+    const next = uiReducer(state({ sidePanelTab: 'files' }), {
+      type: 'sidePanel/setTab',
+      tab: null,
+    });
+    expect(next.sidePanelTab).toBeNull();
+    expect(next.sidePanelFocusRequest).toBe(0);
+  });
+
+  it('reopens the side panel and bumps the focus request when a tab is selected with focus', () => {
+    const closed = state({ sidePanelTab: null });
+    const next = uiReducer(closed, { type: 'sidePanel/setTab', tab: 'search', focus: true });
+    expect(next.sidePanelTab).toBe('search');
+    expect(next.sidePanelFocusRequest).toBe(1);
+  });
+
+  it('switches a closed side panel to targeted when a target is set', () => {
+    const closed = state({ sidePanelTab: null });
+    expect(uiReducer(closed, { type: 'target/pr', pr: 7 }).sidePanelTab).toBe('targeted');
+  });
+
+  it('is a no-op when closing an already closed side panel', () => {
+    const closed = state({ sidePanelTab: null });
+    expect(uiReducer(closed, { type: 'sidePanel/setTab', tab: null })).toBe(closed);
+  });
+});
+
 describe('targeting behaviors', () => {
   it('changing the PR clears the commit and switches the side panel to targeted', () => {
     const withCommit = state({ targeting: { pr: null, commit: 'deadbeef', path: null } });

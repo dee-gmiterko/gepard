@@ -13,6 +13,7 @@ interface ResizablePanelProps {
   max: number;
   maxShare: number;
   edge: 'left' | 'right';
+  collapsedWidth?: number;
   onCommit: (width: number) => void;
   className?: string;
   children: React.ReactNode;
@@ -24,6 +25,7 @@ export function ResizablePanel({
   max,
   maxShare,
   edge,
+  collapsedWidth,
   onCommit,
   className,
   children,
@@ -61,9 +63,13 @@ export function ResizablePanel({
     <div
       ref={ref}
       className={className}
-      style={{ width: live ?? width, maxWidth: `${maxShare * 100}cqw` }}
+      style={
+        collapsedWidth !== undefined
+          ? { width: collapsedWidth }
+          : { width: live ?? width, maxWidth: `${maxShare * 100}cqw` }
+      }
     >
-      <Handle $edge={edge} onPointerDown={onPointerDown} />
+      {collapsedWidth === undefined && <Handle $edge={edge} onPointerDown={onPointerDown} />}
       {children}
     </div>
   );
