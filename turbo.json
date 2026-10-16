@@ -61,6 +61,15 @@
     "//#barrels:check": {
       "inputs": ["scripts/refresh-barrels.sh", "src/common/**", "src/common-lsp/**", "package.json"]
     },
+    "//#catalog:check": {
+      "inputs": [
+        "scripts/refresh-catalog.ts",
+        "scripts/helpers/catalog.ts",
+        "extensions/**",
+        "release-please-config.json",
+        "package.json"
+      ]
+    },
     "validate": {
       "dependsOn": [
         "typecheck",
