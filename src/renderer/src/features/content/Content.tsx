@@ -20,6 +20,7 @@ const Main = styled.main`
 const FilesRow = styled.div`
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  container-type: inline-size;
   min-width: 0;
   min-height: 0;
 `;

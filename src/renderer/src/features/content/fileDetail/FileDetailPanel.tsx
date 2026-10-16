@@ -124,6 +124,7 @@ export function FileDetailPanel(): React.JSX.Element | null {
       width={layout.fileCommentsPanelWidth}
       min={MIN_WIDTH}
       max={MAX_WIDTH}
+      maxShare={0.4}
       edge="left"
       onCommit={commitWidth}
     >

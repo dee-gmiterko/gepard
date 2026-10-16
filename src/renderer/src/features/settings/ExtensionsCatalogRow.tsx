@@ -5,25 +5,12 @@ import { Button } from '../../components/Button';
 import { Caption } from '../../components/Caption';
 import { ListRow, RowTitle } from '../../components/List';
 import { Stack, Inline } from '../../components/Layout';
-import { catalogAction } from '../../helpers/extensionCatalog';
 import { ExtensionKindBadge } from './ExtensionKindBadge';
 
 const messages = defineMessages({
-  builtin: {
-    id: 'settings.extensions.catalog.builtin',
-    defaultMessage: 'Built-in',
-  },
-  catalogInstalled: {
-    id: 'settings.extensions.catalog.installed',
-    defaultMessage: 'Installed v{version}',
-  },
   catalogInstall: {
     id: 'settings.extensions.catalog.install',
     defaultMessage: 'Install',
-  },
-  catalogUpToDate: {
-    id: 'settings.extensions.catalog.upToDate',
-    defaultMessage: 'Up to date',
   },
   catalogUnsupported: {
     id: 'settings.extensions.catalog.unsupported',
@@ -34,13 +21,6 @@ const messages = defineMessages({
     defaultMessage: 'Installing…',
   },
 });
-
-const actionMessages = {
-  install: messages.catalogInstall,
-  upToDate: messages.catalogUpToDate,
-  builtin: messages.builtin,
-  unsupported: messages.catalogUnsupported,
-} as const;
 
 export function ExtensionsCatalogRow({
   entry,
@@ -53,33 +33,24 @@ export function ExtensionsCatalogRow({
   disabled: boolean;
   onInstall: () => void;
 }): React.JSX.Element {
-  const action = catalogAction(entry);
   return (
     <ListRow $padding={2}>
       <Stack $gap={1}>
         <Inline $gap={2}>
           <RowTitle $size="sm">{entry.displayName}</RowTitle>
           <ExtensionKindBadge kind={entry.kind} />
-          {entry.installedVersion !== null && (
-            <Caption>
-              <FormattedMessage
-                {...messages.catalogInstalled}
-                values={{ version: entry.installedVersion }}
-              />
-            </Caption>
-          )}
         </Inline>
         <Caption>{entry.description}</Caption>
       </Stack>
-      {action === 'install' ? (
+      {entry.supported ? (
         <Button variant="secondary" disabled={disabled} onClick={onInstall}>
           <FormattedMessage
-            {...(installing ? messages.catalogInstalling : actionMessages[action])}
+            {...(installing ? messages.catalogInstalling : messages.catalogInstall)}
           />
         </Button>
       ) : (
         <Badge $tone="muted">
-          <FormattedMessage {...actionMessages[action]} />
+          <FormattedMessage {...messages.catalogUnsupported} />
         </Badge>
       )}
     </ListRow>

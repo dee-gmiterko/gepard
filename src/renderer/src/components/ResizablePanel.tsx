@@ -11,6 +11,7 @@ interface ResizablePanelProps {
   width: number;
   min: number;
   max: number;
+  maxShare: number;
   edge: 'left' | 'right';
   onCommit: (width: number) => void;
   className?: string;
@@ -21,17 +22,23 @@ export function ResizablePanel({
   width,
   min,
   max,
+  maxShare,
   edge,
   onCommit,
   className,
   children,
 }: ResizablePanelProps): React.JSX.Element {
   const [live, setLive] = useState<number | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
   const shownRef = useRef(width);
   useLayoutEffect(() => {
     shownRef.current = live ?? width;
   });
   const getValue = useCallback(() => shownRef.current, []);
+  const getMax = useCallback(
+    () => (ref.current?.parentElement?.clientWidth ?? Infinity) * maxShare,
+    [maxShare],
+  );
   const handleCommit = useCallback(
     (value: number) => {
       setLive(null);
@@ -43,6 +50,7 @@ export function ResizablePanel({
   const { onPointerDown } = useResizeHandle({
     min,
     max,
+    getMax,
     sign: edge === 'right' ? 1 : -1,
     getValue,
     onChange: setLive,
@@ -50,7 +58,11 @@ export function ResizablePanel({
   });
 
   return (
-    <div className={className} style={{ width: live ?? width }}>
+    <div
+      ref={ref}
+      className={className}
+      style={{ width: live ?? width, maxWidth: `${maxShare * 100}cqw` }}
+    >
       <Handle $edge={edge} onPointerDown={onPointerDown} />
       {children}
     </div>

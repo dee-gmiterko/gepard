@@ -20,6 +20,7 @@ const Shell = styled.div`
 const Body = styled.div`
   display: grid;
   grid-template-columns: auto 1fr;
+  container-type: inline-size;
   min-height: 0;
 `;
 
