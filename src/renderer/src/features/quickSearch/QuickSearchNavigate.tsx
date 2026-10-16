@@ -12,7 +12,6 @@ import { PathLabel } from '../../components/PathLabel';
 import { Caption } from '../../components/Caption';
 import { listReset } from '../../components/List';
 import { rankNavigation, type NavigationMatch } from '../../helpers/navigation';
-import { QuickSearchStatus } from './QuickSearchStatus';
 import { useQuickSearchAutoFocus } from './useQuickSearchAutoFocus';
 
 const messages = defineMessages({
@@ -55,6 +54,10 @@ const kindMessages: Partial<Record<SymbolKind, MessageDescriptor>> = {
   enum: messages.kindEnum,
   type: messages.kindType,
 };
+
+const QuickSearchStatus = styled(Caption)`
+  padding: 0 ${({ theme }) => theme.space[1]};
+`;
 
 const Options = styled.ul`
   ${listReset}

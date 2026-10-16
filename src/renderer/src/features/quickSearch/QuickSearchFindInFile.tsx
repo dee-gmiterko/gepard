@@ -8,6 +8,7 @@ import { IconButton } from '../../components/IconButton';
 import { Inline } from '../../components/Layout';
 import { TextInput } from '../../components/TextInput';
 import { Message } from '../../components/Message';
+import { Caption } from '../../components/Caption';
 import {
   findBestMatch,
   foldCase,
@@ -18,7 +19,6 @@ import {
 import { useActionHandler } from '../../keyboard/actionHandlers';
 import { useKeybindingOverrides } from '../../queries/keybindings';
 import { bindingKeyLabel } from '../../helpers/key';
-import { QuickSearchStatus } from './QuickSearchStatus';
 import { useQuickSearchAutoFocus } from './useQuickSearchAutoFocus';
 
 const messages = defineMessages({
@@ -55,6 +55,10 @@ const messages = defineMessages({
     defaultMessage: 'No matches.',
   },
 });
+
+const QuickSearchStatus = styled(Caption)`
+  padding: 0 ${({ theme }) => theme.space[1]};
+`;
 
 const StepButton = styled(IconButton)`
   flex-shrink: 0;
