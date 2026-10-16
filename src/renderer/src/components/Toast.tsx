@@ -31,7 +31,7 @@ const Viewport = styled(Stack)`
   right: ${({ theme }) => theme.space[3]};
   z-index: ${({ theme }) => theme.z.popover};
   width: 416px;
-  max-width: calc(100vw - ${({ theme }) => theme.space[6]});
+  max-width: calc(100% - ${({ theme }) => theme.space[6]});
 `;
 
 const Card = styled(Surface)<{ $tone: ToastTone }>`

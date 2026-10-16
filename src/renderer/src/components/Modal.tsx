@@ -9,7 +9,7 @@ const Dialog = styled(Surface).attrs({ $elevation: 'floating' as const })<{
   $width: string;
 }>`
   width: ${({ $width }) => $width};
-  max-width: calc(100vw - ${({ theme }) => theme.space[6]});
+  max-width: calc(100% - ${({ theme }) => theme.space[6]});
   padding: 0;
   color: ${({ theme }) => theme.colors.fg};
 

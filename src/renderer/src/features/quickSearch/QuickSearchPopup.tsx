@@ -25,7 +25,7 @@ const Popup = styled(Surface).attrs({ $elevation: 'floating' as const })`
   flex-direction: column;
   gap: ${({ theme }) => theme.space[2]};
   width: 560px;
-  max-width: calc(100vw - ${({ theme }) => theme.space[6]});
+  max-width: calc(100% - ${({ theme }) => theme.space[6]});
   padding: ${({ theme }) => theme.space[2]};
 `;
 
