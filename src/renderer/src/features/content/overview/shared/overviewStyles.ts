@@ -4,6 +4,7 @@ import { focusVisible } from '../../../../components/controlStyles';
 import { Surface } from '../../../../components/Surface';
 
 export const Page = styled.div`
+  container: overview / inline-size;
   height: 100%;
   overflow: auto;
   padding: ${({ theme }) => theme.space[4]};

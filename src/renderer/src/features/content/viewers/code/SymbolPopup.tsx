@@ -46,8 +46,8 @@ const Popup = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.space[2]};
-  min-width: 240px;
-  max-width: 480px;
+  min-width: min(240px, 100cqi);
+  max-width: min(480px, 100cqi);
   max-height: 320px;
   overflow: auto;
   padding: ${({ theme }) => theme.space[2]};

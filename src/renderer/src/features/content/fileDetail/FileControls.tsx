@@ -78,6 +78,7 @@ const Floating = styled(Surface).attrs({ $elevation: 'floating' as const })`
   right: ${({ theme }) => theme.space[3]};
   z-index: ${({ theme }) => theme.z.floating};
   width: 280px;
+  max-width: calc(100% - ${({ theme }) => theme.space[6]});
   max-height: calc(100% - ${({ theme }) => theme.space[6]});
   overflow: auto;
   padding: ${({ theme }) => theme.space[2]};

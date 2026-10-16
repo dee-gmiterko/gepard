@@ -49,6 +49,7 @@ function panelId(id: SidePanelTab): string {
 
 const Panel = styled(ResizablePanel)`
   position: relative;
+  container: sidebar / inline-size;
   display: grid;
   grid-template-columns: 32px 1fr;
   grid-template-rows: minmax(0, 1fr);

@@ -2,6 +2,7 @@ import styled from 'styled-components';
 
 export const Toolbar = styled.div`
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: ${({ theme }) => theme.space[1]};
   padding: ${({ theme }) => theme.space[1]} ${({ theme }) => theme.space[2]};

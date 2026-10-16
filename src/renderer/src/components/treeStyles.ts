@@ -17,7 +17,11 @@ const Row = styled.div<{ $depth: number }>`
   gap: ${({ theme }) => theme.space[1]};
   min-height: 24px;
   padding: 2px ${({ theme }) => theme.space[2]} 2px
-    calc(${({ theme }) => theme.space[2]} + ${({ $depth }) => $depth * 14}px);
+    calc(${({ theme }) => theme.space[2]} + ${({ $depth }) => $depth} * var(--tree-indent, 14px));
+
+  @container sidebar (max-width: 280px) {
+    --tree-indent: 8px;
+  }
 
   ${focusVisible}
 `;

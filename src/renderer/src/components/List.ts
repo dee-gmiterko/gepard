@@ -21,6 +21,7 @@ export const ListRow = styled.li<{
 }>`
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: ${({ theme, $gap = 3 }) => theme.space[$gap]};
   padding: ${({ theme, $padding = 3 }) => theme.space[$padding]} 0;
