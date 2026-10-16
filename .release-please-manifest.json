@@ -7,5 +7,6 @@
   "extensions/lsp/cpp": "1.0.0",
   "extensions/themes/dark-high-contrast": "1.0.0",
   "extensions/grammars/godot": "1.0.0",
-  "extensions/lsp/java": "1.0.0"
+  "extensions/lsp/java": "1.0.0",
+  "extensions/themes/light-high-contrast": "1.0.0"
 }
