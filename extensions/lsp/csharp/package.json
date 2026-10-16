@@ -1,6 +1,6 @@
 {
   "name": "gepard-ext-csharp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "description": "Code intelligence for C# projects (Roslyn language server).",
