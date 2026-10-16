@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/dee-gmiterko/gepard/compare/gepard-ext-php-v1.0.0...gepard-ext-php-v1.0.1) (2026-10-16)
+
+
+### Bug Fixes
+
+* skip markdown files in every prettier run ([1d486a3](https://github.com/dee-gmiterko/gepard/commit/1d486a36524d7f4d61bac6175867f6cf0bf088eb))
+
 ## 1.0.0 (2026-10-16)
 
 
