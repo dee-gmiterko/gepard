@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ExtensionKind } from '@gepard/common';
-import { extensionsFilesJsonPath, writeLockPath } from '../paths';
-import { withFileLock } from '../helpers/fileLock';
+import type { Paths } from '../paths';
+import type { FileLockService } from '../services/fileLock';
 import { readJsonFile, writeJsonFile } from '../helpers/jsonFile';
 
 const KnownFile = z.object({
@@ -14,16 +14,23 @@ export type KnownFile = z.infer<typeof KnownFile>;
 const KnownFilesState = z.record(z.string(), KnownFile);
 export type KnownFilesState = z.infer<typeof KnownFilesState>;
 
-export async function getKnownFiles(): Promise<KnownFilesState> {
-  return readJsonFile(extensionsFilesJsonPath(), KnownFilesState, () => ({}));
-}
+export class ExtensionsStore {
+  constructor(
+    private readonly paths: Paths,
+    private readonly locks: FileLockService,
+  ) {}
 
-export async function setKnownFiles(state: KnownFilesState): Promise<void> {
-  await writeJsonFile(extensionsFilesJsonPath(), state);
-}
+  async getKnownFiles(): Promise<KnownFilesState> {
+    return readJsonFile(this.paths.extensionsFilesJsonPath(), KnownFilesState, () => ({}));
+  }
 
-export function mergeKnownFiles(entries: KnownFilesState): Promise<void> {
-  return withFileLock(writeLockPath('extensions-files'), async () => {
-    await setKnownFiles({ ...(await getKnownFiles()), ...entries });
-  });
+  async setKnownFiles(state: KnownFilesState): Promise<void> {
+    await writeJsonFile(this.paths.extensionsFilesJsonPath(), state);
+  }
+
+  mergeKnownFiles(entries: KnownFilesState): Promise<void> {
+    return this.locks.withLock(this.paths.writeLockPath('extensions-files'), async () => {
+      await this.setKnownFiles({ ...(await this.getKnownFiles()), ...entries });
+    });
+  }
 }

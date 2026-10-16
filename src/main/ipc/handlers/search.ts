@@ -1,6 +1,6 @@
 import { access, readFile, stat } from 'node:fs/promises';
-import type { HandlerMap } from '../registry';
-import { withLatestWins } from '../cancellation';
+import type { HandlerMap } from '../dispatch';
+import type { LatestWinsService } from '../cancellation';
 import { ripgrepSearch, ripgrepSearchPage } from '../../helpers/process/ripgrep';
 import { applyPage, EMPTY_PAGE, type PageSourceFile } from '../../helpers/search/paging';
 import { pageOptions, searchRunKey, toResult } from '../../helpers/search/query';
@@ -17,7 +17,7 @@ import {
   makeTargetMatcher,
   StaleShaError,
 } from '@gepard/common';
-import { projectRepoDir } from '../../paths';
+import type { Paths } from '../../paths';
 
 const KIND_FILTER_POOL_FACTOR = 10;
 
@@ -27,7 +27,11 @@ export type SearchIndexer = Pick<
 >;
 
 export class SearchHandlers {
-  constructor(private readonly indexer: SearchIndexer) {}
+  constructor(
+    private readonly paths: Paths,
+    private readonly indexer: SearchIndexer,
+    private readonly latest: LatestWinsService,
+  ) {}
 
   private requireCurrentSha(projectId: string, sha: string): void {
     const current = this.indexer.currentSha(projectId);
@@ -43,7 +47,7 @@ export class SearchHandlers {
   private async findSession(projectId: string, filePath: string): Promise<LanguageSession | null> {
     const session = this.indexer.session(projectId, filePath);
     if (!session) return null;
-    const onDisk = await access(resolveInRepo(projectRepoDir(projectId), filePath)).then(
+    const onDisk = await access(resolveInRepo(this.paths.projectRepoDir(projectId), filePath)).then(
       () => true,
       () => false,
     );
@@ -51,9 +55,9 @@ export class SearchHandlers {
   }
 
   runSearch(input: ChannelParsedInput<'search.run'>): Promise<ChannelOutput<'search.run'>> {
-    return withLatestWins(searchRunKey(input), async ({ signal, token }) => {
+    return this.latest.withLatestWins(searchRunKey(input), async ({ signal, token }) => {
       this.requireCurrentSha(input.projectId, input.sha);
-      const repoRoot = projectRepoDir(input.projectId);
+      const repoRoot = this.paths.projectRepoDir(input.projectId);
       const opts = pageOptions(input);
       const targeted = input.scope === 'targeted';
       const inScope = targeted ? makeTargetMatcher(input.targetedPaths) : null;
@@ -123,7 +127,7 @@ export class SearchHandlers {
   }
 
   lineSymbols(input: ChannelParsedInput<'symbols.line'>): Promise<ChannelOutput<'symbols.line'>> {
-    return withLatestWins(
+    return this.latest.withLatestWins(
       `symbols.line:${input.projectId}:${input.path}:${input.line}`,
       async ({ token }) => {
         this.requireCurrentSha(input.projectId, input.sha);
@@ -137,12 +141,12 @@ export class SearchHandlers {
   definitionAt(
     input: ChannelParsedInput<'symbols.definition'>,
   ): Promise<ChannelOutput<'symbols.definition'>> {
-    return withLatestWins(
+    return this.latest.withLatestWins(
       `symbols.definition:${input.projectId}:${input.path}:${input.pos.line}:${input.pos.col}`,
       async ({ token }) => {
         this.requireCurrentSha(input.projectId, input.sha);
         const session = await this.findSession(input.projectId, input.path);
-        const repoRoot = projectRepoDir(input.projectId);
+        const repoRoot = this.paths.projectRepoDir(input.projectId);
         let symbol: string;
         try {
           const text = await readFile(resolveInRepo(repoRoot, input.path), 'utf8');
@@ -163,7 +167,7 @@ export class SearchHandlers {
     this.requireCurrentSha(input.projectId, input.sha);
     const rules = this.indexer.extension(input.projectId, input.path)?.importResolution;
     if (!rules) return Promise.resolve({ path: null });
-    const repoRoot = projectRepoDir(input.projectId);
+    const repoRoot = this.paths.projectRepoDir(input.projectId);
     const isFile = (path: string): Promise<boolean> =>
       stat(resolveInRepo(repoRoot, path)).then(
         (s) => s.isFile(),
@@ -177,7 +181,7 @@ export class SearchHandlers {
   workspaceSymbols(
     input: ChannelParsedInput<'symbols.workspace'>,
   ): Promise<ChannelOutput<'symbols.workspace'>> {
-    return withLatestWins(`symbols.workspace:${input.projectId}`, async ({ token }) => {
+    return this.latest.withLatestWins(`symbols.workspace:${input.projectId}`, async ({ token }) => {
       this.requireCurrentSha(input.projectId, input.sha);
       const sessions = this.indexer.sessions(input.projectId);
       if (sessions.length === 0) return [];
@@ -201,7 +205,7 @@ export class SearchHandlers {
   documentSymbols(
     input: ChannelParsedInput<'symbols.document'>,
   ): Promise<ChannelOutput<'symbols.document'>> {
-    return withLatestWins(
+    return this.latest.withLatestWins(
       `symbols.document:${input.projectId}:${input.path}`,
       async ({ token }) => {
         this.requireCurrentSha(input.projectId, input.sha);

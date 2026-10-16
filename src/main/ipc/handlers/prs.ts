@@ -1,7 +1,7 @@
-import type { HandlerMap } from '../registry';
+import type { HandlerMap } from '../dispatch';
 import type { GhService } from '../../services/gh';
 import type { GitService } from '../../services/git';
-import * as review from '../../store/review';
+import type { ReviewStore } from '../../store/review';
 import {
   CODEOWNERS_PATHS,
   ownersOf,
@@ -13,6 +13,7 @@ export class PrsHandlers {
   constructor(
     private readonly gh: GhService,
     private readonly git: GitService,
+    private readonly review: ReviewStore,
   ) {}
 
   toHandlerMap(): Pick<
@@ -77,7 +78,7 @@ export class PrsHandlers {
         const { owner, repo } = await this.gh.repoRefFor(projectId);
         const issue = await this.gh.createIssue(owner, repo, { title, body });
         if (clearUnassignedThreadIds.length > 0)
-          await review.clearUnassignedThreads(projectId, clearUnassignedThreadIds);
+          await this.review.clearUnassignedThreads(projectId, clearUnassignedThreadIds);
         return issue;
       },
 

@@ -1,19 +1,18 @@
-import type { HandlerMap } from '../registry';
-import {
-  setContextMenuLabels,
-  setContextMenuLineTarget,
-  showFileViewMenu,
-} from '../../contextMenu';
+import type { HandlerMap } from '../dispatch';
+import type { ContextMenuPort } from '../../contextMenuPort';
 
 export class ContextMenuHandlers {
+  constructor(private readonly contextMenu: ContextMenuPort) {}
+
   toHandlerMap(): Pick<
     HandlerMap,
     'contextMenu.setLabels' | 'contextMenu.setLineTarget' | 'contextMenu.showFileView'
   > {
     return {
-      'contextMenu.setLabels': (labels) => setContextMenuLabels(labels),
-      'contextMenu.setLineTarget': (target) => setContextMenuLineTarget(target),
-      'contextMenu.showFileView': (request, { window }) => showFileViewMenu(window, request),
+      'contextMenu.setLabels': (labels) => this.contextMenu.setLabels(labels),
+      'contextMenu.setLineTarget': (target) => this.contextMenu.setLineTarget(target),
+      'contextMenu.showFileView': (request, { window }) =>
+        this.contextMenu.showFileView(window, request),
     };
   }
 }

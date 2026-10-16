@@ -3,9 +3,9 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { gitService } from '../../di';
-import { __setUserDataDir } from '../support/electron';
-import { makeTmpDir, type TmpDir } from '../support/tmp';
+import { GitService } from '../../services/git';
+import { makeUserData, makeTmpDir, type TmpDir, type UserData } from '../support/tmp';
+import { makeGitServices } from '../support/services';
 
 const execFileP = promisify(execFile);
 const ENV = {
@@ -24,7 +24,8 @@ async function git(cwd: string, args: string[]): Promise<string> {
 }
 describe('GitService.listCommits (integration)', () => {
   let origin: TmpDir;
-  let userData: TmpDir;
+  let userData: UserData;
+  let svc: GitService;
   const projectId = 'acme__history';
   const oids: Record<string, string> = {};
 
@@ -36,8 +37,8 @@ describe('GitService.listCommits (integration)', () => {
 
   beforeAll(async () => {
     origin = await makeTmpDir('git-history-origin');
-    userData = await makeTmpDir('git-history-ud');
-    __setUserDataDir(userData.path);
+    userData = await makeUserData();
+    svc = makeGitServices(userData.paths).git;
     const o = origin.path;
     await git(o, ['init', '-b', 'main']);
     await mkdir(join(o, 'src'));
@@ -47,7 +48,7 @@ describe('GitService.listCommits (integration)', () => {
     oids.unrelated = await commit('unrelated change');
     await writeFile(join(o, 'src', 'b.ts'), 'b\n');
     oids.second = await commit('add b');
-    await gitService.cloneProject(projectId, `file://${o}`);
+    await svc.cloneProject(projectId, `file://${o}`);
   }, 30_000);
 
   afterAll(async () => {
@@ -59,54 +60,50 @@ describe('GitService.listCommits (integration)', () => {
 
   describe('search', () => {
     it('matches case-insensitively on plain text', async () => {
-      expect(oidsOf(await gitService.listCommits(projectId, { search: 'UNRELATED' }))).toEqual([
+      expect(oidsOf(await svc.listCommits(projectId, { search: 'UNRELATED' }))).toEqual([
         oids.unrelated,
       ]);
     });
 
     it('returns nothing when no message matches', async () => {
-      expect(await gitService.listCommits(projectId, { search: 'zzz-no-such' })).toEqual([]);
+      expect(await svc.listCommits(projectId, { search: 'zzz-no-such' })).toEqual([]);
     });
 
     it('treats an unbalanced bracket as literal text', async () => {
-      expect(oidsOf(await gitService.listCommits(projectId, { search: 'foo[' }))).toEqual([
-        oids.root,
-      ]);
+      expect(oidsOf(await svc.listCommits(projectId, { search: 'foo[' }))).toEqual([oids.root]);
     });
 
     it('treats a parenthesis as literal text', async () => {
-      expect(oidsOf(await gitService.listCommits(projectId, { search: 'a(' }))).toEqual([
-        oids.root,
-      ]);
+      expect(oidsOf(await svc.listCommits(projectId, { search: 'a(' }))).toEqual([oids.root]);
     });
 
     it('does not interpret "." as a regex wildcard', async () => {
-      expect(await gitService.listCommits(projectId, { search: 'unrelated.change' })).toEqual([]);
+      expect(await svc.listCommits(projectId, { search: 'unrelated.change' })).toEqual([]);
     });
   });
 
   describe('glob path filter', () => {
     it('includes the root commit that added matching files', async () => {
-      expect(oidsOf(await gitService.listCommits(projectId, { path: 'src/*.ts' }))).toEqual([
+      expect(oidsOf(await svc.listCommits(projectId, { path: 'src/*.ts' }))).toEqual([
         oids.second,
         oids.root,
       ]);
     });
 
     it('excludes commits that touch no matching file', async () => {
-      expect(oidsOf(await gitService.listCommits(projectId, { path: 'src/*.ts' }))).not.toContain(
+      expect(oidsOf(await svc.listCommits(projectId, { path: 'src/*.ts' }))).not.toContain(
         oids.unrelated,
       );
     });
 
     it('a literal path lists the commits touching it', async () => {
-      expect(oidsOf(await gitService.listCommits(projectId, { path: 'other.md' }))).toEqual([
+      expect(oidsOf(await svc.listCommits(projectId, { path: 'other.md' }))).toEqual([
         oids.unrelated,
       ]);
     });
 
     it('a glob matching nothing returns no commits', async () => {
-      expect(await gitService.listCommits(projectId, { path: 'src/*.py' })).toEqual([]);
+      expect(await svc.listCommits(projectId, { path: 'src/*.py' })).toEqual([]);
     });
   });
 });

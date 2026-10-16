@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/consistent-type-assertions -- generic channel dispatch is validated at runtime against the contract schemas */
 import {
   channels,
   type ChannelName,

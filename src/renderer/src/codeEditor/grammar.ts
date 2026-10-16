@@ -14,6 +14,7 @@ import {
   type GrammarExtension,
   type GrammarModule,
 } from '@gepard/common';
+import { importDefaultExport } from './moduleSource';
 import { escapeRegExp } from '../helpers/string';
 
 export const grammarApi: GrammarApi = {
@@ -32,16 +33,12 @@ const moduleCache = new Map<string, Promise<GrammarExtension>>();
 export function loadGrammarModule(source: string): Promise<GrammarExtension> {
   let loaded = moduleCache.get(source);
   if (!loaded) {
-    const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
-    loaded = import(/* @vite-ignore */ url)
-      .then((mod: { default?: unknown }) => {
-        const candidate = mod.default;
-        if (!isGrammarExtension(candidate)) {
-          throw new Error('grammar module has no valid default export');
-        }
-        return candidate;
-      })
-      .finally(() => URL.revokeObjectURL(url));
+    loaded = importDefaultExport(source).then((candidate) => {
+      if (!isGrammarExtension(candidate)) {
+        throw new Error('grammar module has no valid default export');
+      }
+      return candidate;
+    });
     moduleCache.set(source, loaded);
     loaded.catch(() => moduleCache.delete(source));
   }

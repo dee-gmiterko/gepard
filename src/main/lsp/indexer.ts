@@ -9,10 +9,10 @@ import {
   type LanguageExtension,
   type LanguageSession,
 } from '@gepard/common';
-import { emit } from '../ipc/registry';
-import { log } from '../log';
-import { isNotifiableLevel, notifyMainFailure } from '../notify';
-import { extensionDataDir } from '../paths';
+import type { IpcEventService } from '../ipc/events';
+import type { Paths } from '../paths';
+import type { LoggerService } from '../log';
+import { isNotifiableLevel, type NotifyService } from '../notify';
 import { startLineIndex, type LineIndexHandle } from '../services/line-index-manager';
 import type { ExtensionsService } from '../services/extensions';
 
@@ -48,25 +48,24 @@ function isClaimedBy(extension: LanguageExtension, filePath: string): boolean {
   return languageIdOf(extension.languages, filePath) !== undefined;
 }
 
-async function disposeSessions(projectId: string, entries: LanguageEntry[]): Promise<void> {
-  await Promise.all(
-    entries.map(({ session }) =>
-      session.dispose().catch((e: Error) => {
-        notifyMainFailure('lsp', `projectId=${projectId} dispose failed: ${e.message}`);
-      }),
-    ),
-  );
-}
+export type IndexerNotify = Pick<NotifyService, 'mainFailure'>;
+export type LanguageExtensionSource = Pick<ExtensionsService, 'enabledLanguageExtensions'>;
 
 export class IndexerService {
   private readonly projects = new Map<string, ProjectState>();
 
-  constructor(private readonly extensions: Pick<ExtensionsService, 'enabledLanguageExtensions'>) {}
+  constructor(
+    private readonly paths: Paths,
+    private readonly logger: LoggerService,
+    private readonly events: IpcEventService,
+    private readonly notify: IndexerNotify,
+    private readonly extensionSource: LanguageExtensionSource,
+  ) {}
 
   private setStatus(projectId: string, status: IndexStatus): void {
     const state = this.projects.get(projectId);
     if (state) state.status = status;
-    emit('index.status', { projectId, status });
+    this.events.emit('index.status', { projectId, status });
   }
 
   private isCurrent(projectId: string, state: ProjectState): boolean {
@@ -80,12 +79,22 @@ export class IndexerService {
         if (this.isCurrent(projectId, state)) this.setStatus(projectId, s);
       },
       log: (level, msg) => {
-        if (isNotifiableLevel(level)) notifyMainFailure(scope, msg);
-        else if (level === 'warn') log.warn(scope, msg);
+        if (isNotifiableLevel(level)) this.notify.mainFailure(scope, msg);
+        else if (level === 'warn') this.logger.warn(scope, msg);
         // LSP servers send frequent $/progress and window/logMessage notifications
         // at 'info' level.
       },
     };
+  }
+
+  private async disposeSessions(projectId: string, entries: LanguageEntry[]): Promise<void> {
+    await Promise.all(
+      entries.map(({ session }) =>
+        session.dispose().catch((e: Error) => {
+          this.notify.mainFailure('lsp', `projectId=${projectId} dispose failed: ${e.message}`);
+        }),
+      ),
+    );
   }
 
   private async startLanguageSession(
@@ -96,7 +105,7 @@ export class IndexerService {
     files: string[],
   ): Promise<LanguageEntry> {
     const sink = this.makeSink(projectId, extension.id, state);
-    const dataDir = extensionDataDir(extension.id);
+    const dataDir = this.paths.extensionDataDir(extension.id);
     await mkdir(dataDir, { recursive: true });
     const session = await extension.open({ root: repoRoot }, { dataDir }, sink);
     // Language servers load a project on the first request for one of its
@@ -114,7 +123,10 @@ export class IndexerService {
     const lineIndex = this.projects.get(projectId)?.lineIndex;
     if (!lineIndex) return;
     await lineIndex.dispose().catch((e: Error) => {
-      notifyMainFailure('lsp', `projectId=${projectId} line index dispose failed: ${e.message}`);
+      this.notify.mainFailure(
+        'lsp',
+        `projectId=${projectId} line index dispose failed: ${e.message}`,
+      );
     });
   }
 
@@ -122,7 +134,7 @@ export class IndexerService {
     await Promise.all(
       [...this.projects.keys()].filter((id) => id !== projectId).map((id) => this.close(id)),
     );
-    await disposeSessions(projectId, this.projects.get(projectId)?.sessions ?? []);
+    await this.disposeSessions(projectId, this.projects.get(projectId)?.sessions ?? []);
     await this.disposeLineIndex(projectId);
     const state: ProjectState = {
       status: { state: 'indexing', phase: 'files', done: 0, total: files.length },
@@ -139,7 +151,7 @@ export class IndexerService {
     this.projects.set(projectId, state);
     this.setStatus(projectId, { state: 'indexing', phase: 'files', done: 0, total: files.length });
 
-    const extensions = await this.extensions.enabledLanguageExtensions();
+    const extensions = await this.extensionSource.enabledLanguageExtensions();
     if (!this.isCurrent(projectId, state)) return;
 
     const matching = extensions.filter((ext) => files.some((f) => isClaimedBy(ext, f)));
@@ -210,14 +222,14 @@ export class IndexerService {
       }
       const message = errorMessage(result.reason);
       failures.push(`${matching[i].displayName}: ${message}`);
-      log.error(
+      this.logger.error(
         'lsp',
         `projectId=${projectId} extension=${matching[i].id} session start failed: ${message}`,
       );
     });
 
     if (!this.isCurrent(projectId, state)) {
-      await disposeSessions(projectId, started);
+      await this.disposeSessions(projectId, started);
       return;
     }
     if (started.length === 0) {
@@ -236,7 +248,7 @@ export class IndexerService {
       state.pendingSessionChanges = [];
     }
     for (const { extension } of started) {
-      log.info('lsp', `projectId=${projectId} extension=${extension.id} session started`);
+      this.logger.info('lsp', `projectId=${projectId} extension=${extension.id} session started`);
     }
     this.setStatus(projectId, { state: 'idle' });
   }
@@ -254,7 +266,9 @@ export class IndexerService {
   }
 
   async close(projectId: string): Promise<void> {
-    await disposeSessions(projectId, this.projects.get(projectId)?.sessions ?? []).catch(() => {});
+    await this.disposeSessions(projectId, this.projects.get(projectId)?.sessions ?? []).catch(
+      () => {},
+    );
     await this.disposeLineIndex(projectId).catch(() => {});
     this.projects.delete(projectId);
   }

@@ -3,10 +3,17 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { gitService } from '../../di';
-import { nohooksDir, projectRepoDir } from '../../paths';
-import { __clearEmittedEvents, __setUserDataDir, emittedEvents } from '../support/electron';
-import { makeTmpDir, type TmpDir } from '../support/tmp';
+import { GitService } from '../../services/git';
+import {
+  collectEvents,
+  makeTmpDir,
+  makeUserData,
+  type EmittedEvent,
+  type TmpDir,
+  type UserData,
+} from '../support/tmp';
+import { makeGitServices } from '../support/services';
+import type { Paths } from '../../paths';
 
 const execFileP = promisify(execFile);
 
@@ -67,16 +74,21 @@ async function buildFixtureRepo(dir: string): Promise<Fixture> {
 
 describe('GitService (integration)', () => {
   let origin: TmpDir;
-  let userData: TmpDir;
+  let userData: UserData;
+  let paths: Paths;
+  let gitService: GitService;
+  let emittedEvents: EmittedEvent[];
   let fixture: Fixture;
   const projectId = 'acme__widgets';
   const EMPTY_TREE_SHA = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 
   beforeAll(async () => {
     origin = await makeTmpDir('git-origin');
-    userData = await makeTmpDir('git-userdata');
-    __setUserDataDir(userData.path);
-    __clearEmittedEvents();
+    userData = await makeUserData();
+    paths = userData.paths;
+    const services = makeGitServices(paths);
+    gitService = services.git;
+    emittedEvents = collectEvents(services.events);
     fixture = await buildFixtureRepo(origin.path);
     await gitService.cloneProject(projectId, `file://${origin.path}`);
   }, 30_000);
@@ -87,9 +99,9 @@ describe('GitService (integration)', () => {
   });
 
   it('disables hooks on the clone (core.hooksPath -> the empty nohooks dir)', async () => {
-    const repoRoot = projectRepoDir(projectId);
+    const repoRoot = paths.projectRepoDir(projectId);
     const hooksPath = (await git(repoRoot, ['config', '--get', 'core.hooksPath'])).trim();
-    expect(hooksPath).toBe(nohooksDir());
+    expect(hooksPath).toBe(paths.nohooksDir());
   });
 
   it('emits clone.progress events, ending in phase: done', () => {
@@ -132,7 +144,7 @@ describe('GitService (integration)', () => {
     await gitService.checkoutTarget(projectId, { kind: 'commit', sha: fixture.rootSha });
     const result = await gitService.commitRange(projectId, fixture.featureHeadSha);
     expect(result).toEqual({ base: fixture.baseSha, head: fixture.featureHeadSha });
-    const checkedOut = (await git(projectRepoDir(projectId), ['rev-parse', 'HEAD'])).trim();
+    const checkedOut = (await git(paths.projectRepoDir(projectId), ['rev-parse', 'HEAD'])).trim();
     expect(checkedOut).toBe(fixture.rootSha);
   });
 
@@ -144,7 +156,7 @@ describe('GitService (integration)', () => {
   it('checkoutTarget: default after a commit checks out the head of the default branch', async () => {
     await gitService.checkoutTarget(projectId, { kind: 'commit', sha: fixture.rootSha });
     const result = await gitService.checkoutTarget(projectId, { kind: 'default' });
-    const repoRoot = projectRepoDir(projectId);
+    const repoRoot = paths.projectRepoDir(projectId);
     const checkedOut = (await git(repoRoot, ['rev-parse', 'HEAD'])).trim();
     const originHead = (await git(repoRoot, ['rev-parse', 'refs/remotes/origin/HEAD'])).trim();
     expect(checkedOut).toBe(originHead);
@@ -191,7 +203,7 @@ describe('GitService (integration)', () => {
     });
 
     expect(result).toEqual({ base: fixture.baseSha, head: rewrittenSha });
-    const checkedOut = (await git(projectRepoDir(projectId), ['rev-parse', 'HEAD'])).trim();
+    const checkedOut = (await git(paths.projectRepoDir(projectId), ['rev-parse', 'HEAD'])).trim();
     expect(checkedOut).toBe(rewrittenSha);
   });
 });

@@ -4,13 +4,15 @@ import eslintReact from '@eslint-react/eslint-plugin';
 import eslintPluginReactHooks from 'eslint-plugin-react-hooks';
 import eslintPluginReactRefresh from 'eslint-plugin-react-refresh';
 import eslintPluginFormatjs from 'eslint-plugin-formatjs';
-import { ignores, javascript, typescript } from './index.mjs';
+import { ignores, javascript, moduleSources, tests, typescript } from './index.mjs';
 
 export default function createReactConfig(options) {
   return defineConfig(
     ignores,
     javascript,
     typescript(options),
+    tests,
+    moduleSources,
     {
       files: ['**/*.{ts,tsx}'],
       extends: [eslintReact.configs['recommended-typescript']],

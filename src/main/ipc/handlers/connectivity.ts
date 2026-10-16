@@ -1,4 +1,4 @@
-import type { HandlerMap } from '../registry';
+import type { HandlerMap } from '../dispatch';
 import type { ConnectivityService } from '../../services/connectivity';
 
 export class ConnectivityHandlers {

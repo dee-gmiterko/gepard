@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { readJsonFile, writeJsonFile } from '../helpers/jsonFile';
-import { withFileLock } from '../helpers/fileLock';
-import { reviewJsonPath, writeLockPath } from '../paths';
+import type { Paths } from '../paths';
+import type { FileLockService } from '../services/fileLock';
 import {
   Comment,
   CommentDraft,
@@ -29,38 +29,6 @@ const cacheKey = (projectId: string, pr: number | null): string =>
 
 export const UNASSIGNED_PR_ID = 'unassigned';
 
-export function withReviewLock<T>(
-  projectId: string,
-  pr: number | null,
-  fn: () => Promise<T>,
-): Promise<T> {
-  return withFileLock(writeLockPath(`review-${cacheKey(projectId, pr)}`), fn);
-}
-
-async function readStoreFile(projectId: string, pr: number | null): Promise<ReviewStoreFile> {
-  return readJsonFile(reviewJsonPath(projectId, pr), ReviewStoreFile, emptyStore);
-}
-
-export async function loadReview(projectId: string, pr: number | null): Promise<ReviewStoreFile> {
-  return readStoreFile(projectId, pr);
-}
-
-export async function saveReview(
-  projectId: string,
-  pr: number | null,
-  store: ReviewStoreFile,
-): Promise<void> {
-  await writeJsonFile(reviewJsonPath(projectId, pr), store);
-}
-
-export async function listThreads(projectId: string, pr: number | null): Promise<ReviewThread[]> {
-  const store = await loadReview(projectId, pr);
-  return store.threads
-    .filter((t) => t.local?.status !== 'deleted')
-    .map((t) => ({ ...t, comments: t.comments.filter((c) => c.local?.status !== 'deleted') }))
-    .filter((t) => t.comments.length > 0);
-}
-
 export interface UpsertContext {
   prId: string;
   commitOid: string;
@@ -79,40 +47,95 @@ function findComment(
   return null;
 }
 
-async function upsertLocalCommentLocked(
-  projectId: string,
-  pr: number | null,
-  ctx: UpsertContext,
-  draft: CommentDraftInput,
-): Promise<Comment> {
-  const store = await loadReview(projectId, pr);
-  const now = new Date().toISOString();
+export class ReviewStore {
+  constructor(
+    private readonly paths: Paths,
+    private readonly locks: FileLockService,
+  ) {}
 
-  if (draft.id !== null) {
-    const found = findComment(store, draft.id);
-    if (!found) throw new AppError('NOT_FOUND', `comment ${draft.id} not found`);
-    const status = found.comment.local?.status;
-    if (status === 'deleted' || found.thread.local?.status === 'deleted') {
-      throw new AppError('NOT_EDITABLE', `comment ${draft.id} is marked for deletion`);
-    }
-    if (status === undefined && !found.comment.viewerDidAuthor) {
-      throw new AppError('NOT_EDITABLE', `comment ${draft.id} can only be edited by its author`);
-    }
-    const nextStatus = status === 'new' ? 'new' : 'edited';
-    found.comment.body = draft.body;
-    found.comment.updatedAt = now;
-    found.comment.local = { status: nextStatus, updatedAt: now, references: draft.references };
-    await saveReview(projectId, pr, store);
-    return found.comment;
+  withReviewLock<T>(projectId: string, pr: number | null, fn: () => Promise<T>): Promise<T> {
+    return this.locks.withLock(this.paths.writeLockPath(`review-${cacheKey(projectId, pr)}`), fn);
   }
 
-  if (draft.threadId !== null) {
-    const thread = store.threads.find((t) => t.id === draft.threadId);
-    if (!thread) throw new AppError('NOT_FOUND', `thread ${draft.threadId} not found`);
-    const root = thread.comments[0];
+  private async readStoreFile(projectId: string, pr: number | null): Promise<ReviewStoreFile> {
+    return readJsonFile(this.paths.reviewJsonPath(projectId, pr), ReviewStoreFile, emptyStore);
+  }
+
+  async loadReview(projectId: string, pr: number | null): Promise<ReviewStoreFile> {
+    return this.readStoreFile(projectId, pr);
+  }
+
+  async saveReview(projectId: string, pr: number | null, store: ReviewStoreFile): Promise<void> {
+    await writeJsonFile(this.paths.reviewJsonPath(projectId, pr), store);
+  }
+
+  async listThreads(projectId: string, pr: number | null): Promise<ReviewThread[]> {
+    const store = await this.loadReview(projectId, pr);
+    return store.threads
+      .filter((t) => t.local?.status !== 'deleted')
+      .map((t) => ({ ...t, comments: t.comments.filter((c) => c.local?.status !== 'deleted') }))
+      .filter((t) => t.comments.length > 0);
+  }
+
+  private async upsertLocalCommentLocked(
+    projectId: string,
+    pr: number | null,
+    ctx: UpsertContext,
+    draft: CommentDraftInput,
+  ): Promise<Comment> {
+    const store = await this.loadReview(projectId, pr);
+    const now = new Date().toISOString();
+
+    if (draft.id !== null) {
+      const found = findComment(store, draft.id);
+      if (!found) throw new AppError('NOT_FOUND', `comment ${draft.id} not found`);
+      const status = found.comment.local?.status;
+      if (status === 'deleted' || found.thread.local?.status === 'deleted') {
+        throw new AppError('NOT_EDITABLE', `comment ${draft.id} is marked for deletion`);
+      }
+      if (status === undefined && !found.comment.viewerDidAuthor) {
+        throw new AppError('NOT_EDITABLE', `comment ${draft.id} can only be edited by its author`);
+      }
+      const nextStatus = status === 'new' ? 'new' : 'edited';
+      found.comment.body = draft.body;
+      found.comment.updatedAt = now;
+      found.comment.local = { status: nextStatus, updatedAt: now, references: draft.references };
+      await this.saveReview(projectId, pr, store);
+      return found.comment;
+    }
+
+    if (draft.threadId !== null) {
+      const thread = store.threads.find((t) => t.id === draft.threadId);
+      if (!thread) throw new AppError('NOT_FOUND', `thread ${draft.threadId} not found`);
+      const root = thread.comments[0];
+      const comment: Comment = {
+        id: randomUUID(),
+        threadId: thread.id,
+        reviewId: null,
+        reviewState: null,
+        author: null,
+        body: draft.body,
+        createdAt: now,
+        updatedAt: now,
+        lastEditedAt: null,
+        replyToId: root?.id ?? null,
+        outdated: false,
+        viewerDidAuthor: true,
+        viewerCanDelete: true,
+        local: { status: 'new', updatedAt: now, references: draft.references },
+      };
+      thread.comments.push(comment);
+      await this.saveReview(projectId, pr, store);
+      return comment;
+    }
+
+    if (!draft.anchor && !draft.general) {
+      throw new AppError('BAD_INPUT', 'a new thread needs an anchor');
+    }
+    const threadId = randomUUID();
     const comment: Comment = {
       id: randomUUID(),
-      threadId: thread.id,
+      threadId,
       reviewId: null,
       reviewState: null,
       author: null,
@@ -120,185 +143,161 @@ async function upsertLocalCommentLocked(
       createdAt: now,
       updatedAt: now,
       lastEditedAt: null,
-      replyToId: root?.id ?? null,
+      replyToId: null,
       outdated: false,
       viewerDidAuthor: true,
       viewerCanDelete: true,
       local: { status: 'new', updatedAt: now, references: draft.references },
     };
-    thread.comments.push(comment);
-    await saveReview(projectId, pr, store);
+    const thread: ReviewThread = {
+      id: threadId,
+      prId: ctx.prId,
+      anchor: draft.anchor
+        ? {
+            path: draft.anchor.path,
+            subjectType: draft.anchor.subjectType,
+            side: draft.anchor.side,
+            line: draft.anchor.line,
+            startLine: draft.anchor.startLine,
+            startSide: draft.anchor.startSide,
+            originalLine: draft.anchor.line,
+            originalStartLine: draft.anchor.startLine,
+            commitOid: ctx.commitOid,
+            originalCommitOid: ctx.commitOid,
+          }
+        : generalCommentAnchor(),
+      isResolved: false,
+      isOutdated: false,
+      comments: [comment],
+      local: { status: 'new', updatedAt: now },
+    };
+    store.threads.push(thread);
+    await this.saveReview(projectId, pr, store);
     return comment;
   }
 
-  if (!draft.anchor && !draft.general) {
-    throw new AppError('BAD_INPUT', 'a new thread needs an anchor');
+  upsertLocalComment(
+    projectId: string,
+    pr: number | null,
+    ctx: UpsertContext,
+    draft: CommentDraftInput,
+  ): Promise<Comment> {
+    return this.withReviewLock(projectId, pr, () =>
+      this.upsertLocalCommentLocked(projectId, pr, ctx, draft),
+    );
   }
-  const threadId = randomUUID();
-  const comment: Comment = {
-    id: randomUUID(),
-    threadId,
-    reviewId: null,
-    reviewState: null,
-    author: null,
-    body: draft.body,
-    createdAt: now,
-    updatedAt: now,
-    lastEditedAt: null,
-    replyToId: null,
-    outdated: false,
-    viewerDidAuthor: true,
-    viewerCanDelete: true,
-    local: { status: 'new', updatedAt: now, references: draft.references },
-  };
-  const thread: ReviewThread = {
-    id: threadId,
-    prId: ctx.prId,
-    anchor: draft.anchor
-      ? {
-          path: draft.anchor.path,
-          subjectType: draft.anchor.subjectType,
-          side: draft.anchor.side,
-          line: draft.anchor.line,
-          startLine: draft.anchor.startLine,
-          startSide: draft.anchor.startSide,
-          originalLine: draft.anchor.line,
-          originalStartLine: draft.anchor.startLine,
-          commitOid: ctx.commitOid,
-          originalCommitOid: ctx.commitOid,
-        }
-      : generalCommentAnchor(),
-    isResolved: false,
-    isOutdated: false,
-    comments: [comment],
-    local: { status: 'new', updatedAt: now },
-  };
-  store.threads.push(thread);
-  await saveReview(projectId, pr, store);
-  return comment;
-}
 
-export function upsertLocalComment(
-  projectId: string,
-  pr: number | null,
-  ctx: UpsertContext,
-  draft: CommentDraftInput,
-): Promise<Comment> {
-  return withReviewLock(projectId, pr, () => upsertLocalCommentLocked(projectId, pr, ctx, draft));
-}
+  private async deleteLocalCommentLocked(
+    projectId: string,
+    pr: number | null,
+    commentId: string,
+  ): Promise<void> {
+    const store = await this.loadReview(projectId, pr);
+    const now = new Date().toISOString();
+    const found = findComment(store, commentId);
+    if (!found) throw new AppError('NOT_FOUND', `comment ${commentId} not found`);
+    const { thread, comment } = found;
+    const isRoot = thread.comments[0]?.id === commentId;
 
-async function deleteLocalCommentLocked(
-  projectId: string,
-  pr: number | null,
-  commentId: string,
-): Promise<void> {
-  const store = await loadReview(projectId, pr);
-  const now = new Date().toISOString();
-  const found = findComment(store, commentId);
-  if (!found) throw new AppError('NOT_FOUND', `comment ${commentId} not found`);
-  const { thread, comment } = found;
-  const isRoot = thread.comments[0]?.id === commentId;
-
-  if (isRoot) {
-    if (thread.local?.status === 'new') {
-      store.threads = store.threads.filter((t) => t.id !== thread.id);
-    } else {
-      const hasLiveReplies = thread.comments.some(
-        (c) => c.id !== commentId && c.local?.status !== 'deleted',
-      );
-      if (hasLiveReplies) {
-        throw new AppError(
-          'NOT_DELETABLE',
-          `comment ${commentId} is a thread root with replies and cannot be deleted`,
+    if (isRoot) {
+      if (thread.local?.status === 'new') {
+        store.threads = store.threads.filter((t) => t.id !== thread.id);
+      } else {
+        const hasLiveReplies = thread.comments.some(
+          (c) => c.id !== commentId && c.local?.status !== 'deleted',
         );
+        if (hasLiveReplies) {
+          throw new AppError(
+            'NOT_DELETABLE',
+            `comment ${commentId} is a thread root with replies and cannot be deleted`,
+          );
+        }
+        if (!comment.viewerCanDelete) {
+          throw new AppError('NOT_DELETABLE', `comment ${commentId} cannot be deleted`);
+        }
+        thread.local = { status: 'deleted', updatedAt: now };
       }
+    } else if (comment.local?.status === 'new') {
+      thread.comments = thread.comments.filter((c) => c.id !== commentId);
+    } else {
       if (!comment.viewerCanDelete) {
         throw new AppError('NOT_DELETABLE', `comment ${commentId} cannot be deleted`);
       }
-      thread.local = { status: 'deleted', updatedAt: now };
+      comment.local = {
+        status: 'deleted',
+        updatedAt: now,
+        references: comment.local?.references ?? [],
+      };
     }
-  } else if (comment.local?.status === 'new') {
-    thread.comments = thread.comments.filter((c) => c.id !== commentId);
-  } else {
-    if (!comment.viewerCanDelete) {
-      throw new AppError('NOT_DELETABLE', `comment ${commentId} cannot be deleted`);
-    }
-    comment.local = {
-      status: 'deleted',
-      updatedAt: now,
-      references: comment.local?.references ?? [],
-    };
+    await this.saveReview(projectId, pr, store);
   }
-  await saveReview(projectId, pr, store);
-}
 
-export function deleteLocalComment(
-  projectId: string,
-  pr: number | null,
-  commentId: string,
-): Promise<void> {
-  return withReviewLock(projectId, pr, () => deleteLocalCommentLocked(projectId, pr, commentId));
-}
-
-export function clearUnassignedThreads(projectId: string, threadIds: string[]): Promise<void> {
-  return withReviewLock(projectId, null, async () => {
-    const store = await loadReview(projectId, null);
-    const ids = new Set(threadIds);
-    store.threads = store.threads.filter((t) => !ids.has(t.id));
-    await saveReview(projectId, null, store);
-  });
-}
-
-export async function listViewed(projectId: string, pr: number): Promise<LocalViewedState[]> {
-  return (await loadReview(projectId, pr)).viewed;
-}
-
-export async function knownPrId(projectId: string, pr: number): Promise<string | null> {
-  const store = await loadReview(projectId, pr);
-  return store.viewed[0]?.prId ?? store.threads[0]?.prId ?? null;
-}
-
-async function setLocalViewedLocked(
-  projectId: string,
-  pr: number,
-  prId: string,
-  paths: string[],
-  viewed: boolean,
-  sha: string | null,
-): Promise<LocalViewedState[]> {
-  const store = await loadReview(projectId, pr);
-  const now = new Date().toISOString();
-  for (const path of paths) {
-    const row = store.viewed.find((v) => v.path === path);
-    if (row) {
-      row.viewed = viewed;
-      row.localUpdatedAt = now;
-      if (viewed && sha !== null) row.viewedSha = sha;
-    } else {
-      store.viewed.push({
-        prId,
-        path,
-        viewed,
-        remote: null,
-        localUpdatedAt: now,
-        remoteFetchedAt: null,
-        viewedSha: viewed ? sha : null,
-      });
-    }
+  deleteLocalComment(projectId: string, pr: number | null, commentId: string): Promise<void> {
+    return this.withReviewLock(projectId, pr, () =>
+      this.deleteLocalCommentLocked(projectId, pr, commentId),
+    );
   }
-  await saveReview(projectId, pr, store);
-  return store.viewed;
-}
 
-export function setLocalViewed(
-  projectId: string,
-  pr: number,
-  prId: string,
-  paths: string[],
-  viewed: boolean,
-  sha: string | null = null,
-): Promise<LocalViewedState[]> {
-  return withReviewLock(projectId, pr, () =>
-    setLocalViewedLocked(projectId, pr, prId, paths, viewed, sha),
-  );
+  clearUnassignedThreads(projectId: string, threadIds: string[]): Promise<void> {
+    return this.withReviewLock(projectId, null, async () => {
+      const store = await this.loadReview(projectId, null);
+      const ids = new Set(threadIds);
+      store.threads = store.threads.filter((t) => !ids.has(t.id));
+      await this.saveReview(projectId, null, store);
+    });
+  }
+
+  async listViewed(projectId: string, pr: number): Promise<LocalViewedState[]> {
+    return (await this.loadReview(projectId, pr)).viewed;
+  }
+
+  async knownPrId(projectId: string, pr: number): Promise<string | null> {
+    const store = await this.loadReview(projectId, pr);
+    return store.viewed[0]?.prId ?? store.threads[0]?.prId ?? null;
+  }
+
+  private async setLocalViewedLocked(
+    projectId: string,
+    pr: number,
+    prId: string,
+    paths: string[],
+    viewed: boolean,
+    sha: string | null,
+  ): Promise<LocalViewedState[]> {
+    const store = await this.loadReview(projectId, pr);
+    const now = new Date().toISOString();
+    for (const path of paths) {
+      const row = store.viewed.find((v) => v.path === path);
+      if (row) {
+        row.viewed = viewed;
+        row.localUpdatedAt = now;
+        if (viewed && sha !== null) row.viewedSha = sha;
+      } else {
+        store.viewed.push({
+          prId,
+          path,
+          viewed,
+          remote: null,
+          localUpdatedAt: now,
+          remoteFetchedAt: null,
+          viewedSha: viewed ? sha : null,
+        });
+      }
+    }
+    await this.saveReview(projectId, pr, store);
+    return store.viewed;
+  }
+
+  setLocalViewed(
+    projectId: string,
+    pr: number,
+    prId: string,
+    paths: string[],
+    viewed: boolean,
+    sha: string | null = null,
+  ): Promise<LocalViewedState[]> {
+    return this.withReviewLock(projectId, pr, () =>
+      this.setLocalViewedLocked(projectId, pr, prId, paths, viewed, sha),
+    );
+  }
 }

@@ -1,15 +1,16 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { __setUserDataDir } from '../support/electron';
-import { makeTmpDir, type TmpDir } from '../support/tmp';
-import * as review from '../../store/review';
-import * as projects from '../../store/projects';
+import { makeUserData, silentLogger, type UserData } from '../support/tmp';
+import { ReviewStore, UNASSIGNED_PR_ID, type CommentDraftInput } from '../../store/review';
+import { ProjectStore } from '../../store/projects';
+import { FileLockService } from '../../services/fileLock';
 
 describe('store/review', () => {
-  let userData: TmpDir;
+  let userData: UserData;
+  let review: ReviewStore;
 
   beforeAll(async () => {
-    userData = await makeTmpDir('review-store');
-    __setUserDataDir(userData.path);
+    userData = await makeUserData();
+    review = new ReviewStore(userData.paths, new FileLockService());
   });
 
   afterAll(async () => {
@@ -366,7 +367,7 @@ describe('store/review', () => {
   });
 
   it('keeps unassigned comments apart from PR comments and clears selected threads', async () => {
-    const unassignedCtx = { prId: review.UNASSIGNED_PR_ID, commitOid: ctx.commitOid };
+    const unassignedCtx = { prId: UNASSIGNED_PR_ID, commitOid: ctx.commitOid };
     const general = await review.upsertLocalComment('proj-g', null, unassignedCtx, {
       id: null,
       threadId: null,
@@ -401,7 +402,7 @@ describe('store/review', () => {
 
     const unassigned = await review.listThreads('proj-g', null);
     expect(unassigned.map((t) => t.comments[0].body)).toEqual(['global note', 'line note']);
-    expect(unassigned.every((t) => t.prId === review.UNASSIGNED_PR_ID)).toBe(true);
+    expect(unassigned.every((t) => t.prId === UNASSIGNED_PR_ID)).toBe(true);
     expect((await review.listThreads('proj-g', 1)).map((t) => t.comments[0].body)).toEqual([
       'pr note',
     ]);
@@ -416,11 +417,15 @@ describe('store/review', () => {
 });
 
 describe('store/review and project lifecycle', () => {
-  let userData: TmpDir;
+  let userData: UserData;
+  let review: ReviewStore;
+  let projects: ProjectStore;
 
   beforeAll(async () => {
-    userData = await makeTmpDir('review-lifecycle');
-    __setUserDataDir(userData.path);
+    userData = await makeUserData();
+    const locks = new FileLockService();
+    review = new ReviewStore(userData.paths, locks);
+    projects = new ProjectStore(userData.paths, silentLogger, locks);
   });
 
   afterAll(async () => {
@@ -428,7 +433,7 @@ describe('store/review and project lifecycle', () => {
   });
 
   const ctx = { prId: 'PR_1', commitOid: '1'.repeat(40) };
-  const draft = (body: string): review.CommentDraftInput => ({
+  const draft = (body: string): CommentDraftInput => ({
     id: null,
     threadId: null,
     anchor: {

@@ -10,8 +10,10 @@ import { ExtensionCatalogService } from '../../services/extensionCatalog';
 import { ExtensionInstallerService } from '../../services/extensionInstaller';
 import { DownloadService } from '../../services/download';
 import { DEMO_LANG_BODY, writePackage } from '../support/extensionPackages';
-import { __setUserDataDir } from '../support/electron';
-import { makeTmpDir, type TmpDir } from '../support/tmp';
+import { makeUserData, type UserData } from '../support/tmp';
+import { ExtensionsStore } from '../../store/extensions';
+import { SettingsStore } from '../../store/settings';
+import { FileLockService } from '../../services/fileLock';
 import { KIND_SPECS } from '../../extensions/kindSpecs';
 import { ExtensionScannerService } from '../../services/extensionScanner';
 import { ExtensionsService } from '../../services/extensions';
@@ -101,7 +103,7 @@ class FakeGitHub {
 }
 
 describe('ExtensionInstallerService', () => {
-  let tmp: TmpDir;
+  let tmp: UserData;
   let extensions: ExtensionsService;
   let github: FakeGitHub;
   let installer: ExtensionInstallerService;
@@ -112,7 +114,7 @@ describe('ExtensionInstallerService', () => {
       extensions,
       new ExtensionCatalogService(CATALOG, extensions, target),
       github.client,
-      new DownloadService(github.client, () => tmp.path),
+      new DownloadService(github.client, tmp.path),
       target,
     );
   }
@@ -141,19 +143,19 @@ describe('ExtensionInstallerService', () => {
   }
 
   beforeEach(async () => {
-    tmp = await makeTmpDir('ext-install');
-    const userData = join(tmp.path, 'userData');
-    await mkdir(userData, { recursive: true });
-    __setUserDataDir(userData);
-    userExtensions = join(userData, 'extensions');
+    tmp = await makeUserData();
+    userExtensions = tmp.paths.extensionsRootDir();
     const builtins = join(tmp.path, 'builtins');
     await mkdir(builtins, { recursive: true });
+    const locks = new FileLockService();
     extensions = new ExtensionsService(
-      () => userExtensions,
+      userExtensions,
+      new SettingsStore(tmp.paths, locks),
       new ExtensionScannerService(
-        () => userExtensions,
-        () => builtins,
+        userExtensions,
+        builtins,
         KIND_SPECS,
+        new ExtensionsStore(tmp.paths, locks),
       ),
     );
     github = new FakeGitHub();
