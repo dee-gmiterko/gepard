@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { settingsJsonPath, writeLockPath } from '../paths';
+import type { Paths } from '../paths';
+import type { FileLockService } from '../services/fileLock';
 import { readJsonFile, writeJsonFile } from '../helpers/jsonFile';
-import { withFileLock } from '../helpers/fileLock';
 
 const SettingsFile = z.object({
   theme: z.object({ templateId: z.string().nullable() }),
@@ -19,66 +19,69 @@ const EMPTY_SETTINGS: SettingsFile = {
   keybindings: {},
 };
 
-function updateSettings<T>(fn: (settings: SettingsFile) => Promise<T>): Promise<T> {
-  return withFileLock(writeLockPath('settings'), async () => fn(await readSettings()));
-}
-
-async function readSettings(): Promise<SettingsFile> {
-  return readJsonFile(settingsJsonPath(), SettingsFile, () => EMPTY_SETTINGS);
-}
-
-export async function getTemplateId(): Promise<string | null> {
-  const settings = await readSettings();
-  return settings.theme.templateId;
-}
-
-export async function setTemplateId(templateId: string | null): Promise<string | null> {
-  return updateSettings(async (settings) => {
-    await writeJsonFile(settingsJsonPath(), { ...settings, theme: { templateId } });
-    return templateId;
-  });
-}
-
-export async function getLocaleId(): Promise<string | null> {
-  const settings = await readSettings();
-  return settings.locale.localeId;
-}
-
-export async function setLocaleId(localeId: string | null): Promise<string | null> {
-  return updateSettings(async (settings) => {
-    await writeJsonFile(settingsJsonPath(), { ...settings, locale: { localeId } });
-    return localeId;
-  });
-}
-
 export type ExtensionsState = SettingsFile['extensions'];
-
-export async function getEnabledMap(): Promise<ExtensionsState> {
-  return (await readSettings()).extensions;
-}
-
-export async function setEnabled(id: string, enabled: boolean): Promise<void> {
-  return updateSettings(async (settings) => {
-    const extensions = { ...settings.extensions, [id]: enabled };
-    await writeJsonFile(settingsJsonPath(), { ...settings, extensions });
-  });
-}
-
 export type KeybindingOverrides = SettingsFile['keybindings'];
 
-export async function getKeybindingOverrides(): Promise<KeybindingOverrides> {
-  return (await readSettings()).keybindings;
-}
+export class SettingsStore {
+  constructor(
+    private readonly paths: Paths,
+    private readonly locks: FileLockService,
+  ) {}
 
-export async function setKeybindingOverride(
-  id: string,
-  key: string | null,
-): Promise<KeybindingOverrides> {
-  return updateSettings(async (settings) => {
-    const keybindings = { ...settings.keybindings };
-    if (key === null) delete keybindings[id];
-    else keybindings[id] = key;
-    await writeJsonFile(settingsJsonPath(), { ...settings, keybindings });
-    return keybindings;
-  });
+  private update<T>(fn: (settings: SettingsFile) => Promise<T>): Promise<T> {
+    return this.locks.withLock(this.paths.writeLockPath('settings'), async () =>
+      fn(await this.read()),
+    );
+  }
+
+  private async read(): Promise<SettingsFile> {
+    return readJsonFile(this.paths.settingsJsonPath(), SettingsFile, () => EMPTY_SETTINGS);
+  }
+
+  async getTemplateId(): Promise<string | null> {
+    return (await this.read()).theme.templateId;
+  }
+
+  async setTemplateId(templateId: string | null): Promise<string | null> {
+    return this.update(async (settings) => {
+      await writeJsonFile(this.paths.settingsJsonPath(), { ...settings, theme: { templateId } });
+      return templateId;
+    });
+  }
+
+  async getLocaleId(): Promise<string | null> {
+    return (await this.read()).locale.localeId;
+  }
+
+  async setLocaleId(localeId: string | null): Promise<string | null> {
+    return this.update(async (settings) => {
+      await writeJsonFile(this.paths.settingsJsonPath(), { ...settings, locale: { localeId } });
+      return localeId;
+    });
+  }
+
+  async getEnabledMap(): Promise<ExtensionsState> {
+    return (await this.read()).extensions;
+  }
+
+  async setEnabled(id: string, enabled: boolean): Promise<void> {
+    return this.update(async (settings) => {
+      const extensions = { ...settings.extensions, [id]: enabled };
+      await writeJsonFile(this.paths.settingsJsonPath(), { ...settings, extensions });
+    });
+  }
+
+  async getKeybindingOverrides(): Promise<KeybindingOverrides> {
+    return (await this.read()).keybindings;
+  }
+
+  async setKeybindingOverride(id: string, key: string | null): Promise<KeybindingOverrides> {
+    return this.update(async (settings) => {
+      const keybindings = { ...settings.keybindings };
+      if (key === null) delete keybindings[id];
+      else keybindings[id] = key;
+      await writeJsonFile(this.paths.settingsJsonPath(), { ...settings, keybindings });
+      return keybindings;
+    });
+  }
 }

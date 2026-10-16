@@ -1,15 +1,9 @@
 import { app, BrowserWindow, nativeTheme } from 'electron';
 import { electronApp, optimizer } from '@electron-toolkit/utils';
-import { registerHandlers } from './ipc/electron';
-import { emit } from './ipc/registry';
-import { createMainWindow, focusMainWindow } from './window';
-import { log } from './log';
-import { markRendererReady, notifyMainFailure } from './notify';
+import { parseProcessCli } from './cli';
+import { composeElectron } from './electronDi';
+import { registerHandlers } from './ipc/electronIpc';
 import { formatCaughtError } from './helpers/error';
-import { portalContrast, portalReducedMotion, startPortalThemeSync } from './helpers/portalTheme';
-import { setSystemPreferenceSource, systemPreference } from './helpers/systemPreference';
-import { setUserDataDir } from './paths';
-import { handlers, indexer, launchService } from './di';
 
 const QUIT_CLOSE_TIMEOUT_MS = 1_000;
 
@@ -17,13 +11,16 @@ export function bootstrap(): void {
   // Electron derives the userData path from the app name at the first
   // `app.getPath()` call.
   app.setName('gepard');
-  setUserDataDir(app.getPath('userData'));
+
+  const { core, portalTheme, systemPreference, contextMenu, dispatch, windows } =
+    composeElectron(parseProcessCli());
+  const { logger, notify, events, launch, indexer } = core;
 
   process.on('uncaughtException', (err) => {
-    notifyMainFailure('app', `uncaughtException: ${formatCaughtError(err)}`);
+    notify.mainFailure('app', `uncaughtException: ${formatCaughtError(err)}`);
   });
   process.on('unhandledRejection', (reason) => {
-    notifyMainFailure('app', `unhandledRejection: ${formatCaughtError(reason)}`);
+    notify.mainFailure('app', `unhandledRejection: ${formatCaughtError(reason)}`);
   });
 
   // Electron >= 36 on GNOME 48+/Fedora aborts at startup with a GTK 2/3 vs 4
@@ -35,7 +32,7 @@ export function bootstrap(): void {
   app
     .whenReady()
     .then(() => {
-      log.info(
+      logger.info(
         'app',
         `startup version=${app.getVersion()} electron=${process.versions.electron} ` +
           `chrome=${process.versions.chrome} node=${process.versions.node} ` +
@@ -45,36 +42,27 @@ export function bootstrap(): void {
 
       app.on('browser-window-created', (_, window) => {
         optimizer.watchWindowShortcuts(window);
-        window.webContents.once('did-finish-load', () => markRendererReady());
+        window.webContents.once('did-finish-load', () => notify.rendererReady());
+        contextMenu.install(window.webContents);
       });
 
-      registerHandlers(handlers);
-      launchService.focus = focusMainWindow;
-      setSystemPreferenceSource(() => ({
-        mode: nativeTheme.shouldUseDarkColors ? 'dark' : 'light',
-        contrast:
-          nativeTheme.shouldUseHighContrastColors || portalContrast() === 'high'
-            ? 'high'
-            : 'normal',
-        reducedMotion: portalReducedMotion(),
-      }));
-
+      registerHandlers(dispatch, events);
       const emitSystemPreferenceChanged = (): void =>
-        emit('systemPreference.changed', systemPreference());
-      const stopPortalThemeSync = startPortalThemeSync(emitSystemPreferenceChanged);
+        events.emit('systemPreference.changed', systemPreference.get());
+      const stopPortalThemeSync = portalTheme.startSync(emitSystemPreferenceChanged);
       app.on('will-quit', stopPortalThemeSync);
 
       nativeTheme.on('updated', emitSystemPreferenceChanged);
 
-      void launchService.startup();
-      createMainWindow();
+      void launch.startup();
+      windows.create();
 
       app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
+        if (BrowserWindow.getAllWindows().length === 0) windows.create();
       });
     })
     .catch((err: unknown) => {
-      notifyMainFailure('app', `startup failed: ${formatCaughtError(err)}`);
+      notify.mainFailure('app', `startup failed: ${formatCaughtError(err)}`);
     });
 
   let closingSessions = false;

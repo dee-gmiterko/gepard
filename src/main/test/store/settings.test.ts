@@ -1,9 +1,8 @@
-import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { __setUserDataDir } from '../support/electron';
-import { makeTmpDir, type TmpDir } from '../support/tmp';
-import * as settings from '../../store/settings';
-import * as extensionsStore from '../../store/extensions';
+import { makeUserData, type UserData } from '../support/tmp';
+import { SettingsStore } from '../../store/settings';
+import { ExtensionsStore } from '../../store/extensions';
+import { FileLockService } from '../../services/fileLock';
 import {
   DEMO_GRAMMAR_BODY,
   DEMO_LANG_BODY,
@@ -15,12 +14,29 @@ import { ExtensionScannerService } from '../../services/extensionScanner';
 import { ExtensionsService } from '../../services/extensions';
 
 describe('store/settings and known extension files', () => {
-  let userData: TmpDir;
+  let userData: UserData;
+  let settings: SettingsStore;
+  let extensionsStore: ExtensionsStore;
 
   beforeEach(async () => {
-    userData = await makeTmpDir('store-settings');
-    __setUserDataDir(userData.path);
+    userData = await makeUserData();
+    const locks = new FileLockService();
+    settings = new SettingsStore(userData.paths, locks);
+    extensionsStore = new ExtensionsStore(userData.paths, locks);
   });
+
+  function newService(): ExtensionsService {
+    return new ExtensionsService(
+      userData.paths.extensionsRootDir(),
+      settings,
+      new ExtensionScannerService(
+        userData.paths.extensionsRootDir(),
+        userData.paths.builtinExtensionsDir(),
+        KIND_SPECS,
+        extensionsStore,
+      ),
+    );
+  }
 
   afterEach(async () => {
     await userData.cleanup();
@@ -86,25 +102,17 @@ describe('store/settings and known extension files', () => {
     }
 
     it('records a single kind in extensions-files.json', async () => {
-      const builtin = join(userData.path, 'builtin');
-      const userDir = (): string => join(userData.path, 'ext');
+      const builtin = userData.paths.builtinExtensionsDir();
       await writePackage(builtin, 'only-lang', DEMO_LANG_BODY.replace('demo-lang', 'only-lang'));
-      await new ExtensionsService(
-        userDir,
-        new ExtensionScannerService(userDir, () => builtin, KIND_SPECS),
-      ).list();
+      await newService().list();
       const ids = Object.values(await extensionsStore.getKnownFiles()).map((k) => k.id);
       expect(ids).toEqual(['only-lang']);
     });
 
     it('records every kind scanned concurrently by list()', async () => {
-      const builtin = join(userData.path, 'builtin');
-      const userDir = (): string => join(userData.path, 'ext');
+      const builtin = userData.paths.builtinExtensionsDir();
       await writeBuiltins(builtin);
-      await new ExtensionsService(
-        userDir,
-        new ExtensionScannerService(userDir, () => builtin, KIND_SPECS),
-      ).list();
+      await newService().list();
       const ids = Object.values(await extensionsStore.getKnownFiles()).map((k) => k.id);
       expect(ids.sort()).toEqual(['b-grammar', 'b-lang', 'b-theme']);
     });

@@ -10,29 +10,30 @@ import { findProjectByName } from '../helpers/projects';
 import { instanceCommand, waitForInstance } from '../helpers/process/instance';
 import { ProjectLocks } from '../helpers/process/projectLock';
 import { formatCaughtError } from '../helpers/error';
-import * as store from '../store/projects';
+import type { ProjectStore } from '../store/projects';
 import type { IndexerService } from '../lsp/indexer';
-import { appPath, projectLocksDir, projectRepoDir } from '../paths';
-import { emit } from '../ipc/registry';
-import { notifyMainFailure } from '../notify';
-import { log } from '../log';
+import type { Paths } from '../paths';
+import type { LoggerService } from '../log';
+import type { IpcEventService } from '../ipc/events';
+import type { NotifyService } from '../notify';
 import type { GitService } from './git';
 
 export class LaunchService {
-  focus: () => void = () => undefined;
-  private projectLocks: ProjectLocks | null = null;
+  private readonly locks: ProjectLocks;
   private started: Promise<OpenedProject | null> | null = null;
 
   constructor(
     private readonly git: GitService,
+    private readonly store: ProjectStore,
     private readonly indexer: IndexerService,
+    private readonly events: IpcEventService,
+    private readonly notify: NotifyService,
     private readonly target: string | null,
-  ) {}
-
-  // Created lazily: the userData path is only valid once app.setName has run.
-  private get locks(): ProjectLocks {
-    this.projectLocks ??= new ProjectLocks(projectLocksDir(), () => this.focus());
-    return this.projectLocks;
+    private readonly paths: Paths,
+    private readonly logger: LoggerService,
+    focusWindow: () => void,
+  ) {
+    this.locks = new ProjectLocks(paths.projectLocksDir(), focusWindow);
   }
 
   startup(): Promise<OpenedProject | null> {
@@ -43,20 +44,20 @@ export class LaunchService {
   private async openTarget(): Promise<OpenedProject | null> {
     if (this.target === null) return null;
     try {
-      log.info('launch', `opening ${this.target}`);
+      this.logger.info('launch', `opening ${this.target}`);
       const project = await this.resolveTarget(this.target);
       if (project.cloned) return await this.open(project.id);
       this.git.cloneProject(project.id, project.url).catch(() => undefined);
       return null;
     } catch (e) {
-      notifyMainFailure('launch', formatCaughtError(e));
+      this.notify.mainFailure('launch', formatCaughtError(e));
       return null;
     }
   }
 
   private async resolveTarget(target: string): Promise<Project> {
-    if (isGitHubRepoUrl(target)) return store.addProject(target);
-    const project = findProjectByName(await store.listProjects(), target);
+    if (isGitHubRepoUrl(target)) return this.store.addProject(target);
+    const project = findProjectByName(await this.store.listProjects(), target);
     if (!project)
       throw new AppError(
         'BAD_INPUT',
@@ -72,20 +73,20 @@ export class LaunchService {
   }
 
   async open(projectId: string): Promise<OpenedProject> {
-    const project = await store.getProject(projectId);
+    const project = await this.store.getProject(projectId);
     if (!project) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${projectId}`);
     if (!project.cloned)
       throw new AppError('PROJECT_NOT_CLONED', `project ${projectId} is not cloned yet`);
     await this.claim(projectId);
     const [{ head, files }, targeting, layout] = await Promise.all([
       this.git.workingTree(projectId),
-      store.getLastTargeting(projectId),
-      store.getLayout(projectId),
+      this.store.getLastTargeting(projectId),
+      this.store.getLayout(projectId),
     ]);
-    this.indexer.open(projectId, projectRepoDir(projectId), files, head).catch((e) => {
+    this.indexer.open(projectId, this.paths.projectRepoDir(projectId), files, head).catch((e) => {
       const message = e instanceof Error ? e.message : String(e);
-      log.error('launch', `indexer failed for ${projectId}: ${message}`);
-      emit('index.status', { projectId, status: { state: 'error', message } });
+      this.logger.error('launch', `indexer failed for ${projectId}: ${message}`);
+      this.events.emit('index.status', { projectId, status: { state: 'error', message } });
     });
     return { project, head, targeting, layout };
   }
@@ -115,18 +116,19 @@ export class LaunchService {
     const target = projectId === null ? null : await this.projectUrl(projectId);
     const { command, args } = instanceCommand(target, {
       execPath: process.execPath,
-      appPath: appPath(),
+      appPath: this.paths.appPath,
       defaultApp: Boolean(process.defaultApp),
       appImage: process.env['APPIMAGE'],
     });
-    log.info('launch', `detached instance: ${command} ${args.join(' ')}`);
+    this.logger.info('launch', `detached instance: ${command} ${args.join(' ')}`);
     const child = spawn(command, args, { detached: true, stdio: ['ignore', 'pipe', 'ignore'] });
     child.unref();
-    if (!(await waitForInstance(child))) log.warn('launch', `no window reported: ${command}`);
+    if (!(await waitForInstance(child)))
+      this.logger.warn('launch', `no window reported: ${command}`);
   }
 
   private async projectUrl(projectId: string): Promise<string> {
-    const project = await store.getProject(projectId);
+    const project = await this.store.getProject(projectId);
     if (!project) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${projectId}`);
     return project.url;
   }

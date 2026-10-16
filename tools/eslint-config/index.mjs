@@ -19,8 +19,25 @@ export const typescript = ({ tsconfigRootDir }) => ({
   rules: {
     '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
     '@typescript-eslint/no-non-null-assertion': 'error',
+    'no-restricted-syntax': [
+      'error',
+      {
+        selector: 'ImportExpression',
+        message: 'Dynamic import() is banned; use static imports and inject the dependency.',
+      },
+    ],
   },
 });
+
+export const moduleSources = {
+  files: ['**/codeEditor/moduleSource.ts'],
+  rules: { 'no-restricted-syntax': 'off' },
+};
+
+export const tests = {
+  files: ['**/test/**/*.{ts,tsx}'],
+  rules: { '@typescript-eslint/consistent-type-assertions': 'off' },
+};
 
 export const scripts = {
   files: ['**/scripts/**/*.ts'],
@@ -28,5 +45,13 @@ export const scripts = {
 };
 
 export default function createConfig(options) {
-  return defineConfig(ignores, javascript, typescript(options), scripts, eslintConfigPrettier);
+  return defineConfig(
+    ignores,
+    javascript,
+    typescript(options),
+    scripts,
+    tests,
+    moduleSources,
+    eslintConfigPrettier,
+  );
 }

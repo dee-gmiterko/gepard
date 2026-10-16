@@ -2,11 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { isErrnoException } from '@gepard/common';
-import { isProcessAlive } from './process/projectLock';
+import { isProcessAlive } from '../helpers/process/projectLock';
 
 const RETRY_DELAY_MS = 10;
-
-const queues = new Map<string, Promise<unknown>>();
 
 async function ownerPid(path: string): Promise<number | null> {
   try {
@@ -50,26 +48,30 @@ async function release(path: string, token: string): Promise<void> {
   }
 }
 
-export function withFileLock<T>(path: string, fn: () => Promise<T>): Promise<T> {
-  const settledPrior = (queues.get(path) ?? Promise.resolve()).then(
-    () => undefined,
-    () => undefined,
-  );
-  const result = settledPrior.then(async () => {
-    const token = randomUUID();
-    await acquire(path, token);
-    try {
-      return await fn();
-    } finally {
-      await release(path, token);
-    }
-  });
-  queues.set(
-    path,
-    result.then(
+export class FileLockService {
+  private readonly queues = new Map<string, Promise<unknown>>();
+
+  withLock<T>(path: string, fn: () => Promise<T>): Promise<T> {
+    const settledPrior = (this.queues.get(path) ?? Promise.resolve()).then(
       () => undefined,
       () => undefined,
-    ),
-  );
-  return result;
+    );
+    const result = settledPrior.then(async () => {
+      const token = randomUUID();
+      await acquire(path, token);
+      try {
+        return await fn();
+      } finally {
+        await release(path, token);
+      }
+    });
+    this.queues.set(
+      path,
+      result.then(
+        () => undefined,
+        () => undefined,
+      ),
+    );
+    return result;
+  }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { withLatestWins, type CancellableRun } from '../../ipc/cancellation';
+import { LatestWinsService, type CancellableRun } from '../../ipc/cancellation';
 
 function deferredWork<T>(): {
   fn: (run: CancellableRun) => Promise<T>;
@@ -24,6 +24,10 @@ function deferredWork<T>(): {
 }
 
 describe('withLatestWins', () => {
+  const latest = new LatestWinsService();
+  const withLatestWins = <T>(key: string, fn: (run: CancellableRun) => Promise<T>): Promise<T> =>
+    latest.withLatestWins(key, fn);
+
   it('cancels the in-flight call under the same key immediately', async () => {
     const first = deferredWork<string>();
     const second = deferredWork<string>();

@@ -1,14 +1,14 @@
-import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import * as settingsStore from '../../store/settings';
+import { SettingsStore } from '../../store/settings';
+import { ExtensionsStore } from '../../store/extensions';
+import { FileLockService } from '../../services/fileLock';
 import {
   DEMO_GRAMMAR_BODY,
   DEMO_LANG_BODY,
   DEMO_THEME_BODY,
   writePackage,
 } from '../support/extensionPackages';
-import { __setUserDataDir } from '../support/electron';
-import { makeTmpDir, type TmpDir } from '../support/tmp';
+import { makeTmpDir, makeUserData, type UserData } from '../support/tmp';
 import { KIND_SPECS } from '../../extensions/kindSpecs';
 import { ExtensionScannerService } from '../../services/extensionScanner';
 import { ExtensionsService } from '../../services/extensions';
@@ -52,27 +52,29 @@ async function writeBuiltins(root: string): Promise<void> {
 }
 
 describe('ExtensionsService', () => {
-  let userData: TmpDir;
+  let userData: UserData;
   let extRoot: string;
-  let builtinRoot: string;
+  let settingsStore: SettingsStore;
 
   function newService(): ExtensionsService {
+    const locks = new FileLockService();
+    settingsStore = new SettingsStore(userData.paths, locks);
     return new ExtensionsService(
-      () => extRoot,
+      extRoot,
+      settingsStore,
       new ExtensionScannerService(
-        () => extRoot,
-        () => builtinRoot,
+        extRoot,
+        userData.paths.builtinExtensionsDir(),
         KIND_SPECS,
+        new ExtensionsStore(userData.paths, locks),
       ),
     );
   }
 
-  async function setup(prefix: string): Promise<ExtensionsService> {
-    userData = await makeTmpDir(prefix);
-    __setUserDataDir(userData.path);
-    extRoot = join(userData.path, 'extensions');
-    builtinRoot = join(userData.path, 'builtin');
-    await writeBuiltins(builtinRoot);
+  async function setup(): Promise<ExtensionsService> {
+    userData = await makeUserData();
+    extRoot = userData.paths.extensionsRootDir();
+    await writeBuiltins(userData.paths.builtinExtensionsDir());
     return newService();
   }
 
@@ -81,7 +83,7 @@ describe('ExtensionsService', () => {
   });
 
   it('lists the built-in lsp, theme, and locale packages, enabled by default, with no extensions directory', async () => {
-    const registry = await setup('ext-registry-builtin');
+    const registry = await setup();
     const list = await registry.list();
 
     expect(list).toEqual(
@@ -149,7 +151,7 @@ describe('ExtensionsService', () => {
   });
 
   it('setEnabled(false) persists per id and is reflected by list() and the enabled*() accessors', async () => {
-    const registry = await setup('ext-registry-disable');
+    const registry = await setup();
     const updated = await registry.setEnabled('builtin-dark', false);
     const darkEntry = updated.find((e) => e.id === 'builtin-dark');
     expect(darkEntry).toEqual({
@@ -168,7 +170,7 @@ describe('ExtensionsService', () => {
   });
 
   it('picks up an external package of either kind dropped into the extensions directory', async () => {
-    const registry = await setup('ext-registry-external');
+    const registry = await setup();
     await writePackage(extRoot, 'demo', DEMO_LANG_BODY);
     await writePackage(extRoot, 'demo-theme', DEMO_THEME_BODY, {
       gepard: { type: 'theme' },
@@ -209,7 +211,7 @@ describe('ExtensionsService', () => {
   });
 
   it('lists a broken external package as an unresolvable, disabled entry without affecting the others', async () => {
-    const registry = await setup('ext-registry-broken');
+    const registry = await setup();
     await writePackage(extRoot, 'broken', `throw new Error('nope')`);
 
     const list = await registry.list();
@@ -222,7 +224,7 @@ describe('ExtensionsService', () => {
   });
 
   it('installs a package folder into the extensions directory', async () => {
-    const registry = await setup('ext-registry-install');
+    const registry = await setup();
     const source = await makeTmpDir('ext-registry-install-src');
     try {
       const lspPkgDir = await writePackage(source.path, 'demo', DEMO_LANG_BODY);
@@ -285,7 +287,7 @@ describe('ExtensionsService', () => {
   });
 
   it('rejects installing a package whose manifest has no valid "gepard.type"', async () => {
-    const registry = await setup('ext-registry-install-invalid');
+    const registry = await setup();
     const source = await makeTmpDir('ext-registry-install-invalid-src');
     try {
       const pkgDir = await writePackage(source.path, 'demo', DEMO_LANG_BODY, {
@@ -299,7 +301,7 @@ describe('ExtensionsService', () => {
   });
 
   it('rescans on every list()/enabled*() call, so a newly dropped package is picked up without restarting', async () => {
-    const registry = await setup('ext-registry-rescan');
+    const registry = await setup();
     expect((await registry.list()).map((e) => e.id).sort()).toEqual([
       'builtin-dark',
       'builtin-en',

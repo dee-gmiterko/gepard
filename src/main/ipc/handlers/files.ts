@@ -1,4 +1,4 @@
-import type { HandlerMap } from '../registry';
+import type { HandlerMap } from '../dispatch';
 import type { GitService } from '../../services/git';
 
 export class FilesHandlers {

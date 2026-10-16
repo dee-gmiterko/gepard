@@ -1,6 +1,6 @@
 import { readdir } from 'node:fs/promises';
 import * as path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { createRequire } from 'node:module';
 import {
   errorMessage,
   ExtensionKind,
@@ -11,8 +11,8 @@ import {
 } from '@gepard/common';
 import type { KindSpec } from '../extensions/kindSpecs';
 import { readManifest } from '../helpers/extension';
-import * as extensionsStore from '../store/extensions';
-import type * as settingsStore from '../store/settings';
+import type { ExtensionsStore, KnownFile, KnownFilesState } from '../store/extensions';
+import type { ExtensionsState } from '../store/settings';
 
 const LOADABLE_ENTRY_FILE = /\.(mjs|cjs|js)$/;
 
@@ -64,27 +64,25 @@ export function loadedOf<T>(
   return result;
 }
 
-// Node never re-evaluates a module once it has imported its URL, whether that
-// import succeeded or failed, so a package dir already scanned is never
-// imported again.
 export class ExtensionScannerService {
   private readonly cache = new Map<string, ScanEntry>();
 
   constructor(
-    private readonly userDir: () => string,
-    private readonly builtinDir: () => string,
+    private readonly userDir: string,
+    private readonly builtinDir: string,
     private readonly specs: readonly KindSpec<unknown>[],
+    private readonly extensionsStore: ExtensionsStore,
   ) {}
 
   forget(dir: string): void {
     this.cache.delete(dir);
   }
 
-  async scan(enabledMap: settingsStore.ExtensionsState): Promise<ScannedPackage[]> {
-    const knownFiles = await extensionsStore.getKnownFiles();
+  async scan(enabledMap: ExtensionsState): Promise<ScannedPackage[]> {
+    const knownFiles = await this.extensionsStore.getKnownFiles();
     const packages = [
-      ...(await this.scanRoot(this.builtinDir(), BUILTIN, knownFiles, enabledMap)),
-      ...(await this.scanRoot(this.userDir(), LOCAL, knownFiles, enabledMap)),
+      ...(await this.scanRoot(this.builtinDir, BUILTIN, knownFiles, enabledMap)),
+      ...(await this.scanRoot(this.userDir, LOCAL, knownFiles, enabledMap)),
     ];
     await this.persistKnownFiles(packages, knownFiles);
     return packages;
@@ -93,8 +91,8 @@ export class ExtensionScannerService {
   private async scanRoot(
     root: string,
     source: ExtensionSource,
-    knownFiles: extensionsStore.KnownFilesState,
-    enabledMap: settingsStore.ExtensionsState,
+    knownFiles: KnownFilesState,
+    enabledMap: ExtensionsState,
   ): Promise<ScannedPackage[]> {
     let names: string[];
     try {
@@ -117,8 +115,8 @@ export class ExtensionScannerService {
 
   private async scanPackage(
     dir: string,
-    known: extensionsStore.KnownFile | undefined,
-    enabledMap: settingsStore.ExtensionsState,
+    known: KnownFile | undefined,
+    enabledMap: ExtensionsState,
   ): Promise<ScanEntry> {
     const prior = this.cache.get(dir);
     if (prior && prior.status !== 'disabled') return prior;
@@ -160,7 +158,8 @@ export class ExtensionScannerService {
       if (!LOADABLE_ENTRY_FILE.test(entryName)) {
         throw new Error(`package.json "main" (${entryName}) is not a .js/.mjs/.cjs file`);
       }
-      const mod: unknown = await import(pathToFileURL(path.join(dir, entryName)).href);
+      const entryPath = path.join(dir, entryName);
+      const mod: unknown = createRequire(entryPath)(entryPath);
       const exports = extensionModuleSchema.parse(mod);
       const candidate = exports.default ?? exports.extension ?? mod;
       if (!spec.isValid(candidate)) {
@@ -190,9 +189,9 @@ export class ExtensionScannerService {
 
   private async persistKnownFiles(
     packages: readonly ScannedPackage[],
-    known: extensionsStore.KnownFilesState,
+    known: KnownFilesState,
   ): Promise<void> {
-    const next: extensionsStore.KnownFilesState = {};
+    const next: KnownFilesState = {};
     let changed = false;
     for (const pkg of packages) {
       if (pkg.status !== 'loaded') continue;
@@ -207,6 +206,6 @@ export class ExtensionScannerService {
         changed = true;
       }
     }
-    if (changed) await extensionsStore.mergeKnownFiles(next);
+    if (changed) await this.extensionsStore.mergeKnownFiles(next);
   }
 }

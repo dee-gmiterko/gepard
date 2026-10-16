@@ -6,9 +6,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { channels } from '@gepard/common';
 import { FilesHandlers } from '../../../ipc/handlers/files';
-import { gitService } from '../../../di';
-import { __setUserDataDir } from '../../support/electron';
-import { makeTmpDir, type TmpDir } from '../../support/tmp';
+import { GitService } from '../../../services/git';
+import { makeUserData, makeTmpDir, type TmpDir, type UserData } from '../../support/tmp';
+import { makeGitServices } from '../../support/services';
 
 const execFileP = promisify(execFile);
 const ENV = {
@@ -28,8 +28,9 @@ async function git(cwd: string, args: string[]): Promise<string> {
 
 describe('files.content over the real IPC contract and handler (integration)', () => {
   let origin: TmpDir;
-  let userData: TmpDir;
-  const handlers = new FilesHandlers(gitService).toHandlerMap();
+  let userData: UserData;
+  let svc: GitService;
+  let handlers: ReturnType<FilesHandlers['toHandlerMap']>;
   const projectId = 'acme__ipc';
   let sha: string;
 
@@ -40,8 +41,9 @@ describe('files.content over the real IPC contract and handler (integration)', (
 
   beforeAll(async () => {
     origin = await makeTmpDir('files-ipc-origin');
-    userData = await makeTmpDir('files-ipc-ud');
-    __setUserDataDir(userData.path);
+    userData = await makeUserData();
+    svc = makeGitServices(userData.paths).git;
+    handlers = new FilesHandlers(svc).toHandlerMap();
     const o = origin.path;
     await git(o, ['init', '-b', 'main']);
     await mkdir(join(o, 'src'));
@@ -50,7 +52,7 @@ describe('files.content over the real IPC contract and handler (integration)', (
     await git(o, ['add', '-A']);
     await git(o, ['commit', '-m', 'init']);
     sha = await git(o, ['rev-parse', 'HEAD']);
-    await gitService.cloneProject(projectId, `file://${o}`);
+    await svc.cloneProject(projectId, `file://${o}`);
   }, 30_000);
 
   afterAll(async () => {

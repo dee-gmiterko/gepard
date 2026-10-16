@@ -4,31 +4,30 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { languageIdOf } from '@gepard/common';
 import { GRAMMAR_SPEC, KIND_SPECS, LSP_SPEC, THEME_SPEC } from '../../extensions/kindSpecs';
 import { ExtensionScannerService, loadedOf } from '../../services/extensionScanner';
-import * as extensionsStore from '../../store/extensions';
-import { __setUserDataDir } from '../support/electron';
+import { ExtensionsStore } from '../../store/extensions';
+import { FileLockService } from '../../services/fileLock';
 import {
   DEMO_GRAMMAR_BODY,
   DEMO_LANG_BODY,
   DEMO_THEME_BODY,
   writePackage,
 } from '../support/extensionPackages';
-import { makeTmpDir, type TmpDir } from '../support/tmp';
+import { makeUserData, type UserData } from '../support/tmp';
 
 describe('ExtensionScannerService', () => {
-  let dir: TmpDir;
+  let dir: UserData;
   let root: string;
-  let userData: string;
+  let extensionsStore: ExtensionsStore;
 
-  async function setup(prefix: string): Promise<ExtensionScannerService> {
-    dir = await makeTmpDir(prefix);
-    userData = join(dir.path, 'userData');
-    await mkdir(userData, { recursive: true });
-    __setUserDataDir(userData);
+  async function setup(): Promise<ExtensionScannerService> {
+    dir = await makeUserData();
+    extensionsStore = new ExtensionsStore(dir.paths, new FileLockService());
     root = join(dir.path, 'ext');
     return new ExtensionScannerService(
-      () => root,
-      () => join(dir.path, 'builtin'),
+      root,
+      join(dir.path, 'builtin'),
       KIND_SPECS,
+      extensionsStore,
     );
   }
 
@@ -37,12 +36,12 @@ describe('ExtensionScannerService', () => {
   });
 
   it('returns nothing when the directories do not exist', async () => {
-    const scanner = await setup('ext-scan-missing');
+    const scanner = await setup();
     expect(await scanner.scan({})).toEqual([]);
   });
 
   it('loads a conforming package, reports a wrong-shaped one, and one that throws on import', async () => {
-    const scanner = await setup('ext-scan');
+    const scanner = await setup();
     await writePackage(root, 'good', DEMO_LANG_BODY);
     await writePackage(root, 'bad-shape', `module.exports = { id: 'bad-shape' }`);
     await writePackage(root, 'throws', `throw new Error('boom during import')`);
@@ -68,7 +67,7 @@ describe('ExtensionScannerService', () => {
   });
 
   it('reports an lsp package that does not export languages', async () => {
-    const scanner = await setup('ext-scan-no-language-id');
+    const scanner = await setup();
     await writePackage(
       root,
       'no-language-id',
@@ -86,7 +85,7 @@ describe('ExtensionScannerService', () => {
   });
 
   it('dispatches every package of the one shared folder to its own kind in a single scan', async () => {
-    const scanner = await setup('ext-scan-kinds');
+    const scanner = await setup();
     await writePackage(root, 'a-lang', DEMO_LANG_BODY);
     await writePackage(root, 'b-theme', DEMO_THEME_BODY, { gepard: { type: 'theme' } });
     await writePackage(root, 'c-grammar', DEMO_GRAMMAR_BODY, { gepard: { type: 'grammar' } });
@@ -103,7 +102,7 @@ describe('ExtensionScannerService', () => {
   });
 
   it('reads and imports each package once per scan, however many kinds exist', async () => {
-    const scanner = await setup('ext-scan-once-per-scan');
+    const scanner = await setup();
     const counterFile = join(root, 'counter.txt');
     await mkdir(root, { recursive: true });
     await writeFile(counterFile, '');
@@ -119,7 +118,7 @@ describe('ExtensionScannerService', () => {
   });
 
   it('never re-imports a path once scanned, so a fix on disk is not picked up', async () => {
-    const scanner = await setup('ext-scan-stale-failure');
+    const scanner = await setup();
     const pkgDir = await writePackage(root, 'ext', `module.exports = { id: 'incomplete' }`);
 
     const first = await scanner.scan({});
@@ -131,7 +130,7 @@ describe('ExtensionScannerService', () => {
   });
 
   it('never imports a package known to be disabled, and imports it once enabled', async () => {
-    const scanner = await setup('ext-scan-disabled');
+    const scanner = await setup();
     const counterFile = join(dir.path, 'counter.txt');
     await writeFile(counterFile, '');
     const pkgDir = await writePackage(

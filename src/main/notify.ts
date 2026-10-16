@@ -1,8 +1,8 @@
 // `webContents.send` reaches only windows that already exist and have
 // registered a listener; it does not queue messages.
 import type { LogLevel } from '@gepard/common';
-import { emit } from './ipc/registry';
-import { log } from './log';
+import type { IpcEventService } from './ipc/events';
+import type { LoggerService } from './log';
 
 export interface AppErrorPayload {
   scope: string;
@@ -26,17 +26,25 @@ export class AppErrorGate {
   }
 }
 
-const appErrorGate = new AppErrorGate();
-
 export function isNotifiableLevel(level: LogLevel): boolean {
   return level === 'error';
 }
 
-export function notifyMainFailure(scope: string, message: string): void {
-  log.error(scope, message);
-  for (const payload of appErrorGate.notify({ scope, message })) emit('app.error', payload);
-}
+export class NotifyService {
+  private readonly gate = new AppErrorGate();
 
-export function markRendererReady(): void {
-  for (const payload of appErrorGate.open()) emit('app.error', payload);
+  constructor(
+    private readonly logger: LoggerService,
+    private readonly events: IpcEventService,
+  ) {}
+
+  mainFailure(scope: string, message: string): void {
+    this.logger.error(scope, message);
+    for (const payload of this.gate.notify({ scope, message }))
+      this.events.emit('app.error', payload);
+  }
+
+  rendererReady(): void {
+    for (const payload of this.gate.open()) this.events.emit('app.error', payload);
+  }
 }

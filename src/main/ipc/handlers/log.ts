@@ -1,14 +1,16 @@
-import type { HandlerMap } from '../registry';
-import { log, logFilePath } from '../../log';
+import type { HandlerMap } from '../dispatch';
+import type { LoggerService } from '../../log';
 import { oneLine } from '../../helpers/string';
 
 export class LogHandlers {
+  constructor(private readonly logger: LoggerService) {}
+
   toHandlerMap(): Pick<HandlerMap, 'log.write' | 'log.getPath'> {
     return {
       'log.write': ({ level, scope, message }) => {
-        log[level](`renderer:${oneLine(scope)}`, oneLine(message));
+        this.logger[level](`renderer:${oneLine(scope)}`, oneLine(message));
       },
-      'log.getPath': () => logFilePath(),
+      'log.getPath': () => this.logger.filePath(),
     };
   }
 }

@@ -17,14 +17,14 @@ export type DownloadSource = GitHubReleaseDownload;
 export class DownloadService {
   constructor(
     private readonly gh: GhClient,
-    private readonly tmpDir: () => string,
+    private readonly tmpDir: string,
   ) {}
 
   async withDownload<R>(
     source: DownloadSource,
     use: (file: string, workDir: string) => Promise<R>,
   ): Promise<R> {
-    const workDir = await mkdtemp(path.join(this.tmpDir(), 'gepard-download-'));
+    const workDir = await mkdtemp(path.join(this.tmpDir, 'gepard-download-'));
     try {
       return await use(await this.fetch(source, workDir), workDir);
     } finally {

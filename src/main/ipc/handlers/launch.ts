@@ -1,5 +1,5 @@
 import { NewWindowUnavailableError } from '@gepard/common';
-import type { HandlerMap } from '../registry';
+import type { HandlerMap } from '../dispatch';
 import type { LaunchService } from '../../services/launch';
 
 export class LaunchHandlers {

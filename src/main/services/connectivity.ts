@@ -1,5 +1,6 @@
 import { ConnectionError } from '@gepard/common';
-import { log } from '../log';
+import type { IpcEventService } from '../ipc/events';
+import type { LoggerService } from '../log';
 
 export interface RemoteObserver {
   onRemoteResult(ok: boolean, error?: unknown): void;
@@ -8,7 +9,10 @@ export interface RemoteObserver {
 export class ConnectivityService implements RemoteObserver {
   private offline = false;
 
-  constructor(private readonly publish: (offline: boolean) => void) {}
+  constructor(
+    private readonly logger: LoggerService,
+    private readonly events: IpcEventService,
+  ) {}
 
   isOffline(): boolean {
     return this.offline;
@@ -17,8 +21,8 @@ export class ConnectivityService implements RemoteObserver {
   private setOffline(offline: boolean, reason?: string): void {
     if (this.offline === offline) return;
     this.offline = offline;
-    log.warn('connectivity', offline ? `offline: ${reason ?? 'unknown'}` : 'back online');
-    this.publish(offline);
+    this.logger.warn('connectivity', offline ? `offline: ${reason ?? 'unknown'}` : 'back online');
+    this.events.emit('connectivity.changed', { offline });
   }
 
   onRemoteResult(ok: boolean, error?: unknown): void {

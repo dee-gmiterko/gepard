@@ -1,94 +1,94 @@
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { ProjectId, AppError } from '@gepard/common';
-
-export const packaged = __dirname.includes('app.asar');
-
-let dataDir: string | null = null;
-
-export function setUserDataDir(dir: string): void {
-  dataDir = dir;
-}
-
-export function userDataDir(): string {
-  if (dataDir === null) throw new Error('user data dir is not set');
-  return dataDir;
-}
-
-const APP_ROOT_FROM_MAIN_OUTPUT = join('..', '..');
-
-export function appPath(): string {
-  return join(__dirname, APP_ROOT_FROM_MAIN_OUTPUT);
-}
-
-export function nohooksDir(): string {
-  return join(userDataDir(), 'nohooks');
-}
-
-export function projectsDir(): string {
-  return join(userDataDir(), 'projects');
-}
-
-export function projectLocksDir(): string {
-  return join(userDataDir(), 'locks');
-}
-
-export function writeLockPath(name: string): string {
-  return join(projectLocksDir(), `write-${encodeURIComponent(name)}.lock`);
-}
 
 export function projectId(owner: string, repo: string): string {
   return `${owner}__${repo}`.toLowerCase();
 }
 
-export function projectDir(id: string): string {
-  if (!ProjectId.safeParse(id).success) {
-    throw new AppError('INVALID_PROJECT_ID', `invalid project id: ${id}`);
+export function resolveUserDataDir(
+  platform: NodeJS.Platform,
+  env: NodeJS.ProcessEnv,
+  home: string = homedir(),
+): string {
+  if (platform === 'win32') return join(env['APPDATA'] ?? home, 'gepard');
+  if (platform === 'darwin') return join(home, 'Library', 'Application Support', 'gepard');
+  return join(env['XDG_CONFIG_HOME'] ?? join(home, '.config'), 'gepard');
+}
+
+export class Paths {
+  constructor(
+    private readonly userDataDir: string,
+    readonly appPath: string,
+    readonly packaged: boolean,
+  ) {}
+
+  nohooksDir(): string {
+    return join(this.userDataDir, 'nohooks');
   }
-  return join(projectsDir(), id);
-}
 
-export function projectJsonPath(id: string): string {
-  return join(projectDir(id), 'project.json');
-}
+  projectsDir(): string {
+    return join(this.userDataDir, 'projects');
+  }
 
-export function projectRepoDir(id: string): string {
-  return join(projectDir(id), 'repo');
-}
+  projectLocksDir(): string {
+    return join(this.userDataDir, 'locks');
+  }
 
-export function projectCloneTmpDir(id: string): string {
-  return join(projectDir(id), 'repo.cloning');
-}
+  writeLockPath(name: string): string {
+    return join(this.projectLocksDir(), `write-${encodeURIComponent(name)}.lock`);
+  }
 
-export function projectReviewDir(id: string): string {
-  return join(projectDir(id), 'review');
-}
+  projectDir(id: string): string {
+    if (!ProjectId.safeParse(id).success) {
+      throw new AppError('INVALID_PROJECT_ID', `invalid project id: ${id}`);
+    }
+    return join(this.projectsDir(), id);
+  }
 
-export function extensionsRootDir(): string {
-  return join(userDataDir(), 'extensions');
-}
+  projectJsonPath(id: string): string {
+    return join(this.projectDir(id), 'project.json');
+  }
 
-export function builtinExtensionsDir(): string {
-  return packaged
-    ? join(appPath(), '..', 'extensions')
-    : join(appPath(), '..', '..', 'dist', 'extensions');
-}
+  projectRepoDir(id: string): string {
+    return join(this.projectDir(id), 'repo');
+  }
 
-export function extensionDataDir(id: string): string {
-  return join(userDataDir(), 'extensions-data', encodeURIComponent(id));
-}
+  projectCloneTmpDir(id: string): string {
+    return join(this.projectDir(id), 'repo.cloning');
+  }
 
-export function extensionsFilesJsonPath(): string {
-  return join(userDataDir(), 'extensions-files.json');
-}
+  projectReviewDir(id: string): string {
+    return join(this.projectDir(id), 'review');
+  }
 
-export function settingsJsonPath(): string {
-  return join(userDataDir(), 'settings.json');
-}
+  extensionsRootDir(): string {
+    return join(this.userDataDir, 'extensions');
+  }
 
-export function reviewJsonPath(id: string, pr: number | null): string {
-  return join(projectReviewDir(id), `${pr ?? 'unassigned'}.json`);
-}
+  builtinExtensionsDir(): string {
+    return this.packaged
+      ? join(this.appPath, '..', 'extensions')
+      : join(this.appPath, '..', '..', 'dist', 'extensions');
+  }
 
-export function logsDir(): string {
-  return join(userDataDir(), 'logs');
+  extensionDataDir(id: string): string {
+    return join(this.userDataDir, 'extensions-data', encodeURIComponent(id));
+  }
+
+  extensionsFilesJsonPath(): string {
+    return join(this.userDataDir, 'extensions-files.json');
+  }
+
+  settingsJsonPath(): string {
+    return join(this.userDataDir, 'settings.json');
+  }
+
+  reviewJsonPath(id: string, pr: number | null): string {
+    return join(this.projectReviewDir(id), `${pr ?? 'unassigned'}.json`);
+  }
+
+  logsDir(): string {
+    return join(this.userDataDir, 'logs');
+  }
 }

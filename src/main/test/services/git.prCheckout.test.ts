@@ -3,9 +3,9 @@ import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { gitService } from '../../di';
-import { __setUserDataDir } from '../support/electron';
-import { makeTmpDir, type TmpDir } from '../support/tmp';
+import { GitService } from '../../services/git';
+import { makeUserData, makeTmpDir, type TmpDir, type UserData } from '../support/tmp';
+import { makeGitServices } from '../support/services';
 
 const execFileP = promisify(execFile);
 const ENV = {
@@ -25,7 +25,8 @@ async function git(cwd: string, args: string[]): Promise<string> {
 describe('GitService.checkoutTarget for pull requests (integration)', () => {
   let origin: TmpDir;
   let bare: TmpDir;
-  let userData: TmpDir;
+  let userData: UserData;
+  let svc: GitService;
   let rootSha: string;
   let mainTip: string;
   let featureSha: string;
@@ -34,8 +35,8 @@ describe('GitService.checkoutTarget for pull requests (integration)', () => {
   beforeAll(async () => {
     origin = await makeTmpDir('git-pr-origin');
     bare = await makeTmpDir('git-pr-bare');
-    userData = await makeTmpDir('git-pr-ud');
-    __setUserDataDir(userData.path);
+    userData = await makeUserData();
+    svc = makeGitServices(userData.paths).git;
     const o = origin.path;
     await git(o, ['init', '-b', 'main']);
     await writeFile(join(o, 'a.txt'), '1\n');
@@ -65,8 +66,8 @@ describe('GitService.checkoutTarget for pull requests (integration)', () => {
     } finally {
       await w.cleanup();
     }
-    await gitService.cloneProject('acme__origin', `file://${o}`);
-    await gitService.cloneProject('acme__bare', `file://${bare.path}`);
+    await svc.cloneProject('acme__origin', `file://${o}`);
+    await svc.cloneProject('acme__bare', `file://${bare.path}`);
   }, 60_000);
 
   afterAll(async () => {
@@ -76,7 +77,7 @@ describe('GitService.checkoutTarget for pull requests (integration)', () => {
   });
 
   it('checks out a same-repo PR head and returns the merge-base as base', async () => {
-    const result = await gitService.checkoutTarget('acme__origin', {
+    const result = await svc.checkoutTarget('acme__origin', {
       kind: 'pr',
       pr: 1,
       headRefOid: featureSha,
@@ -87,7 +88,7 @@ describe('GitService.checkoutTarget for pull requests (integration)', () => {
 
   it('fails clearly for a commit that exists nowhere on the remote', async () => {
     await expect(
-      gitService.checkoutTarget('acme__bare', {
+      svc.checkoutTarget('acme__bare', {
         kind: 'pr',
         pr: 9,
         headRefOid: 'c'.repeat(40),
@@ -97,7 +98,7 @@ describe('GitService.checkoutTarget for pull requests (integration)', () => {
   });
 
   it('succeeds for a fork PR commit reachable only via refs/pull/N/head', async () => {
-    const result = await gitService.checkoutTarget('acme__bare', {
+    const result = await svc.checkoutTarget('acme__bare', {
       kind: 'pr',
       pr: 1,
       headRefOid: forkSha,
@@ -110,14 +111,14 @@ describe('GitService.checkoutTarget for pull requests (integration)', () => {
     let n = 0;
     async function freshClone(): Promise<string> {
       const id = `acme__fork${n++}`;
-      await gitService.cloneProject(id, `file://${bare.path}`);
+      await svc.cloneProject(id, `file://${bare.path}`);
       return id;
     }
 
     it('reports PR_HEAD_UNAVAILABLE when refs/pull/N/head does not exist', async () => {
       const id = await freshClone();
       await expect(
-        gitService.checkoutTarget(id, {
+        svc.checkoutTarget(id, {
           kind: 'pr',
           pr: 99,
           headRefOid: 'd'.repeat(40),
@@ -129,7 +130,7 @@ describe('GitService.checkoutTarget for pull requests (integration)', () => {
     it('reports PR_HEAD_CHANGED when the PR head moved past the requested sha', async () => {
       const id = await freshClone();
       await git(bare.path, ['update-ref', 'refs/pull/2/head', forkSha]);
-      const error = await gitService
+      const error = await svc
         .checkoutTarget(id, {
           kind: 'pr',
           pr: 2,
@@ -148,7 +149,7 @@ describe('GitService.checkoutTarget for pull requests (integration)', () => {
       await git(origin.path, ['commit', '-m', 'main moves again']);
       const newTip = await git(origin.path, ['rev-parse', 'HEAD']);
       await git(origin.path, ['push', bare.path, 'main']);
-      const result = await gitService.checkoutTarget(id, {
+      const result = await svc.checkoutTarget(id, {
         kind: 'pr',
         pr: 1,
         headRefOid: featureSha,
@@ -159,20 +160,20 @@ describe('GitService.checkoutTarget for pull requests (integration)', () => {
 
     it('lists the commits of a fork PR touching a path', async () => {
       const id = await freshClone();
-      await gitService.ensurePrCommitsFetched(id, 1, [forkSha]);
-      const touching = await gitService.commitsTouchingPath(id, [forkSha], 'fork.txt');
+      await svc.ensurePrCommitsFetched(id, 1, [forkSha]);
+      const touching = await svc.commitsTouchingPath(id, [forkSha], 'fork.txt');
       expect([...touching]).toEqual([forkSha]);
     });
 
     it('checks out a fork PR commit that is not local when told the PR', async () => {
       const id = await freshClone();
-      const result = await gitService.checkoutTarget(id, { kind: 'commit', sha: forkSha, pr: 1 });
+      const result = await svc.checkoutTarget(id, { kind: 'commit', sha: forkSha, pr: 1 });
       expect(result).toEqual({ base: rootSha, head: forkSha });
     });
 
     it('rejects a non-local commit without a PR', async () => {
       const id = await freshClone();
-      await expect(gitService.checkoutTarget(id, { kind: 'commit', sha: forkSha })).rejects.toThrow(
+      await expect(svc.checkoutTarget(id, { kind: 'commit', sha: forkSha })).rejects.toThrow(
         /not on origin/,
       );
     });

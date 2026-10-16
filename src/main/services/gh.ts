@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { chunk } from '../helpers/array';
 import { mapWithConcurrency, withBatches } from '../helpers/async';
-import type { getProject as getProjectFromStore } from '../store/projects';
+import type { ProjectStore } from '../store/projects';
 import type { GhClient } from '../clients/gh';
 import {
   buildPrListArgs,
@@ -552,12 +552,12 @@ mutation($threadId:ID!, $body:String!, $reviewId:ID) {
 
 export class GhService {
   constructor(
-    private readonly getProject: typeof getProjectFromStore,
     private readonly gh: GhClient,
+    private readonly projects: ProjectStore,
   ) {}
 
   async repoRefFor(projectId: string): Promise<RepoRef> {
-    const project = await this.getProject(projectId);
+    const project = await this.projects.getProject(projectId);
     if (!project) throw new AppError('PROJECT_NOT_FOUND', `unknown project: ${projectId}`);
     return { owner: project.owner, repo: project.repo };
   }

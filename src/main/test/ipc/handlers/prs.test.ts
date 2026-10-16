@@ -3,11 +3,11 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ghService, gitService } from '../../../di';
 import { PrsHandlers } from '../../../ipc/handlers/prs';
-import { projectRepoDir } from '../../../paths';
-import { __setUserDataDir } from '../../support/electron';
-import { makeTmpDir, type TmpDir } from '../../support/tmp';
+import { ReviewStore } from '../../../store/review';
+import { FileLockService } from '../../../services/fileLock';
+import { makeUserData, type UserData } from '../../support/tmp';
+import { makeGitServices } from '../../support/services';
 
 const execFileP = promisify(execFile);
 const ENV = {
@@ -26,12 +26,11 @@ async function git(cwd: string, args: string[]): Promise<string> {
 }
 
 describe('overview.owners against a real repository', () => {
-  let userData: TmpDir;
+  let userData: UserData;
   const projectId = 'o__owners';
 
   beforeEach(async () => {
-    userData = await makeTmpDir('overview-owners');
-    __setUserDataDir(userData.path);
+    userData = await makeUserData();
   });
 
   afterEach(async () => {
@@ -43,7 +42,7 @@ describe('overview.owners against a real repository', () => {
     changed: string[],
     codeownersPath = '.github/CODEOWNERS',
   ): Promise<Record<string, string[]> | null> {
-    const repo = projectRepoDir(projectId);
+    const repo = userData.paths.projectRepoDir(projectId);
     await mkdir(repo, { recursive: true });
     await git(repo, ['init', '-b', 'main']);
     await writeFile(join(repo, 'README.md'), 'hi\n');
@@ -61,7 +60,12 @@ describe('overview.owners against a real repository', () => {
     await git(repo, ['add', '.']);
     await git(repo, ['commit', '-m', 'change']);
     const head = await git(repo, ['rev-parse', 'HEAD']);
-    const handlers = new PrsHandlers(ghService, gitService).toHandlerMap();
+    const services = makeGitServices(userData.paths);
+    const handlers = new PrsHandlers(
+      services.gh,
+      services.git,
+      new ReviewStore(userData.paths, new FileLockService()),
+    ).toHandlerMap();
     return handlers['overview.owners']({ projectId, base, head }, { window: null, remote: false });
   }
 

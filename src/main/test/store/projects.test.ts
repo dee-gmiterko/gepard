@@ -1,16 +1,17 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { __setUserDataDir } from '../support/electron';
-import { makeTmpDir, type TmpDir } from '../support/tmp';
-import * as projects from '../../store/projects';
+import { makeUserData, silentLogger, type UserData } from '../support/tmp';
+import { ProjectStore } from '../../store/projects';
+import { FileLockService } from '../../services/fileLock';
 
 describe('store/projects', () => {
-  let userData: TmpDir;
+  let userData: UserData;
+  let projects: ProjectStore;
 
   beforeEach(async () => {
-    userData = await makeTmpDir('store-projects');
-    __setUserDataDir(userData.path);
+    userData = await makeUserData();
+    projects = new ProjectStore(userData.paths, silentLogger, new FileLockService());
   });
 
   afterEach(async () => {
@@ -31,28 +32,28 @@ describe('store/projects', () => {
 
     it('ignores plain files and directories without a project.json', async () => {
       await projects.addProject('https://github.com/o/good');
-      await writeFile(join(userData.path, 'projects', 'note.txt'), 'x');
-      await mkdir(join(userData.path, 'projects', 'o__empty'), { recursive: true });
+      await writeFile(join(userData.userDir, 'projects', 'note.txt'), 'x');
+      await mkdir(join(userData.userDir, 'projects', 'o__empty'), { recursive: true });
       expect((await projects.listProjects()).map((p) => p.id)).toEqual(['o__good']);
     });
 
     it('still lists valid projects when a stray directory has an invalid project id', async () => {
       await projects.addProject('https://github.com/o/good');
-      await mkdir(join(userData.path, 'projects', 'Not A Valid Id!'), { recursive: true });
+      await mkdir(join(userData.userDir, 'projects', 'Not A Valid Id!'), { recursive: true });
       expect((await projects.listProjects()).map((p) => p.id)).toEqual(['o__good']);
     });
 
     it('still lists valid projects when another project.json is corrupt', async () => {
       await projects.addProject('https://github.com/o/good');
-      await mkdir(join(userData.path, 'projects', 'o__bad'), { recursive: true });
-      await writeFile(join(userData.path, 'projects', 'o__bad', 'project.json'), '{not json');
+      await mkdir(join(userData.userDir, 'projects', 'o__bad'), { recursive: true });
+      await writeFile(join(userData.userDir, 'projects', 'o__bad', 'project.json'), '{not json');
       expect((await projects.listProjects()).map((p) => p.id)).toEqual(['o__good']);
     });
 
     it('still lists valid projects when another project.json fails schema validation', async () => {
       await projects.addProject('https://github.com/o/good');
-      await mkdir(join(userData.path, 'projects', 'o__bad'), { recursive: true });
-      await writeFile(join(userData.path, 'projects', 'o__bad', 'project.json'), '{"id":1}');
+      await mkdir(join(userData.userDir, 'projects', 'o__bad'), { recursive: true });
+      await writeFile(join(userData.userDir, 'projects', 'o__bad', 'project.json'), '{"id":1}');
       expect((await projects.listProjects()).map((p) => p.id)).toEqual(['o__good']);
     });
   });

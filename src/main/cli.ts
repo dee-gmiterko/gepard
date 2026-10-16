@@ -39,15 +39,11 @@ export function parseCli(args: string[]): Cli {
   };
 }
 
-function parseProcessCli(): Cli {
-  // hideBin assumes Electron's argv layout, which does not apply when the binary runs as Node.
-  const args = process.env['ELECTRON_RUN_AS_NODE'] ? process.argv.slice(2) : hideBin(process.argv);
+export function parseProcessCli(): Cli {
   try {
-    return parseCli(args);
+    return parseCli(hideBin(process.argv));
   } catch (e) {
     process.stderr.write(`gepard: ${errorMessage(e)}\n`);
     process.exit(2);
   }
 }
-
-export const cli = parseProcessCli();

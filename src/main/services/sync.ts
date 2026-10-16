@@ -1,10 +1,9 @@
 import { AppError, generalCommentAnchor, RemoteNotFoundError } from '@gepard/common';
 import type { SyncMode } from '@gepard/common';
-import { log } from '../log';
+import type { LoggerService } from '../log';
 import type { GhService } from './gh';
 import type { GitService } from './git';
-import * as review from '../store/review';
-import { withReviewLock, type ReviewStoreFile } from '../store/review';
+import type { ReviewStore, ReviewStoreFile } from '../store/review';
 import {
   collectPendingGeneralReplies,
   composeBody,
@@ -39,6 +38,8 @@ export class SyncService {
   constructor(
     private readonly gh: GhService,
     private readonly git: GitService,
+    private readonly logger: LoggerService,
+    private readonly review: ReviewStore,
   ) {}
 
   private async pushViewed(
@@ -88,7 +89,7 @@ export class SyncService {
           goneRemotely++;
         }
         store.threads = store.threads.filter((t) => t.id !== thread.id);
-        await review.saveReview(projectId, pr, store);
+        await this.review.saveReview(projectId, pr, store);
         continue;
       }
       for (const comment of [...thread.comments]) {
@@ -102,7 +103,7 @@ export class SyncService {
           goneRemotely++;
         }
         thread.comments = thread.comments.filter((c) => c.id !== comment.id);
-        await review.saveReview(projectId, pr, store);
+        await this.review.saveReview(projectId, pr, store);
       }
     }
     return { pushedCount, goneRemotely };
@@ -138,7 +139,7 @@ export class SyncService {
             thread.comments = thread.comments.filter((c) => c.id !== comment.id);
           }
         }
-        await review.saveReview(projectId, pr, store);
+        await this.review.saveReview(projectId, pr, store);
       }
     }
     return { pushedCount, goneRemotely };
@@ -172,7 +173,7 @@ export class SyncService {
         if (c.threadId === oldThreadId) c.threadId = thread.id;
       }
       pushedCount++;
-      await review.saveReview(projectId, pr, store);
+      await this.review.saveReview(projectId, pr, store);
     }
 
     for (const { thread, comment } of collectPendingGeneralReplies(store.threads)) {
@@ -185,7 +186,7 @@ export class SyncService {
       comment.local = undefined;
       thread.comments = thread.comments.filter((c) => c !== comment);
       pushedCount++;
-      await review.saveReview(projectId, pr, store);
+      await this.review.saveReview(projectId, pr, store);
     }
 
     return pushedCount;
@@ -217,7 +218,7 @@ export class SyncService {
     for (const c of thread.comments) {
       if (c.threadId === oldThreadId) c.threadId = thread.id;
     }
-    await review.saveReview(projectId, pr, store);
+    await this.review.saveReview(projectId, pr, store);
   }
 
   private async ensureOwnPendingReview(
@@ -234,13 +235,13 @@ export class SyncService {
     if (existing) {
       if (store.pendingReviewId !== existing.id) {
         store.pendingReviewId = existing.id;
-        await review.saveReview(projectId, pr, store);
+        await this.review.saveReview(projectId, pr, store);
       }
       return existing.id;
     }
     const reviewId = await this.gh.createPendingReview(prId, commitOid);
     store.pendingReviewId = reviewId;
-    await review.saveReview(projectId, pr, store);
+    await this.review.saveReview(projectId, pr, store);
     return reviewId;
   }
 
@@ -364,13 +365,13 @@ export class SyncService {
     commit: string | undefined,
     mode: SyncMode,
   ): Promise<SyncResult> {
-    log.info('sync', `projectId=${projectId} pr=${pr} mode=${mode} start`);
-    const store = await review.loadReview(projectId, pr);
+    this.logger.info('sync', `projectId=${projectId} pr=${pr} mode=${mode} start`);
+    const store = await this.review.loadReview(projectId, pr);
 
     const { id: prId, headRefOid, baseRefOid } = await this.gh.viewPr(ctx.owner, ctx.repo, pr);
 
     await this.git.fetchOrigin(projectId).catch((e: unknown) => {
-      log.warn('sync', `projectId=${projectId} pr=${pr} fetch origin failed: ${String(e)}`);
+      this.logger.warn('sync', `projectId=${projectId} pr=${pr} fetch origin failed: ${String(e)}`);
     });
     const { head: currentHead } = await this.git.workingTree(projectId);
     let checkout: { base: string; head: string };
@@ -418,10 +419,10 @@ export class SyncService {
         pushedComments = commentsOutcome.pushedCount;
         goneRemotely = commentsOutcome.goneRemotely;
       } finally {
-        await review.saveReview(projectId, pr, store);
+        await this.review.saveReview(projectId, pr, store);
       }
       if (goneRemotely > 0) {
-        log.warn(
+        this.logger.warn(
           'sync',
           `projectId=${projectId} pr=${pr} dropped ${goneRemotely} local pending change(s) ` +
             `already deleted on GitHub`,
@@ -456,8 +457,8 @@ export class SyncService {
       pendingReviewId: store.pendingReviewId,
       lastSuccessfulSyncAt: mode === 'full' ? syncedAt : store.lastSuccessfulSyncAt,
     };
-    await review.saveReview(projectId, pr, finalStore);
-    log.info(
+    await this.review.saveReview(projectId, pr, finalStore);
+    this.logger.info(
       'sync',
       `projectId=${projectId} pr=${pr} mode=${mode} end ` +
         `pushed=${pushedViewed + pushedComments} pulledThreads=${remoteThreads.length} ` +
@@ -478,7 +479,7 @@ export class SyncService {
     commit: string | undefined,
     mode: SyncMode,
   ): Promise<SyncResult> {
-    return withReviewLock(projectId, pr, () =>
+    return this.review.withReviewLock(projectId, pr, () =>
       this.runSyncLocked(projectId, pr, ctx, commit, mode),
     );
   }

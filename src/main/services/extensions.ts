@@ -21,7 +21,7 @@ import {
   type KindSpec,
 } from '../extensions/kindSpecs';
 import { readManifest } from '../helpers/extension';
-import * as settingsStore from '../store/settings';
+import type { SettingsStore } from '../store/settings';
 import {
   loadedOf,
   type ExtensionScannerService,
@@ -67,12 +67,13 @@ function describePackage(pkg: ScannedPackage): ExtensionInfo {
 
 export class ExtensionsService {
   constructor(
-    readonly userDir: () => string,
+    readonly userDir: string,
+    private readonly settings: SettingsStore,
     private readonly scanner: ExtensionScannerService,
   ) {}
 
   async list(): Promise<ExtensionInfo[]> {
-    const enabledMap = await settingsStore.getEnabledMap();
+    const enabledMap = await this.settings.getEnabledMap();
     const packages = await this.scanner.scan(enabledMap);
     return packages.map((pkg) =>
       pkg.status === 'loaded'
@@ -82,7 +83,7 @@ export class ExtensionsService {
   }
 
   private async enabledPackages<T>(spec: KindSpec<T>): Promise<LoadedExtensionPackage<T>[]> {
-    const enabledMap = await settingsStore.getEnabledMap();
+    const enabledMap = await this.settings.getEnabledMap();
     const packages = await this.scanner.scan(enabledMap);
     return loadedOf(packages, spec).filter(
       ({ extension }) => enabledMap[spec.getId(extension)] ?? true,
@@ -90,7 +91,7 @@ export class ExtensionsService {
   }
 
   async setEnabled(id: string, enabled: boolean): Promise<ExtensionInfo[]> {
-    await settingsStore.setEnabled(id, enabled);
+    await this.settings.setEnabled(id, enabled);
     return this.list();
   }
 
@@ -125,7 +126,7 @@ export class ExtensionsService {
     dirName: string | undefined,
     replacePackage: string | undefined,
   ): Promise<void> {
-    const userDir = this.userDir();
+    const userDir = this.userDir;
     const name = dirName ?? path.basename(srcDir);
     await mkdir(userDir, { recursive: true });
     if (replacePackage !== undefined) {

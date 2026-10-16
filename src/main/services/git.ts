@@ -19,10 +19,10 @@ import {
   type NameStatusEntry,
   parseBranchNames,
 } from '../helpers/git/gitParsing';
-import { emit } from '../ipc/registry';
-import { nohooksDir, projectCloneTmpDir, projectRepoDir } from '../paths';
-import { isCloned } from '../store/projects';
-import { log } from '../log';
+import type { IpcEventService } from '../ipc/events';
+import type { Paths } from '../paths';
+import type { ProjectStore } from '../store/projects';
+import type { LoggerService } from '../log';
 import {
   type ChangedFile,
   type Commit,
@@ -65,8 +65,12 @@ export class GitService {
   private statusCache: { key: string; entries: Promise<NameStatusEntry[]> } | null = null;
 
   constructor(
+    private readonly paths: Paths,
+    private readonly logger: LoggerService,
+    private readonly events: IpcEventService,
     private readonly indexer: Indexer,
     private readonly git: GitClient,
+    private readonly projects: ProjectStore,
   ) {}
 
   private enqueue<T>(projectId: string, fn: () => Promise<T>): Promise<T> {
@@ -90,12 +94,12 @@ export class GitService {
   }
 
   private async doCloneProject(projectId: string, url: string): Promise<void> {
-    const repoDir = projectRepoDir(projectId);
-    const tmpDir = projectCloneTmpDir(projectId);
-    const nohooks = nohooksDir();
+    const repoDir = this.paths.projectRepoDir(projectId);
+    const tmpDir = this.paths.projectCloneTmpDir(projectId);
+    const nohooks = this.paths.nohooksDir();
     try {
-      if (await isCloned(projectId)) {
-        emit('clone.progress', { projectId, phase: 'done', percent: 100 });
+      if (await this.projects.isCloned(projectId)) {
+        this.events.emit('clone.progress', { projectId, phase: 'done', percent: 100 });
         return;
       }
       await mkdir(nohooks, { recursive: true });
@@ -106,16 +110,17 @@ export class GitService {
         hooksPath: nohooks,
         onStderrLine: (line) => {
           const progress = parseCloneProgressLine(line);
-          if (progress) emit('clone.progress', { projectId, ...progress, message: line });
+          if (progress)
+            this.events.emit('clone.progress', { projectId, ...progress, message: line });
         },
       });
       await rename(tmpDir, repoDir);
-      emit('clone.progress', { projectId, phase: 'done', percent: 100 });
+      this.events.emit('clone.progress', { projectId, phase: 'done', percent: 100 });
     } catch (e) {
       await rm(tmpDir, { recursive: true, force: true }).catch(() => undefined);
       const message = e instanceof Error ? e.message : String(e);
-      log.error('clone', `projectId=${projectId} url=${url} failed: ${message}`);
-      emit('clone.progress', {
+      this.logger.error('clone', `projectId=${projectId} url=${url} failed: ${message}`);
+      this.events.emit('clone.progress', {
         projectId,
         phase: 'error',
         percent: null,
@@ -141,7 +146,7 @@ export class GitService {
 
   workingTree(projectId: string): Promise<{ head: string; files: string[] }> {
     return this.enqueue(projectId, async () => {
-      const repoRoot = projectRepoDir(projectId);
+      const repoRoot = this.paths.projectRepoDir(projectId);
       const [head, files] = await Promise.all([
         this.currentHeadSha(repoRoot),
         this.trackedFiles(repoRoot),
@@ -261,7 +266,7 @@ export class GitService {
   }
 
   async commitRange(projectId: string, sha: string): Promise<{ base: string; head: string }> {
-    const repoRoot = projectRepoDir(projectId);
+    const repoRoot = this.paths.projectRepoDir(projectId);
     return { base: await this.parentOrEmptyTree(repoRoot, sha), head: sha };
   }
 
@@ -277,9 +282,9 @@ export class GitService {
     target: CheckoutTarget,
   ): Promise<{ base: string; head: string }> {
     return this.enqueue(projectId, async () => {
-      const repoRoot = projectRepoDir(projectId);
+      const repoRoot = this.paths.projectRepoDir(projectId);
       const oldSha = await this.currentHeadSha(repoRoot);
-      log.info(
+      this.logger.info(
         'checkout',
         `projectId=${projectId} start from=${oldSha} target=${this.describeCheckoutTarget(target)}`,
       );
@@ -307,7 +312,10 @@ export class GitService {
         result = { base: head, head };
         this.fetchOrigin(projectId).catch((e) => {
           const message = e instanceof Error ? e.message : String(e);
-          log.warn('checkout', `projectId=${projectId} background fetch origin failed: ${message}`);
+          this.logger.warn(
+            'checkout',
+            `projectId=${projectId} background fetch origin failed: ${message}`,
+          );
         });
       }
 
@@ -316,7 +324,10 @@ export class GitService {
         this.trackedFiles(repoRoot),
       ]);
       this.indexer.onCheckout(projectId, changes, result.head, files.length);
-      log.info('checkout', `projectId=${projectId} end base=${result.base} head=${result.head}`);
+      this.logger.info(
+        'checkout',
+        `projectId=${projectId} end base=${result.base} head=${result.head}`,
+      );
       return result;
     });
   }
@@ -325,7 +336,7 @@ export class GitService {
     projectId: string,
     opts: { search?: string; path?: string; limit?: number } = {},
   ): Promise<Commit[]> {
-    const repoRoot = projectRepoDir(projectId);
+    const repoRoot = this.paths.projectRepoDir(projectId);
     const limit = opts.limit ?? DEFAULT_LOG_LIMIT;
     const globPath = opts.path !== undefined && isGlob(opts.path) ? opts.path : undefined;
     const glob = globPath !== undefined;
@@ -369,7 +380,7 @@ export class GitService {
 
   fetchOrigin(projectId: string): Promise<void> {
     return this.enqueue(projectId, async () => {
-      const repoRoot = projectRepoDir(projectId);
+      const repoRoot = this.paths.projectRepoDir(projectId);
       await this.git.run(repoRoot, ['fetch', 'origin', '--prune']);
     });
   }
@@ -377,7 +388,7 @@ export class GitService {
   ensurePrCommitsFetched(projectId: string, pr: number, oids: string[]): Promise<void> {
     return this.enqueue(projectId, async () => {
       if (oids.length === 0) return;
-      const repoRoot = projectRepoDir(projectId);
+      const repoRoot = this.paths.projectRepoDir(projectId);
       const newest = oids[oids.length - 1];
       await this.ensureCommit(repoRoot, newest, { pr });
     });
@@ -386,7 +397,7 @@ export class GitService {
   // git diff-tree fails on a missing object instead of fetching it.
   async filesTouchedByCommits(projectId: string, oids: string[]): Promise<Map<string, string[]>> {
     if (oids.length === 0) return new Map();
-    const repoRoot = projectRepoDir(projectId);
+    const repoRoot = this.paths.projectRepoDir(projectId);
     const { stdout } = await this.git.run(
       repoRoot,
       ['diff-tree', '--stdin', '-r', '--root', '-c', '--name-only', '-z', '--format=%H'],
@@ -406,7 +417,7 @@ export class GitService {
   }
 
   async changedFiles(projectId: string, base: string, head: string): Promise<ChangedFile[]> {
-    const repoRoot = projectRepoDir(projectId);
+    const repoRoot = this.paths.projectRepoDir(projectId);
     const [nameStatusRes, numstatRes] = await Promise.all([
       this.git.run(repoRoot, ['diff', '--name-status', '-M', '-C', '-z', base, head]),
       this.git.run(repoRoot, ['diff', '--numstat', '-M', '-C', '-z', base, head]),
@@ -451,7 +462,7 @@ export class GitService {
   }
 
   async fileContentAt(projectId: string, sha: string, path: string): Promise<FileContent> {
-    const repoRoot = projectRepoDir(projectId);
+    const repoRoot = this.paths.projectRepoDir(projectId);
     assertInRepo(repoRoot, path);
     const ref = `${sha}:${path}`;
     if (!(await this.blobExists(repoRoot, ref))) return { kind: 'missing', path, sha };
@@ -504,7 +515,7 @@ export class GitService {
   }
 
   async fileDiff(projectId: string, base: string, head: string, path: string): Promise<FileDiff> {
-    const repoRoot = projectRepoDir(projectId);
+    const repoRoot = this.paths.projectRepoDir(projectId);
     assertInRepo(repoRoot, path);
     const status = await this.statusEntryFor(repoRoot, base, head, path);
     const previousPath = status?.previousPath ?? null;
@@ -552,7 +563,7 @@ export class GitService {
   }
 
   async listTree(projectId: string, sha: string): Promise<string[]> {
-    const repoRoot = projectRepoDir(projectId);
+    const repoRoot = this.paths.projectRepoDir(projectId);
     const { stdout } = await this.git.run(repoRoot, ['ls-tree', '-r', '--name-only', '-z', sha]);
     return parseZTokens(stdout);
   }
@@ -574,7 +585,7 @@ export class GitService {
 
   // A GitHub pull request can use only branches that exist on the remote.
   async listBranches(projectId: string): Promise<BranchesInfo> {
-    const repoRoot = projectRepoDir(projectId);
+    const repoRoot = this.paths.projectRepoDir(projectId);
     await this.git.run(repoRoot, ['fetch', 'origin', '--prune']);
     const [refsOut, defaultBranch] = await Promise.all([
       this.git.run(repoRoot, ['for-each-ref', '--format=%(refname:short)', 'refs/remotes/origin']),

@@ -1,8 +1,9 @@
+import { IndexerService } from '../../lsp/indexer';
+import { IpcEventService } from '../../ipc/events';
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import type { LanguageExtension, LanguageSession } from '@gepard/common';
-import { __setUserDataDir } from '../support/electron';
 import { fakeLanguageSession } from '../support/session';
-import { makeTmpDir, type TmpDir } from '../support/tmp';
+import { makeUserData, silentLogger, type UserData } from '../support/tmp';
 
 const mocks = vi.hoisted(() => {
   const extensions: LanguageExtension[] = [];
@@ -10,19 +11,9 @@ const mocks = vi.hoisted(() => {
   return { extensions, lineIndexReady };
 });
 
-vi.mock('../../log', () => ({ log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
-vi.mock('../../notify', () => ({
-  isNotifiableLevel: () => false,
-  notifyMainFailure: vi.fn(),
-}));
 vi.mock('../../services/line-index-manager', () => ({
   startLineIndex: () => mocks.lineIndexReady.then(() => null),
 }));
-const { IndexerService } = await import('../../lsp/indexer');
-
-const indexer = new IndexerService({
-  enabledLanguageExtensions: () => Promise.resolve(mocks.extensions),
-});
 
 interface FakeSession {
   session: LanguageSession;
@@ -61,11 +52,18 @@ function fakeExtension(id: string, suffix: string): FakeExtension {
 const sessions = new Map<string, FakeSession>();
 
 describe('indexer with several language extensions', () => {
-  let userData: TmpDir;
+  let userData: UserData;
+  let indexer: IndexerService;
 
   beforeEach(async () => {
-    userData = await makeTmpDir('lsp-multi');
-    __setUserDataDir(userData.path);
+    userData = await makeUserData();
+    indexer = new IndexerService(
+      userData.paths,
+      silentLogger,
+      new IpcEventService(),
+      { mainFailure: vi.fn() },
+      { enabledLanguageExtensions: () => Promise.resolve(mocks.extensions) },
+    );
     sessions.clear();
   });
 
