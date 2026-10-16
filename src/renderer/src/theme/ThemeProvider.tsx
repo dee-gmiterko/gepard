@@ -22,6 +22,10 @@ const GlobalStyle = createGlobalStyle`
     height: 100%;
   }
 
+  #root {
+    container: app / inline-size;
+  }
+
   body {
     margin: 0;
     background: ${({ theme }) => theme.colors.bg};

@@ -4,7 +4,6 @@ export const NARROW_EDITOR_WIDTH = '420px';
 
 export const EditorHost = styled.div`
   height: 100%;
-  container: editor / inline-size;
 
   .cm-editor {
     height: 100%;

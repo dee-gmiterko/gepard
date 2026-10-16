@@ -20,7 +20,7 @@ const messages = defineMessages({
 
 const Centered = styled.div`
   ${centerLayout}
-  height: 100vh;
+  height: 100%;
 `;
 
 interface Props {

@@ -29,6 +29,7 @@ const Bar = styled.header`
   gap: ${({ theme }) => theme.space[3]};
   height: 40px;
   container: header / inline-size;
+  z-index: ${({ theme }) => theme.z.floating};
   padding: 0 ${({ theme }) => theme.space[3]};
   background: ${({ theme }) => theme.colors.bgSubtle};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};

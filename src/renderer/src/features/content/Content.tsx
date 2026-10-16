@@ -27,6 +27,7 @@ const FilesRow = styled.div`
 
 const ViewerArea = styled.div`
   position: relative;
+  container: editor / inline-size;
   min-height: 0;
   overflow: hidden;
 `;

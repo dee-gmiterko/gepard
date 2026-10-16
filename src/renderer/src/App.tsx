@@ -14,7 +14,7 @@ import { QuickSearch } from './features/quickSearch/QuickSearch';
 const Shell = styled.div`
   display: grid;
   grid-template-rows: auto 1fr;
-  height: 100vh;
+  height: 100%;
 `;
 
 const Body = styled.div`
