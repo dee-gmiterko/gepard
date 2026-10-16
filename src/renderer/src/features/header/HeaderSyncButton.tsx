@@ -16,7 +16,13 @@ const messages = defineMessages({
     id: 'header.syncButton.refreshWithCount',
     defaultMessage: 'Refresh ({count} to sync)',
   },
+  countOverflow: {
+    id: 'header.syncButton.countOverflow',
+    defaultMessage: '{max}+',
+  },
 });
+
+const MAX_BADGE_COUNT = 99;
 
 const Wrap = styled.span<{ $spinning: boolean }>`
   position: relative;
@@ -55,7 +61,13 @@ export function HeaderSyncButton(): React.JSX.Element | null {
   return (
     <Wrap $spinning={syncing}>
       <IconButton icon={RefreshCw} label={label} disabled={syncing} onClick={sync} />
-      {pendingCount ? <CountBadge aria-hidden="true">{pendingCount}</CountBadge> : null}
+      {pendingCount ? (
+        <CountBadge aria-hidden="true">
+          {pendingCount > MAX_BADGE_COUNT
+            ? intl.formatMessage(messages.countOverflow, { max: MAX_BADGE_COUNT })
+            : intl.formatNumber(pendingCount)}
+        </CountBadge>
+      ) : null}
     </Wrap>
   );
 }

@@ -276,6 +276,7 @@
   "header.prTarget.unresolvedLabel": "#{number}",
   "header.progress": "{viewed} / {total} viewed",
   "header.projects": "Projects",
+  "header.syncButton.countOverflow": "{max}+",
   "header.syncButton.refresh": "Refresh",
   "header.syncButton.refreshWithCount": "Refresh ({count} to sync)",
   "keyboard.acceptNext": "Mark viewed and go to next file",
