@@ -1,9 +1,11 @@
 import { defineMessages, FormattedMessage } from 'react-intl';
 import styled from 'styled-components';
+import type { UseQueryResult } from '@tanstack/react-query';
+import type { PrOverviewDetails } from '@gepard/common';
 import { Surface } from '../../../../components/Surface';
 import { Markdown } from '../../../../components/Markdown';
 import { Panel } from '../shared/Panel';
-import { QueryState } from '../shared/QueryState';
+import { PanelBody } from '../shared/PanelBody';
 import { Muted } from '../shared/overviewStyles';
 
 const messages = defineMessages({
@@ -20,29 +22,29 @@ const Scroll = styled(Surface).attrs({ $elevation: 'flat' })`
   padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[3]};
 `;
 
+function DescriptionBody({ body }: { body: string }): React.JSX.Element {
+  return body.trim() ? (
+    <Scroll>
+      <Markdown>{body}</Markdown>
+    </Scroll>
+  ) : (
+    <Muted>
+      <FormattedMessage {...messages.none} />
+    </Muted>
+  );
+}
+
 export function DescriptionPanel({
-  body,
-  error,
+  detailsQuery,
 }: {
-  body: string | undefined;
-  error: Error | null;
+  detailsQuery: UseQueryResult<PrOverviewDetails>;
 }): React.JSX.Element {
+  const { data, isPending, error } = detailsQuery;
   return (
-    <Panel
-      title={<FormattedMessage {...messages.title} />}
-      isLoading={body === undefined && !error}
-    >
-      {body === undefined ? (
-        <QueryState isLoading={false} error={error} />
-      ) : body.trim() ? (
-        <Scroll>
-          <Markdown>{body}</Markdown>
-        </Scroll>
-      ) : (
-        <Muted>
-          <FormattedMessage {...messages.none} />
-        </Muted>
-      )}
+    <Panel title={<FormattedMessage {...messages.title} />}>
+      <PanelBody isPending={isPending} error={error}>
+        {data && <DescriptionBody body={data.body} />}
+      </PanelBody>
     </Panel>
   );
 }

@@ -58,7 +58,7 @@ function invalidateComments(
 export function useUpsertComment() {
   const projectId = useProjectId() ?? '';
   const pr = useTargetPr();
-  const prId = useTargetedPr()?.id ?? null;
+  const prId = useTargetedPr().data?.id ?? null;
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (draft: CommentDraftBody) =>
@@ -90,7 +90,7 @@ export function useCreateIssue() {
 export function useSetViewed() {
   const projectId = useProjectId() ?? '';
   const pr = useTargetPr() ?? NaN;
-  const prId = useTargetedPr()?.id ?? null;
+  const prId = useTargetedPr().data?.id ?? null;
   const sha = useCheckoutHead()?.head ?? null;
   const qc = useQueryClient();
   const key = qk.viewed(projectId, pr);

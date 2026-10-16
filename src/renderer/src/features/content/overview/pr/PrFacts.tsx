@@ -1,5 +1,6 @@
 import { defineMessages, FormattedMessage } from 'react-intl';
 import styled from 'styled-components';
+import type { UseQueryResult } from '@tanstack/react-query';
 import type { PrSummary } from '@gepard/common';
 import { Inline } from '../../../../components/Layout';
 import { Skeleton } from '../../../../components/Skeleton';
@@ -36,13 +37,14 @@ const Box = styled(Surface).attrs({ $elevation: 'flat' })`
   font-size: ${({ theme }) => theme.font.size.sm};
 `;
 
-export function PrFacts({ pr }: { pr: PrSummary | null }): React.JSX.Element {
+export function PrFacts({ prQuery }: { prQuery: UseQueryResult<PrSummary> }): React.JSX.Element {
   const actions = useOverviewActions();
-  const { files, isLoading: filesLoading } = useChangedFileList();
+  const { files, isPending: filesPending } = useChangedFileList();
   const commitsQuery = usePrCommits();
   const commentsQuery = useComments();
   const viewedQuery = useViewed();
   const commits = commitsQuery.data;
+  const pr = prQuery.data;
   const threads = commentsQuery.data ?? [];
   const viewedPaths = useViewedPaths();
 
@@ -56,14 +58,18 @@ export function PrFacts({ pr }: { pr: PrSummary | null }): React.JSX.Element {
   const unresolved = threads.filter((t) => !t.isResolved && t.anchor.subjectType !== 'PR').length;
 
   return (
-    <Box aria-busy={filesLoading || commitsQuery.isLoading || commentsQuery.isLoading}>
+    <Box
+      aria-busy={
+        filesPending || commitsQuery.isPending || commentsQuery.isPending || viewedQuery.isPending
+      }
+    >
       <Inline $gap={2}>
-        {filesLoading ? (
+        {filesPending ? (
           <Skeleton width="96px" />
         ) : (
           <Lines additions={additions} deletions={deletions} />
         )}
-        {filesLoading && !pr ? (
+        {filesPending && prQuery.isPending ? (
           <Skeleton width="56px" />
         ) : (
           <Muted>
@@ -71,14 +77,14 @@ export function PrFacts({ pr }: { pr: PrSummary | null }): React.JSX.Element {
           </Muted>
         )}
       </Inline>
-      {commitsQuery.isLoading ? (
+      {commitsQuery.isPending ? (
         <Skeleton width="72px" />
       ) : (
         <Muted>
           <FormattedMessage {...messages.commits} values={{ count: commits?.length ?? 0 }} />
         </Muted>
       )}
-      {commentsQuery.isLoading ? (
+      {commentsQuery.isPending ? (
         <Skeleton width="128px" />
       ) : (
         <LinkButton onClick={actions.openComments}>
@@ -88,7 +94,7 @@ export function PrFacts({ pr }: { pr: PrSummary | null }): React.JSX.Element {
           </Num>
         </LinkButton>
       )}
-      {filesLoading || viewedQuery.isLoading ? (
+      {filesPending || viewedQuery.isPending ? (
         <Skeleton width="160px" />
       ) : (
         <LinkButton onClick={actions.openFiles}>

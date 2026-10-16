@@ -3,6 +3,7 @@ import { defineMessages, FormattedMessage } from 'react-intl';
 import type { ChangedFile } from '@gepard/common';
 import { topChangedFiles } from '../../../../helpers/overview';
 import { Panel } from '../shared/Panel';
+import { PanelBody } from '../shared/PanelBody';
 import { Table } from '../shared/overviewStyles';
 import { useOverviewActions } from '../shared/useOverviewActions';
 import { TopFileRow } from './TopFileRow';
@@ -16,30 +17,28 @@ const LIMIT = 5;
 
 export function TopFilesPanel({
   files,
-  isLoading = false,
+  isPending,
 }: {
   files: readonly ChangedFile[];
-  isLoading?: boolean;
+  isPending: boolean;
 }): React.JSX.Element {
   const actions = useOverviewActions();
   const viewedPaths = useViewedPaths();
   const top = useMemo(() => topChangedFiles(files, LIMIT), [files]);
   return (
-    <Panel
-      title={<FormattedMessage {...messages.title} />}
-      isLoading={isLoading}
-      skeletonRows={LIMIT}
-    >
-      <Table>
-        {top.map((f) => (
-          <TopFileRow
-            key={f.path}
-            file={f}
-            viewed={viewedPaths.has(f.path)}
-            onOpen={actions.openFile}
-          />
-        ))}
-      </Table>
+    <Panel title={<FormattedMessage {...messages.title} />}>
+      <PanelBody isPending={isPending} rows={LIMIT}>
+        <Table>
+          {top.map((f) => (
+            <TopFileRow
+              key={f.path}
+              file={f}
+              viewed={viewedPaths.has(f.path)}
+              onOpen={actions.openFile}
+            />
+          ))}
+        </Table>
+      </PanelBody>
     </Panel>
   );
 }

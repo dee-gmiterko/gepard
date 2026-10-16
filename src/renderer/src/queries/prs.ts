@@ -89,7 +89,7 @@ export function useCheckoutTarget(): CheckoutTarget {
   return { checkout, pending };
 }
 
-export function useTargetedPrQuery(): UseQueryResult<PrSummary> {
+export function useTargetedPr(): UseQueryResult<PrSummary> {
   const projectId = useProjectId() ?? '';
   const pr = useTargetPr();
   return useQuery({
@@ -97,8 +97,4 @@ export function useTargetedPrQuery(): UseQueryResult<PrSummary> {
     queryFn: pr === null ? skipToken : () => invoke('pr.view', { projectId, pr }),
     enabled: Boolean(projectId),
   });
-}
-
-export function useTargetedPr(): PrSummary | null {
-  return useTargetedPrQuery().data ?? null;
 }
