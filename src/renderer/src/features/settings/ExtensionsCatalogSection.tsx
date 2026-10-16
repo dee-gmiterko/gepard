@@ -28,7 +28,9 @@ const messages = defineMessages({
 export function ExtensionsCatalogSection(): React.JSX.Element {
   const { data, isLoading, isError } = useExtensionCatalog();
   const install = useInstallExtension();
-  const entries = data?.entries ?? [];
+  const entries = (data?.entries ?? []).filter(
+    (entry) => entry.installedVersion === null && entry.installedSource?.kind !== 'builtin',
+  );
 
   return (
     <Section>

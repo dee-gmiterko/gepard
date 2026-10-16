@@ -19,7 +19,7 @@ import { ExtensionsRow } from './ExtensionsRow';
 const messages = defineMessages({
   title: {
     id: 'settings.extensions.title',
-    defaultMessage: 'Extensions',
+    defaultMessage: 'Installed extensions',
   },
   addExtension: {
     id: 'settings.extensions.addExtension',
