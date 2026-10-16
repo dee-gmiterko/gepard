@@ -168,6 +168,7 @@ export const FileDiff = z.discriminatedUnion('kind', [
     previousPath: RepoPath.nullable(),
     before: ImageData.nullable(),
     after: ImageData.nullable(),
+    moved: z.boolean().optional(),
   }),
   z.object({
     kind: z.literal('binary'),
@@ -175,6 +176,7 @@ export const FileDiff = z.discriminatedUnion('kind', [
     previousPath: RepoPath.nullable(),
     oldSize: z.int().nonnegative().nullable().optional(),
     newSize: z.int().nonnegative().nullable().optional(),
+    moved: z.boolean().optional(),
   }),
   z.object({ kind: z.literal('missing'), path: RepoPath }),
 ]);

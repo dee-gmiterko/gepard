@@ -114,3 +114,57 @@ describe('binary diff view', () => {
     expect(panel.queryByText('Size before')).not.toBeInTheDocument();
   });
 });
+
+describe('moved file view', () => {
+  it('shows the move message above the size of a moved binary file without a diff', async () => {
+    const world = createWorld({
+      targeting: { pr: 7 },
+      prs: [pr(7, 'Move the font')],
+      files: { 'Inter.woff2': '' },
+    });
+    const { user } = renderWithProviders(<App />, {
+      ...world.handlers,
+      'files.diff': ({ path }) => ({
+        kind: 'binary',
+        path,
+        previousPath: 'old.woff2',
+        oldSize: 1500,
+        newSize: 1500,
+        moved: true,
+      }),
+    });
+
+    await user.click(await screen.findByText('Inter.woff2'));
+
+    expect(await screen.findByText(/File renamed without changes\./)).toBeVisible();
+    expect(screen.getByText(/old\.woff2 → Inter\.woff2/)).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Binary file' })).toBeVisible();
+    expect(screen.getByText('1.5 kB')).toBeVisible();
+    expect(screen.queryByText('Size before')).not.toBeInTheDocument();
+  });
+
+  it('shows the image once below the move message for a moved image', async () => {
+    const world = createWorld({
+      targeting: { pr: 7 },
+      prs: [pr(7, 'Move the logo')],
+      files: { 'logo.png': '' },
+    });
+    const { user } = renderWithProviders(<App />, {
+      ...world.handlers,
+      'files.diff': ({ path }) => ({
+        kind: 'image',
+        path,
+        previousPath: 'old.png',
+        before: { mime: 'image/png', base64: 'AAAA' },
+        after: { mime: 'image/png', base64: 'AAAA' },
+        moved: true,
+      }),
+    });
+
+    await user.click(await screen.findByText('logo.png'));
+
+    expect(await screen.findByText(/File renamed without changes\./)).toBeVisible();
+    expect(screen.getAllByRole('img', { name: 'logo.png' })).toHaveLength(1);
+    expect(screen.queryByText('Before')).not.toBeInTheDocument();
+  });
+});
