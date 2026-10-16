@@ -23,7 +23,7 @@ export const typescript = ({ tsconfigRootDir }) => ({
       'error',
       {
         selector: 'ImportExpression',
-        message: 'Dynamic import() is banned; use static imports and inject the dependency.',
+        message: 'Dynamic import() is not allowed.',
       },
     ],
   },
