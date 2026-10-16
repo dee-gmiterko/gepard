@@ -73,6 +73,7 @@ export interface Core {
 
 export interface CoreHost {
   target: string | null;
+  builtinExtensionsDir: string;
   logToConsole: boolean;
   instances: (logger: LoggerService) => InstanceLauncher;
   focusWindow: () => void;
@@ -94,7 +95,7 @@ export function composeCore(paths: Paths, host: CoreHost): Core {
   const platformTarget = `${process.platform}-${process.arch}`;
   const extensionScanner = new ExtensionScannerService(
     paths.extensionsRootDir(),
-    paths.builtinExtensionsDir(),
+    host.builtinExtensionsDir,
     KIND_SPECS,
     extensionsStore,
   );

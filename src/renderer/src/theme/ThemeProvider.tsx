@@ -1,30 +1,11 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ThemeProvider as StyledThemeProvider, createGlobalStyle } from 'styled-components';
-import type { SystemPreference, ThemeContrast } from '@gepard/common';
-import { invoke, useIpcEvent } from '../ipc/client';
+import type { SystemPreference } from '@gepard/common';
+import { useSystemPreference } from '../queries/systemPreference';
+import { HIGH_CONTRAST_QUERIES, mediaContrast, watchMedia } from './media';
 import { useThemeTemplateId, useThemes } from '../queries/theme';
 import { buildTheme } from './tokens';
 import { resolveTemplate } from '../helpers/theme';
-
-const DARK_QUERY = '(prefers-color-scheme: dark)';
-const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
-const HIGH_CONTRAST_QUERIES = ['(prefers-contrast: more)', '(forced-colors: active)'];
-
-function mediaMatches(query: string): boolean {
-  return window.matchMedia(query).matches;
-}
-
-function mediaContrast(): ThemeContrast {
-  return HIGH_CONTRAST_QUERIES.some(mediaMatches) ? 'high' : 'normal';
-}
-
-function mediaSystemPreference(): SystemPreference {
-  return {
-    mode: mediaMatches(DARK_QUERY) ? 'dark' : 'light',
-    contrast: mediaContrast(),
-    reducedMotion: mediaMatches(REDUCED_MOTION_QUERY),
-  };
-}
 
 const GlobalStyle = createGlobalStyle`
   :root {
@@ -57,27 +38,11 @@ const GlobalStyle = createGlobalStyle`
 `;
 
 export function AppThemeProvider({ children }: { children: ReactNode }): React.JSX.Element {
-  const [systemPreference, setSystemPreference] = useState(mediaSystemPreference);
+  const systemPreference = useSystemPreference();
   const [contrast, setContrast] = useState(mediaContrast);
 
-  // The main process is authoritative: its portal sync overrides themeSource, which matchMedia may not reflect.
-  useEffect(() => {
-    invoke('systemPreference.get')
-      .then(setSystemPreference)
-      .catch(() => {});
-  }, []);
-
-  useIpcEvent('systemPreference.changed', setSystemPreference);
-
   // Chromium reports the OS contrast setting on Windows and macOS; main covers Linux.
-  useEffect(() => {
-    const lists = HIGH_CONTRAST_QUERIES.map((query) => window.matchMedia(query));
-    const update = (): void => setContrast(mediaContrast());
-    for (const list of lists) list.addEventListener('change', update);
-    return () => {
-      for (const list of lists) list.removeEventListener('change', update);
-    };
-  }, []);
+  useEffect(() => watchMedia(HIGH_CONTRAST_QUERIES, () => setContrast(mediaContrast())), []);
 
   useEffect(() => {
     document.documentElement.dataset.motion = systemPreference.reducedMotion ? 'reduced' : 'normal';

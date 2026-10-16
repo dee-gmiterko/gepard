@@ -13,16 +13,12 @@ describe('resolveUserDataDir', () => {
 });
 
 describe('Paths', () => {
-  const paths = new Paths('/data', '/builtin');
+  const paths = new Paths('/data');
 
   it('derives locations from the base directory it was constructed with', () => {
     expect(paths.settingsJsonPath()).toBe('/data/settings.json');
     expect(paths.projectRepoDir('o__r')).toBe('/data/projects/o__r/repo');
     expect(paths.logsDir()).toBe('/data/logs');
-  });
-
-  it('uses the built-in extensions directory it was constructed with', () => {
-    expect(paths.builtinExtensionsDir()).toBe('/builtin');
   });
 
   it('rejects invalid project ids', () => {

@@ -17,10 +17,7 @@ export function resolveUserDataDir(
 }
 
 export class Paths {
-  constructor(
-    private readonly userDataDir: string,
-    private readonly builtinExtensions: string,
-  ) {}
+  constructor(private readonly userDataDir: string) {}
 
   nohooksDir(): string {
     return join(this.userDataDir, 'nohooks');
@@ -63,10 +60,6 @@ export class Paths {
 
   extensionsRootDir(): string {
     return join(this.userDataDir, 'extensions');
-  }
-
-  builtinExtensionsDir(): string {
-    return this.builtinExtensions;
   }
 
   extensionDataDir(id: string): string {

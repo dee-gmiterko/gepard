@@ -18,6 +18,7 @@ export async function makeTmpDir(prefix: string): Promise<TmpDir> {
 export interface UserData extends TmpDir {
   paths: Paths;
   userDir: string;
+  builtinDir: string;
 }
 
 export async function makeUserData(): Promise<UserData> {
@@ -27,7 +28,8 @@ export async function makeUserData(): Promise<UserData> {
   return {
     ...tmp,
     userDir,
-    paths: new Paths(userDir, join(tmp.path, 'extensions')),
+    builtinDir: join(tmp.path, 'extensions'),
+    paths: new Paths(userDir),
   };
 }
 

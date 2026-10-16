@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { is } from '@electron-toolkit/utils';
 import icon from './resources/icon.png?asset';
-import { isAllowedExternalUrl } from '@gepard/main/helpers/url';
+import { isAllowedExternalUrl } from './helpers/url';
 import type { NotifyService } from '@gepard/main/notify';
 import { formatCaughtError } from '@gepard/main/helpers/error';
 import { WINDOW_SHOWN_MARKER } from './instance';
@@ -36,7 +36,7 @@ export class MainWindowService {
 
   create(): BrowserWindow {
     const devServerUrl = is.dev ? process.env['ELECTRON_RENDERER_URL'] : undefined;
-    const indexHtmlPath = join(__dirname, '../renderer/index.html');
+    const indexHtmlPath = join(import.meta.dirname, '../renderer/index.html');
     const indexHtmlUrl = pathToFileURL(indexHtmlPath).href;
 
     function isOwnAppUrl(url: string): boolean {
@@ -58,7 +58,7 @@ export class MainWindowService {
       autoHideMenuBar: true,
       ...(process.platform === 'linux' ? { icon } : {}),
       webPreferences: {
-        preload: join(__dirname, '../preload/index.cjs'),
+        preload: join(import.meta.dirname, '../preload/index.cjs'),
         sandbox: true,
         contextIsolation: true,
         nodeIntegration: false,
