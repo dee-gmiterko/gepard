@@ -44,6 +44,8 @@ const CountBadge = styled(Badge)`
   background: ${({ theme }) => theme.colors.accent};
   color: ${({ theme }) => theme.colors.bg};
   border-color: transparent;
+  font-size: 9px;
+  line-height: 1.3;
   pointer-events: none;
 `;
 
