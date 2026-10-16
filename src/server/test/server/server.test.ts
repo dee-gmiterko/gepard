@@ -1,7 +1,7 @@
 import { createServer, type Server } from 'node:http';
 import { WebSocket } from 'ws';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createIpcServer } from '../server';
+import { createIpcServer } from '../../server/server';
 
 class Client {
   private readonly messages: string[] = [];

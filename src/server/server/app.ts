@@ -1,20 +1,20 @@
 import { createServer } from 'node:http';
 import { join } from 'node:path';
-import { composeCore, composeHandlers } from '@gepard/main/di';
-import { Paths, resolveUserDataDir } from '@gepard/main/paths';
+import { composeCore, composeHandlers } from '@gepard/main/main/di';
+import { Paths, resolveUserDataDir } from '@gepard/main/main/paths';
 import { IpcDispatchService } from '@gepard/main/ipc/dispatch';
 import { SystemPreferenceService } from '@gepard/main/services/systemPreference';
 import { parseProcessCli } from './cli';
 import { createIpcServer } from './server';
-import { createStaticHandler } from './static';
-import { ServerFolderPicker } from './folderPicker';
-import { DefaultSystemPreferenceSource } from './systemPreference';
-import { NoContextMenu } from './noContextMenu';
-import { NoInstanceLauncher } from './noInstanceLauncher';
+import { createStaticApp } from './static';
+import { ServerFolderPicker } from '../providers/folderPicker';
+import { DefaultSystemPreferenceSource } from '../providers/systemPreference';
+import { NoContextMenu } from '../providers/noContextMenu';
+import { NoInstanceLauncher } from '../providers/noInstanceLauncher';
 
 const BUILTIN_EXTENSIONS_FROM_OUTPUT = join('..', '..', '..', 'dist', 'extensions');
 
-export function startServer(): void {
+export function bootstrap(): void {
   const { host, port } = parseProcessCli();
   const paths = new Paths(resolveUserDataDir(process.platform, process.env));
   const core = composeCore(paths, {
@@ -33,7 +33,7 @@ export function startServer(): void {
     ),
   );
   createIpcServer(createServer(), {
-    serveStatic: createStaticHandler(join(import.meta.dirname, 'renderer')),
+    serveStatic: createStaticApp(join(import.meta.dirname, 'renderer')),
     dispatch: dispatch.bind({ window: null }),
     subscribe: (sink) => core.events.subscribe(sink),
     onConnection: () => core.notify.rendererReady(),

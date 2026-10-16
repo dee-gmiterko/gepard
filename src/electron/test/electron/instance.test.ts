@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 import { AppError } from '@gepard/common';
-import { instanceCommand, waitForInstance, waitForLine } from '../instance';
+import { instanceCommand, waitForInstance, waitForLine } from '../../electron/instance';
 
 const MARKER = 'gepard:window-shown';
 

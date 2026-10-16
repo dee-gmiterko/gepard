@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Envelope } from '@gepard/common';
-import { serveIpcSocket, type IpcSocket } from '../bridge';
+import { serveIpcSocket, type IpcSocket } from '../../server/bridge';
 
 interface FakeSocket extends IpcSocket {
   sent: string[];

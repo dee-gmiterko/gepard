@@ -9,8 +9,8 @@ import {
 } from '@gepard/common';
 import { readJsonFile, writeJsonFile } from '../helpers/jsonFile';
 import { formatCaughtError } from '../helpers/error';
-import { projectId as makeProjectId, type Paths } from '../paths';
-import type { LoggerService } from '../log';
+import { projectId as makeProjectId, type Paths } from '../main/paths';
+import type { LoggerService } from '../main/log';
 import type { FileLockService } from '../services/fileLock';
 
 const ProjectFile = Project.omit({ cloned: true }).extend({

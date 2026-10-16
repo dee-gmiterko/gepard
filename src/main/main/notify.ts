@@ -1,7 +1,7 @@
 // `webContents.send` reaches only windows that already exist and have
 // registered a listener; it does not queue messages.
 import type { LogLevel } from '@gepard/common';
-import type { IpcEventService } from './ipc/events';
+import type { IpcEventService } from '../ipc/events';
 import type { LoggerService } from './log';
 
 export interface AppErrorPayload {

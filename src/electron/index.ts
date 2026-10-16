@@ -1,3 +1,3 @@
-import { bootstrap } from './app';
+import { bootstrap } from './electron/app';
 
 bootstrap();

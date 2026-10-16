@@ -1,8 +1,6 @@
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 
-// Workspace packages ship TypeScript sources, so they are bundled; everything else is
-// resolved from node_modules at run time.
 export default defineConfig({
   ssr: { noExternal: [/^@gepard\//] },
   build: {

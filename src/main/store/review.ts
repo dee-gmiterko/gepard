@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { readJsonFile, writeJsonFile } from '../helpers/jsonFile';
-import type { Paths } from '../paths';
+import type { Paths } from '../main/paths';
 import type { FileLockService } from '../services/fileLock';
 import {
   Comment,

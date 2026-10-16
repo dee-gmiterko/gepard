@@ -9,12 +9,12 @@ import {
   buildContextMenuTemplate,
   buildFileViewMenuTemplate,
   hasTextualContent,
-} from './helpers/contextMenu';
+} from '../helpers/contextMenu';
 import { formatCaughtError } from '@gepard/main/helpers/error';
-import type { NotifyService } from '@gepard/main/notify';
+import type { NotifyService } from '@gepard/main/main/notify';
 import { windowOf, type NativeMenu } from './nativeUi';
-import type { WindowHandle } from '@gepard/main/native';
-import type { ContextMenuPort } from '@gepard/main/contextMenuPort';
+import type { WindowHandle } from '@gepard/main/ports/native';
+import type { ContextMenuPort } from '@gepard/main/ports/contextMenuPort';
 
 const TARGET_MAX_AGE_MS = 1000;
 

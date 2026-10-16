@@ -17,7 +17,7 @@ import {
   makeTargetMatcher,
   StaleShaError,
 } from '@gepard/common';
-import type { Paths } from '../../paths';
+import type { Paths } from '../../main/paths';
 
 const KIND_FILTER_POOL_FACTOR = 10;
 

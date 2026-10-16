@@ -1,6 +1,6 @@
 import { ConnectionError } from '@gepard/common';
 import type { IpcEventService } from '../ipc/events';
-import type { LoggerService } from '../log';
+import type { LoggerService } from '../main/log';
 
 export interface RemoteObserver {
   onRemoteResult(ok: boolean, error?: unknown): void;

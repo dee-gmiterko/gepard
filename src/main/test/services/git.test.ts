@@ -13,7 +13,7 @@ import {
   type UserData,
 } from '../support/tmp';
 import { makeGitServices } from '../support/services';
-import type { Paths } from '../../paths';
+import type { Paths } from '../../main/paths';
 
 const execFileP = promisify(execFile);
 

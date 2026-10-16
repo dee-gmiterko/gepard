@@ -2,7 +2,7 @@ import { app, BrowserWindow, nativeTheme } from 'electron';
 import { electronApp, optimizer } from '@electron-toolkit/utils';
 import { parseProcessCli } from './cli';
 import { composeElectron } from './di';
-import { registerHandlers } from './ipc/ipc';
+import { registerHandlers } from '../ipc/ipc';
 import { formatCaughtError } from '@gepard/main/helpers/error';
 
 const QUIT_CLOSE_TIMEOUT_MS = 1_000;

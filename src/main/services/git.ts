@@ -20,9 +20,9 @@ import {
   parseBranchNames,
 } from '../helpers/git/gitParsing';
 import type { IpcEventService } from '../ipc/events';
-import type { Paths } from '../paths';
+import type { Paths } from '../main/paths';
 import type { ProjectStore } from '../store/projects';
-import type { LoggerService } from '../log';
+import type { LoggerService } from '../main/log';
 import {
   type ChangedFile,
   type Commit,

@@ -2,9 +2,9 @@ import { BrowserWindow, shell } from 'electron';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { is } from '@electron-toolkit/utils';
-import icon from './resources/icon.png?asset';
-import { isAllowedExternalUrl } from './helpers/url';
-import type { NotifyService } from '@gepard/main/notify';
+import icon from '../resources/icon.png?asset';
+import { isAllowedExternalUrl } from '../helpers/url';
+import type { NotifyService } from '@gepard/main/main/notify';
 import { formatCaughtError } from '@gepard/main/helpers/error';
 import { WINDOW_SHOWN_MARKER } from './instance';
 
