@@ -51,7 +51,7 @@ export function useMainTab(): MainTab {
   return useUiSelector((s) => s.mainTab);
 }
 
-export function useSidePanelTab(): SidePanelTab {
+export function useSidePanelTab(): SidePanelTab | null {
   return useUiSelector((s) => s.sidePanelTab);
 }
 

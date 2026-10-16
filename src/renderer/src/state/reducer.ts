@@ -68,7 +68,7 @@ export interface UiState {
   projectId: string | null;
   targeting: Targeting;
   layout: Layout;
-  sidePanelTab: SidePanelTab;
+  sidePanelTab: SidePanelTab | null;
   sidePanelFocusRequest: number;
   pinnedFiles: string[];
   acceptedFiles: string[];
@@ -115,7 +115,7 @@ export type UiAction =
       checkoutHead: { base: string; head: string } | null;
       for?: { pr: number | null; commit: string | null };
     }
-  | { type: 'sidePanel/setTab'; tab: SidePanelTab; focus?: boolean }
+  | { type: 'sidePanel/setTab'; tab: SidePanelTab | null; focus?: boolean }
   | { type: 'layout/setSidePanelWidth'; width: number }
   | { type: 'layout/setFileCommentsPanelWidth'; width: number }
   | { type: 'layout/setFileCommentsPanelOpen'; open: boolean }
