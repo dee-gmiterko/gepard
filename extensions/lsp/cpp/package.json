@@ -1,6 +1,6 @@
 {
   "name": "gepard-ext-cpp",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Code intelligence for C and C++ projects (clangd).",
