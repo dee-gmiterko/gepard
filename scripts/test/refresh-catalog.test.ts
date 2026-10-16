@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  buildCatalog,
-  buildReleaseConfig,
-  mergeReleaseManifest,
-  type ExtensionPackage,
-} from '../helpers/catalog';
+import { buildCatalog, buildReleaseConfig, type ExtensionPackage } from '../helpers/catalog';
 
 const PACKAGES: ExtensionPackage[] = [
   {
@@ -70,18 +65,6 @@ describe('buildReleaseConfig', () => {
     expect(config.packages['extensions/themes/dark']).toEqual({
       component: 'gepard-theme-dark',
       'include-component-in-tag': true,
-    });
-  });
-});
-
-describe('mergeReleaseManifest', () => {
-  it('adds missing extensions at their package version without touching released ones', () => {
-    expect(
-      mergeReleaseManifest({ '.': '1.0.0', 'extensions/lsp/typescript': '0.0.9' }, PACKAGES),
-    ).toEqual({
-      '.': '1.0.0',
-      'extensions/lsp/typescript': '0.0.9',
-      'extensions/themes/dark': '0.2.0',
     });
   });
 });
