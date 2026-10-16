@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { defineMessages, FormattedMessage } from 'react-intl';
+import type { UseQueryResult } from '@tanstack/react-query';
 import type { PrOverviewDetails, PrSummary } from '@gepard/common';
 import { Stack } from '../../../../components/Layout';
 import { useComments } from '../../../../queries/comments';
@@ -10,7 +11,7 @@ import {
   groupTimelineByDay,
 } from '../../../../helpers/overview';
 import { Panel } from '../shared/Panel';
-import { SkeletonRows } from '../shared/SkeletonRows';
+import { PanelBody } from '../shared/PanelBody';
 import { TimelineDay } from './TimelineDay';
 
 const messages = defineMessages({
@@ -18,17 +19,18 @@ const messages = defineMessages({
 });
 
 export function TimelinePanel({
-  pr,
-  details,
+  prQuery,
+  detailsQuery,
 }: {
-  pr: PrSummary | null;
-  details: PrOverviewDetails | undefined;
+  prQuery: UseQueryResult<PrSummary>;
+  detailsQuery: UseQueryResult<PrOverviewDetails>;
 }): React.JSX.Element {
   const commitsQuery = usePrCommits();
   const commentsQuery = useComments();
+  const pr = prQuery.data;
   const commits = commitsQuery.data;
   const threads = commentsQuery.data;
-  const isLoading = !pr || commitsQuery.isLoading || commentsQuery.isLoading || !details;
+  const details = detailsQuery.data;
   const days = useMemo(
     () =>
       pr
@@ -46,14 +48,20 @@ export function TimelinePanel({
         : [],
     [pr, commits, threads, details],
   );
+  const isPending =
+    prQuery.isPending ||
+    detailsQuery.isPending ||
+    commitsQuery.isPending ||
+    commentsQuery.isPending;
   return (
     <Panel title={<FormattedMessage {...messages.title} />}>
-      <Stack $gap={4} aria-busy={isLoading}>
-        {days.map((day) => (
-          <TimelineDay key={day.day} day={day} />
-        ))}
-        {isLoading && <SkeletonRows rows={3} />}
-      </Stack>
+      <PanelBody isPending={isPending} rows={3}>
+        <Stack $gap={4}>
+          {days.map((day) => (
+            <TimelineDay key={day.day} day={day} />
+          ))}
+        </Stack>
+      </PanelBody>
     </Panel>
   );
 }

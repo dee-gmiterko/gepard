@@ -10,6 +10,7 @@ import {
   UNOWNED,
 } from '../../../../helpers/overview';
 import { Panel } from '../shared/Panel';
+import { PanelBody } from '../shared/PanelBody';
 import { QueryState } from '../shared/QueryState';
 import { useOverviewActions } from '../shared/useOverviewActions';
 import { GroupList } from './GroupList';
@@ -33,7 +34,7 @@ const Columns = styled.div`
 
 export function FileBreakdown(): React.JSX.Element {
   const actions = useOverviewActions();
-  const { files, isLoading, error } = useChangedFileList();
+  const { files, isPending, error } = useChangedFileList();
   const owners = useChangedFileOwners();
   const ownersByPath = owners.data;
 
@@ -46,41 +47,49 @@ export function FileBreakdown(): React.JSX.Element {
 
   if (error && files.length === 0) return <QueryState isLoading={false} error={error} />;
 
-  const ownersLoading = isLoading || owners.isLoading;
+  const ownersPending = isPending || owners.isPending;
 
   return (
-    <Columns aria-busy={isLoading}>
-      <Panel title={<FormattedMessage {...messages.folders} />} isLoading={isLoading}>
-        <GroupList
-          groups={folders}
-          label={(key) => key || <FormattedMessage {...messages.rootFolder} />}
-          onOpen={(key) => {
-            if (key) actions.openFolder(key);
-          }}
-        />
+    <Columns aria-busy={isPending}>
+      <Panel title={<FormattedMessage {...messages.folders} />}>
+        <PanelBody isPending={isPending}>
+          <GroupList
+            groups={folders}
+            label={(key) => key || <FormattedMessage {...messages.rootFolder} />}
+            onOpen={(key) => {
+              if (key) actions.openFolder(key);
+            }}
+          />
+        </PanelBody>
       </Panel>
-      <Panel title={<FormattedMessage {...messages.types} />} isLoading={isLoading}>
-        <GroupList
-          groups={types}
-          label={(key) =>
-            key === NO_EXTENSION ? <FormattedMessage {...messages.noExtension} /> : key
-          }
-          onOpen={(key) => {
-            if (key !== NO_EXTENSION) actions.openExtension(key);
-          }}
-        />
+      <Panel title={<FormattedMessage {...messages.types} />}>
+        <PanelBody isPending={isPending}>
+          <GroupList
+            groups={types}
+            label={(key) =>
+              key === NO_EXTENSION ? <FormattedMessage {...messages.noExtension} /> : key
+            }
+            onOpen={(key) => {
+              if (key !== NO_EXTENSION) actions.openExtension(key);
+            }}
+          />
+        </PanelBody>
       </Panel>
-      {(ownersLoading || ownerGroups) && (
-        <Panel title={<FormattedMessage {...messages.owners} />} isLoading={ownersLoading}>
-          {ownerGroups && (
-            <GroupList
-              groups={ownerGroups}
-              label={(key) => (key === UNOWNED ? <FormattedMessage {...messages.unowned} /> : key)}
-            />
-          )}
+      {(ownersPending || ownerGroups) && (
+        <Panel title={<FormattedMessage {...messages.owners} />}>
+          <PanelBody isPending={ownersPending}>
+            {ownerGroups && (
+              <GroupList
+                groups={ownerGroups}
+                label={(key) =>
+                  key === UNOWNED ? <FormattedMessage {...messages.unowned} /> : key
+                }
+              />
+            )}
+          </PanelBody>
         </Panel>
       )}
-      <TopFilesPanel files={files} isLoading={isLoading} />
+      <TopFilesPanel files={files} isPending={isPending} />
     </Columns>
   );
 }

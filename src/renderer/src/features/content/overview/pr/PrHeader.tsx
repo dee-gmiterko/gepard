@@ -1,6 +1,7 @@
 import { defineMessages, FormattedMessage } from 'react-intl';
 import styled from 'styled-components';
 import { ArrowLeft } from 'react-feather';
+import type { UseQueryResult } from '@tanstack/react-query';
 import { prHeadLabel, type PrOverviewDetails, type PrSummary } from '@gepard/common';
 import { Badge } from '../../../../components/Badge';
 import { Button } from '../../../../components/Button';
@@ -41,26 +42,21 @@ const HeaderRow = styled(Inline)`
   align-self: stretch;
 `;
 
-function stateMessage(details: PrOverviewDetails | undefined): keyof typeof messages {
-  if (!details) return 'stateOpen';
+function stateMessage(details: PrOverviewDetails): keyof typeof messages {
   if (details.state === 'MERGED') return 'stateMerged';
   if (details.state === 'CLOSED') return 'stateClosed';
   return details.isDraft ? 'stateDraft' : 'stateOpen';
 }
 
 export function PrHeader({
-  pr,
-  prError,
-  details,
-  isLoadingDetails,
-  detailsError,
+  prQuery,
+  detailsQuery,
 }: {
-  pr: PrSummary | null;
-  prError: Error | null;
-  details: PrOverviewDetails | undefined;
-  isLoadingDetails: boolean;
-  detailsError: Error | null;
+  prQuery: UseQueryResult<PrSummary>;
+  detailsQuery: UseQueryResult<PrOverviewDetails>;
 }): React.JSX.Element {
+  const { data: pr } = prQuery;
+  const { data: details } = detailsQuery;
   const actions = useOverviewActions();
   return (
     <Stack $gap={2} $align="flex-start">
@@ -74,18 +70,20 @@ export function PrHeader({
       </div>
       <HeaderRow>
         <Title>
-          {pr ? (
-            <PrLabel number={pr.number} title={pr.title} truncate={false} />
-          ) : (
+          {prQuery.isPending ? (
             <Skeleton width="50%" height="1.2em" />
+          ) : (
+            pr && <PrLabel number={pr.number} title={pr.title} truncate={false} />
           )}
         </Title>
-        {details ? (
-          <Badge>
-            <FormattedMessage {...messages[stateMessage(details)]} />
-          </Badge>
+        {detailsQuery.isPending ? (
+          <Skeleton width="56px" height="1.2em" />
         ) : (
-          isLoadingDetails && <Skeleton width="56px" height="1.2em" />
+          details && (
+            <Badge>
+              <FormattedMessage {...messages[stateMessage(details)]} />
+            </Badge>
+          )
         )}
         {pr?.isCrossRepository && <ForkBadge head={prHeadLabel(pr)} />}
         <DecisionBadge decision={details?.reviewDecision ?? null} />
@@ -95,23 +93,25 @@ export function PrHeader({
         <SyncButton />
       </HeaderRow>
       <Inline $gap={2}>
-        {pr ? (
-          <Muted>
-            <FormattedMessage
-              {...messages.byline}
-              values={{ author: pr.author.login, head: prHeadLabel(pr), base: pr.baseRefName }}
-            />
-          </Muted>
-        ) : (
+        {prQuery.isPending ? (
           <Skeleton width="280px" />
-        )}
-        {details ? (
-          <RelativeTime value={details.updatedAt} />
         ) : (
-          isLoadingDetails && <Skeleton width="72px" />
+          pr && (
+            <Muted>
+              <FormattedMessage
+                {...messages.byline}
+                values={{ author: pr.author.login, head: prHeadLabel(pr), base: pr.baseRefName }}
+              />
+            </Muted>
+          )
+        )}
+        {detailsQuery.isPending ? (
+          <Skeleton width="72px" />
+        ) : (
+          details && <RelativeTime value={details.updatedAt} />
         )}
       </Inline>
-      <QueryState isLoading={false} error={prError ?? detailsError} />
+      <QueryState isLoading={false} error={prQuery.error ?? detailsQuery.error} />
     </Stack>
   );
 }

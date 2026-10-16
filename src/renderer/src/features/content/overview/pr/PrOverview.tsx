@@ -1,4 +1,4 @@
-import { useTargetedPrQuery } from '../../../../queries/prs';
+import { useTargetedPr } from '../../../../queries/prs';
 import { usePrOverviewDetails } from '../../../../queries/overview';
 import { Page, PageBody } from '../shared/overviewStyles';
 import { DescriptionPanel } from './DescriptionPanel';
@@ -9,25 +9,18 @@ import { ReviewersPanel } from './ReviewersPanel';
 import { TimelinePanel } from './TimelinePanel';
 
 export function PrOverview(): React.JSX.Element {
-  const prQuery = useTargetedPrQuery();
-  const pr = prQuery.data ?? null;
-  const details = usePrOverviewDetails();
+  const prQuery = useTargetedPr();
+  const detailsQuery = usePrOverviewDetails();
 
   return (
     <Page>
       <PageBody>
-        <PrHeader
-          pr={pr}
-          prError={prQuery.error}
-          details={details.data}
-          isLoadingDetails={details.isLoading}
-          detailsError={details.error}
-        />
-        <PrFacts pr={pr} />
+        <PrHeader prQuery={prQuery} detailsQuery={detailsQuery} />
+        <PrFacts prQuery={prQuery} />
         <FileBreakdown />
-        <ReviewersPanel details={details.data} error={details.error} />
-        <TimelinePanel pr={pr} details={details.data} />
-        <DescriptionPanel body={details.data?.body} error={details.error} />
+        <ReviewersPanel detailsQuery={detailsQuery} />
+        <TimelinePanel prQuery={prQuery} detailsQuery={detailsQuery} />
+        <DescriptionPanel detailsQuery={detailsQuery} />
       </PageBody>
     </Page>
   );
