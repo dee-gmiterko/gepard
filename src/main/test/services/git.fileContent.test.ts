@@ -55,6 +55,13 @@ describe('GitService file content and diff over unusual tree entries (integratio
     oids.binRemoved = await commit('remove bin.dat');
     await writeFile(join(o, 'bin.dat'), Buffer.from([0, 9, 8, 7]));
     oids.binReadded = await commit('re-add bin.dat');
+    await writeFile(join(o, 'pic.png'), Buffer.alloc(200, 7));
+    oids.picAdded = await commit('add pic.png');
+    await git(o, ['mv', 'bin.dat', 'moved.dat']);
+    await git(o, ['mv', 'pic.png', 'moved.png']);
+    oids.moved = await commit('move bin.dat and pic.png');
+    await writeFile(join(o, 'moved.png'), Buffer.concat([Buffer.alloc(199, 7), Buffer.from([9])]));
+    oids.movedEdited = await commit('edit moved.png');
     await gitService.cloneProject(projectId, `file://${o}`);
   }, 30_000);
 
@@ -104,6 +111,7 @@ describe('GitService file content and diff over unusual tree entries (integratio
         previousPath: null,
         oldSize: 6,
         newSize: 10,
+        moved: false,
       });
     });
 
@@ -114,6 +122,32 @@ describe('GitService file content and diff over unusual tree entries (integratio
       expect(
         await gitService.fileDiff(projectId, oids.binRemoved, oids.binReadded, 'bin.dat'),
       ).toMatchObject({ kind: 'binary', oldSize: null, newSize: 4 });
+    });
+
+    it('flags a renamed binary file with identical content as moved', async () => {
+      expect(await gitService.fileDiff(projectId, oids.picAdded, oids.moved, 'moved.dat')).toEqual({
+        kind: 'binary',
+        path: 'moved.dat',
+        previousPath: 'bin.dat',
+        oldSize: 4,
+        newSize: 4,
+        moved: true,
+      });
+    });
+
+    it('flags a renamed image with identical content as moved', async () => {
+      const res = await gitService.fileDiff(projectId, oids.picAdded, oids.moved, 'moved.png');
+      expect(res).toMatchObject({ kind: 'image', previousPath: 'pic.png', moved: true });
+    });
+
+    it('does not flag an image as moved when its content changed too', async () => {
+      const res = await gitService.fileDiff(
+        projectId,
+        oids.picAdded,
+        oids.movedEdited,
+        'moved.png',
+      );
+      expect(res).toMatchObject({ kind: 'image', previousPath: 'pic.png', moved: false });
     });
 
     it('reports a path absent on both sides as missing', async () => {

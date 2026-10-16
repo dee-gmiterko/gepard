@@ -1,7 +1,5 @@
 import { defineMessages, FormattedMessage } from 'react-intl';
-import { BinaryFacts } from './BinaryFacts';
-import { BinaryFact } from './BinaryFact';
-import { BinaryFactSize } from './BinaryFactSize';
+import { BinaryFact, BinaryFactSize, BinaryFacts } from './BinaryFacts';
 
 const messages = defineMessages({
   title: {

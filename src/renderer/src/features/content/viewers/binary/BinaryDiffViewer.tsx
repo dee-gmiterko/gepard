@@ -1,9 +1,5 @@
 import { defineMessages, FormattedMessage } from 'react-intl';
-import { BinaryFacts } from './BinaryFacts';
-import { BinaryFact } from './BinaryFact';
-import { BinaryFactPath } from './BinaryFactPath';
-import { BinaryFactSize } from './BinaryFactSize';
-import { BinaryFactSizeDelta } from './BinaryFactSizeDelta';
+import { BinaryFact, BinaryFactPath, BinaryFactSize, BinaryFacts } from './BinaryFacts';
 
 const messages = defineMessages({
   title: {
@@ -70,7 +66,7 @@ export function BinaryDiffViewer({
             )}
           </BinaryFact>
           <BinaryFact label={<FormattedMessage {...messages.sizeChange} />}>
-            <BinaryFactSizeDelta bytes={(newSize ?? 0) - (oldSize ?? 0)} />
+            <BinaryFactSize bytes={(newSize ?? 0) - (oldSize ?? 0)} signed />
           </BinaryFact>
         </>
       )}
