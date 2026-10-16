@@ -232,13 +232,19 @@ function clampToContainer(panel: HTMLElement, natural: NaturalBox, candidate: Po
 function useDragOffset(
   panelRef: RefObject<HTMLElement | null>,
   initial: Point,
+  active: boolean,
   onCommit: (offset: Point) => void,
 ): {
   offset: Point;
   onPointerDown: (e: PointerEvent<HTMLElement>) => void;
   onKeyDown: (e: KeyboardEvent<HTMLElement>) => void;
 } {
+  const [desired, setDesired] = useState<Point>(initial);
   const [offset, setOffset] = useState<Point>(initial);
+  const offsetRef = useRef(offset);
+  useEffect(() => {
+    offsetRef.current = offset;
+  });
   const start = useRef<{ px: number; py: number; x: number; y: number } | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
   const draggingRef = useRef(false);
@@ -247,8 +253,22 @@ function useDragOffset(
 
   const { x: initialX, y: initialY } = initial;
   useEffect(() => {
-    if (!draggingRef.current) setOffset({ x: initialX, y: initialY });
+    if (!draggingRef.current) setDesired({ x: initialX, y: initialY });
   }, [initialX, initialY]);
+
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!active || !panel) return;
+    const fit = (): void => {
+      const next = clampToContainer(panel, naturalBox(panel, offsetRef.current), desired);
+      setOffset((prev) => (prev.x === next.x && prev.y === next.y ? prev : next));
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(panel);
+    if (panel.offsetParent) observer.observe(panel.offsetParent);
+    return () => observer.disconnect();
+  }, [panelRef, active, desired]);
 
   function onPointerDown(e: PointerEvent<HTMLElement>): void {
     const el = e.currentTarget;
@@ -263,6 +283,7 @@ function useDragOffset(
       if (!s) return;
       const candidate = { x: s.x + ev.clientX - s.px, y: s.y + ev.clientY - s.py };
       latest = natural && panel ? clampToContainer(panel, natural, candidate) : candidate;
+      setDesired(latest);
       setOffset(latest);
     };
     // Browsers fire pointercancel instead of pointerup when they interrupt a gesture.
@@ -308,6 +329,7 @@ function useDragOffset(
     e.preventDefault();
     const panel = panelRef.current;
     const next = panel ? clampToContainer(panel, naturalBox(panel, offset), candidate) : candidate;
+    setDesired(next);
     setOffset(next);
     onCommit(next);
   }
@@ -325,10 +347,15 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
   const path = useActiveFile();
   const panelRef = useRef<HTMLDivElement>(null);
   const initialPosition = layout.fileControlsPosition ?? { x: 0, y: 0 };
-  const { offset, onPointerDown, onKeyDown } = useDragOffset(panelRef, initialPosition, (next) => {
-    dispatch({ type: 'layout/setFileControlsPosition', position: next });
-    setLayout.mutate({ ...layout, fileControlsPosition: next });
-  });
+  const { offset, onPointerDown, onKeyDown } = useDragOffset(
+    panelRef,
+    initialPosition,
+    !docked,
+    (next) => {
+      dispatch({ type: 'layout/setFileControlsPosition', position: next });
+      setLayout.mutate({ ...layout, fileControlsPosition: next });
+    },
+  );
 
   const { data: viewed } = useViewed();
   const isChangedFile = useIsCheckedOutChangedFile(path);
