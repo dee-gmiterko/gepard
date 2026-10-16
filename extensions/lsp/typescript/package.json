@@ -1,6 +1,6 @@
 {
   "name": "gepard-ext-typescript",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Code intelligence for TypeScript and JavaScript projects (native TypeScript language server).",
