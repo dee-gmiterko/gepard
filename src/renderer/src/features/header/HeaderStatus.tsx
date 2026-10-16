@@ -73,11 +73,13 @@ const Progress = styled.div`
   font-size: ${({ theme }) => theme.font.size.xs};
   color: ${({ theme }) => theme.colors.fgMuted};
   white-space: nowrap;
+`;
+
+const ProgressBarSlot = styled.span`
+  display: inline-flex;
 
   @container header (max-width: 960px) {
-    > :last-child {
-      display: none;
-    }
+    display: none;
   }
 `;
 
@@ -117,16 +119,18 @@ export function HeaderStatus({ pending }: HeaderStatusProps): React.JSX.Element 
               {...messages.progress}
               values={{ viewed: progress.viewedCount, total: progress.totalCount }}
             />
-            <ProgressBar
-              value={progress.viewedCount}
-              max={progress.totalCount}
-              tone="muted"
-              width="80px"
-              label={intl.formatMessage(messages.progress, {
-                viewed: progress.viewedCount,
-                total: progress.totalCount,
-              })}
-            />
+            <ProgressBarSlot>
+              <ProgressBar
+                value={progress.viewedCount}
+                max={progress.totalCount}
+                tone="muted"
+                width="80px"
+                label={intl.formatMessage(messages.progress, {
+                  viewed: progress.viewedCount,
+                  total: progress.totalCount,
+                })}
+              />
+            </ProgressBarSlot>
           </Progress>
         )}
         {index?.state === 'indexing' && (

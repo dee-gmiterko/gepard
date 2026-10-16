@@ -18,10 +18,6 @@ const Column = styled.div`
   flex-direction: column;
   gap: ${({ theme }) => theme.space[6]};
   min-width: 0;
-
-  > section {
-    margin-top: 0;
-  }
 `;
 
 export function ExtensionsPanel(): React.JSX.Element {

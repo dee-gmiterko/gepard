@@ -12,7 +12,7 @@ import { ForkBadge } from '../shared/ForkBadge';
 import { PrLabel } from '../shared/PrLabel';
 import { ProgressBar } from '../../../../components/ProgressBar';
 import { RelativeTime } from '../shared/RelativeTime';
-import { Cell, LinkButton, Muted, Num, RowGrid } from '../shared/overviewStyles';
+import { Cell, LinkButton, Muted, Num, RowGrid, WideOnly } from '../shared/overviewStyles';
 
 const messages = defineMessages({
   review: { id: 'content.overview.project.review', defaultMessage: 'Review' },
@@ -72,24 +72,30 @@ export function PrRow({ pr }: { pr: OverviewPr }): React.JSX.Element {
           <FileCount files={pr.changedFiles} />
         </Muted>
       </Cell>
-      <LinkButton onClick={() => actions.openPr(pr.number)}>
-        <Num>
-          <FormattedMessage
-            {...messages.commentCount}
-            values={{ total: pr.comments, unresolved: pr.unresolvedThreads }}
-          />
-        </Num>
-      </LinkButton>
-      <Cell>
-        <ProgressBar value={pr.viewedFiles} max={pr.countedFiles} />
-        <Muted>
-          <FormattedMessage
-            {...messages.viewedCount}
-            values={{ done: pr.viewedFiles, total: pr.countedFiles }}
-          />
-        </Muted>
-      </Cell>
-      <RelativeTime value={pr.updatedAt} />
+      <WideOnly>
+        <LinkButton onClick={() => actions.openPr(pr.number)}>
+          <Num>
+            <FormattedMessage
+              {...messages.commentCount}
+              values={{ total: pr.comments, unresolved: pr.unresolvedThreads }}
+            />
+          </Num>
+        </LinkButton>
+      </WideOnly>
+      <WideOnly>
+        <Cell>
+          <ProgressBar value={pr.viewedFiles} max={pr.countedFiles} />
+          <Muted>
+            <FormattedMessage
+              {...messages.viewedCount}
+              values={{ done: pr.viewedFiles, total: pr.countedFiles }}
+            />
+          </Muted>
+        </Cell>
+      </WideOnly>
+      <WideOnly>
+        <RelativeTime value={pr.updatedAt} />
+      </WideOnly>
       <Button onClick={() => actions.reviewPr(pr.number)}>
         <FormattedMessage {...messages.review} />
       </Button>

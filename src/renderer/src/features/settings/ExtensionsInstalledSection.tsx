@@ -61,7 +61,7 @@ export function ExtensionsInstalledSection(): React.JSX.Element {
   const install = useInstallExtension();
 
   return (
-    <Section>
+    <Section $flush>
       <SectionHeading
         title={<FormattedMessage {...messages.title} />}
         actions={

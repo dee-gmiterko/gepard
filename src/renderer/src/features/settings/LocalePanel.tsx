@@ -30,7 +30,7 @@ export function LocalePanel(): React.JSX.Element {
   }
 
   return (
-    <Section>
+    <Section $flush>
       <SectionHeading title={<FormattedMessage {...messages.title} />} />
       <Select value={localeId ?? SYSTEM_OPTION} onChange={handleChange}>
         <option value={SYSTEM_OPTION}>{intl.formatMessage(messages.followSystem)}</option>

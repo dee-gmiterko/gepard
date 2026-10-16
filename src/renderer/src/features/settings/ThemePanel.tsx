@@ -30,7 +30,7 @@ export function ThemePanel(): React.JSX.Element {
   }
 
   return (
-    <Section>
+    <Section $flush>
       <SectionHeading title={<FormattedMessage {...messages.title} />} />
       <Select value={templateId ?? SYSTEM_OPTION} onChange={handleChange}>
         <option value={SYSTEM_OPTION}>{intl.formatMessage(messages.followSystem)}</option>
