@@ -3,10 +3,10 @@ import styled from 'styled-components';
 
 const Field = styled.div`
   display: flex;
-  flex-shrink: 0;
+  flex: 0 1 260px;
   align-items: center;
   gap: ${({ theme }) => theme.space[1]};
-  width: 260px;
+  min-width: 96px;
   color: ${({ theme }) => theme.colors.fgMuted};
 `;
 

@@ -28,6 +28,7 @@ const Bar = styled.header`
   justify-content: space-between;
   gap: ${({ theme }) => theme.space[3]};
   height: 40px;
+  container: header / inline-size;
   padding: 0 ${({ theme }) => theme.space[3]};
   background: ${({ theme }) => theme.colors.bgSubtle};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};

@@ -30,6 +30,15 @@ const messages = defineMessages({
   },
 });
 
+const Sides = styled.div`
+  display: flex;
+  width: 100%;
+
+  @container viewer (max-width: 560px) {
+    flex-direction: column;
+  }
+`;
+
 const Side = styled.div`
   flex: 1 1 50%;
   display: flex;
@@ -40,6 +49,11 @@ const Side = styled.div`
 
   & + & {
     border-left: 1px solid ${({ theme }) => theme.colors.border};
+
+    @container viewer (max-width: 560px) {
+      border-left: none;
+      border-top: 1px solid ${({ theme }) => theme.colors.border};
+    }
   }
 `;
 
@@ -92,8 +106,10 @@ export function ImageDiffViewer({
 }): React.JSX.Element {
   return (
     <ViewerFrame>
-      <ImageSide label={messages.before} alt={messages.beforeAlt} path={path} image={before} />
-      <ImageSide label={messages.after} alt={messages.afterAlt} path={path} image={after} />
+      <Sides>
+        <ImageSide label={messages.before} alt={messages.beforeAlt} path={path} image={before} />
+        <ImageSide label={messages.after} alt={messages.afterAlt} path={path} image={after} />
+      </Sides>
     </ViewerFrame>
   );
 }

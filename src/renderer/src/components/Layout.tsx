@@ -23,6 +23,7 @@ export const Inline = styled.div<{ $gap?: Gap }>`
 
 export const ActionRow = styled.div`
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: ${({ theme }) => theme.space[2]};
 `;

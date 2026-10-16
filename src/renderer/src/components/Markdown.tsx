@@ -41,6 +41,16 @@ const Prose = styled.div`
     font-size: ${({ theme }) => theme.font.size.sm};
   }
 
+  img {
+    max-width: 100%;
+  }
+
+  table {
+    display: block;
+    max-width: 100%;
+    overflow: auto;
+  }
+
   pre code {
     display: block;
     padding: ${({ theme }) => theme.space[2]};

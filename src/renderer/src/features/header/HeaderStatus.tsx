@@ -51,6 +51,10 @@ const Status = styled(Ellipsis)`
   width: 90px;
   font-size: ${({ theme }) => theme.font.size.xs};
   color: ${({ theme }) => theme.colors.fgMuted};
+
+  @container header (max-width: 760px) {
+    display: none;
+  }
 `;
 
 const Offline = styled.div`
@@ -69,6 +73,12 @@ const Progress = styled.div`
   font-size: ${({ theme }) => theme.font.size.xs};
   color: ${({ theme }) => theme.colors.fgMuted};
   white-space: nowrap;
+
+  @container header (max-width: 960px) {
+    > :last-child {
+      display: none;
+    }
+  }
 `;
 
 interface HeaderStatusProps {

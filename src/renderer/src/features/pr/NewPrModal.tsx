@@ -56,12 +56,13 @@ const messages = defineMessages({
 
 const BranchRow = styled.div`
   display: flex;
+  flex-wrap: wrap;
   gap: ${({ theme }) => theme.space[2]};
 `;
 
 const Field = styled.label`
   display: flex;
-  flex: 1;
+  flex: 1 1 160px;
   min-width: 0;
   flex-direction: column;
   gap: ${({ theme }) => theme.space[1]};

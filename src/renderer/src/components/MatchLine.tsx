@@ -15,6 +15,10 @@ const LineNo = styled(LineTag)`
   min-width: 3em;
   text-align: right;
   color: ${({ theme }) => theme.colors.fgSubtle};
+
+  @container sidebar (max-width: 280px) {
+    display: none;
+  }
 `;
 
 const Preview = styled.span`

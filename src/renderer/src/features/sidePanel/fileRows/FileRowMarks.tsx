@@ -30,6 +30,10 @@ const Counts = styled.span`
   gap: ${({ theme }) => theme.space[1]};
   font-size: ${({ theme }) => theme.font.size.xs};
   font-family: ${({ theme }) => theme.font.mono};
+
+  @container sidebar (max-width: 280px) {
+    display: none;
+  }
 `;
 
 const Add = styled.span`

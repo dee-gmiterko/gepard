@@ -64,6 +64,8 @@ const Row = styled.div`
 
 const Name = styled.span`
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 `;
 
 const Reason = styled.div`
