@@ -28,5 +28,5 @@ const ipc: IpcBridge = {
 };
 
 export function exposeIpcBridge(): void {
-  contextBridge.exposeInMainWorld('ipc', ipc);
+  contextBridge.exposeInMainWorld('gepard', { host: 'desktop', ipc });
 }

@@ -13,7 +13,7 @@ const handlers = {
   },
 } satisfies Partial<HandlerMap> as unknown as HandlerMap;
 
-const ctx = { window: null, remote: false };
+const ctx = { window: null };
 const service = new IpcDispatchService(handlers);
 
 describe('IpcDispatchService.dispatch', () => {

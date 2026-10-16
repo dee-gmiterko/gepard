@@ -21,7 +21,7 @@ export function renderWithProviders(
   handlers: Handlers,
   { strict = false, ipc = createFakeIpc(handlers) }: { strict?: boolean; ipc?: FakeIpc } = {},
 ): Rendered {
-  window.ipc = ipc.bridge;
+  window.gepard = { host: 'desktop', ipc: ipc.bridge };
   const queryClient = createQueryClient();
   const user = userEvent.setup();
   const tree = (

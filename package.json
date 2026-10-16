@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "yarn workspace gepard run dev",
     "start": "yarn workspace gepard run start",
+    "server": "yarn workspace @gepard/server run serve",
     "build": "turbo run build",
     "build:unpack": "turbo run package:unpack",
     "build:win": "turbo run package:win",

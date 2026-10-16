@@ -1,4 +1,3 @@
-import type { BrowserWindow } from 'electron';
 import { z } from 'zod';
 import {
   ChannelNameList,
@@ -9,10 +8,10 @@ import {
   type ChannelOutput,
   type Envelope,
 } from '@gepard/common';
+import type { WindowHandle } from '../native';
 
 export interface HandlerCtx {
-  window: BrowserWindow | null;
-  remote: boolean;
+  window: WindowHandle | null;
 }
 
 export type HandlerMap = {

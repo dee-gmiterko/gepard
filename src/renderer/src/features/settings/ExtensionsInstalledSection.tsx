@@ -2,6 +2,7 @@ import styled from 'styled-components';
 import { Plus } from 'react-feather';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { Button } from '../../components/Button';
+import { hostCapabilities } from '../../ipc/host';
 import { Caption } from '../../components/Caption';
 import { List, ListRow } from '../../components/List';
 import { Message } from '../../components/Message';
@@ -64,18 +65,20 @@ export function ExtensionsInstalledSection(): React.JSX.Element {
       <SectionHeading
         title={<FormattedMessage {...messages.title} />}
         actions={
-          <Button
-            onClick={() =>
-              install.mutate({
-                kind: 'local',
-                dialogTitle: intl.formatMessage(messages.installDialogTitle),
-              })
-            }
-            disabled={install.isPending}
-          >
-            <Plus size={14} />
-            <FormattedMessage {...messages.addExtension} />
-          </Button>
+          hostCapabilities().folderPicker && (
+            <Button
+              onClick={() =>
+                install.mutate({
+                  kind: 'local',
+                  dialogTitle: intl.formatMessage(messages.installDialogTitle),
+                })
+              }
+              disabled={install.isPending}
+            >
+              <Plus size={14} />
+              <FormattedMessage {...messages.addExtension} />
+            </Button>
+          )
         }
       />
       {dir && (

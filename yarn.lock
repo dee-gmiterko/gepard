@@ -1806,6 +1806,27 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@gepard/electron@workspace:^, @gepard/electron@workspace:src/electron":
+  version: 0.0.0-use.local
+  resolution: "@gepard/electron@workspace:src/electron"
+  dependencies:
+    "@electron-toolkit/tsconfig": "npm:^2.0.0"
+    "@electron-toolkit/utils": "npm:^4.0.0"
+    "@gepard/common": "workspace:^"
+    "@gepard/eslint-config": "workspace:^"
+    "@gepard/main": "workspace:^"
+    "@types/node": "npm:^26.6.4"
+    "@types/yargs": "npm:^17.0.35"
+    electron: "npm:^44.5.1"
+    electron-vite: "npm:^5.0.0"
+    eslint: "npm:^10.11.0"
+    prettier: "npm:^3.9.9"
+    typescript: "npm:^7.0.2"
+    vitest: "npm:^5.0.3"
+    yargs: "npm:^18.2.0"
+  languageName: unknown
+  linkType: soft
+
 "@gepard/eslint-config@workspace:^, @gepard/eslint-config@workspace:tools/eslint-config":
   version: 0.0.0-use.local
   resolution: "@gepard/eslint-config@workspace:tools/eslint-config"
@@ -1827,17 +1848,12 @@ __metadata:
   resolution: "@gepard/main@workspace:src/main"
   dependencies:
     "@electron-toolkit/tsconfig": "npm:^2.0.0"
-    "@electron-toolkit/utils": "npm:^4.0.0"
     "@gepard/common": "workspace:^"
     "@gepard/eslint-config": "workspace:^"
     "@types/mime-types": "npm:^3.0.1"
     "@types/node": "npm:^26.6.4"
-    "@types/ws": "npm:^8.18.2"
-    "@types/yargs": "npm:^17.0.35"
     "@vscode/ripgrep": "npm:^1.18.0"
-    electron: "npm:^44.5.1"
     electron-log: "npm:^5.4.4"
-    electron-vite: "npm:^5.0.0"
     eslint: "npm:^10.11.0"
     mime-types: "npm:^3.0.2"
     prettier: "npm:^3.9.9"
@@ -1846,8 +1862,6 @@ __metadata:
     vite: "npm:^8.3.2"
     vitest: "npm:^5.0.3"
     vscode-jsonrpc: "npm:^9.0.3"
-    ws: "npm:^8.22.0"
-    yargs: "npm:^18.2.0"
     zod: "npm:^4.6.5"
   languageName: unknown
   linkType: soft
@@ -1902,6 +1916,37 @@ __metadata:
     vitest: "npm:^5.0.3"
     zod: "npm:^4.6.5"
     zustand: "npm:^5.0.15"
+  languageName: unknown
+  linkType: soft
+
+"@gepard/server@workspace:src/server":
+  version: 0.0.0-use.local
+  resolution: "@gepard/server@workspace:src/server"
+  dependencies:
+    "@electron-toolkit/tsconfig": "npm:^2.0.0"
+    "@gepard/common": "workspace:^"
+    "@gepard/eslint-config": "workspace:^"
+    "@gepard/main": "workspace:^"
+    "@gepard/renderer": "workspace:^"
+    "@types/mime-types": "npm:^3.0.1"
+    "@types/node": "npm:^26.6.4"
+    "@types/ws": "npm:^8.18.2"
+    "@types/yargs": "npm:^17.0.35"
+    "@vitejs/plugin-react": "npm:5.2.0"
+    "@vscode/ripgrep": "npm:^1.18.0"
+    electron-log: "npm:^5.4.4"
+    eslint: "npm:^10.11.0"
+    mime-types: "npm:^3.0.2"
+    picomatch: "npm:^4.0.7"
+    prettier: "npm:^3.9.9"
+    tar: "npm:^7.5.22"
+    typescript: "npm:^7.0.2"
+    vite: "npm:^8.3.2"
+    vitest: "npm:^5.0.3"
+    vscode-jsonrpc: "npm:^9.0.3"
+    ws: "npm:^8.22.0"
+    yargs: "npm:^18.2.0"
+    zod: "npm:^4.6.5"
   languageName: unknown
   linkType: soft
 
@@ -5712,6 +5757,7 @@ __metadata:
     "@electron-toolkit/tsconfig": "npm:^2.0.0"
     "@electron-toolkit/utils": "npm:^4.0.0"
     "@gepard/common": "workspace:^"
+    "@gepard/electron": "workspace:^"
     "@gepard/eslint-config": "workspace:^"
     "@gepard/main": "workspace:^"
     "@gepard/preload": "workspace:^"
@@ -5729,7 +5775,6 @@ __metadata:
     typescript: "npm:^7.0.2"
     vite: "npm:^8.3.2"
     vscode-jsonrpc: "npm:^9.0.3"
-    ws: "npm:^8.22.0"
     yargs: "npm:^18.2.0"
     zod: "npm:^4.6.5"
   languageName: unknown

@@ -66,7 +66,7 @@ describe('overview.owners against a real repository', () => {
       services.git,
       new ReviewStore(userData.paths, new FileLockService()),
     ).toHandlerMap();
-    return handlers['overview.owners']({ projectId, base, head }, { window: null, remote: false });
+    return handlers['overview.owners']({ projectId, base, head }, { window: null });
   }
 
   it('maps changed files to owners from .github/CODEOWNERS', async () => {

@@ -1,9 +1,7 @@
 import createConfig from '@gepard/eslint-config';
 
-const ELECTRON_ONLY_FILES = ['index.ts', '**/electron[A-Z]*.ts'];
-
-const ELECTRON_BOUNDARY_MESSAGE =
-  'Electron is available only in the electron-only files (index.ts and electron*.ts); the server must never load it.';
+const HOST_MESSAGE =
+  'The core is host-agnostic: it must not depend on Electron, the server or any package of a host.';
 
 export default [
   ...createConfig({ tsconfigRootDir: import.meta.dirname }),
@@ -15,24 +13,23 @@ export default [
         'error',
         {
           paths: [
-            { name: 'electron', message: ELECTRON_BOUNDARY_MESSAGE, allowTypeImports: true },
-            { name: 'electron/main', message: ELECTRON_BOUNDARY_MESSAGE, allowTypeImports: true },
-            {
-              name: 'electron/renderer',
-              message: ELECTRON_BOUNDARY_MESSAGE,
-              allowTypeImports: true,
-            },
+            { name: 'electron', message: HOST_MESSAGE },
+            { name: 'ws', message: HOST_MESSAGE },
           ],
           patterns: [
-            { group: ['@electron-toolkit/*'], message: ELECTRON_BOUNDARY_MESSAGE },
-            { group: ['**/electron[A-Z]*'], message: ELECTRON_BOUNDARY_MESSAGE },
+            { group: ['electron/*', '@electron-toolkit/*'], message: HOST_MESSAGE },
+            {
+              group: [
+                '@gepard/electron',
+                '@gepard/electron/*',
+                '@gepard/server',
+                '@gepard/server/*',
+              ],
+              message: HOST_MESSAGE,
+            },
           ],
         },
       ],
     },
-  },
-  {
-    files: ELECTRON_ONLY_FILES,
-    rules: { '@typescript-eslint/no-restricted-imports': 'off' },
   },
 ];

@@ -27,7 +27,7 @@ export async function makeUserData(): Promise<UserData> {
   return {
     ...tmp,
     userDir,
-    paths: new Paths(userDir, join(tmp.path, 'app', 'out'), false),
+    paths: new Paths(userDir, join(tmp.path, 'extensions')),
   };
 }
 

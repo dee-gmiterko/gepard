@@ -45,7 +45,7 @@ const PROJECT = 'owner__repo';
 let userData: UserData;
 let handlers: ReturnType<SearchHandlers['toHandlerMap']>;
 
-const ctx: HandlerCtx = { window: null, remote: false };
+const ctx: HandlerCtx = { window: null };
 
 function call<C extends keyof ReturnType<SearchHandlers['toHandlerMap']> & ChannelName>(
   channel: C,

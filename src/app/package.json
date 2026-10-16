@@ -31,13 +31,13 @@
     "mime-types": "^3.0.2",
     "picomatch": "^4.0.7",
     "vscode-jsonrpc": "^9.0.3",
-    "ws": "^8.22.0",
     "yargs": "^18.2.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "^2.0.0",
     "@gepard/common": "workspace:^",
+    "@gepard/electron": "workspace:^",
     "@gepard/eslint-config": "workspace:^",
     "@gepard/main": "workspace:^",
     "@gepard/preload": "workspace:^",

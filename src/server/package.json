@@ -1,0 +1,43 @@
+{
+  "name": "@gepard/server",
+  "version": "0.1.2",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build --config vite.renderer.config.ts && vite build",
+    "serve": "yarn build && node dist/server.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@gepard/common": "workspace:^",
+    "@gepard/main": "workspace:^",
+    "@vscode/ripgrep": "^1.18.0",
+    "electron-log": "^5.4.4",
+    "mime-types": "^3.0.2",
+    "picomatch": "^4.0.7",
+    "tar": "^7.5.22",
+    "vscode-jsonrpc": "^9.0.3",
+    "ws": "^8.22.0",
+    "yargs": "^18.2.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@electron-toolkit/tsconfig": "^2.0.0",
+    "@gepard/eslint-config": "workspace:^",
+    "@gepard/renderer": "workspace:^",
+    "@types/mime-types": "^3.0.1",
+    "@types/node": "^26.6.4",
+    "@types/ws": "^8.18.2",
+    "@types/yargs": "^17.0.35",
+    "@vitejs/plugin-react": "5.2.0",
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.9",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
+  }
+}
