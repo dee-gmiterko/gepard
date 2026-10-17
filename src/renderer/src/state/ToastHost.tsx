@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useIntl } from 'react-intl';
 import { useUiDispatch } from './UiContext';
 import { useToasts } from './hooks';
@@ -8,11 +8,19 @@ import { ToastViewport } from '../components/Toast';
 
 const AUTO_DISMISS_MS = 8000;
 
+function AutoDismiss({ id }: { id: string }): null {
+  const dispatch = useUiDispatch();
+  useEffect(() => {
+    const timer = setTimeout(() => dispatch({ type: 'toast/dismiss', id }), AUTO_DISMISS_MS);
+    return () => clearTimeout(timer);
+  }, [dispatch, id]);
+  return null;
+}
+
 export function ToastHost(): React.JSX.Element {
   const toasts = useToasts();
   const dispatch = useUiDispatch();
   const intl = useIntl();
-  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
   useEffect(
     () =>
@@ -30,28 +38,14 @@ export function ToastHost(): React.JSX.Element {
     [dispatch, intl],
   );
 
-  useEffect(() => {
-    const timerMap = timers.current;
-    for (const toast of toasts) {
-      if (timerMap.has(toast.id) || toast.tone === 'danger') continue;
-      timerMap.set(
-        toast.id,
-        setTimeout(() => {
-          timerMap.delete(toast.id);
-          dispatch({ type: 'toast/dismiss', id: toast.id });
-        }, AUTO_DISMISS_MS),
-      );
-    }
-    const liveIds = new Set(toasts.map((t) => t.id));
-    for (const [id, timer] of timerMap) {
-      if (!liveIds.has(id)) {
-        clearTimeout(timer);
-        timerMap.delete(id);
-      }
-    }
-  }, [toasts, dispatch]);
-
   return (
-    <ToastViewport toasts={toasts} onDismiss={(id) => dispatch({ type: 'toast/dismiss', id })} />
+    <>
+      {toasts
+        .filter((t) => t.tone !== 'danger')
+        .map((t) => (
+          <AutoDismiss key={t.id} id={t.id} />
+        ))}
+      <ToastViewport toasts={toasts} onDismiss={(id) => dispatch({ type: 'toast/dismiss', id })} />
+    </>
   );
 }

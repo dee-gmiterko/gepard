@@ -18,10 +18,10 @@ export function HighlightedText({
   const sorted = [...ranges].filter(([s, e]) => e > s).sort((a, b) => a[0] - b[0]);
   const parts: React.ReactNode[] = [];
   let cursor = 0;
-  sorted.forEach(([start, end], i) => {
+  sorted.forEach(([start, end]) => {
     const from = Math.max(start, cursor);
     if (from > cursor) parts.push(text.slice(cursor, from));
-    if (end > from) parts.push(<Mark key={i}>{text.slice(from, end)}</Mark>);
+    if (end > from) parts.push(<Mark key={from}>{text.slice(from, end)}</Mark>);
     cursor = Math.max(cursor, end);
   });
   if (cursor < text.length) parts.push(text.slice(cursor));

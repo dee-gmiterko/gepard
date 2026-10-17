@@ -169,7 +169,7 @@ export function SettingsOverlay({ onClose }: SettingsOverlayProps): React.JSX.El
   }, [onClose]);
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
-  const tabRefs = useRef<Partial<Record<SettingsTab, HTMLButtonElement | null>>>({});
+  const tabsRef = useRef<Partial<Record<SettingsTab, HTMLButtonElement | null>>>({});
 
   function handleTabKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
     const index = TABS.findIndex((tab) => tab.id === activeTab);
@@ -195,7 +195,7 @@ export function SettingsOverlay({ onClose }: SettingsOverlayProps): React.JSX.El
     event.preventDefault();
     const target = TABS[next].id;
     setActiveTab(target);
-    tabRefs.current[target]?.focus();
+    tabsRef.current[target]?.focus();
   }
 
   useEffect(() => {
@@ -241,7 +241,7 @@ export function SettingsOverlay({ onClose }: SettingsOverlayProps): React.JSX.El
                 <Tab
                   key={tab.id}
                   ref={(node) => {
-                    tabRefs.current[tab.id] = node;
+                    tabsRef.current[tab.id] = node;
                   }}
                   type="button"
                   id={tabId(tab.id)}

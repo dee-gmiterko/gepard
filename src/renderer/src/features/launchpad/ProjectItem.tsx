@@ -217,10 +217,10 @@ export function ProjectItem({ project, autoClone }: ProjectItemProps): React.JSX
     cloneStart.mutate(project.id, { onError: () => setProgress(undefined) });
   }
 
-  const autoCloneStarted = useRef(false);
+  const autoCloneStartedRef = useRef(false);
   useEffect(() => {
-    if (!autoClone || project.cloned || autoCloneStarted.current) return;
-    autoCloneStarted.current = true;
+    if (!autoClone || project.cloned || autoCloneStartedRef.current) return;
+    autoCloneStartedRef.current = true;
     setProgress({ projectId: project.id, phase: 'counting', percent: 0 });
     cloneStart.mutate(project.id, { onError: () => setProgress(undefined) });
   }, [autoClone, project.cloned, project.id, cloneStart]);

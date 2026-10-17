@@ -239,7 +239,7 @@ function useDragOffset(
   useEffect(() => {
     offsetRef.current = offset;
   });
-  const start = useRef<{ px: number; py: number; x: number; y: number } | null>(null);
+  const startRef = useRef<{ px: number; py: number; x: number; y: number } | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
   const draggingRef = useRef(false);
 
@@ -257,7 +257,6 @@ function useDragOffset(
       const next = clampToContainer(panel, naturalBox(panel, offsetRef.current), desired);
       setOffset((prev) => (prev.x === next.x && prev.y === next.y ? prev : next));
     };
-    fit();
     const observer = new ResizeObserver(fit);
     observer.observe(panel);
     if (panel.offsetParent) observer.observe(panel.offsetParent);
@@ -269,11 +268,11 @@ function useDragOffset(
     el.setPointerCapture(e.pointerId);
     const panel = panelRef.current;
     const natural = panel ? naturalBox(panel, offset) : null;
-    start.current = { px: e.clientX, py: e.clientY, ...offset };
+    startRef.current = { px: e.clientX, py: e.clientY, ...offset };
     draggingRef.current = true;
     let latest = offset;
     const move = (ev: globalThis.PointerEvent): void => {
-      const s = start.current;
+      const s = startRef.current;
       if (!s) return;
       const candidate = { x: s.x + ev.clientX - s.px, y: s.y + ev.clientY - s.py };
       latest = natural && panel ? clampToContainer(panel, natural, candidate) : candidate;
@@ -282,7 +281,7 @@ function useDragOffset(
     };
     // Browsers fire pointercancel instead of pointerup when they interrupt a gesture.
     const end = (): void => {
-      start.current = null;
+      startRef.current = null;
       draggingRef.current = false;
       cleanupRef.current?.();
       onCommit(latest);

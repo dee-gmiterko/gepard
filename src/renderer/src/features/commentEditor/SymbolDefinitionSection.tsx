@@ -81,7 +81,7 @@ function DefinitionRow({
 
   return (
     <>
-      {targets.map((t, i) => {
+      {targets.map((t) => {
         const ref: CommentReference = {
           path: t.location.path,
           line: t.location.range.start.line,
@@ -89,7 +89,9 @@ function DefinitionRow({
         };
         const checked = selected.some((r) => sameRef(r, ref));
         return (
-          <Inline key={`${symbol.name}-${i}`}>
+          <Inline
+            key={`${t.location.path}:${t.location.range.start.line}:${t.location.range.start.col}`}
+          >
             <Checkbox
               checked={checked}
               ariaLabel={intl.formatMessage(messages.addReference, {
@@ -153,9 +155,9 @@ export function SymbolDefinitionSection({
               <FormattedMessage {...messages.loading} />
             </Message>
           )}
-          {symbols.map((symbol, i) => (
+          {symbols.map((symbol) => (
             <DefinitionRow
-              key={`${symbol.name}-${symbol.range.start.line}-${symbol.range.start.col}-${i}`}
+              key={`${symbol.name}-${symbol.range.start.line}-${symbol.range.start.col}`}
               refAnchor={refAnchor}
               symbol={symbol}
               scope={scope}

@@ -37,12 +37,12 @@ function PathTargetInput({
   onCommit,
 }: PathTargetInputProps): React.JSX.Element {
   const [text, setText] = useState(committed ?? '');
-  const lastOwnCommit = useRef(committed ?? '');
+  const lastOwnCommitRef = useRef(committed ?? '');
 
   useEffect(() => {
     const normalized = committed ?? '';
-    if (normalized === lastOwnCommit.current) return;
-    lastOwnCommit.current = normalized;
+    if (normalized === lastOwnCommitRef.current) return;
+    lastOwnCommitRef.current = normalized;
     setText(normalized);
   }, [committed]);
 
@@ -54,15 +54,15 @@ function PathTargetInput({
   const debouncedText = useDebouncedValue(text, 50);
   useEffect(() => {
     const trimmed = debouncedText.trim();
-    if (trimmed === lastOwnCommit.current) return;
-    lastOwnCommit.current = trimmed;
+    if (trimmed === lastOwnCommitRef.current) return;
+    lastOwnCommitRef.current = trimmed;
     onCommitRef.current(debouncedText);
   }, [debouncedText]);
 
   function handleSelect(folder: string | null): void {
     const next = folder ?? '';
     setText(next);
-    lastOwnCommit.current = next.trim();
+    lastOwnCommitRef.current = next.trim();
     onCommit(next);
   }
 
