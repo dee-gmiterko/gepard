@@ -59,12 +59,17 @@ function isLaunchInput(input: unknown): input is LaunchInput {
   );
 }
 
+function launchInput(input: LaunchInput): LaunchInput {
+  if (!input.detached || input.projectId === null || window.gepard.host === 'desktop') return input;
+  return { projectId: input.projectId, detached: false };
+}
+
 export function useOpenProject() {
   const qc = useQueryClient();
   const dispatch = useUiDispatch();
   return useMutation({
     mutationKey: qk.launch(),
-    mutationFn: (input: LaunchInput) => invoke('app.launch', input),
+    mutationFn: (input: LaunchInput) => invoke('app.launch', launchInput(input)),
     onSuccess: (opened) => {
       if (!opened) return;
       const projectId = opened.project.id;
@@ -84,7 +89,9 @@ export function useLaunchingProjectIds(): (string | null)[] {
   return useMutationState({
     filters: { mutationKey: qk.launch(), status: 'pending' },
     select: (mutation) => mutation.state.variables,
-  }).flatMap((input) => (isLaunchInput(input) && input.detached ? [input.projectId] : []));
+  }).flatMap((input) =>
+    isLaunchInput(input) && launchInput(input).detached ? [input.projectId] : [],
+  );
 }
 
 export function useOpenedProject() {

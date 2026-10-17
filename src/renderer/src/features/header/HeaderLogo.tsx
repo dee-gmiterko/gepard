@@ -2,7 +2,6 @@ import type { MouseEvent } from 'react';
 import styled from 'styled-components';
 import { defineMessages, useIntl } from 'react-intl';
 import { disabledControl, focusVisible } from '../../components/controlStyles';
-import { hostCapabilities } from '../../ipc/host';
 import { useLaunchingProjectIds, useOpenProject } from '../../queries/projects';
 import { useUiDispatch } from '../../state/UiContext';
 import logo from '../../../../app/resources/logo.svg';
@@ -52,11 +51,16 @@ export function HeaderLogo(): React.JSX.Element {
   const launching = useLaunchingProjectIds().includes(null);
   const label = intl.formatMessage(launching ? messages.launching : messages.projects);
 
-  function handleClick(e: MouseEvent): void {
-    if (hostCapabilities().detachedWindows && (e.ctrlKey || e.metaKey))
-      openProject({ projectId: null, detached: true });
-    else dispatch({ type: 'project/close' });
+  function closeProject(): void {
+    dispatch({ type: 'project/close' });
   }
+
+  function handleDesktopClick(e: MouseEvent): void {
+    if (e.ctrlKey || e.metaKey) openProject({ projectId: null, detached: true });
+    else closeProject();
+  }
+
+  const handleClick = window.gepard.host === 'desktop' ? handleDesktopClick : closeProject;
 
   return (
     <LogoButton

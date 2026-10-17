@@ -1,3 +1,4 @@
+import type { ContextMenuRequest } from '@gepard/common';
 import { useUiSelector } from './UiContext';
 import { isDiffView } from './selectors';
 import type {
@@ -73,6 +74,10 @@ export function useSettingsOpen(): boolean {
 
 export function useQuickSearchMode(): QuickSearchMode | null {
   return useUiSelector((s) => s.quickSearch);
+}
+
+export function useContextMenu(): ContextMenuRequest | null {
+  return useUiSelector((s) => s.contextMenu);
 }
 
 export function useIsDiffView(): boolean {

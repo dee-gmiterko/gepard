@@ -21,15 +21,15 @@ import { defineMessages, useIntl } from 'react-intl';
 import { useUiDispatch } from '../../../state/UiContext';
 import { useAcceptedFiles, useActiveFile, useLayout, useTargetPr } from '../../../state/hooks';
 import { invoke } from '../../../ipc/client';
-import { hostCapabilities } from '../../../ipc/host';
 import { reportQueryError } from '../../../errors/report';
 import { useSetLayout } from '../../../queries/projects';
 import { useViewed } from '../../../queries/comments';
-import { useCommands, useFileNavigation } from '../../../keyboard/useCommands';
+import { runFileViewPick, useCommands, useFileNavigation } from '../../../keyboard/useCommands';
 import { useIsCheckedOutChangedFile } from '../../../queries/review';
 import { IconButton } from '../../../components/IconButton';
 import { Inline, Stack } from '../../../components/Layout';
 import { Surface } from '../../../components/Surface';
+import { clampToBounds, type Point } from '../../../helpers/viewport';
 import { SyncButton } from '../sync/SyncButton';
 import { ComposeIssueButton } from '../issue/ComposeIssueButton';
 
@@ -194,11 +194,6 @@ const Grip = styled(IconButton)`
 const GRIP_STEP = 16;
 const EDGE_PADDING = 12;
 
-interface Point {
-  x: number;
-  y: number;
-}
-
 interface NaturalBox {
   left: number;
   top: number;
@@ -219,14 +214,13 @@ function naturalBox(panel: HTMLElement, offset: Point): NaturalBox {
 function clampToContainer(panel: HTMLElement, natural: NaturalBox, candidate: Point): Point {
   const container = (panel.offsetParent ?? panel.parentElement)?.getBoundingClientRect();
   if (!container) return candidate;
-  const minX = container.left + EDGE_PADDING - natural.left;
-  const minY = container.top + EDGE_PADDING - natural.top;
-  const maxX = Math.max(minX, container.right - EDGE_PADDING - natural.width - natural.left);
-  const maxY = Math.max(minY, container.bottom - EDGE_PADDING - natural.height - natural.top);
-  return {
-    x: Math.min(Math.max(candidate.x, minX), maxX),
-    y: Math.min(Math.max(candidate.y, minY), maxY),
-  };
+  const at = clampToBounds(
+    { x: natural.left + candidate.x, y: natural.top + candidate.y },
+    natural,
+    container,
+    EDGE_PADDING,
+  );
+  return { x: at.x - natural.left, y: at.y - natural.top };
 }
 
 function useDragOffset(
@@ -367,19 +361,21 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
 
   function openViewOptions(button: HTMLElement): void {
     const rect = button.getBoundingClientRect();
-    invoke('contextMenu.showFileView', {
+    const request = {
       x: rect.left,
       y: rect.bottom,
       wrapLongLines: layout.wrapLongLines,
       fullFileDiff: layout.fullFileDiff,
       randomizeOrder: layout.randomizeOrder,
       incrementalDiff: layout.incrementalDiff,
-    })
+    };
+    if (window.gepard.host === 'browser') {
+      dispatch({ type: 'contextMenu/open', menu: { kind: 'fileView', ...request } });
+      return;
+    }
+    invoke('contextMenu.showFileView', request)
       .then((pick) => {
-        if (pick === 'wrapLongLines') commands.toggleWrapLines();
-        if (pick === 'fullFile') commands.toggleFullFileDiff();
-        if (pick === 'randomizeOrder') commands.toggleRandomizeOrder();
-        if (pick === 'incrementalDiff') commands.toggleIncrementalDiff();
+        if (pick) runFileViewPick(commands, pick);
       })
       .catch((error: unknown) => reportQueryError('contextMenu.showFileView', error));
   }
@@ -414,15 +410,13 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
               {intl.formatMessage(messages.viewed)}
             </ViewedLabel>
           )}
-          {hostCapabilities().contextMenu && (
-            <MenuToggle
-              icon={MoreHorizontal}
-              size={14}
-              label={intl.formatMessage(messages.viewOptions)}
-              aria-haspopup="menu"
-              onClick={(e) => openViewOptions(e.currentTarget)}
-            />
-          )}
+          <MenuToggle
+            icon={MoreHorizontal}
+            size={14}
+            label={intl.formatMessage(messages.viewOptions)}
+            aria-haspopup="menu"
+            onClick={(e) => openViewOptions(e.currentTarget)}
+          />
           <IconButton
             icon={Sidebar}
             size={14}
