@@ -11,7 +11,6 @@ import { Inline } from '../../components/Layout';
 import { ListRow, RowTitle } from '../../components/List';
 import { reportQueryError } from '../../errors/report';
 import { useIpcEvent } from '../../ipc/client';
-import { hostCapabilities } from '../../ipc/host';
 import { qk } from '../../queries/keys';
 import {
   useCloneStart,
@@ -229,7 +228,7 @@ export function ProjectItem({ project, autoClone }: ProjectItemProps): React.JSX
   function handleOpen(e: MouseEvent): void {
     openProject({
       projectId: project.id,
-      detached: hostCapabilities().detachedWindows && (e.ctrlKey || e.metaKey),
+      detached: window.gepard.host === 'desktop' && (e.ctrlKey || e.metaKey),
     });
   }
 

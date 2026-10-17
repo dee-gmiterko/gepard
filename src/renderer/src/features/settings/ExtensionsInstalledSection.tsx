@@ -2,7 +2,6 @@ import styled from 'styled-components';
 import { Plus } from 'react-feather';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { Button } from '../../components/Button';
-import { hostCapabilities } from '../../ipc/host';
 import { Caption } from '../../components/Caption';
 import { List, ListRow } from '../../components/List';
 import { Message } from '../../components/Message';
@@ -65,7 +64,7 @@ export function ExtensionsInstalledSection(): React.JSX.Element {
       <SectionHeading
         title={<FormattedMessage {...messages.title} />}
         actions={
-          hostCapabilities().folderPicker && (
+          window.gepard.host === 'desktop' && (
             <Button
               onClick={() =>
                 install.mutate({
