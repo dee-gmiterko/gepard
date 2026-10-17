@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clampToViewport } from '../../src/helpers/viewport';
+import { clampToBounds, clampToViewport } from '../../src/helpers/viewport';
 
 const viewport = { width: 800, height: 600 };
 const size = { width: 200, height: 100 };
@@ -21,6 +21,26 @@ describe('clampToViewport', () => {
     expect(clampToViewport({ x: 50, y: 50 }, { width: 900, height: 700 }, viewport, 4)).toEqual({
       x: 4,
       y: 4,
+    });
+  });
+});
+
+describe('clampToBounds', () => {
+  const bounds = { left: 100, top: 50, right: 500, bottom: 350 };
+
+  it('keeps a position that fits', () => {
+    expect(clampToBounds({ x: 150, y: 80 }, size, bounds, 10)).toEqual({ x: 150, y: 80 });
+  });
+
+  it('insets the bounds by the padding on every side', () => {
+    expect(clampToBounds({ x: 0, y: 0 }, size, bounds, 10)).toEqual({ x: 110, y: 60 });
+    expect(clampToBounds({ x: 999, y: 999 }, size, bounds, 10)).toEqual({ x: 290, y: 240 });
+  });
+
+  it('pins to the top-left edge when the box does not fit', () => {
+    expect(clampToBounds({ x: 200, y: 200 }, { width: 600, height: 400 }, bounds, 10)).toEqual({
+      x: 110,
+      y: 60,
     });
   });
 });
