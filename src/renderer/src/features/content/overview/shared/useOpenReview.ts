@@ -31,7 +31,7 @@ export function useOpenReview(): (targeting: Targeting) => void {
       targeting.path,
     );
     const viewedPaths = new Set(viewed.filter((v) => v.viewed).map((v) => v.path));
-    return firstFileToReview(files, viewedPaths);
+    return firstFileToReview(files, viewedPaths, current.layout.randomizeOrder);
   }
 
   return (targeting) => {

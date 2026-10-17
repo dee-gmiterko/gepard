@@ -129,5 +129,16 @@ describe('firstFileToReview', () => {
 
   it('is null without files', () => {
     expect(firstFileToReview([], new Set())).toBeNull();
+    expect(firstFileToReview([], new Set(), true)).toBeNull();
+  });
+
+  it('picks randomly among unviewed files when randomizing', () => {
+    const viewed = new Set(['a.ts']);
+    expect(firstFileToReview(files, viewed, true, () => 0)).toBe('b.ts');
+    expect(firstFileToReview(files, viewed, true, () => 0.99)).toBe('c.ts');
+  });
+
+  it('picks randomly among all files when everything is viewed and randomizing', () => {
+    expect(firstFileToReview(files, new Set(files), true, () => 0.5)).toBe('b.ts');
   });
 });
