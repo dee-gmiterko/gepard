@@ -47,4 +47,33 @@ describe('useResizeHandle', () => {
   it('lets a tight space override the minimum', () => {
     expect(drag({ start: 300, dx: -1000, getMax: () => 150 })).toEqual([150]);
   });
+
+  it('commits the latest width when a touch gesture is cancelled', () => {
+    const onCommit = vi.fn();
+    const { result } = renderHook(() =>
+      useResizeHandle({
+        min: 200,
+        max: 600,
+        sign: 1,
+        getValue: () => 300,
+        onChange: () => undefined,
+        onCommit,
+      }),
+    );
+    const el = document.createElement('div');
+    const setPointerCapture = vi.fn();
+    el.setPointerCapture = setPointerCapture;
+    result.current.onPointerDown({
+      preventDefault: () => undefined,
+      currentTarget: el,
+      pointerId: 7,
+      clientX: 0,
+    } as unknown as ReactPointerEvent<HTMLElement>);
+    const move = new Event('pointermove') as Event & { clientX: number };
+    move.clientX = 50;
+    el.dispatchEvent(move);
+    el.dispatchEvent(new Event('pointercancel'));
+    expect(setPointerCapture).toHaveBeenCalledWith(7);
+    expect(onCommit).toHaveBeenCalledWith(350);
+  });
 });
