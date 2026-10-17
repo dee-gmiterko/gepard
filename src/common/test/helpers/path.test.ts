@@ -1,6 +1,6 @@
 import * as path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { comparePaths, normalizeRepoPath, toPosix } from '../../helpers/path';
+import { comparePaths, formatLineReference, normalizeRepoPath, toPosix } from '../../helpers/path';
 
 describe('toPosix', () => {
   it('joins platform segments with forward slashes', () => {
@@ -52,5 +52,11 @@ describe('normalizeRepoPath', () => {
     expect(normalizeRepoPath('')).toBeNull();
     expect(normalizeRepoPath(null)).toBeNull();
     expect(() => normalizeRepoPath('../x')).toThrow(/invalid repository path/);
+  });
+});
+
+describe('formatLineReference', () => {
+  it('joins path and line with a colon', () => {
+    expect(formatLineReference({ path: 'src/a.ts', line: 12 })).toBe('src/a.ts:12');
   });
 });
