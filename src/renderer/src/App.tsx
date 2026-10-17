@@ -4,6 +4,7 @@ import { useProjectId, useSettingsOpen } from './state/hooks';
 import { useGlobalKeys } from './keyboard/useGlobalKeys';
 import { useWindowTitle } from './hooks/useWindowTitle';
 import { useContextMenuLabels } from './hooks/useContextMenuLabels';
+import { BrowserContextMenu } from './contextMenu/BrowserContextMenu';
 import { Launchpad } from './features/launchpad/Launchpad';
 import { Header } from './features/header/Header';
 import { SidePanel } from './features/sidePanel/SidePanel';
@@ -34,9 +35,12 @@ function App(): React.JSX.Element {
 
   const closeSettings = (): void => dispatch({ type: 'settings/setOpen', open: false });
 
+  const browserMenu = <BrowserContextMenu />;
+
   if (!projectId) {
     return (
       <>
+        {browserMenu}
         <Launchpad />
         {settingsOpen && <SettingsOverlay onClose={closeSettings} />}
       </>
@@ -51,6 +55,7 @@ function App(): React.JSX.Element {
         <Content />
       </Body>
       <QuickSearch />
+      {browserMenu}
       {settingsOpen && <SettingsOverlay onClose={closeSettings} />}
     </Shell>
   );

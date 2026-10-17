@@ -23,12 +23,17 @@ const messages = defineMessages({
   incrementalDiff: { id: 'contextMenu.incrementalDiff', defaultMessage: 'Show incremental' },
 }) satisfies Record<ContextMenuLabelKey, MessageDescriptor>;
 
-export function useContextMenuLabels(): (key: ContextMenuLabelKey) => string {
+export function useContextMenuLabel(): (key: ContextMenuLabelKey) => string {
   const intl = useIntl();
-  const label = useCallback(
+  return useCallback(
     (key: ContextMenuLabelKey): string => intl.formatMessage(messages[key]),
     [intl],
   );
+}
+
+export function useContextMenuLabels(): (key: ContextMenuLabelKey) => string {
+  const intl = useIntl();
+  const label = useContextMenuLabel();
   useEffect(() => {
     const labels = ContextMenuLabels.parse(
       Object.fromEntries(

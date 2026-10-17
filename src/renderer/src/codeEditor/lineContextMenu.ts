@@ -1,6 +1,7 @@
 import { EditorView } from '@codemirror/view';
 import type { Extension } from '@codemirror/state';
 import { reportQueryError } from '../errors/report';
+import { setBrowserLineTarget } from '../contextMenu/menuStore';
 import { invoke } from '../ipc/client';
 
 export function lineContextMenu(
@@ -13,6 +14,10 @@ export function lineContextMenu(
       if (pos === null) return false;
       const line = fileLineOf(view.state.doc.lineAt(pos).number);
       if (line === null) return false;
+      if (window.gepard.host === 'browser') {
+        setBrowserLineTarget({ path, line });
+        return false;
+      }
       invoke('contextMenu.setLineTarget', { path, line }).catch((error: unknown) =>
         reportQueryError('contextMenu.setLineTarget', error),
       );

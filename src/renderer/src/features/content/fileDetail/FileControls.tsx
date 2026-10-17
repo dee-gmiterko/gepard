@@ -20,8 +20,8 @@ import {
 import { defineMessages, useIntl } from 'react-intl';
 import { useUiDispatch } from '../../../state/UiContext';
 import { useAcceptedFiles, useActiveFile, useLayout, useTargetPr } from '../../../state/hooks';
-import { invoke } from '../../../ipc/client';
-import { hostCapabilities } from '../../../ipc/host';
+import { useContextMenuLabel } from '../../../hooks/useContextMenuLabels';
+import { showFileViewMenu } from '../../../contextMenu/fileViewMenu';
 import { reportQueryError } from '../../../errors/report';
 import { useSetLayout } from '../../../queries/projects';
 import { useViewed } from '../../../queries/comments';
@@ -339,6 +339,7 @@ function useDragOffset(
 
 export function FileControls({ docked = false }: { docked?: boolean }): React.JSX.Element {
   const intl = useIntl();
+  const contextMenuLabel = useContextMenuLabel();
   const acceptedFiles = useAcceptedFiles();
   const layout = useLayout();
   const dispatch = useUiDispatch();
@@ -367,14 +368,17 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
 
   function openViewOptions(button: HTMLElement): void {
     const rect = button.getBoundingClientRect();
-    invoke('contextMenu.showFileView', {
-      x: rect.left,
-      y: rect.bottom,
-      wrapLongLines: layout.wrapLongLines,
-      fullFileDiff: layout.fullFileDiff,
-      randomizeOrder: layout.randomizeOrder,
-      incrementalDiff: layout.incrementalDiff,
-    })
+    showFileViewMenu(
+      {
+        x: rect.left,
+        y: rect.bottom,
+        wrapLongLines: layout.wrapLongLines,
+        fullFileDiff: layout.fullFileDiff,
+        randomizeOrder: layout.randomizeOrder,
+        incrementalDiff: layout.incrementalDiff,
+      },
+      contextMenuLabel,
+    )
       .then((pick) => {
         if (pick === 'wrapLongLines') commands.toggleWrapLines();
         if (pick === 'fullFile') commands.toggleFullFileDiff();
@@ -414,15 +418,13 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
               {intl.formatMessage(messages.viewed)}
             </ViewedLabel>
           )}
-          {hostCapabilities().contextMenu && (
-            <MenuToggle
-              icon={MoreHorizontal}
-              size={14}
-              label={intl.formatMessage(messages.viewOptions)}
-              aria-haspopup="menu"
-              onClick={(e) => openViewOptions(e.currentTarget)}
-            />
-          )}
+          <MenuToggle
+            icon={MoreHorizontal}
+            size={14}
+            label={intl.formatMessage(messages.viewOptions)}
+            aria-haspopup="menu"
+            onClick={(e) => openViewOptions(e.currentTarget)}
+          />
           <IconButton
             icon={Sidebar}
             size={14}

@@ -17,7 +17,6 @@ describe('hostCapabilities', () => {
     expect(hostCapabilities()).toEqual({
       folderPicker: true,
       detachedWindows: true,
-      contextMenu: true,
     });
   });
 
@@ -26,7 +25,6 @@ describe('hostCapabilities', () => {
     expect(hostCapabilities()).toEqual({
       folderPicker: false,
       detachedWindows: false,
-      contextMenu: false,
     });
   });
 });
