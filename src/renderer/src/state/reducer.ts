@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { MessageDescriptor } from 'react-intl';
-import type { DiffSide } from '@gepard/common';
+import type { ContextMenuLineTarget, ContextMenuRequest, DiffSide } from '@gepard/common';
 import type { ReportTone } from '../errors/report';
 import { canMarkViewed, viewedAfter, type ReviewFiles } from '../helpers/review';
 import {
@@ -81,6 +81,8 @@ export interface UiState {
   revealLine: { line: number; side: DiffSide } | null;
   settingsOpen: boolean;
   quickSearch: QuickSearchMode | null;
+  contextMenu: ContextMenuRequest | null;
+  contextMenuLineTarget: ContextMenuLineTarget | null;
   commentDrafts: Record<string, string>;
 }
 
@@ -101,6 +103,8 @@ export const initialUiState: UiState = {
   revealLine: null,
   settingsOpen: false,
   quickSearch: null,
+  contextMenu: null,
+  contextMenuLineTarget: null,
   commentDrafts: {},
 };
 
@@ -142,6 +146,9 @@ export type UiAction =
   | { type: 'settings/setOpen'; open: boolean }
   | { type: 'quickSearch/open'; mode: QuickSearchMode }
   | { type: 'quickSearch/close' }
+  | { type: 'contextMenu/open'; menu: ContextMenuRequest }
+  | { type: 'contextMenu/close' }
+  | { type: 'contextMenu/setLineTarget'; target: ContextMenuLineTarget }
   | { type: 'commentDraft/set'; key: string; body: string }
   | { type: 'viewed/mark'; paths: string[]; viewed: boolean; review: ReviewFiles }
   | { type: 'file/step'; direction: 1 | -1; review: ReviewFiles }
@@ -306,6 +313,13 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
     case 'quickSearch/close':
       if (state.quickSearch === null) return state;
       return { ...state, quickSearch: null };
+    case 'contextMenu/setLineTarget':
+      return { ...state, contextMenuLineTarget: action.target };
+    case 'contextMenu/open':
+      return { ...state, contextMenu: action.menu, contextMenuLineTarget: null };
+    case 'contextMenu/close':
+      if (state.contextMenu === null) return state;
+      return { ...state, contextMenu: null };
     case 'commentDraft/set': {
       if (action.body === '') {
         if (!(action.key in state.commentDrafts)) return state;

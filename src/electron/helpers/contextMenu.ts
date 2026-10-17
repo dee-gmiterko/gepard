@@ -1,10 +1,12 @@
 import type { MenuItemConstructorOptions } from 'electron';
 import {
+  FILE_VIEW_MENU_STATE,
   FileViewMenuPick,
   type ContextMenuLabelKey,
   type ContextMenuLabels,
   type ContextMenuLineTarget,
   type FileViewMenuRequest,
+  formatLineReference,
 } from '@gepard/common';
 
 export interface ContextMenuParams {
@@ -26,10 +28,6 @@ export interface ContextMenuActions {
   replaceMisspelling: (word: string) => void;
   addToDictionary: (word: string) => void;
   copyText: (text: string) => void;
-}
-
-export function formatLineReference(target: ContextMenuLineTarget): string {
-  return `${target.path}:${target.line}`;
 }
 
 export function hasTextualContent(
@@ -106,13 +104,6 @@ type FileViewMenuState = Pick<
   'wrapLongLines' | 'fullFileDiff' | 'randomizeOrder' | 'incrementalDiff'
 >;
 
-const FILE_VIEW_STATE: Record<FileViewMenuPick, keyof FileViewMenuState> = {
-  wrapLongLines: 'wrapLongLines',
-  fullFile: 'fullFileDiff',
-  randomizeOrder: 'randomizeOrder',
-  incrementalDiff: 'incrementalDiff',
-};
-
 export function buildFileViewMenuTemplate(
   state: FileViewMenuState,
   labels: ContextMenuLabels,
@@ -121,7 +112,7 @@ export function buildFileViewMenuTemplate(
   return FileViewMenuPick.options.map((pick): MenuItemConstructorOptions => ({
     label: labels[pick],
     type: 'checkbox',
-    checked: state[FILE_VIEW_STATE[pick]],
+    checked: state[FILE_VIEW_MENU_STATE[pick]],
     click: () => onPick(pick),
   }));
 }

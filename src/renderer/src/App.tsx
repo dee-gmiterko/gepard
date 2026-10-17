@@ -4,13 +4,13 @@ import { useProjectId, useSettingsOpen } from './state/hooks';
 import { useGlobalKeys } from './keyboard/useGlobalKeys';
 import { useWindowTitle } from './hooks/useWindowTitle';
 import { useContextMenuLabels } from './hooks/useContextMenuLabels';
-import { BrowserContextMenu } from './contextMenu/BrowserContextMenu';
 import { Launchpad } from './features/launchpad/Launchpad';
 import { Header } from './features/header/Header';
 import { SidePanel } from './features/sidePanel/SidePanel';
 import { Content } from './features/content/Content';
 import { SettingsOverlay } from './features/settings/SettingsOverlay';
 import { QuickSearch } from './features/quickSearch/QuickSearch';
+import { ContextMenu } from './features/contextMenu/ContextMenu';
 
 const Shell = styled.div`
   display: grid;
@@ -35,14 +35,12 @@ function App(): React.JSX.Element {
 
   const closeSettings = (): void => dispatch({ type: 'settings/setOpen', open: false });
 
-  const browserMenu = <BrowserContextMenu />;
-
   if (!projectId) {
     return (
       <>
-        {browserMenu}
         <Launchpad />
         {settingsOpen && <SettingsOverlay onClose={closeSettings} />}
+        {window.gepard.host === 'browser' && <ContextMenu />}
       </>
     );
   }
@@ -55,8 +53,8 @@ function App(): React.JSX.Element {
         <Content />
       </Body>
       <QuickSearch />
-      {browserMenu}
       {settingsOpen && <SettingsOverlay onClose={closeSettings} />}
+      {window.gepard.host === 'browser' && <ContextMenu />}
     </Shell>
   );
 }

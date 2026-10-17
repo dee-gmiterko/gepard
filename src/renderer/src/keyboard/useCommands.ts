@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { defineMessages, type MessageDescriptor } from 'react-intl';
+import type { FileViewMenuPick } from '@gepard/common';
 import { useUiDispatch, useUiStore } from '../state/UiContext';
 import { useActiveFile, useLayout } from '../state/hooks';
 import type { Layout, QuickSearchMode, SidePanelTab, UiAction } from '../state/reducer';
@@ -65,6 +66,20 @@ export interface Commands {
   submitComment: () => boolean;
   findNext: () => boolean;
   findPrevious: () => boolean;
+}
+
+const FILE_VIEW_COMMANDS: Record<
+  FileViewMenuPick,
+  'toggleWrapLines' | 'toggleFullFileDiff' | 'toggleRandomizeOrder' | 'toggleIncrementalDiff'
+> = {
+  wrapLongLines: 'toggleWrapLines',
+  fullFile: 'toggleFullFileDiff',
+  randomizeOrder: 'toggleRandomizeOrder',
+  incrementalDiff: 'toggleIncrementalDiff',
+};
+
+export function runFileViewPick(commands: Commands, pick: FileViewMenuPick): void {
+  commands[FILE_VIEW_COMMANDS[pick]]();
 }
 
 export function useFileNavigation(): { canGoPrev: boolean; canGoNext: boolean } {

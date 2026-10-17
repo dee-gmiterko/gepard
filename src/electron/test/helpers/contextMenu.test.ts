@@ -4,7 +4,6 @@ import type { ContextMenuLabels } from '@gepard/common';
 import {
   buildContextMenuTemplate,
   buildFileViewMenuTemplate,
-  formatLineReference,
   hasTextualContent,
   type ContextMenuActions,
   type ContextMenuParams,
@@ -58,12 +57,6 @@ function clickItem(template: MenuItemConstructorOptions[], index: number): void 
 
 const labelsOf = (t: { label?: string; type?: string }[]): (string | undefined)[] =>
   t.map((i) => (i.type === 'separator' ? '-' : i.label));
-
-describe('formatLineReference', () => {
-  it('joins path and line with a colon', () => {
-    expect(formatLineReference({ path: 'src/a.ts', line: 12 })).toBe('src/a.ts:12');
-  });
-});
 
 describe('hasTextualContent', () => {
   it('is false without editable, selection, selectable text or line target', () => {

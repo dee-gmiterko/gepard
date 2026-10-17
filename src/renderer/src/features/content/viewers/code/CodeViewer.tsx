@@ -11,6 +11,7 @@ import { commentAffordanceGutter } from '../../../../codeEditor/commentAffordanc
 import { commentBlockDecorations } from '../../../../codeEditor/commentBlocks';
 import { CommentPortals } from '../../../../codeEditor/CommentPortals';
 import { fullFileDiffDecorations } from '../../../../codeEditor/fullFileDiff';
+import { useSetLineTarget } from '../../../../hooks/useSetLineTarget';
 import { lineContextMenu } from '../../../../codeEditor/lineContextMenu';
 import { pipelineGutter } from '../../../../codeEditor/pipeline';
 import { useReadOnlyEditor } from '../../../../codeEditor/readOnlyEditor';
@@ -84,17 +85,18 @@ function CodeText({
   const symbolPortals = useSymbolPortals(head, path);
   const wrapLongLines = layout.wrapLongLines;
   const goto = useGotoDefinition(path, symbolPortals);
+  const setLineTarget = useSetLineTarget();
   const diffCompartment = useMemo(() => new Compartment(), []);
   const extensions = useMemo(
     () => [
       lineNumbers(),
       symbolTooltip(symbolPortals),
       goto,
-      lineContextMenu(path),
+      lineContextMenu(path, setLineTarget),
       wrapLongLines ? EditorView.lineWrapping : [],
       diffCompartment.of([]),
     ],
-    [symbolPortals, goto, path, wrapLongLines, diffCompartment],
+    [symbolPortals, goto, path, setLineTarget, wrapLongLines, diffCompartment],
   );
   const { containerRef, view, comments, commentGutter } = useReadOnlyEditor(path, text, extensions);
   const [draft, setDraft] = useState<number | null>(null);

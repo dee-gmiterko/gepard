@@ -446,3 +446,30 @@ describe('comment drafts', () => {
     expect(uiReducer(s, { type: 'project/close' }).commentDrafts).toEqual({});
   });
 });
+
+describe('context menu', () => {
+  const menu = {
+    kind: 'text',
+    x: 1,
+    y: 2,
+    editable: false,
+    hasSelection: true,
+    target: null,
+  } as const;
+  const target = { path: 'a.ts', line: 3 };
+
+  it('opening consumes the pending line target', () => {
+    const pending = uiReducer(state(), { type: 'contextMenu/setLineTarget', target });
+    expect(pending.contextMenuLineTarget).toEqual(target);
+    const open = uiReducer(pending, { type: 'contextMenu/open', menu });
+    expect(open.contextMenu).toEqual(menu);
+    expect(open.contextMenuLineTarget).toBeNull();
+  });
+
+  it('closes the menu and is a no-op when already closed', () => {
+    const open = state({ contextMenu: menu });
+    expect(uiReducer(open, { type: 'contextMenu/close' }).contextMenu).toBeNull();
+    const closed = state();
+    expect(uiReducer(closed, { type: 'contextMenu/close' })).toBe(closed);
+  });
+});

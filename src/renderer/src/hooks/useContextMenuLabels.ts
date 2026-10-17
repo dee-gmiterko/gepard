@@ -32,17 +32,14 @@ export function useContextMenuLabel(): (key: ContextMenuLabelKey) => string {
 }
 
 export function useContextMenuLabels(): (key: ContextMenuLabelKey) => string {
-  const intl = useIntl();
   const label = useContextMenuLabel();
   useEffect(() => {
     const labels = ContextMenuLabels.parse(
-      Object.fromEntries(
-        ContextMenuLabelKey.options.map((key) => [key, intl.formatMessage(messages[key])]),
-      ),
+      Object.fromEntries(ContextMenuLabelKey.options.map((key) => [key, label(key)])),
     );
     invoke('contextMenu.setLabels', labels).catch((error: unknown) =>
       reportQueryError('contextMenu.setLabels', error),
     );
-  }, [intl]);
+  }, [label]);
   return label;
 }

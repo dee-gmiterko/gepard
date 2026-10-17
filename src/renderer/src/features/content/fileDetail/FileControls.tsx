@@ -20,12 +20,11 @@ import {
 import { defineMessages, useIntl } from 'react-intl';
 import { useUiDispatch } from '../../../state/UiContext';
 import { useAcceptedFiles, useActiveFile, useLayout, useTargetPr } from '../../../state/hooks';
-import { useContextMenuLabel } from '../../../hooks/useContextMenuLabels';
-import { showFileViewMenu } from '../../../contextMenu/fileViewMenu';
+import { invoke } from '../../../ipc/client';
 import { reportQueryError } from '../../../errors/report';
 import { useSetLayout } from '../../../queries/projects';
 import { useViewed } from '../../../queries/comments';
-import { useCommands, useFileNavigation } from '../../../keyboard/useCommands';
+import { runFileViewPick, useCommands, useFileNavigation } from '../../../keyboard/useCommands';
 import { useIsCheckedOutChangedFile } from '../../../queries/review';
 import { IconButton } from '../../../components/IconButton';
 import { Inline, Stack } from '../../../components/Layout';
@@ -339,7 +338,6 @@ function useDragOffset(
 
 export function FileControls({ docked = false }: { docked?: boolean }): React.JSX.Element {
   const intl = useIntl();
-  const contextMenuLabel = useContextMenuLabel();
   const acceptedFiles = useAcceptedFiles();
   const layout = useLayout();
   const dispatch = useUiDispatch();
@@ -368,22 +366,21 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
 
   function openViewOptions(button: HTMLElement): void {
     const rect = button.getBoundingClientRect();
-    showFileViewMenu(
-      {
-        x: rect.left,
-        y: rect.bottom,
-        wrapLongLines: layout.wrapLongLines,
-        fullFileDiff: layout.fullFileDiff,
-        randomizeOrder: layout.randomizeOrder,
-        incrementalDiff: layout.incrementalDiff,
-      },
-      contextMenuLabel,
-    )
+    const request = {
+      x: rect.left,
+      y: rect.bottom,
+      wrapLongLines: layout.wrapLongLines,
+      fullFileDiff: layout.fullFileDiff,
+      randomizeOrder: layout.randomizeOrder,
+      incrementalDiff: layout.incrementalDiff,
+    };
+    if (window.gepard.host === 'browser') {
+      dispatch({ type: 'contextMenu/open', menu: { kind: 'fileView', ...request } });
+      return;
+    }
+    invoke('contextMenu.showFileView', request)
       .then((pick) => {
-        if (pick === 'wrapLongLines') commands.toggleWrapLines();
-        if (pick === 'fullFile') commands.toggleFullFileDiff();
-        if (pick === 'randomizeOrder') commands.toggleRandomizeOrder();
-        if (pick === 'incrementalDiff') commands.toggleIncrementalDiff();
+        if (pick) runFileViewPick(commands, pick);
       })
       .catch((error: unknown) => reportQueryError('contextMenu.showFileView', error));
   }
