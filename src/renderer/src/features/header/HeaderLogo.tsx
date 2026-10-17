@@ -51,11 +51,16 @@ export function HeaderLogo(): React.JSX.Element {
   const launching = useLaunchingProjectIds().includes(null);
   const label = intl.formatMessage(launching ? messages.launching : messages.projects);
 
-  function handleClick(e: MouseEvent): void {
-    if (window.gepard.host === 'desktop' && (e.ctrlKey || e.metaKey))
-      openProject({ projectId: null, detached: true });
-    else dispatch({ type: 'project/close' });
+  function closeProject(): void {
+    dispatch({ type: 'project/close' });
   }
+
+  function handleDesktopClick(e: MouseEvent): void {
+    if (e.ctrlKey || e.metaKey) openProject({ projectId: null, detached: true });
+    else closeProject();
+  }
+
+  const handleClick = window.gepard.host === 'desktop' ? handleDesktopClick : closeProject;
 
   return (
     <LogoButton

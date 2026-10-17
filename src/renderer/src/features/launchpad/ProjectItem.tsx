@@ -228,7 +228,7 @@ export function ProjectItem({ project, autoClone }: ProjectItemProps): React.JSX
   function handleOpen(e: MouseEvent): void {
     openProject({
       projectId: project.id,
-      detached: window.gepard.host === 'desktop' && (e.ctrlKey || e.metaKey),
+      detached: e.ctrlKey || e.metaKey,
     });
   }
 
