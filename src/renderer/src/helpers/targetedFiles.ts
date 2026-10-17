@@ -55,6 +55,13 @@ export function nextReviewFile(
 export function firstFileToReview(
   files: readonly string[],
   viewedPaths: ReadonlySet<string>,
+  randomize = false,
+  random: () => number = Math.random,
 ): string | null {
+  if (randomize) {
+    const unviewed = files.filter((f) => !viewedPaths.has(f));
+    const pool = unviewed.length > 0 ? unviewed : files;
+    if (pool.length > 0) return pool[Math.floor(random() * pool.length) % pool.length];
+  }
   return nextTargetedFile(files, null, viewedPaths, 1) ?? files[0] ?? null;
 }
