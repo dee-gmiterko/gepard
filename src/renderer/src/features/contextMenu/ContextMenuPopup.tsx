@@ -57,7 +57,6 @@ export function ContextMenuPopup({ menu }: { menu: ContextMenuRequest }): React.
     );
   }, [menu.x, menu.y]);
 
-  // The menu never takes focus, so Escape is only seen on the window.
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
       if (e.key === 'Escape') dispatch({ type: 'contextMenu/close' });
