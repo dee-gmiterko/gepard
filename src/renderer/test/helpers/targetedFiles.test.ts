@@ -132,13 +132,18 @@ describe('firstFileToReview', () => {
     expect(firstFileToReview([], new Set(), true)).toBeNull();
   });
 
-  it('picks randomly among unviewed files when randomizing', () => {
-    const viewed = new Set(['a.ts']);
-    expect(firstFileToReview(files, viewed, true, () => 0)).toBe('b.ts');
-    expect(firstFileToReview(files, viewed, true, () => 0.99)).toBe('c.ts');
+  it('picks the unviewed file at the offset seeded by the unviewed set when randomizing', () => {
+    expect(firstFileToReview(files, new Set(['a.ts']), true)).toBe('b.ts');
+    expect(firstFileToReview(files, new Set(['b.ts']), true)).not.toBe('b.ts');
   });
 
-  it('picks randomly among all files when everything is viewed and randomizing', () => {
-    expect(firstFileToReview(files, new Set(files), true, () => 0.5)).toBe('b.ts');
+  it('seeds from all files when everything is viewed and randomizing', () => {
+    expect(firstFileToReview(files, new Set(files), true)).toBe('c.ts');
+  });
+
+  it('is deterministic when randomizing', () => {
+    const five = ['a.ts', 'b.ts', 'c.ts', 'd.ts', 'e.ts'];
+    expect(firstFileToReview(five, new Set(), true)).toBe('b.ts');
+    expect(firstFileToReview(five, new Set(), true)).toBe('b.ts');
   });
 });

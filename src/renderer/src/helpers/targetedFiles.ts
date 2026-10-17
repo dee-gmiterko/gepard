@@ -24,6 +24,11 @@ export function pathSeed(path: string): number {
   return fnv >>> 0;
 }
 
+function pickSeeded(pool: readonly string[], seed: number, direction: 1 | -1): string {
+  const offset = seed % pool.length;
+  return pool[direction === 1 ? offset : pool.length - 1 - offset];
+}
+
 export function nextRandomizedFile(
   files: readonly string[],
   activePath: string | null,
@@ -34,10 +39,8 @@ export function nextRandomizedFile(
     return nextTargetedFile(files, activePath, viewedPaths, direction);
   }
   const unviewed = files.filter((f) => f !== activePath && !viewedPaths.has(f));
-  const n = unviewed.length;
-  if (n === 0) return null;
-  const offset = pathSeed(activePath) % n;
-  return unviewed[direction === 1 ? offset : n - 1 - offset];
+  if (unviewed.length === 0) return null;
+  return pickSeeded(unviewed, pathSeed(activePath), direction);
 }
 
 export function nextReviewFile(
@@ -56,12 +59,11 @@ export function firstFileToReview(
   files: readonly string[],
   viewedPaths: ReadonlySet<string>,
   randomize = false,
-  random: () => number = Math.random,
 ): string | null {
   if (randomize) {
     const unviewed = files.filter((f) => !viewedPaths.has(f));
     const pool = unviewed.length > 0 ? unviewed : files;
-    if (pool.length > 0) return pool[Math.floor(random() * pool.length) % pool.length];
+    if (pool.length > 0) return pickSeeded(pool, pathSeed(pool.join('\n')), 1);
   }
   return nextTargetedFile(files, null, viewedPaths, 1) ?? files[0] ?? null;
 }
