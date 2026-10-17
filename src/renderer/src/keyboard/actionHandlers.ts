@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef } from 'react';
+import { createContext, useCallback, use, useEffect, useRef } from 'react';
 
 type Handler = () => void;
 
@@ -7,7 +7,7 @@ export type ActionHandlers = Map<string, Handler>;
 export const ActionHandlersContext = createContext<ActionHandlers | null>(null);
 
 function useActionHandlers(): ActionHandlers {
-  const handlers = useContext(ActionHandlersContext);
+  const handlers = use(ActionHandlersContext);
   if (!handlers) throw new Error('Action handlers must be used within <ActionHandlersProvider>');
   return handlers;
 }

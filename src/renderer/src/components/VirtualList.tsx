@@ -61,7 +61,6 @@ export function VirtualList({
     if (!el) return;
     const measure = (): void =>
       setViewport({ scrollRow: Math.floor(el.scrollTop / rowHeight), height: el.clientHeight });
-    measure();
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
@@ -77,16 +76,16 @@ export function VirtualList({
     if (viewport.height > 0 && last >= rowCount - NEAR_END_ROWS) nearEndRef.current?.();
   }, [last, rowCount, viewport.height]);
 
-  const appliedScrollKey = useRef<string | null>(null);
+  const appliedScrollKeyRef = useRef<string | null>(null);
   useLayoutEffect(() => {
     const el = scrollerRef.current;
     if (!scrollTo) {
-      appliedScrollKey.current = null;
+      appliedScrollKeyRef.current = null;
       return;
     }
     if (!el || viewport.height === 0 || scrollTo.index < 0 || scrollTo.index >= rowCount) return;
-    if (appliedScrollKey.current === scrollTo.key) return;
-    appliedScrollKey.current = scrollTo.key;
+    if (appliedScrollKeyRef.current === scrollTo.key) return;
+    appliedScrollKeyRef.current = scrollTo.key;
     const top = scrollTo.index * rowHeight;
     if (top < el.scrollTop || top + rowHeight > el.scrollTop + el.clientHeight) {
       el.scrollTop = top - Math.max(0, (el.clientHeight - rowHeight) / 2);

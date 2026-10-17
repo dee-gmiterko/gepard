@@ -169,8 +169,11 @@ function SymbolPopup({
         <Caption>
           <FormattedMessage {...messages.definition} />
         </Caption>
-        {internal.map((d, i) => (
-          <Link key={i} onActivate={() => onOpen(d.location.path, d.location.range.start.line)}>
+        {internal.map((d) => (
+          <Link
+            key={`${d.location.path}:${d.location.range.start.line}:${d.location.range.start.col}`}
+            onActivate={() => onOpen(d.location.path, d.location.range.start.line)}
+          >
             <DefinitionEntry>
               <PathAndLine path={d.location.path} line={d.location.range.start.line} />
               <DefinitionPreview

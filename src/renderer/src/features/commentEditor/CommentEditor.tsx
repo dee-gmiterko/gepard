@@ -70,14 +70,14 @@ export function CommentEditor({
   const uiStore = useUiStore();
   const dispatch = useUiDispatch();
   const [focused, setFocused] = useState(false);
-  const [body, setBodyState] = useState(() =>
+  const [body, setBody] = useState(() =>
     target.kind === 'edit'
       ? target.initialBody
       : ((draftKey && uiStore.getState().commentDrafts[draftKey]) ?? ''),
   );
 
-  function setBody(value: string): void {
-    setBodyState(value);
+  function updateBody(value: string): void {
+    setBody(value);
     if (draftKey) dispatch({ type: 'commentDraft/set', key: draftKey, body: value });
   }
   const { data: annotations } = useFileAnnotations(
@@ -122,7 +122,7 @@ export function CommentEditor({
     upsert.mutate(draft, {
       onSuccess: () => {
         if (target.kind !== 'edit') {
-          setBody('');
+          updateBody('');
           setChoices(initialReferenceChoices([]));
         }
         onSubmitted();
@@ -136,7 +136,7 @@ export function CommentEditor({
     <Stack>
       <TextArea
         value={body}
-        onChange={(e) => setBody(e.target.value)}
+        onChange={(e) => updateBody(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Escape' && onCancel) {
             e.preventDefault();

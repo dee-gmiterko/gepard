@@ -45,14 +45,14 @@ export function SegmentedControl<T extends string>({
   options: readonly { value: T; label: ReactNode }[];
   onChange: (value: T) => void;
 }): React.JSX.Element {
-  const name = useId();
+  const nameId = useId();
   return (
     <Group aria-label={label}>
       {options.map((option) => (
         <Option key={option.value} $active={value === option.value}>
           <Radio
             type="radio"
-            name={name}
+            name={nameId}
             value={option.value}
             checked={value === option.value}
             onChange={() => onChange(option.value)}

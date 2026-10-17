@@ -23,7 +23,7 @@ function StateProvider({
   children: ReactNode;
 }): React.JSX.Element {
   const [handle] = useState(() => createUiStore(startupState(opened)));
-  return <UiStoreContext.Provider value={handle}>{children}</UiStoreContext.Provider>;
+  return <UiStoreContext value={handle}>{children}</UiStoreContext>;
 }
 
 export function UiProvider({ children }: { children: ReactNode }): React.JSX.Element | null {

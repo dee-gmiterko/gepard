@@ -92,7 +92,7 @@ export function Tree<T>({
 }: TreeProps<T>): React.JSX.Element {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   const [focusedPath, setFocusedPath] = useState<string | null>(null);
-  const pendingFocus = useRef<string | null>(null);
+  const pendingFocusRef = useRef<string | null>(null);
 
   const rows = useMemo(() => flattenVisible(nodes, collapsed), [nodes, collapsed]);
 
@@ -122,7 +122,7 @@ export function Tree<T>({
   function moveTo(index: number): void {
     const target = rows.at(index);
     if (!target) return;
-    pendingFocus.current = target.node.path;
+    pendingFocusRef.current = target.node.path;
     setFocusedPath(target.node.path);
   }
 
@@ -180,8 +180,8 @@ export function Tree<T>({
       onFocus: () => setFocusedPath(node.path),
       onKeyDown: onRowKeyDown(index),
       ref: (el: HTMLDivElement | null) => {
-        if (el && pendingFocus.current === node.path) {
-          pendingFocus.current = null;
+        if (el && pendingFocusRef.current === node.path) {
+          pendingFocusRef.current = null;
           el.focus();
         }
       },
