@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import styled from 'styled-components';
-import { Command, Globe, Package, Droplet, X } from 'react-feather';
+import { Command, Package, Droplet, X } from 'react-feather';
 import { defineMessages, FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl';
 import { activeToggleBackground, focusVisible } from '../../components/controlStyles';
 import { IconButton } from '../../components/IconButton';
 import { SectionHeading } from '../../components/SectionHeading';
-import { ThemePanel } from './ThemePanel';
-import { LocalePanel } from './LocalePanel';
+import { GeneralPanel } from './GeneralPanel';
 import { KeybindingsPanel } from './KeybindingsPanel';
 import { ExtensionsPanel } from './ExtensionsPanel';
 
@@ -23,13 +22,9 @@ const messages = defineMessages({
     id: 'settings.tablist',
     defaultMessage: 'Settings sections',
   },
-  tabTheme: {
-    id: 'settings.tabs.theme',
-    defaultMessage: 'Theme',
-  },
-  tabLanguage: {
-    id: 'settings.tabs.language',
-    defaultMessage: 'Language',
+  tabGeneral: {
+    id: 'settings.tabs.general',
+    defaultMessage: 'General',
   },
   tabControls: {
     id: 'settings.tabs.controls',
@@ -41,7 +36,7 @@ const messages = defineMessages({
   },
 });
 
-type SettingsTab = 'theme' | 'language' | 'controls' | 'extensions';
+type SettingsTab = 'general' | 'controls' | 'extensions';
 
 const TABS: {
   id: SettingsTab;
@@ -49,8 +44,7 @@ const TABS: {
   icon: typeof X;
   screen: () => React.JSX.Element;
 }[] = [
-  { id: 'theme', label: messages.tabTheme, icon: Droplet, screen: ThemePanel },
-  { id: 'language', label: messages.tabLanguage, icon: Globe, screen: LocalePanel },
+  { id: 'general', label: messages.tabGeneral, icon: Droplet, screen: GeneralPanel },
   { id: 'controls', label: messages.tabControls, icon: Command, screen: KeybindingsPanel },
   { id: 'extensions', label: messages.tabExtensions, icon: Package, screen: ExtensionsPanel },
 ];
@@ -174,7 +168,7 @@ export function SettingsOverlay({ onClose }: SettingsOverlayProps): React.JSX.El
     onCloseRef.current = onClose;
   }, [onClose]);
 
-  const [activeTab, setActiveTab] = useState<SettingsTab>('theme');
+  const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const tabRefs = useRef<Partial<Record<SettingsTab, HTMLButtonElement | null>>>({});
 
   function handleTabKeyDown(event: KeyboardEvent<HTMLDivElement>): void {

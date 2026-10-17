@@ -31,6 +31,9 @@ import {
 
 const FALLBACK_KIND: ExtensionKind = 'lsp';
 
+// The app needs at least one of each of these to render and translate.
+const REQUIRED_KINDS: readonly ExtensionKind[] = ['theme', 'locale'];
+
 function describePackage(pkg: ScannedPackage): ExtensionInfo {
   switch (pkg.status) {
     case 'loaded':
@@ -91,6 +94,20 @@ export class ExtensionsService {
   }
 
   async setEnabled(id: string, enabled: boolean): Promise<ExtensionInfo[]> {
+    if (!enabled) {
+      const current = await this.list();
+      const target = current.find((ext) => ext.id === id);
+      if (
+        target?.enabled &&
+        REQUIRED_KINDS.includes(target.kind) &&
+        !current.some((ext) => ext.id !== id && ext.kind === target.kind && ext.enabled)
+      ) {
+        throw new AppError(
+          'FORBIDDEN',
+          `The last enabled ${target.kind} extension cannot be disabled`,
+        );
+      }
+    }
     await this.settings.setEnabled(id, enabled);
     return this.list();
   }

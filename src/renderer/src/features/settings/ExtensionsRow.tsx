@@ -39,10 +39,12 @@ const RowError = styled.div`
 export function ExtensionsRow({
   ext,
   disabled,
+  isLastOfKind,
   onToggle,
 }: {
   ext: ExtensionInfo;
   disabled: boolean;
+  isLastOfKind: boolean;
   onToggle: (enabled: boolean) => void;
 }): React.JSX.Element {
   const intl = useIntl();
@@ -72,7 +74,7 @@ export function ExtensionsRow({
       </Stack>
       <Checkbox
         checked={ext.enabled}
-        disabled={Boolean(ext.error) || disabled}
+        disabled={Boolean(ext.error) || disabled || (isLastOfKind && ext.enabled)}
         ariaLabel={intl.formatMessage(messages.enableExtension, {
           name: ext.displayName,
         })}

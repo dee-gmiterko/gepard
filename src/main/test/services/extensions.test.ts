@@ -169,6 +169,24 @@ describe('ExtensionsService', () => {
     expect((await settingsStore.getEnabledMap())['builtin-dark']).toBe(false);
   });
 
+  it('refuses to disable the last enabled theme or locale but allows the others', async () => {
+    const registry = await setup();
+    await registry.setEnabled('builtin-dark', false);
+
+    await expect(registry.setEnabled('builtin-light', false)).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(registry.setEnabled('builtin-en', false)).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    expect((await settingsStore.getEnabledMap())['builtin-light']).toBeUndefined();
+    expect((await settingsStore.getEnabledMap())['builtin-en']).toBeUndefined();
+
+    await expect(registry.setEnabled('builtin-lang', false)).resolves.toBeDefined();
+    await expect(registry.setEnabled('builtin-dark', true)).resolves.toBeDefined();
+    await expect(registry.setEnabled('builtin-light', false)).resolves.toBeDefined();
+  });
+
   it('picks up an external package of either kind dropped into the extensions directory', async () => {
     const registry = await setup();
     await writePackage(extRoot, 'demo', DEMO_LANG_BODY);
