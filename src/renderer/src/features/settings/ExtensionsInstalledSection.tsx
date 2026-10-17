@@ -1,6 +1,7 @@
 import styled from 'styled-components';
 import { Plus } from 'react-feather';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import type { ExtensionKind } from '@gepard/common';
 import { Button } from '../../components/Button';
 import { Caption } from '../../components/Caption';
 import { List, ListRow } from '../../components/List';
@@ -45,6 +46,9 @@ const messages = defineMessages({
     defaultMessage: 'Add extension package',
   },
 });
+
+// Mirrors the main-process guard: the app needs one of each enabled.
+const REQUIRED_KINDS: readonly ExtensionKind[] = ['theme', 'locale'];
 
 const DirCaption = styled(Caption)`
   display: block;
@@ -111,6 +115,10 @@ export function ExtensionsInstalledSection(): React.JSX.Element {
               key={ext.id}
               ext={ext}
               disabled={setEnabled.isPending}
+              isLastOfKind={
+                REQUIRED_KINDS.includes(ext.kind) &&
+                !extensions?.some((o) => o.id !== ext.id && o.kind === ext.kind && o.enabled)
+              }
               onToggle={(enabled) => setEnabled.mutate({ id: ext.id, enabled })}
             />
           ))
