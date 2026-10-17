@@ -37,3 +37,9 @@ export const MenuMessage = styled.li`
   font-size: ${({ theme }) => theme.font.size.sm};
   color: ${({ theme }) => theme.colors.fgMuted};
 `;
+
+export const MenuSeparator = styled.li.attrs({ role: 'separator' })`
+  height: 1px;
+  margin: ${({ theme }) => theme.space[1]} 0;
+  background: ${({ theme }) => theme.colors.border};
+`;

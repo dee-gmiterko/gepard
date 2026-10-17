@@ -1,10 +1,10 @@
 import { EditorView } from '@codemirror/view';
 import type { Extension } from '@codemirror/state';
-import { reportQueryError } from '../errors/report';
-import { invoke } from '../ipc/client';
+import type { ContextMenuLineTarget } from '@gepard/common';
 
 export function lineContextMenu(
   path: string,
+  setLineTarget: (target: ContextMenuLineTarget) => void,
   fileLineOf: (docLine: number) => number | null = (docLine) => docLine,
 ): Extension {
   return EditorView.domEventHandlers({
@@ -13,9 +13,7 @@ export function lineContextMenu(
       if (pos === null) return false;
       const line = fileLineOf(view.state.doc.lineAt(pos).number);
       if (line === null) return false;
-      invoke('contextMenu.setLineTarget', { path, line }).catch((error: unknown) =>
-        reportQueryError('contextMenu.setLineTarget', error),
-      );
+      setLineTarget({ path, line });
       return false;
     },
   });

@@ -21,11 +21,10 @@ import { defineMessages, useIntl } from 'react-intl';
 import { useUiDispatch } from '../../../state/UiContext';
 import { useAcceptedFiles, useActiveFile, useLayout, useTargetPr } from '../../../state/hooks';
 import { invoke } from '../../../ipc/client';
-import { hostCapabilities } from '../../../ipc/host';
 import { reportQueryError } from '../../../errors/report';
 import { useSetLayout } from '../../../queries/projects';
 import { useViewed } from '../../../queries/comments';
-import { useCommands, useFileNavigation } from '../../../keyboard/useCommands';
+import { runFileViewPick, useCommands, useFileNavigation } from '../../../keyboard/useCommands';
 import { useIsCheckedOutChangedFile } from '../../../queries/review';
 import { IconButton } from '../../../components/IconButton';
 import { Inline, Stack } from '../../../components/Layout';
@@ -367,19 +366,21 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
 
   function openViewOptions(button: HTMLElement): void {
     const rect = button.getBoundingClientRect();
-    invoke('contextMenu.showFileView', {
+    const request = {
       x: rect.left,
       y: rect.bottom,
       wrapLongLines: layout.wrapLongLines,
       fullFileDiff: layout.fullFileDiff,
       randomizeOrder: layout.randomizeOrder,
       incrementalDiff: layout.incrementalDiff,
-    })
+    };
+    if (window.gepard.host === 'browser') {
+      dispatch({ type: 'contextMenu/open', menu: { kind: 'fileView', ...request } });
+      return;
+    }
+    invoke('contextMenu.showFileView', request)
       .then((pick) => {
-        if (pick === 'wrapLongLines') commands.toggleWrapLines();
-        if (pick === 'fullFile') commands.toggleFullFileDiff();
-        if (pick === 'randomizeOrder') commands.toggleRandomizeOrder();
-        if (pick === 'incrementalDiff') commands.toggleIncrementalDiff();
+        if (pick) runFileViewPick(commands, pick);
       })
       .catch((error: unknown) => reportQueryError('contextMenu.showFileView', error));
   }
@@ -414,15 +415,13 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
               {intl.formatMessage(messages.viewed)}
             </ViewedLabel>
           )}
-          {hostCapabilities().contextMenu && (
-            <MenuToggle
-              icon={MoreHorizontal}
-              size={14}
-              label={intl.formatMessage(messages.viewOptions)}
-              aria-haspopup="menu"
-              onClick={(e) => openViewOptions(e.currentTarget)}
-            />
-          )}
+          <MenuToggle
+            icon={MoreHorizontal}
+            size={14}
+            label={intl.formatMessage(messages.viewOptions)}
+            aria-haspopup="menu"
+            onClick={(e) => openViewOptions(e.currentTarget)}
+          />
           <IconButton
             icon={Sidebar}
             size={14}

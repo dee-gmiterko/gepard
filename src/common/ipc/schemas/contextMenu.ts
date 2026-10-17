@@ -43,3 +43,35 @@ export const FileViewMenuPick = z.enum([
   'incrementalDiff',
 ]);
 export type FileViewMenuPick = z.infer<typeof FileViewMenuPick>;
+
+export const FILE_VIEW_MENU_STATE = {
+  wrapLongLines: 'wrapLongLines',
+  fullFile: 'fullFileDiff',
+  randomizeOrder: 'randomizeOrder',
+  incrementalDiff: 'incrementalDiff',
+} as const satisfies Record<FileViewMenuPick, keyof FileViewMenuRequest>;
+
+export const TextMenuCommand = ContextMenuLabelKey.extract([
+  'undo',
+  'redo',
+  'cut',
+  'copy',
+  'paste',
+  'selectAll',
+]);
+export type TextMenuCommand = z.infer<typeof TextMenuCommand>;
+
+export const TextMenuRequest = z.object({
+  x: z.number(),
+  y: z.number(),
+  editable: z.boolean(),
+  hasSelection: z.boolean(),
+  target: ContextMenuLineTarget.nullable(),
+});
+export type TextMenuRequest = z.infer<typeof TextMenuRequest>;
+
+export const ContextMenuRequest = z.discriminatedUnion('kind', [
+  TextMenuRequest.extend({ kind: z.literal('text') }),
+  FileViewMenuRequest.extend({ kind: z.literal('fileView') }),
+]);
+export type ContextMenuRequest = z.infer<typeof ContextMenuRequest>;

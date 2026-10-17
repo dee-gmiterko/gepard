@@ -19,9 +19,13 @@ export interface Rendered extends RenderResult {
 export function renderWithProviders(
   ui: ReactElement,
   handlers: Handlers,
-  { strict = false, ipc = createFakeIpc(handlers) }: { strict?: boolean; ipc?: FakeIpc } = {},
+  {
+    strict = false,
+    ipc = createFakeIpc(handlers),
+    host = 'desktop',
+  }: { strict?: boolean; ipc?: FakeIpc; host?: 'desktop' | 'browser' } = {},
 ): Rendered {
-  window.gepard = { host: 'desktop', ipc: ipc.bridge };
+  window.gepard = { host, ipc: ipc.bridge };
   const queryClient = createQueryClient();
   const user = userEvent.setup();
   const tree = (

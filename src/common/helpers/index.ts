@@ -3,6 +3,7 @@ export * from './comment';
 export * from './error';
 export * from './extension';
 export * from './fork';
+export * from './lineReference';
 export * from './path';
 export * from './release';
 export * from './repoUrl';

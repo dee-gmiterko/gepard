@@ -10,6 +10,7 @@ import { SidePanel } from './features/sidePanel/SidePanel';
 import { Content } from './features/content/Content';
 import { SettingsOverlay } from './features/settings/SettingsOverlay';
 import { QuickSearch } from './features/quickSearch/QuickSearch';
+import { ContextMenu } from './features/contextMenu/ContextMenu';
 
 const Shell = styled.div`
   display: grid;
@@ -39,6 +40,7 @@ function App(): React.JSX.Element {
       <>
         <Launchpad />
         {settingsOpen && <SettingsOverlay onClose={closeSettings} />}
+        {window.gepard.host === 'browser' && <ContextMenu />}
       </>
     );
   }
@@ -52,6 +54,7 @@ function App(): React.JSX.Element {
       </Body>
       <QuickSearch />
       {settingsOpen && <SettingsOverlay onClose={closeSettings} />}
+      {window.gepard.host === 'browser' && <ContextMenu />}
     </Shell>
   );
 }

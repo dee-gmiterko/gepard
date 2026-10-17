@@ -15,6 +15,7 @@ import { commentAffordanceGutter } from '../../../../codeEditor/commentAffordanc
 import { commentBlockDecorations } from '../../../../codeEditor/commentBlocks';
 import { CommentPortals } from '../../../../codeEditor/CommentPortals';
 import { diffGutters, diffLineDecorations } from '../../../../codeEditor/diff';
+import { useSetLineTarget } from '../../../../hooks/useSetLineTarget';
 import { lineContextMenu } from '../../../../codeEditor/lineContextMenu';
 import { pipelineGutter } from '../../../../codeEditor/pipeline';
 import { useReadOnlyEditor } from '../../../../codeEditor/readOnlyEditor';
@@ -55,6 +56,7 @@ export function DiffCodeViewer({
     [infos, newSideIsHead],
   );
   const goto = useGotoDefinition(path, symbolPortals, gotoLine);
+  const setLineTarget = useSetLineTarget();
   const wrapLongLines = layout.wrapLongLines;
   const extensions = useMemo(() => {
     const fileLineOf = (docLine: number): number | null => newLineOfDocLine(infos, docLine);
@@ -63,10 +65,10 @@ export function DiffCodeViewer({
       diffLineDecorations(doc, infos),
       symbolTooltip(symbolPortals, newSideIsHead ? fileLineOf : () => null),
       goto,
-      lineContextMenu(path, fileLineOf),
+      lineContextMenu(path, setLineTarget, fileLineOf),
       wrapLongLines ? EditorView.lineWrapping : [],
     ];
-  }, [doc, infos, symbolPortals, goto, newSideIsHead, path, wrapLongLines]);
+  }, [doc, infos, symbolPortals, goto, newSideIsHead, path, setLineTarget, wrapLongLines]);
   const { containerRef, view, comments, commentGutter } = useReadOnlyEditor(path, doc, extensions);
   const [draft, setDraft] = useState<{ docLine: number; side: DiffSide } | null>(null);
   const portals = useMemo(() => new CommentPortals(), []);
