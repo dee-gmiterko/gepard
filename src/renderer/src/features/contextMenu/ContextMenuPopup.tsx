@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { Check } from 'react-feather';
 import type { ContextMenuRequest } from '@gepard/common';
@@ -6,12 +6,16 @@ import { useUiDispatch } from '../../state/UiContext';
 import { useContextMenuLabel } from '../../hooks/useContextMenuLabels';
 import { useOutsideClick } from '../../hooks/useOutsideClick';
 import { contextMenuEntries } from '../../helpers/contextMenu';
+import { clampToViewport } from '../../helpers/viewport';
 import { Menu, MenuItem, MenuSeparator } from '../../components/Menu';
 import { useRunContextMenuEntry } from './useRunContextMenuEntry';
+
+const EDGE_PADDING = 4;
 
 const Panel = styled(Menu)`
   position: fixed;
   right: auto;
+  width: max-content;
   min-width: 160px;
 `;
 
@@ -36,8 +40,22 @@ export function ContextMenuPopup({ menu }: { menu: ContextMenuRequest }): React.
   const label = useContextMenuLabel();
   const run = useRunContextMenuEntry(menu);
   const panelRef = useRef<HTMLUListElement>(null);
+  const [position, setPosition] = useState({ x: menu.x, y: menu.y });
   const close = (): void => dispatch({ type: 'contextMenu/close' });
   useOutsideClick(panelRef, close);
+
+  useLayoutEffect(() => {
+    const rect = panelRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setPosition(
+      clampToViewport(
+        { x: menu.x, y: menu.y },
+        rect,
+        { width: window.innerWidth, height: window.innerHeight },
+        EDGE_PADDING,
+      ),
+    );
+  }, [menu.x, menu.y]);
 
   // The menu never takes focus, so Escape is only seen on the window.
   useEffect(() => {
@@ -52,7 +70,7 @@ export function ContextMenuPopup({ menu }: { menu: ContextMenuRequest }): React.
     <Panel
       ref={panelRef}
       role="menu"
-      style={{ left: menu.x, top: menu.y }}
+      style={{ left: position.x, top: position.y }}
       onMouseDown={(e) => e.preventDefault()}
       onContextMenu={(e) => e.preventDefault()}
     >

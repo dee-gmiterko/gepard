@@ -111,3 +111,17 @@ describe('ContextMenu', () => {
     expect(await screen.findByText('wrapped')).toBeInTheDocument();
   });
 });
+
+describe('ContextMenu placement', () => {
+  it('shifts back inside the viewport using the measured panel size', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 500, configurable: true });
+    Object.defineProperty(window, 'innerHeight', { value: 400, configurable: true });
+    const measure = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue({ width: 160, height: 120 } as DOMRect);
+    renderMenu();
+    fireEvent.contextMenu(await screen.findByLabelText('Notes'), { clientX: 480, clientY: 390 });
+    expect(screen.getByRole('menu')).toHaveStyle({ left: '336px', top: '276px' });
+    measure.mockRestore();
+  });
+});
