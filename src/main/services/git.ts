@@ -248,7 +248,14 @@ export class GitService {
   }
 
   private async checkoutDetached(repoRoot: string, ref: string): Promise<void> {
-    await this.git.run(repoRoot, ['-c', 'advice.detachedHead=false', 'checkout', '--detach', ref]);
+    await this.git.run(repoRoot, [
+      '-c',
+      'advice.detachedHead=false',
+      'checkout',
+      '--force',
+      '--detach',
+      ref,
+    ]);
   }
 
   private async parentOrEmptyTree(repoRoot: string, sha: string): Promise<string> {
