@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.1.0](https://github.com/dee-gmiterko/gepard/compare/gepard-locale-en-v1.0.0...gepard-locale-en-v1.1.0) (2026-10-21)
+
+
+### Features
+
+* add a refresh button with a pending sync count to the header ([362dae8](https://github.com/dee-gmiterko/gepard/commit/362dae8c65e4dfffe807d8ca31ea4cd58997f129))
+* cap panel widths by available space and declare the responsive viewport ([b14c408](https://github.com/dee-gmiterko/gepard/commit/b14c408df85da6477cb95d7abb748a3e9172da76))
+* redesign settings overlay with a tab list and two-column extensions ([1b279d3](https://github.com/dee-gmiterko/gepard/commit/1b279d3393e1b38cf08309a5307840a505086e11))
+* run as a server that serves the ui and bridges ipc over a websocket ([6ad207c](https://github.com/dee-gmiterko/gepard/commit/6ad207cd4b7bf0374e61491b0ccb544097cf3523))
+* show size details for binary files and binary diffs ([9486595](https://github.com/dee-gmiterko/gepard/commit/9486595b1f6b07acea5b8331a6c3bc9027c9a2e1))
+* show theme and language on one settings tab and keep the last of each enabled ([84b46bb](https://github.com/dee-gmiterko/gepard/commit/84b46bb66f7cab9eb45ba36279324f562046994f))
+* step through find matches with buttons and arrow keys ([2f9af8b](https://github.com/dee-gmiterko/gepard/commit/2f9af8b77f5fbbfce79ebe621375b1d93ebd901f))
+
+
+### Bug Fixes
+
+* cap the header refresh badge at 99+ ([2a19608](https://github.com/dee-gmiterko/gepard/commit/2a19608034f15cf62b1d6e17f595af36cca69d5c))
+* make comment submit and find stepping keybinding actions and keep comment drafts ([b524c59](https://github.com/dee-gmiterko/gepard/commit/b524c5972434158123932ad098d284a2430c0626))
+* skip markdown files in every prettier run ([1d486a3](https://github.com/dee-gmiterko/gepard/commit/1d486a36524d7f4d61bac6175867f6cf0bf088eb))
+
 ## 1.0.0 (2026-10-16)
 
 
