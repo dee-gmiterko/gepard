@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { ThemeProvider as StyledThemeProvider, createGlobalStyle } from 'styled-components';
 import type { SystemPreference } from '@gepard/common';
 import { useSystemPreference } from '../queries/systemPreference';
-import { HIGH_CONTRAST_QUERIES, mediaContrast, watchMedia } from './media';
+import { HIGH_CONTRAST_QUERIES } from './media';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useThemeTemplateId, useThemes } from '../queries/theme';
 import { buildTheme } from './tokens';
 import { resolveTemplate } from '../helpers/theme';
@@ -43,10 +44,8 @@ const GlobalStyle = createGlobalStyle`
 
 export function AppThemeProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const systemPreference = useSystemPreference();
-  const [contrast, setContrast] = useState(mediaContrast);
-
   // Chromium reports the OS contrast setting on Windows and macOS; main covers Linux.
-  useEffect(() => watchMedia(HIGH_CONTRAST_QUERIES, () => setContrast(mediaContrast())), []);
+  const highContrast = useMediaQuery(HIGH_CONTRAST_QUERIES.join(', '));
 
   useEffect(() => {
     document.documentElement.dataset.motion = systemPreference.reducedMotion ? 'reduced' : 'normal';
@@ -58,10 +57,10 @@ export function AppThemeProvider({ children }: { children: ReactNode }): React.J
   const theme = useMemo(() => {
     const resolved: SystemPreference = {
       ...systemPreference,
-      contrast: systemPreference.contrast === 'high' || contrast === 'high' ? 'high' : 'normal',
+      contrast: systemPreference.contrast === 'high' || highContrast ? 'high' : 'normal',
     };
     return buildTheme(resolveTemplate(resolvedTemplateId, resolved, templates ?? []));
-  }, [resolvedTemplateId, systemPreference, contrast, templates]);
+  }, [resolvedTemplateId, systemPreference, highContrast, templates]);
 
   return (
     <StyledThemeProvider theme={theme}>

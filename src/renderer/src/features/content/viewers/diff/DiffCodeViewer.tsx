@@ -23,7 +23,8 @@ import { revealDocLine } from '../../../../codeEditor/reveal';
 import { symbolTooltip } from '../../../../codeEditor/symbols';
 import { diffViewCommentEntries } from '../../../../helpers/comment';
 import { buildDiffDoc, findDiffDocLine, newLineOfDocLine } from '../../../../helpers/diff';
-import { EditorHost } from '../../../../components/EditorHost';
+import { EditorHost, NARROW_EDITOR_QUERY } from '../../../../components/EditorHost';
+import { useMediaQuery } from '../../../../hooks/useMediaQuery';
 import { CommentPortalHost } from '../CommentPortalHost';
 import { useGotoDefinition, useOpenLocation, useSymbolPortals } from '../useSymbolNavigation';
 import { useViewerAnnotations } from '../useViewerAnnotations';
@@ -58,17 +59,18 @@ export function DiffCodeViewer({
   const goto = useGotoDefinition(path, symbolPortals, gotoLine);
   const setLineTarget = useSetLineTarget();
   const wrapLongLines = layout.wrapLongLines;
+  const narrow = useMediaQuery(NARROW_EDITOR_QUERY);
   const extensions = useMemo(() => {
     const fileLineOf = (docLine: number): number | null => newLineOfDocLine(infos, docLine);
     return [
-      ...diffGutters(infos),
+      ...(narrow ? [] : diffGutters(infos)),
       diffLineDecorations(doc, infos),
       symbolTooltip(symbolPortals, newSideIsHead ? fileLineOf : () => null),
       goto,
       lineContextMenu(path, setLineTarget, fileLineOf),
       wrapLongLines ? EditorView.lineWrapping : [],
     ];
-  }, [doc, infos, symbolPortals, goto, newSideIsHead, path, setLineTarget, wrapLongLines]);
+  }, [narrow, doc, infos, symbolPortals, goto, newSideIsHead, path, setLineTarget, wrapLongLines]);
   const { containerRef, view, comments, commentGutter } = useReadOnlyEditor(path, doc, extensions);
   const [draft, setDraft] = useState<{ docLine: number; side: DiffSide } | null>(null);
   const portals = useMemo(() => new CommentPortals(), []);
