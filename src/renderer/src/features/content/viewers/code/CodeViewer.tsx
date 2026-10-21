@@ -19,7 +19,8 @@ import { revealDocLine } from '../../../../codeEditor/reveal';
 import { symbolTooltip } from '../../../../codeEditor/symbols';
 import { codeViewCommentEntries } from '../../../../helpers/comment';
 import { deletedLineDocLines, fullFileDiffMarks } from '../../../../helpers/diff';
-import { EditorHost } from '../../../../components/EditorHost';
+import { EditorHost, NARROW_EDITOR_QUERY } from '../../../../components/EditorHost';
+import { useMediaQuery } from '../../../../hooks/useMediaQuery';
 import { Message } from '../../../../components/Message';
 import { CommentPortalHost } from '../CommentPortalHost';
 import { useGotoDefinition, useOpenLocation, useSymbolPortals } from '../useSymbolNavigation';
@@ -84,19 +85,20 @@ function CodeText({
   const annotations = useViewerAnnotations(path);
   const symbolPortals = useSymbolPortals(head, path);
   const wrapLongLines = layout.wrapLongLines;
+  const narrow = useMediaQuery(NARROW_EDITOR_QUERY);
   const goto = useGotoDefinition(path, symbolPortals);
   const setLineTarget = useSetLineTarget();
   const diffCompartment = useMemo(() => new Compartment(), []);
   const extensions = useMemo(
     () => [
-      lineNumbers(),
+      narrow ? [] : lineNumbers(),
       symbolTooltip(symbolPortals),
       goto,
       lineContextMenu(path, setLineTarget),
       wrapLongLines ? EditorView.lineWrapping : [],
       diffCompartment.of([]),
     ],
-    [symbolPortals, goto, path, setLineTarget, wrapLongLines, diffCompartment],
+    [narrow, symbolPortals, goto, path, setLineTarget, wrapLongLines, diffCompartment],
   );
   const { containerRef, view, comments, commentGutter } = useReadOnlyEditor(path, text, extensions);
   const [draft, setDraft] = useState<number | null>(null);
