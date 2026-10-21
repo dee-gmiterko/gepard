@@ -21,6 +21,7 @@ You are committing code changes following the project's git conventions.
 
 0. Read recent git log to understand established commit message patterns (note the format observed)
 1. Run `git status` to see all changed files
+   Steps 0 and 1 run as separate commands and their output must be seen before step 2.
 2. Group changes into logical commits
    (e.g. retailer config changes are one, one logical feature and its caused dependencies are one group)
 3. For each group: `git add` the relevant files, `git commit` with a conventional message
