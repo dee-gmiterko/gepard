@@ -1,5 +1,60 @@
 # Changelog
 
+## [0.1.3](https://github.com/dee-gmiterko/gepard/compare/v0.1.2...v0.1.3) (2026-10-21)
+
+
+### Features
+
+* add a randomize order toggle for stepping through files ([e95c1f8](https://github.com/dee-gmiterko/gepard/commit/e95c1f8e0031a8ee11d552b56c3792351baf3db6))
+* add a refresh button with a pending sync count to the header ([362dae8](https://github.com/dee-gmiterko/gepard/commit/362dae8c65e4dfffe807d8ca31ea4cd58997f129))
+* add high contrast theme variants that follow the system preference ([47c3cb8](https://github.com/dee-gmiterko/gepard/commit/47c3cb8706f59eeb341e3aabbad66cc2d682c199))
+* cap panel widths by available space and declare the responsive viewport ([b14c408](https://github.com/dee-gmiterko/gepard/commit/b14c408df85da6477cb95d7abb748a3e9172da76))
+* detect connection failures and show an offline indicator ([792c95b](https://github.com/dee-gmiterko/gepard/commit/792c95b762c627a252b61cdd105752a687747871))
+* hide editor line numbers at wider widths ([45c0066](https://github.com/dee-gmiterko/gepard/commit/45c0066b9e64e056f53e5974a98c0b9d2e63db51))
+* let the left sidebar close by clicking its active tab ([9215465](https://github.com/dee-gmiterko/gepard/commit/921546575940fbcc818bcb12196fa2a44f4c1e5a))
+* let the merged test script include or exclude specific pull requests ([507068f](https://github.com/dee-gmiterko/gepard/commit/507068ff6a47b718a63542e7758c4a4f52ce5d37))
+* link the overview file types to their extension paths ([ace6606](https://github.com/dee-gmiterko/gepard/commit/ace66069c9315aa5ed498f7ed5bc7b94b167f005))
+* load the pull request overview progressively with skeleton placeholders ([114c2f9](https://github.com/dee-gmiterko/gepard/commit/114c2f9294c5e063d02f5113a215d276f49a6710))
+* make content responsive to container size instead of fixed widths ([a05cc06](https://github.com/dee-gmiterko/gepard/commit/a05cc0608270146f00baafe5d87066419a2da179))
+* navigate to definitions and imported files with ctrl click in code views ([92cdcfd](https://github.com/dee-gmiterko/gepard/commit/92cdcfdd35b85e52165c08f2bdee3ab0391f10ad))
+* pack extensions with npm, bundle them from releases and generate the catalog ([9b370e3](https://github.com/dee-gmiterko/gepard/commit/9b370e31a6252723771d1034d11ae6c405735465))
+* redesign settings overlay with a tab list and two-column extensions ([1b279d3](https://github.com/dee-gmiterko/gepard/commit/1b279d3393e1b38cf08309a5307840a505086e11))
+* release language server extensions separately and install them from a catalog ([4d85574](https://github.com/dee-gmiterko/gepard/commit/4d855747cfc1be51764cba5be0fe6b16ca35d599))
+* render context menus in the page for the browser host ([ea04139](https://github.com/dee-gmiterko/gepard/commit/ea04139ec9a7952a5fc011b8a8cfe3d3a19046e2))
+* report imports as imports and resolve import paths in the backend ([5065f28](https://github.com/dee-gmiterko/gepard/commit/5065f2818b11f2a78d6eef0eacf948f8e9adcbc8))
+* run as a server that serves the ui and bridges ipc over a websocket ([6ad207c](https://github.com/dee-gmiterko/gepard/commit/6ad207cd4b7bf0374e61491b0ccb544097cf3523))
+* show moved binary and image files without a diff and merge the binary components ([d3c1114](https://github.com/dee-gmiterko/gepard/commit/d3c1114bf690131b9bc4baec7287bd238ae9f094))
+* show pipeline failure annotations per file and attach them to line comments ([50e26d0](https://github.com/dee-gmiterko/gepard/commit/50e26d0391adb4bdae628f26dcd3568e853221c6))
+* show size details for binary files and binary diffs ([9486595](https://github.com/dee-gmiterko/gepard/commit/9486595b1f6b07acea5b8331a6c3bc9027c9a2e1))
+* show the diff since the last reviewed commit of a file ([a1aed04](https://github.com/dee-gmiterko/gepard/commit/a1aed04111c91330b66309b54587cc3d08c04647))
+* show theme and language on one settings tab and keep the last of each enabled ([84b46bb](https://github.com/dee-gmiterko/gepard/commit/84b46bb66f7cab9eb45ba36279324f562046994f))
+* size overlays from their container and keep popups above panels ([245a0e5](https://github.com/dee-gmiterko/gepard/commit/245a0e5802a2de32061ebfc0f4db0e4bdab85f73))
+* step through find matches with buttons and arrow keys ([2f9af8b](https://github.com/dee-gmiterko/gepard/commit/2f9af8b77f5fbbfce79ebe621375b1d93ebd901f))
+* widen the panel resize handle for touch input ([6cb1f0c](https://github.com/dee-gmiterko/gepard/commit/6cb1f0c3a4cc785c1ec16d895d9c5f7df16aa077))
+
+
+### Bug Fixes
+
+* cache the validate task ([a8f8ca4](https://github.com/dee-gmiterko/gepard/commit/a8f8ca4f541ef9b7c405d3c97d4d1e87e973e61e))
+* cap the header refresh badge at 99+ ([2a19608](https://github.com/dee-gmiterko/gepard/commit/2a19608034f15cf62b1d6e17f595af36cca69d5c))
+* follow the system reduced motion preference and trim narrating comments ([9234d3e](https://github.com/dee-gmiterko/gepard/commit/9234d3e5475f97498fbb220404a7b7fa6bffe8db))
+* force git checkout replacing any accidental files ([5a63920](https://github.com/dee-gmiterko/gepard/commit/5a63920673298180db517452e0f4ec21b7e508f1))
+* give each extensions message its own id and correct the extension docs ([d7b2757](https://github.com/dee-gmiterko/gepard/commit/d7b27574a4ead38e6f07233a4ff09672d367a3f7))
+* keep selections visible, honor configured keys and move diff doc building to helpers ([875284f](https://github.com/dee-gmiterko/gepard/commit/875284fe2f8fcc1868b9e75655e46e20f9fbc7ed))
+* keep the code editor mounted when a file is marked viewed ([4ca64aa](https://github.com/dee-gmiterko/gepard/commit/4ca64aac1e6e67d363ac3525b6dd0e879340ac43))
+* keep the floating file controls inside the viewer when it resizes ([861e89e](https://github.com/dee-gmiterko/gepard/commit/861e89e89b041448adbabb84a57676a9adfcaaf0))
+* load commit annotations through the gh client ([8e64e96](https://github.com/dee-gmiterko/gepard/commit/8e64e9652ee168b981079c3e4827bbf071b6669e))
+* make comment submit and find stepping keybinding actions and keep comment drafts ([b524c59](https://github.com/dee-gmiterko/gepard/commit/b524c5972434158123932ad098d284a2430c0626))
+* make mark all viewed the primary action and include the current file ([960a1c0](https://github.com/dee-gmiterko/gepard/commit/960a1c03e744ab2ca91f293bcb23ebc25be5fb88))
+* post comments on unchanged files as general comments with a file reference ([cd7dac1](https://github.com/dee-gmiterko/gepard/commit/cd7dac11402f9be2fac36708c741e9cf7c79c01b))
+* show connection failures as a minimal deduplicated warning toast ([9969e6a](https://github.com/dee-gmiterko/gepard/commit/9969e6ad7bb99541302bae36f5c1f21176c575f0))
+* shrink the header sync badge font ([bb4a81e](https://github.com/dee-gmiterko/gepard/commit/bb4a81e19c97ce548402087348d1b4ed78e3b56b))
+* skip markdown files in every prettier run ([1d486a3](https://github.com/dee-gmiterko/gepard/commit/1d486a36524d7f4d61bac6175867f6cf0bf088eb))
+* start a review from the random sequence when random order is on ([9d1f57d](https://github.com/dee-gmiterko/gepard/commit/9d1f57dce8866b02b2bb07134bf8767f8a2f2bd3))
+* step through find matches with keybinding actions and keep the function key shortcuts ([306762c](https://github.com/dee-gmiterko/gepard/commit/306762c041b001291933604ecfa77b980beb468c))
+* stop seeding extensions in the release manifest so they get a first release ([3272948](https://github.com/dee-gmiterko/gepard/commit/3272948e68cdc1f384392e49db3398a471b8c930))
+* submit comments with ctrl enter ([1d381ef](https://github.com/dee-gmiterko/gepard/commit/1d381ef7bd153190b9febce1e72424698aa6b506))
+
 ## [0.1.2](https://github.com/dee-gmiterko/gepard/compare/v0.1.1...v0.1.2) (2026-10-09)
 
 Greater project variety support, performance improvements.
