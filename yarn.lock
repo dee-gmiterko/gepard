@@ -415,7 +415,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@codemirror/lang-markdown@npm:^6.0.0":
+"@codemirror/lang-markdown@npm:^6.0.0, @codemirror/lang-markdown@npm:^6.5.2":
   version: 6.5.2
   resolution: "@codemirror/lang-markdown@npm:6.5.2"
   dependencies:
@@ -1885,6 +1885,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@gepard/renderer@workspace:src/renderer"
   dependencies:
+    "@codemirror/lang-markdown": "npm:^6.5.2"
     "@codemirror/language": "npm:^6.12.4"
     "@codemirror/language-data": "npm:^6.5.2"
     "@codemirror/state": "npm:^6.7.6"
