@@ -8,6 +8,7 @@ import {
   highlightActiveLine,
   highlightActiveLineGutter,
 } from '@codemirror/view';
+import { highlightSelectionMatches } from '@codemirror/search';
 import { LanguageDescription, bracketMatching } from '@codemirror/language';
 import { reportError } from '../errors/report';
 import { useCommands } from '../keyboard/useCommands';
@@ -28,6 +29,7 @@ export function readOnlyExtensions(): Extension {
     highlightActiveLine(),
     highlightActiveLineGutter(),
     bracketMatching(),
+    highlightSelectionMatches({ highlightWordAroundCursor: true, minSelectionLength: 1 }),
     urlLinks(),
   ];
 }
