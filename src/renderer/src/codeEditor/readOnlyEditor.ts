@@ -16,6 +16,7 @@ import { useKeybindingOverrides } from '../queries/keybindings';
 import { activeEditor } from './activeEditor';
 import { allLanguageDescriptions } from './grammar';
 import { keymapBridge } from './keymapBridge';
+import { urlLinks } from './urlLinks';
 import { editorTheme } from './theme';
 
 export function readOnlyExtensions(): Extension {
@@ -27,6 +28,7 @@ export function readOnlyExtensions(): Extension {
     highlightActiveLine(),
     highlightActiveLineGutter(),
     bracketMatching(),
+    urlLinks(),
   ];
 }
 
