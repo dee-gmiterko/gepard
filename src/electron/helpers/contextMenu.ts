@@ -101,7 +101,7 @@ export function buildContextMenuTemplate(
 
 type FileViewMenuState = Pick<
   FileViewMenuRequest,
-  'wrapLongLines' | 'fullFileDiff' | 'randomizeOrder' | 'incrementalDiff'
+  'wrapLongLines' | 'fullFileDiff' | 'randomizeOrder' | 'incrementalDiff' | 'showCurrent'
 >;
 
 export function buildFileViewMenuTemplate(

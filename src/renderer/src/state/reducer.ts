@@ -49,6 +49,7 @@ export interface Layout {
   fullFileDiff: boolean;
   randomizeOrder: boolean;
   incrementalDiff: boolean;
+  showCurrent: boolean;
 }
 
 export const defaultLayout: Layout = {
@@ -62,6 +63,7 @@ export const defaultLayout: Layout = {
   fullFileDiff: false,
   randomizeOrder: false,
   incrementalDiff: false,
+  showCurrent: false,
 };
 
 export interface UiState {
@@ -130,6 +132,7 @@ export type UiAction =
   | { type: 'layout/setFullFileDiff'; full: boolean }
   | { type: 'layout/setRandomizeOrder'; randomize: boolean }
   | { type: 'layout/setIncrementalDiff'; incremental: boolean }
+  | { type: 'layout/setShowCurrent'; show: boolean }
   | { type: 'file/open'; path: string; line?: number | null; side?: DiffSide }
   | { type: 'file/focus'; path: string }
   | { type: 'file/pin'; path: string }
@@ -234,6 +237,8 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
       return withLayout(state, { ...state.layout, randomizeOrder: action.randomize });
     case 'layout/setIncrementalDiff':
       return withLayout(state, { ...state.layout, incrementalDiff: action.incremental });
+    case 'layout/setShowCurrent':
+      return withLayout(state, { ...state.layout, showCurrent: action.show });
     case 'file/open':
       return openFile(state, action.path, action.line, action.side);
     case 'file/focus':

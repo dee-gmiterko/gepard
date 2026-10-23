@@ -244,6 +244,15 @@ describe('layout', () => {
     ).toBe(false);
   });
 
+  it('toggles show current via layout/setShowCurrent and defaults to off', () => {
+    expect(initialUiState.layout.showCurrent).toBe(false);
+    const on = uiReducer(state(), { type: 'layout/setShowCurrent', show: true });
+    expect(on.layout.showCurrent).toBe(true);
+    expect(uiReducer(on, { type: 'layout/setShowCurrent', show: false }).layout.showCurrent).toBe(
+      false,
+    );
+  });
+
   it('toggles hiding viewed files via layout/setHideViewedFiles', () => {
     const hidden = uiReducer(state(), { type: 'layout/setHideViewedFiles', hide: true });
     expect(hidden.layout.hideViewedFiles).toBe(true);

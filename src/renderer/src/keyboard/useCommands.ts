@@ -44,6 +44,14 @@ const messages = defineMessages({
     id: 'keyboard.incrementalDiffOff',
     defaultMessage: 'Show incremental: off',
   },
+  showCurrentOn: {
+    id: 'keyboard.showCurrentOn',
+    defaultMessage: 'Show current: on',
+  },
+  showCurrentOff: {
+    id: 'keyboard.showCurrentOff',
+    defaultMessage: 'Show current: off',
+  },
 });
 
 type BooleanLayoutKey = {
@@ -63,6 +71,7 @@ export interface Commands {
   toggleFullFileDiff: () => boolean;
   toggleRandomizeOrder: () => boolean;
   toggleIncrementalDiff: () => boolean;
+  toggleShowCurrent: () => boolean;
   submitComment: () => boolean;
   findNext: () => boolean;
   findPrevious: () => boolean;
@@ -70,12 +79,17 @@ export interface Commands {
 
 const FILE_VIEW_COMMANDS: Record<
   FileViewMenuPick,
-  'toggleWrapLines' | 'toggleFullFileDiff' | 'toggleRandomizeOrder' | 'toggleIncrementalDiff'
+  | 'toggleWrapLines'
+  | 'toggleFullFileDiff'
+  | 'toggleRandomizeOrder'
+  | 'toggleIncrementalDiff'
+  | 'toggleShowCurrent'
 > = {
   wrapLongLines: 'toggleWrapLines',
   fullFile: 'toggleFullFileDiff',
   randomizeOrder: 'toggleRandomizeOrder',
   incrementalDiff: 'toggleIncrementalDiff',
+  showCurrent: 'toggleShowCurrent',
 };
 
 export function runFileViewPick(commands: Commands, pick: FileViewMenuPick): void {
@@ -152,6 +166,11 @@ export function useCommands(): Commands {
           (incremental) => ({ type: 'layout/setIncrementalDiff', incremental }),
           { on: messages.incrementalOn, off: messages.incrementalOff },
         ),
+      toggleShowCurrent: () =>
+        toggleLayout('showCurrent', (show) => ({ type: 'layout/setShowCurrent', show }), {
+          on: messages.showCurrentOn,
+          off: messages.showCurrentOff,
+        }),
       submitComment: () => runActionHandler('submitComment'),
       findNext: () => runActionHandler('findNext'),
       findPrevious: () => runActionHandler('findPrevious'),

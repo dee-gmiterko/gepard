@@ -14,6 +14,7 @@ export const ContextMenuLabelKey = z.enum([
   'fullFile',
   'randomizeOrder',
   'incrementalDiff',
+  'showCurrent',
 ]);
 export type ContextMenuLabelKey = z.infer<typeof ContextMenuLabelKey>;
 
@@ -33,6 +34,7 @@ export const FileViewMenuRequest = z.object({
   fullFileDiff: z.boolean(),
   randomizeOrder: z.boolean(),
   incrementalDiff: z.boolean(),
+  showCurrent: z.boolean(),
 });
 export type FileViewMenuRequest = z.infer<typeof FileViewMenuRequest>;
 
@@ -41,6 +43,7 @@ export const FileViewMenuPick = z.enum([
   'fullFile',
   'randomizeOrder',
   'incrementalDiff',
+  'showCurrent',
 ]);
 export type FileViewMenuPick = z.infer<typeof FileViewMenuPick>;
 
@@ -49,6 +52,7 @@ export const FILE_VIEW_MENU_STATE = {
   fullFile: 'fullFileDiff',
   randomizeOrder: 'randomizeOrder',
   incrementalDiff: 'incrementalDiff',
+  showCurrent: 'showCurrent',
 } as const satisfies Record<FileViewMenuPick, keyof FileViewMenuRequest>;
 
 export const TextMenuCommand = ContextMenuLabelKey.extract([
