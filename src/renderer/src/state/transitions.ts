@@ -27,7 +27,8 @@ export function withLayout(state: UiState, layout: Layout): UiState {
     prev.wrapLongLines === layout.wrapLongLines &&
     prev.fullFileDiff === layout.fullFileDiff &&
     prev.randomizeOrder === layout.randomizeOrder &&
-    prev.incrementalDiff === layout.incrementalDiff;
+    prev.incrementalDiff === layout.incrementalDiff &&
+    prev.showCurrent === layout.showCurrent;
   return same ? state : { ...state, layout };
 }
 

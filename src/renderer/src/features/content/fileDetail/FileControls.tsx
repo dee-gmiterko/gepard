@@ -367,6 +367,7 @@ export function FileControls({ docked = false }: { docked?: boolean }): React.JS
       fullFileDiff: layout.fullFileDiff,
       randomizeOrder: layout.randomizeOrder,
       incrementalDiff: layout.incrementalDiff,
+      showCurrent: layout.showCurrent,
     };
     if (window.gepard.host === 'browser') {
       dispatch({ type: 'contextMenu/open', menu: { kind: 'fileView', ...request } });

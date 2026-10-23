@@ -21,6 +21,7 @@ const messages = defineMessages({
   fullFile: { id: 'contextMenu.fullFile', defaultMessage: 'Full file' },
   randomizeOrder: { id: 'contextMenu.randomizeOrder', defaultMessage: 'Randomize order' },
   incrementalDiff: { id: 'contextMenu.incrementalDiff', defaultMessage: 'Show incremental' },
+  showCurrent: { id: 'contextMenu.showCurrent', defaultMessage: 'Show current' },
 }) satisfies Record<ContextMenuLabelKey, MessageDescriptor>;
 
 export function useContextMenuLabel(): (key: ContextMenuLabelKey) => string {

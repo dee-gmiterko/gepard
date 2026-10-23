@@ -32,7 +32,7 @@ export function FileViewer({ path }: { path: string }): React.JSX.Element {
     const changeType = changedFiles.find(
       (f) => f.path === path || f.previousPath === path,
     )?.changeType;
-    if (isChangedFile && changeType !== 'ADDED')
+    if (isChangedFile && changeType !== 'ADDED' && !layout.showCurrent)
       return layout.fullFileDiff ? <FullFileDiffViewer path={path} /> : <DiffViewer path={path} />;
     return <CodeViewer path={path} />;
   }
