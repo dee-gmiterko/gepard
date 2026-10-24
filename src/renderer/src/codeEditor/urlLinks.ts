@@ -1,61 +1,68 @@
-import type { Extension } from '@codemirror/state';
+import { syntaxTree } from '@codemirror/language';
+import { RangeSetBuilder, type EditorState, type Extension } from '@codemirror/state';
 import {
   Decoration,
   EditorView,
-  MatchDecorator,
   ViewPlugin,
   type DecorationSet,
   type ViewUpdate,
 } from '@codemirror/view';
 
-const URL_PATTERN = /https?:\/\/[^\s<>"'`]+/g;
-const TRAILING_PUNCTUATION = /[.,;:!?)\]}]$/;
+type SyntaxNode = ReturnType<ReturnType<typeof syntaxTree>['resolveInner']>;
 
-export function urlAt(lineText: string, offset: number): string | null {
-  for (const m of lineText.matchAll(URL_PATTERN)) {
-    const url = trimUrl(m[0]);
-    if (offset >= m.index && offset <= m.index + url.length) return url;
+const WEB_URL = /^https?:\/\//;
+
+function urlRange(state: EditorState, pos: number): { from: number; to: number } | null {
+  const tree = syntaxTree(state);
+  for (const side of [-1, 1] as const) {
+    for (let node: SyntaxNode | null = tree.resolveInner(pos, side); node; node = node.parent) {
+      const url = node.name === 'URL' ? node : node.name === 'Link' ? node.getChild('URL') : null;
+      if (url && WEB_URL.test(state.sliceDoc(url.from, url.to))) return url;
+    }
   }
   return null;
 }
 
-const BRACKET_PAIRS: Record<string, string> = { ')': '(', ']': '[', '}': '{' };
-
-function count(text: string, ch: string): number {
-  return text.split(ch).length - 1;
-}
-
-// A closing bracket stays only when the URL holds a matching opener.
-function trimUrl(raw: string): string {
-  let url = raw;
-  while (TRAILING_PUNCTUATION.test(url)) {
-    const last = url[url.length - 1];
-    const open = BRACKET_PAIRS[last];
-    if (open !== undefined && count(url, open) >= count(url, last)) break;
-    url = url.slice(0, -1);
-  }
-  return url;
+export function urlAt(state: EditorState, pos: number): string | null {
+  const range = urlRange(state, pos);
+  return range ? state.sliceDoc(range.from, range.to) : null;
 }
 
 const linkMark = Decoration.mark({ class: 'cm-url-link' });
 
-const decorator = new MatchDecorator({
-  regexp: URL_PATTERN,
-  decorate(add, from, _to, match) {
-    add(from, from + trimUrl(match[0]).length, linkMark);
-  },
-});
+function buildDecorations(view: EditorView): DecorationSet {
+  const builder = new RangeSetBuilder<Decoration>();
+  for (const { from, to } of view.visibleRanges) {
+    syntaxTree(view.state).iterate({
+      from,
+      to,
+      enter: (node) => {
+        if (node.name !== 'URL') return;
+        if (WEB_URL.test(view.state.sliceDoc(node.from, node.to))) {
+          builder.add(node.from, node.to, linkMark);
+        }
+      },
+    });
+  }
+  return builder.finish();
+}
 
 const linkDecorations = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet;
 
     constructor(view: EditorView) {
-      this.decorations = decorator.createDeco(view);
+      this.decorations = buildDecorations(view);
     }
 
     update(update: ViewUpdate): void {
-      this.decorations = decorator.updateDeco(update, this.decorations);
+      if (
+        update.docChanged ||
+        update.viewportChanged ||
+        syntaxTree(update.startState) !== syntaxTree(update.state)
+      ) {
+        this.decorations = buildDecorations(update.view);
+      }
     }
   },
   { decorations: (plugin) => plugin.decorations },
@@ -76,8 +83,7 @@ export function urlLinks(open: (url: string) => void = openUrl): Extension {
         if (!target?.closest('.cm-url-link')) return false;
         const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
         if (pos === null) return false;
-        const line = view.state.doc.lineAt(pos);
-        const url = urlAt(line.text, pos - line.from);
+        const url = urlAt(view.state, pos);
         if (url === null) return false;
         e.preventDefault();
         open(url);
