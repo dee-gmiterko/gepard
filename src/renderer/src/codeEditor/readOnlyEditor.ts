@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useTheme } from 'styled-components';
 import { defineMessages, useIntl } from 'react-intl';
-import { Compartment, EditorState, type Extension, type Text } from '@codemirror/state';
+import { Compartment, EditorState, StateField, type Extension, type Text } from '@codemirror/state';
 import {
   EditorView,
   drawSelection,
@@ -20,6 +20,19 @@ import { keymapBridge } from './keymapBridge';
 import { urlLinks } from './urlLinks';
 import { editorTheme } from './theme';
 
+// Only user-driven selections count; the initial cursor and programmatic reveals do not.
+const userSelected = StateField.define<boolean>({
+  create: () => false,
+  update: (value, tr) => {
+    if (tr.docChanged) return false;
+    return value || (tr.selection !== undefined && tr.isUserEvent('select'));
+  },
+  provide: (f) =>
+    EditorView.editorAttributes.from(f, (v): Record<string, string> =>
+      v ? { class: 'cm-userSelection' } : {},
+    ),
+});
+
 export function readOnlyExtensions(): Extension {
   return [
     EditorState.readOnly.of(true),
@@ -29,6 +42,7 @@ export function readOnlyExtensions(): Extension {
     highlightActiveLine(),
     highlightActiveLineGutter(),
     bracketMatching(),
+    userSelected,
     highlightSelectionMatches({ highlightWordAroundCursor: true, minSelectionLength: 1 }),
     urlLinks(),
   ];
