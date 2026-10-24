@@ -72,7 +72,7 @@ export function editorTheme(theme: Theme): Extension {
       '&.cm-focused .cm-selectionBackground, &.cm-focused ::selection': {
         backgroundColor: `${c.bgSelected} !important`,
       },
-      '&.cm-userSelection .cm-selectionMatch': {
+      '.cm-selectionMatch': {
         backgroundColor: c.bgSelected,
         outline: `1px solid ${c.border}`,
       },
