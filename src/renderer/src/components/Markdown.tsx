@@ -66,7 +66,15 @@ const ProseTable = styled.table`
   overflow: auto;
 `;
 
-const OVERRIDES = { img: { component: ProseImage }, table: { component: ProseTable } };
+function ProseLink(props: React.ComponentProps<'a'>): React.JSX.Element {
+  return <a {...props} target="_blank" rel="noopener noreferrer" />;
+}
+
+const OVERRIDES = {
+  a: { component: ProseLink },
+  img: { component: ProseImage },
+  table: { component: ProseTable },
+};
 
 const InlineProse = styled.span`
   color: inherit;

@@ -59,12 +59,14 @@ describe('contextMenuEntries', () => {
       fullFileDiff: false,
       randomizeOrder: false,
       incrementalDiff: true,
+      showCurrent: true,
     });
     expect(entries.map((e) => [e.key, e.checked])).toEqual([
       ['wrapLongLines', true],
       ['fullFile', false],
       ['randomizeOrder', false],
       ['incrementalDiff', true],
+      ['showCurrent', true],
     ]);
   });
 });

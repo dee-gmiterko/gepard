@@ -172,6 +172,7 @@ const defaultLayout: PersistedLayout = {
   fullFileDiff: false,
   randomizeOrder: false,
   incrementalDiff: false,
+  showCurrent: false,
 };
 
 function matches(text: string, search: string | undefined): boolean {

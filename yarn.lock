@@ -415,7 +415,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@codemirror/lang-markdown@npm:^6.0.0":
+"@codemirror/lang-markdown@npm:^6.0.0, @codemirror/lang-markdown@npm:^6.5.2":
   version: 6.5.2
   resolution: "@codemirror/lang-markdown@npm:6.5.2"
   dependencies:
@@ -613,6 +613,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@codemirror/search@npm:^6.7.2":
+  version: 6.7.2
+  resolution: "@codemirror/search@npm:6.7.2"
+  dependencies:
+    "@codemirror/state": "npm:^6.0.0"
+    "@codemirror/view": "npm:^6.37.0"
+    crelt: "npm:^1.0.5"
+  checksum: 10c0/ba2c9de4bbef77963079b433c9088769f01dde09741af9a6a8d056af27a117fdbd8848d9a2437a3532ae6356c1f85eb03eb280ffc06b3e5251ca48a7a64ac90e
+  languageName: node
+  linkType: hard
+
 "@codemirror/state@npm:^6.0.0, @codemirror/state@npm:^6.7.0, @codemirror/state@npm:^6.7.6":
   version: 6.7.6
   resolution: "@codemirror/state@npm:6.7.6"
@@ -622,15 +633,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@codemirror/view@npm:^6.0.0, @codemirror/view@npm:^6.17.0, @codemirror/view@npm:^6.23.0, @codemirror/view@npm:^6.42.0, @codemirror/view@npm:^6.43.13":
-  version: 6.43.13
-  resolution: "@codemirror/view@npm:6.43.13"
+"@codemirror/view@npm:^6.0.0, @codemirror/view@npm:^6.17.0, @codemirror/view@npm:^6.23.0, @codemirror/view@npm:^6.37.0, @codemirror/view@npm:^6.42.0, @codemirror/view@npm:^6.43.13":
+  version: 6.43.15
+  resolution: "@codemirror/view@npm:6.43.15"
   dependencies:
     "@codemirror/state": "npm:^6.7.0"
     crelt: "npm:^1.0.6"
     style-mod: "npm:^4.1.0"
     w3c-keyname: "npm:^2.2.4"
-  checksum: 10c0/ea848cf146bd7ffdeefdc567858f5b632d176c9c27be151c1238241f696b602a463339f40b18024b185e321a19787eb8ab3be9da4ff1287f92e996330ae66228
+  checksum: 10c0/314cb8a46634b522c706757fbb0b673d468eecf5ab5fe9d5c7e586a2a20c6deb2a2f61c0813cf9153dc3cc4ff7607a399c22fef6162d9656e674f5f18a127065
   languageName: node
   linkType: hard
 
@@ -1885,8 +1896,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@gepard/renderer@workspace:src/renderer"
   dependencies:
+    "@codemirror/lang-markdown": "npm:^6.5.2"
     "@codemirror/language": "npm:^6.12.4"
     "@codemirror/language-data": "npm:^6.5.2"
+    "@codemirror/search": "npm:^6.7.2"
     "@codemirror/state": "npm:^6.7.6"
     "@codemirror/view": "npm:^6.43.13"
     "@electron-toolkit/tsconfig": "npm:^2.0.0"

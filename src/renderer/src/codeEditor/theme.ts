@@ -28,7 +28,11 @@ function highlightStyle(theme: Theme): HighlightStyle {
     { tag: tags.heading, fontWeight: 'bold' },
     { tag: tags.emphasis, fontStyle: 'italic' },
     { tag: tags.strong, fontWeight: 'bold' },
-    { tag: tags.link, textDecoration: 'underline' },
+    { tag: [tags.link, tags.url], color: theme.colors.accent, textDecoration: 'underline' },
+    { tag: tags.monospace, color: s.string },
+    { tag: tags.quote, color: s.comment, fontStyle: 'italic' },
+    { tag: tags.list, color: s.keyword },
+    { tag: [tags.processingInstruction, tags.contentSeparator], color: s.property },
     { tag: tags.invalid, color: s.invalid },
   ]);
 }
@@ -41,6 +45,11 @@ export function editorTheme(theme: Theme): Extension {
         color: c.fg,
         backgroundColor: c.bg,
         fontSize: theme.font.size.md,
+      },
+      '.cm-url-link': {
+        color: c.accent,
+        textDecoration: 'underline',
+        cursor: 'pointer',
       },
       '.cm-scroller': {
         fontFamily: theme.font.mono,
@@ -62,6 +71,10 @@ export function editorTheme(theme: Theme): Extension {
       },
       '&.cm-focused .cm-selectionBackground, &.cm-focused ::selection': {
         backgroundColor: `${c.bgSelected} !important`,
+      },
+      '.cm-selectionMatch': {
+        backgroundColor: c.bgSelected,
+        outline: `1px solid ${c.border}`,
       },
       '.cm-gutters': {
         backgroundColor: c.bgSubtle,

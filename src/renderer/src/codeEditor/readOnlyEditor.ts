@@ -1,13 +1,14 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useTheme } from 'styled-components';
 import { defineMessages, useIntl } from 'react-intl';
-import { Compartment, EditorState, type Extension, type Text } from '@codemirror/state';
+import { Compartment, EditorState, Facet, type Extension, type Text } from '@codemirror/state';
 import {
   EditorView,
   drawSelection,
   highlightActiveLine,
   highlightActiveLineGutter,
 } from '@codemirror/view';
+import { highlightSelectionMatches } from '@codemirror/search';
 import { LanguageDescription, bracketMatching } from '@codemirror/language';
 import { reportError } from '../errors/report';
 import { useCommands } from '../keyboard/useCommands';
@@ -16,7 +17,30 @@ import { useKeybindingOverrides } from '../queries/keybindings';
 import { activeEditor } from './activeEditor';
 import { allLanguageDescriptions } from './grammar';
 import { keymapBridge } from './keymapBridge';
+import { urlLinks } from './urlLinks';
 import { editorTheme } from './theme';
+
+const enabledFacet = Facet.define<boolean, boolean>({ combine: (v) => v.some(Boolean) });
+
+function userSelectionMatches(): Extension {
+  const matches = new Compartment();
+  const highlight = highlightSelectionMatches({
+    highlightWordAroundCursor: true,
+    minSelectionLength: 1,
+  });
+  // Match highlighting stays off until the user selects, so the initial cursor and programmatic reveals show none.
+  return [
+    matches.of([]),
+    EditorState.transactionExtender.of((tr) => {
+      const enabled = tr.startState.facet(enabledFacet);
+      if (tr.docChanged) return enabled ? { effects: matches.reconfigure([]) } : null;
+      if (!enabled && tr.selection !== undefined && tr.isUserEvent('select')) {
+        return { effects: matches.reconfigure([highlight, enabledFacet.of(true)]) };
+      }
+      return null;
+    }),
+  ];
+}
 
 export function readOnlyExtensions(): Extension {
   return [
@@ -27,6 +51,8 @@ export function readOnlyExtensions(): Extension {
     highlightActiveLine(),
     highlightActiveLineGutter(),
     bracketMatching(),
+    userSelectionMatches(),
+    urlLinks(),
   ];
 }
 

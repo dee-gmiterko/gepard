@@ -5,6 +5,7 @@ import {
   LRLanguage,
   StreamLanguage,
 } from '@codemirror/language';
+import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages as builtinLanguages } from '@codemirror/language-data';
 import { styleTags, tags } from '@lezer/highlight';
 import { LRParser } from '@lezer/lr';
@@ -73,5 +74,20 @@ export function allLanguageDescriptions(
   grammars: readonly GrammarModule[],
   load?: GrammarModuleLoader,
 ): LanguageDescription[] {
-  return [...grammarLanguageDescriptions(grammars, load), ...builtinLanguages];
+  const markdownDescription = LanguageDescription.of({
+    name: 'Markdown',
+    extensions: ['md', 'markdown', 'mkd'],
+    load() {
+      return Promise.resolve(
+        markdown({
+          base: markdownLanguage,
+          codeLanguages: allLanguageDescriptions(grammars, load),
+          addKeymap: false,
+        }),
+      );
+    },
+  });
+  const builtinLanguagesExceptMarkdown = builtinLanguages.filter((l) => l.name !== 'Markdown');
+  const grammarLanguageDescription = grammarLanguageDescriptions(grammars, load);
+  return [...grammarLanguageDescription, markdownDescription, ...builtinLanguagesExceptMarkdown];
 }
