@@ -5,9 +5,8 @@ import { Stack } from '../../components/Layout';
 import { Section } from '../../components/Section';
 import { SectionHeading } from '../../components/SectionHeading';
 import { useCommands, type Commands } from '../../keyboard/useCommands';
-import { useSetProjectHiddenFiles, useProjectHiddenFiles } from '../../queries/hiddenFiles';
 import { useLayout } from '../../state/hooks';
-import { HiddenFilesEditor } from './HiddenFilesEditor';
+import { HiddenFilesPanel } from './HiddenFilesPanel';
 
 const messages = defineMessages({
   switchesTitle: {
@@ -33,10 +32,6 @@ const messages = defineMessages({
   showCurrent: {
     id: 'settings.project.switches.showCurrent',
     defaultMessage: 'Show current',
-  },
-  hiddenFilesTitle: {
-    id: 'settings.project.hiddenFiles.title',
-    defaultMessage: 'Hidden files (this project)',
   },
 });
 
@@ -77,8 +72,6 @@ export function ProjectSettingsPanel(): React.JSX.Element {
   const intl = useIntl();
   const layout = useLayout();
   const commands = useCommands();
-  const { data: hiddenFiles } = useProjectHiddenFiles();
-  const saveHiddenFiles = useSetProjectHiddenFiles();
 
   return (
     <Stack $gap={5}>
@@ -95,12 +88,7 @@ export function ProjectSettingsPanel(): React.JSX.Element {
           ))}
         </Columns>
       </Section>
-      <HiddenFilesEditor
-        title={intl.formatMessage(messages.hiddenFilesTitle)}
-        patterns={hiddenFiles}
-        failed={saveHiddenFiles.isError}
-        onSave={(patterns) => saveHiddenFiles.mutate(patterns)}
-      />
+      <HiddenFilesPanel scope="project" />
     </Stack>
   );
 }
