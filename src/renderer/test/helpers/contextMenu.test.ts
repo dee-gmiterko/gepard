@@ -60,6 +60,7 @@ describe('contextMenuEntries', () => {
       randomizeOrder: false,
       incrementalDiff: true,
       showCurrent: true,
+      markdownPreview: true,
     });
     expect(entries.map((e) => [e.key, e.checked])).toEqual([
       ['wrapLongLines', true],
@@ -67,6 +68,7 @@ describe('contextMenuEntries', () => {
       ['randomizeOrder', false],
       ['incrementalDiff', true],
       ['showCurrent', true],
+      ['markdownPreview', true],
     ]);
   });
 });

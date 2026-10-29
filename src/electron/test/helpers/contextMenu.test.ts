@@ -24,6 +24,7 @@ const labels: ContextMenuLabels = {
   randomizeOrder: 'Randomize order',
   incrementalDiff: 'Show incremental',
   showCurrent: 'Show current',
+  markdownPreview: 'Markdown preview',
 };
 
 const flags = {
@@ -125,6 +126,7 @@ describe('buildFileViewMenuTemplate', () => {
         randomizeOrder: true,
         incrementalDiff: false,
         showCurrent: true,
+        markdownPreview: false,
       },
       labels,
       vi.fn(),
@@ -135,6 +137,7 @@ describe('buildFileViewMenuTemplate', () => {
       ['Randomize order', 'checkbox', true],
       ['Show incremental', 'checkbox', false],
       ['Show current', 'checkbox', true],
+      ['Markdown preview', 'checkbox', false],
     ]);
   });
 
@@ -147,6 +150,7 @@ describe('buildFileViewMenuTemplate', () => {
         randomizeOrder: false,
         incrementalDiff: false,
         showCurrent: false,
+        markdownPreview: false,
       },
       labels,
       onPick,
@@ -156,10 +160,12 @@ describe('buildFileViewMenuTemplate', () => {
     clickItem(t, 2);
     clickItem(t, 3);
     clickItem(t, 4);
+    clickItem(t, 5);
     expect(onPick).toHaveBeenNthCalledWith(1, 'wrapLongLines');
     expect(onPick).toHaveBeenNthCalledWith(2, 'fullFile');
     expect(onPick).toHaveBeenNthCalledWith(3, 'randomizeOrder');
     expect(onPick).toHaveBeenNthCalledWith(4, 'incrementalDiff');
     expect(onPick).toHaveBeenNthCalledWith(5, 'showCurrent');
+    expect(onPick).toHaveBeenNthCalledWith(6, 'markdownPreview');
   });
 });

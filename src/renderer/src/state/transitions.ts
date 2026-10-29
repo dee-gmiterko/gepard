@@ -28,7 +28,8 @@ export function withLayout(state: UiState, layout: Layout): UiState {
     prev.fullFileDiff === layout.fullFileDiff &&
     prev.randomizeOrder === layout.randomizeOrder &&
     prev.incrementalDiff === layout.incrementalDiff &&
-    prev.showCurrent === layout.showCurrent;
+    prev.showCurrent === layout.showCurrent &&
+    prev.markdownPreview === layout.markdownPreview;
   return same ? state : { ...state, layout };
 }
 

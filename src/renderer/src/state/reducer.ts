@@ -50,6 +50,7 @@ export interface Layout {
   randomizeOrder: boolean;
   incrementalDiff: boolean;
   showCurrent: boolean;
+  markdownPreview: boolean;
 }
 
 export const defaultLayout: Layout = {
@@ -64,6 +65,7 @@ export const defaultLayout: Layout = {
   randomizeOrder: false,
   incrementalDiff: false,
   showCurrent: false,
+  markdownPreview: false,
 };
 
 export interface UiState {
@@ -133,6 +135,7 @@ export type UiAction =
   | { type: 'layout/setRandomizeOrder'; randomize: boolean }
   | { type: 'layout/setIncrementalDiff'; incremental: boolean }
   | { type: 'layout/setShowCurrent'; show: boolean }
+  | { type: 'layout/setMarkdownPreview'; show: boolean }
   | { type: 'file/open'; path: string; line?: number | null; side?: DiffSide }
   | { type: 'file/focus'; path: string }
   | { type: 'file/pin'; path: string }
@@ -239,6 +242,8 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
       return withLayout(state, { ...state.layout, incrementalDiff: action.incremental });
     case 'layout/setShowCurrent':
       return withLayout(state, { ...state.layout, showCurrent: action.show });
+    case 'layout/setMarkdownPreview':
+      return withLayout(state, { ...state.layout, markdownPreview: action.show });
     case 'file/open':
       return openFile(state, action.path, action.line, action.side);
     case 'file/focus':

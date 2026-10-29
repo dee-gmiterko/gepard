@@ -52,6 +52,14 @@ const messages = defineMessages({
     id: 'keyboard.showCurrentOff',
     defaultMessage: 'Show current: off',
   },
+  markdownPreviewOn: {
+    id: 'keyboard.markdownPreviewOn',
+    defaultMessage: 'Markdown preview: on',
+  },
+  markdownPreviewOff: {
+    id: 'keyboard.markdownPreviewOff',
+    defaultMessage: 'Markdown preview: off',
+  },
 });
 
 type BooleanLayoutKey = {
@@ -72,6 +80,7 @@ export interface Commands {
   toggleRandomizeOrder: () => boolean;
   toggleIncrementalDiff: () => boolean;
   toggleShowCurrent: () => boolean;
+  toggleMarkdownPreview: () => boolean;
   submitComment: () => boolean;
   findNext: () => boolean;
   findPrevious: () => boolean;
@@ -84,12 +93,14 @@ const FILE_VIEW_COMMANDS: Record<
   | 'toggleRandomizeOrder'
   | 'toggleIncrementalDiff'
   | 'toggleShowCurrent'
+  | 'toggleMarkdownPreview'
 > = {
   wrapLongLines: 'toggleWrapLines',
   fullFile: 'toggleFullFileDiff',
   randomizeOrder: 'toggleRandomizeOrder',
   incrementalDiff: 'toggleIncrementalDiff',
   showCurrent: 'toggleShowCurrent',
+  markdownPreview: 'toggleMarkdownPreview',
 };
 
 export function runFileViewPick(commands: Commands, pick: FileViewMenuPick): void {
@@ -170,6 +181,11 @@ export function useCommands(): Commands {
         toggleLayout('showCurrent', (show) => ({ type: 'layout/setShowCurrent', show }), {
           on: messages.showCurrentOn,
           off: messages.showCurrentOff,
+        }),
+      toggleMarkdownPreview: () =>
+        toggleLayout('markdownPreview', (show) => ({ type: 'layout/setMarkdownPreview', show }), {
+          on: messages.markdownPreviewOn,
+          off: messages.markdownPreviewOff,
         }),
       submitComment: () => runActionHandler('submitComment'),
       findNext: () => runActionHandler('findNext'),
