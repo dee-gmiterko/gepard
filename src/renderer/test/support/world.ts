@@ -212,6 +212,7 @@ export function createWorld(options: WorldOptions = {}): World {
     'locale.getLocaleId': () => null,
     'locales.list': () => [],
     'keybindings.getOverrides': () => ({}),
+    'hiddenFiles.get': () => [],
     'extensions.list': () => [],
     'grammars.list': () => [],
     'log.write': () => undefined,

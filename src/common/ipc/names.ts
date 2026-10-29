@@ -61,6 +61,8 @@ export const ChannelNameList = z.enum([
   'locales.list',
   'keybindings.getOverrides',
   'keybindings.setOverride',
+  'hiddenFiles.get',
+  'hiddenFiles.set',
   'contextMenu.setLabels',
   'contextMenu.setLineTarget',
   'contextMenu.showFileView',

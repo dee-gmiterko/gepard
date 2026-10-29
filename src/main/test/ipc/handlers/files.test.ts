@@ -43,7 +43,9 @@ describe('files.content over the real IPC contract and handler (integration)', (
     origin = await makeTmpDir('files-ipc-origin');
     userData = await makeUserData();
     svc = makeGitServices(userData.paths).git;
-    handlers = new FilesHandlers(svc).toHandlerMap();
+    handlers = new FilesHandlers(svc, {
+      filter: (_projectId, items) => Promise.resolve([...items]),
+    }).toHandlerMap();
     const o = origin.path;
     await git(o, ['init', '-b', 'main']);
     await mkdir(join(o, 'src'));

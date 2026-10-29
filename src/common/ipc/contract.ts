@@ -7,6 +7,7 @@ import {
   ViewerRepo,
   Project,
   PersistedLayout,
+  HiddenFilePatterns,
 } from './schemas/project';
 import { CommentsRef, PrRef, ProjectRef } from './schemas/refs';
 import { CommitAnnotation } from './schemas/checks';
@@ -58,6 +59,11 @@ interface ChannelSpec {
   input: z.ZodType;
   output: z.ZodType;
 }
+
+const HiddenFilesTarget = z.discriminatedUnion('scope', [
+  z.object({ scope: z.literal('global') }),
+  ProjectRef.extend({ scope: z.literal('project') }),
+]);
 
 export const channels = {
   'app.viewer': { input: z.void(), output: Viewer.nullable() },
@@ -250,6 +256,12 @@ export const channels = {
   'keybindings.setOverride': {
     input: z.object({ id: z.string(), key: z.string().nullable() }),
     output: z.record(z.string(), z.string()),
+  },
+
+  'hiddenFiles.get': { input: HiddenFilesTarget, output: HiddenFilePatterns },
+  'hiddenFiles.set': {
+    input: z.intersection(HiddenFilesTarget, z.object({ patterns: HiddenFilePatterns })),
+    output: HiddenFilePatterns,
   },
 
   'contextMenu.setLabels': { input: ContextMenuLabels, output: z.void() },

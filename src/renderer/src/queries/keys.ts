@@ -1,3 +1,5 @@
+export type HiddenFilesScope = 'global' | 'project';
+
 export const qk = {
   all: ['gepard'] as const,
   viewer: () => [...qk.all, 'viewer'] as const,
@@ -17,6 +19,8 @@ export const qk = {
   locales: () => [...qk.all, 'locales'] as const,
   localeId: () => [...qk.all, 'localeId'] as const,
   keybindingOverrides: () => [...qk.all, 'keybindingOverrides'] as const,
+  hiddenFiles: (scope: HiddenFilesScope, projectId: string) =>
+    [...qk.all, 'hiddenFiles', scope, projectId] as const,
   project: (projectId: string) => [...qk.all, 'project', projectId] as const,
   open: (p: string) => [...qk.project(p), 'open'] as const,
   commitsAll: (p: string) => [...qk.project(p), 'commits'] as const,

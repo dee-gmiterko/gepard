@@ -9,6 +9,7 @@ const SettingsFile = z.object({
   locale: z.object({ localeId: z.string().nullable() }).default({ localeId: null }),
   extensions: z.record(z.string(), z.boolean()),
   keybindings: z.record(z.string(), z.string()).default({}),
+  hiddenFiles: z.array(z.string()).default([]),
 });
 type SettingsFile = z.infer<typeof SettingsFile>;
 
@@ -17,6 +18,7 @@ const EMPTY_SETTINGS: SettingsFile = {
   locale: { localeId: null },
   extensions: {},
   keybindings: {},
+  hiddenFiles: [],
 };
 
 export type ExtensionsState = SettingsFile['extensions'];
@@ -82,6 +84,17 @@ export class SettingsStore {
       else keybindings[id] = key;
       await writeJsonFile(this.paths.settingsJsonPath(), { ...settings, keybindings });
       return keybindings;
+    });
+  }
+
+  async getHiddenFiles(): Promise<string[]> {
+    return (await this.read()).hiddenFiles;
+  }
+
+  async setHiddenFiles(hiddenFiles: string[]): Promise<string[]> {
+    return this.update(async (settings) => {
+      await writeJsonFile(this.paths.settingsJsonPath(), { ...settings, hiddenFiles });
+      return hiddenFiles;
     });
   }
 }

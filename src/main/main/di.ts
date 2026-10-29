@@ -47,6 +47,8 @@ import { SystemPreferenceHandlers } from '../ipc/handlers/systemPreference';
 import { ThemeHandlers } from '../ipc/handlers/theme';
 import { LocalesHandlers } from '../ipc/handlers/locales';
 import { KeybindingsHandlers } from '../ipc/handlers/keybindings';
+import { HiddenFilesHandlers } from '../ipc/handlers/hiddenFiles';
+import { HiddenFilesService } from '../services/hiddenFiles';
 import { ContextMenuHandlers } from '../ipc/handlers/contextMenu';
 
 export interface Core {
@@ -159,27 +161,46 @@ export function composeHandlers(
   systemPreference: SystemPreferenceService,
 ): HandlerMap {
   const { ghService, gitService, review, indexer, extensions, settings } = core;
+  const hiddenFiles = new HiddenFilesService(settings, core.projects);
+  const projectsHandlers = new ProjectsHandlers(ghService, gitService, core.projects, indexer);
+  const launchHandlers = new LaunchHandlers(core.launch);
+  const prsHandlers = new PrsHandlers(ghService, gitService, review, hiddenFiles);
+  const filesHandlers = new FilesHandlers(gitService, hiddenFiles);
+  const searchHandlers = new SearchHandlers(core.paths, indexer, core.latestWins);
+  const commentsHandlers = new CommentsHandlers(gitService, review);
+  const syncHandlers = new SyncHandlers(ghService, core.syncService, review, indexer);
+  const connectivityHandlers = new ConnectivityHandlers(core.connectivity);
+  const logHandlers = new LogHandlers(core.logger);
+  const extensionsHandlers = new ExtensionsHandlers(
+    extensions,
+    core.extensionCatalog,
+    core.extensionInstaller,
+    folderPicker,
+  );
+  const grammarsHandlers = new GrammarsHandlers(extensions);
+  const systemPreferenceHandlers = new SystemPreferenceHandlers(systemPreference);
+  const themeHandlers = new ThemeHandlers(settings, extensions);
+  const localesHandlers = new LocalesHandlers(settings, extensions);
+  const keybindingsHandlers = new KeybindingsHandlers(settings);
+  const hiddenFilesHandlers = new HiddenFilesHandlers(settings, core.projects);
+  const contextMenuHandlers = new ContextMenuHandlers(contextMenu);
   return {
-    ...new ProjectsHandlers(ghService, gitService, core.projects, indexer).toHandlerMap(),
-    ...new LaunchHandlers(core.launch).toHandlerMap(),
-    ...new PrsHandlers(ghService, gitService, review).toHandlerMap(),
-    ...new FilesHandlers(gitService).toHandlerMap(),
-    ...new SearchHandlers(core.paths, indexer, core.latestWins).toHandlerMap(),
-    ...new CommentsHandlers(gitService, review).toHandlerMap(),
-    ...new SyncHandlers(ghService, core.syncService, review, indexer).toHandlerMap(),
-    ...new ConnectivityHandlers(core.connectivity).toHandlerMap(),
-    ...new LogHandlers(core.logger).toHandlerMap(),
-    ...new ExtensionsHandlers(
-      extensions,
-      core.extensionCatalog,
-      core.extensionInstaller,
-      folderPicker,
-    ).toHandlerMap(),
-    ...new GrammarsHandlers(extensions).toHandlerMap(),
-    ...new SystemPreferenceHandlers(systemPreference).toHandlerMap(),
-    ...new ThemeHandlers(settings, extensions).toHandlerMap(),
-    ...new LocalesHandlers(settings, extensions).toHandlerMap(),
-    ...new KeybindingsHandlers(settings).toHandlerMap(),
-    ...new ContextMenuHandlers(contextMenu).toHandlerMap(),
+    ...projectsHandlers.toHandlerMap(),
+    ...launchHandlers.toHandlerMap(),
+    ...prsHandlers.toHandlerMap(),
+    ...filesHandlers.toHandlerMap(),
+    ...searchHandlers.toHandlerMap(),
+    ...commentsHandlers.toHandlerMap(),
+    ...syncHandlers.toHandlerMap(),
+    ...connectivityHandlers.toHandlerMap(),
+    ...logHandlers.toHandlerMap(),
+    ...extensionsHandlers.toHandlerMap(),
+    ...grammarsHandlers.toHandlerMap(),
+    ...systemPreferenceHandlers.toHandlerMap(),
+    ...themeHandlers.toHandlerMap(),
+    ...localesHandlers.toHandlerMap(),
+    ...keybindingsHandlers.toHandlerMap(),
+    ...hiddenFilesHandlers.toHandlerMap(),
+    ...contextMenuHandlers.toHandlerMap(),
   };
 }

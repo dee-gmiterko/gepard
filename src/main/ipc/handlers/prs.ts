@@ -2,6 +2,7 @@ import type { HandlerMap } from '../dispatch';
 import type { GhService } from '../../services/gh';
 import type { GitService } from '../../services/git';
 import type { ReviewStore } from '../../store/review';
+import type { HiddenFilesFilter } from '../../services/hiddenFiles';
 import {
   CODEOWNERS_PATHS,
   ownersOf,
@@ -14,6 +15,7 @@ export class PrsHandlers {
     private readonly gh: GhService,
     private readonly git: GitService,
     private readonly review: ReviewStore,
+    private readonly hidden: HiddenFilesFilter,
   ) {}
 
   toHandlerMap(): Pick<
@@ -107,7 +109,11 @@ export class PrsHandlers {
           }
         }
         if (!rules) return null;
-        const files = await this.git.changedFiles(projectId, base, head);
+        const files = await this.hidden.filter(
+          projectId,
+          await this.git.changedFiles(projectId, base, head),
+          (f) => f.path,
+        );
         return Object.fromEntries(files.map((f) => [f.path, ownersOf(rules, f.path)]));
       },
 
