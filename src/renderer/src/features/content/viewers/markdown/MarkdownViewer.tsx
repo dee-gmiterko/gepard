@@ -2,13 +2,13 @@ import styled from 'styled-components';
 import { defineMessages, FormattedMessage } from 'react-intl';
 import { useCurrentHead } from '../../../../queries/projects';
 import { useFileContent, useFileDiff } from '../../../../queries/files';
-import { Markdown } from '../../../../components/Markdown';
 import { Message } from '../../../../components/Message';
 import {
+  Markdown,
   markdownDiffSegments,
   type MarkdownSegment,
   type MarkdownViewType,
-} from '../../../../helpers/markdown';
+} from '../../../../components/markdown';
 import { CodeViewer } from '../code/CodeViewer';
 import { DiffViewer } from '../diff/DiffViewer';
 

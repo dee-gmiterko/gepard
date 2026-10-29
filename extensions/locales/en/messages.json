@@ -41,6 +41,8 @@
   "components.combobox.clear": "Clear",
   "components.combobox.loading": "Loading…",
   "components.hideViewedToggle.hideViewed": "Hide viewed files",
+  "components.markdown.mermaid.invalidSyntax": "invalid diagram syntax",
+  "components.markdown.mermaid.renderFailed": "Could not render diagram: {reason}",
   "components.pathAndLine.pathAndLine": "{path}:{line}",
   "components.scopeToggle.all": "All files",
   "components.scopeToggle.ariaLabel": "Search scope",

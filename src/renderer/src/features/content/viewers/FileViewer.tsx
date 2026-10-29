@@ -7,7 +7,7 @@ import { CodeViewer } from './code/CodeViewer';
 import { DiffViewer } from './diff/DiffViewer';
 import { FullFileDiffViewer } from './code/FullFileDiffViewer';
 import { MarkdownViewer } from './markdown/MarkdownViewer';
-import { isMarkdownPath } from '../../../helpers/markdown';
+import { isMarkdownPath } from '../../../components/markdown';
 import { Message } from '../../../components/Message';
 
 const messages = defineMessages({
