@@ -47,6 +47,7 @@ describe('store/settings and known extension files', () => {
     expect(await settings.getLocaleId()).toBeNull();
     expect(await settings.getEnabledMap()).toEqual({});
     expect(await settings.getKeybindingOverrides()).toEqual({});
+    expect(await settings.getHiddenFiles()).toEqual([]);
   });
 
   it('persists each setter sequentially without disturbing the others', async () => {
@@ -54,12 +55,14 @@ describe('store/settings and known extension files', () => {
     await settings.setLocaleId('cs');
     await settings.setEnabled('ext-a', false);
     await settings.setKeybindingOverride('act', 'ctrl+k');
+    await settings.setHiddenFiles(['\\.lock$']);
     await settings.setKeybindingOverride('other', 'ctrl+j');
     await settings.setKeybindingOverride('other', null);
     expect(await settings.getTemplateId()).toBe('tpl');
     expect(await settings.getLocaleId()).toBe('cs');
     expect(await settings.getEnabledMap()).toEqual({ 'ext-a': false });
     expect(await settings.getKeybindingOverrides()).toEqual({ act: 'ctrl+k' });
+    expect(await settings.getHiddenFiles()).toEqual(['\\.lock$']);
   });
 
   it('keeps every update when different setters run concurrently', async () => {

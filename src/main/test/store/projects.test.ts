@@ -92,6 +92,15 @@ describe('store/projects', () => {
       expect((await projects.getLastTargeting(b.id)).pr).toBe(2);
     });
 
+    it('round-trips hidden file patterns per project', async () => {
+      const a = await projects.addProject('https://github.com/o/a');
+      const b = await projects.addProject('https://github.com/o/b');
+      expect(await projects.getHiddenFiles(a.id)).toEqual([]);
+      await projects.setHiddenFiles(a.id, ['^dist/']);
+      expect(await projects.getHiddenFiles(a.id)).toEqual(['^dist/']);
+      expect(await projects.getHiddenFiles(b.id)).toEqual([]);
+    });
+
     it('rejects writes to an unknown project', async () => {
       await expect(
         projects.setLastTargeting('o__nope', { pr: 1, commit: null, path: null }),

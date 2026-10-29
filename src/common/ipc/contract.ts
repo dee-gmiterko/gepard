@@ -7,6 +7,7 @@ import {
   ViewerRepo,
   Project,
   PersistedLayout,
+  HiddenFilePatterns,
 } from './schemas/project';
 import { CommentsRef, PrRef, ProjectRef } from './schemas/refs';
 import { CommitAnnotation } from './schemas/checks';
@@ -250,6 +251,17 @@ export const channels = {
   'keybindings.setOverride': {
     input: z.object({ id: z.string(), key: z.string().nullable() }),
     output: z.record(z.string(), z.string()),
+  },
+
+  'hiddenFiles.getGlobal': { input: z.void(), output: HiddenFilePatterns },
+  'hiddenFiles.setGlobal': {
+    input: z.object({ patterns: HiddenFilePatterns }),
+    output: HiddenFilePatterns,
+  },
+  'hiddenFiles.getProject': { input: ProjectRef, output: HiddenFilePatterns },
+  'hiddenFiles.setProject': {
+    input: ProjectRef.extend({ patterns: HiddenFilePatterns }),
+    output: HiddenFilePatterns,
   },
 
   'contextMenu.setLabels': { input: ContextMenuLabels, output: z.void() },

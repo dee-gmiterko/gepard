@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import styled from 'styled-components';
-import { Command, Package, Droplet, X } from 'react-feather';
+import { Command, Package, Droplet, Sliders, X } from 'react-feather';
 import { defineMessages, FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl';
 import { activeToggleBackground, focusVisible } from '../../components/controlStyles';
 import { IconButton } from '../../components/IconButton';
 import { SectionHeading } from '../../components/SectionHeading';
+import { useProjectId } from '../../state/hooks';
+import { ProjectSettingsPanel } from './ProjectSettingsPanel';
 import { GeneralPanel } from './GeneralPanel';
 import { KeybindingsPanel } from './KeybindingsPanel';
 import { ExtensionsPanel } from './ExtensionsPanel';
@@ -22,6 +24,10 @@ const messages = defineMessages({
     id: 'settings.tablist',
     defaultMessage: 'Settings sections',
   },
+  tabProject: {
+    id: 'settings.tabs.project',
+    defaultMessage: 'Project',
+  },
   tabGeneral: {
     id: 'settings.tabs.general',
     defaultMessage: 'General',
@@ -36,9 +42,9 @@ const messages = defineMessages({
   },
 });
 
-type SettingsTab = 'general' | 'controls' | 'extensions';
+type SettingsTab = 'project' | 'general' | 'controls' | 'extensions';
 
-const TABS: {
+const GLOBAL_TABS: {
   id: SettingsTab;
   label: MessageDescriptor;
   icon: typeof X;
@@ -48,6 +54,13 @@ const TABS: {
   { id: 'controls', label: messages.tabControls, icon: Command, screen: KeybindingsPanel },
   { id: 'extensions', label: messages.tabExtensions, icon: Package, screen: ExtensionsPanel },
 ];
+
+const PROJECT_TAB: (typeof GLOBAL_TABS)[number] = {
+  id: 'project',
+  label: messages.tabProject,
+  icon: Sliders,
+  screen: ProjectSettingsPanel,
+};
 
 function tabId(id: SettingsTab): string {
   return `settings-tab-${id}`;
@@ -162,13 +175,15 @@ export interface SettingsOverlayProps {
 export function SettingsOverlay({ onClose }: SettingsOverlayProps): React.JSX.Element {
   const intl = useIntl();
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const hasProject = useProjectId() !== null;
+  const TABS = hasProject ? [PROJECT_TAB, ...GLOBAL_TABS] : GLOBAL_TABS;
 
   const onCloseRef = useRef(onClose);
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
 
-  const [activeTab, setActiveTab] = useState<SettingsTab>('general');
+  const [activeTab, setActiveTab] = useState<SettingsTab>(hasProject ? 'project' : 'general');
   const tabsRef = useRef<Partial<Record<SettingsTab, HTMLButtonElement | null>>>({});
 
   function handleTabKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
