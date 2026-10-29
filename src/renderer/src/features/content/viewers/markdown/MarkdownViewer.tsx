@@ -20,8 +20,9 @@ const messages = defineMessages({
 });
 
 const Page = styled.div`
-  flex: 1;
+  height: 100%;
   min-width: 0;
+  box-sizing: border-box;
   padding: ${({ theme }) => theme.space[3]};
   overflow: auto;
 `;
