@@ -6,6 +6,8 @@ import { useIsCheckedOutChangedFile } from '../../../queries/review';
 import { CodeViewer } from './code/CodeViewer';
 import { DiffViewer } from './diff/DiffViewer';
 import { FullFileDiffViewer } from './code/FullFileDiffViewer';
+import { MarkdownViewer } from './markdown/MarkdownViewer';
+import { isMarkdownPath } from '../../../helpers/markdown';
 import { Message } from '../../../components/Message';
 
 const messages = defineMessages({
@@ -32,7 +34,10 @@ export function FileViewer({ path }: { path: string }): React.JSX.Element {
     const changeType = changedFiles.find(
       (f) => f.path === path || f.previousPath === path,
     )?.changeType;
-    if (isChangedFile && changeType !== 'ADDED' && !layout.showCurrent)
+    const preview = layout.markdownPreview && isMarkdownPath(path);
+    const showDiff = isChangedFile && changeType !== 'ADDED' && !layout.showCurrent;
+    if (preview) return <MarkdownViewer path={path} type={showDiff ? 'diff' : 'file'} />;
+    if (showDiff)
       return layout.fullFileDiff ? <FullFileDiffViewer path={path} /> : <DiffViewer path={path} />;
     return <CodeViewer path={path} />;
   }
@@ -43,5 +48,7 @@ export function FileViewer({ path }: { path: string }): React.JSX.Element {
         <FormattedMessage {...messages.loading} />
       </Message>
     );
+  if (layout.markdownPreview && isMarkdownPath(path))
+    return <MarkdownViewer path={path} type="file" />;
   return <CodeViewer path={path} />;
 }

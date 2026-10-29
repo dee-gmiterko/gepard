@@ -253,6 +253,12 @@ describe('layout', () => {
     );
   });
 
+  it('toggles markdown preview via layout/setMarkdownPreview and defaults to off', () => {
+    expect(initialUiState.layout.markdownPreview).toBe(false);
+    const on = uiReducer(state(), { type: 'layout/setMarkdownPreview', show: true });
+    expect(on.layout.markdownPreview).toBe(true);
+  });
+
   it('toggles hiding viewed files via layout/setHideViewedFiles', () => {
     const hidden = uiReducer(state(), { type: 'layout/setHideViewedFiles', hide: true });
     expect(hidden.layout.hideViewedFiles).toBe(true);
