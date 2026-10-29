@@ -13,6 +13,7 @@
 - Every push to the main branch updates a standing release pull request holding the changelog and version bump. Merging it creates the tag and the GitHub Release; nothing else publishes.
 - After the release is created, Ubuntu, Windows and macOS runners build the app and upload the AppImage, Windows installer and dmg to the release, replacing assets of the same name. Builds are unsigned and not notarized.
 - The root package and every app package carry the release version.
+- Before the app is built, a check fails the release unless every catalog entry has a published release, tagged for its package, whose extension tree matches the catalogued sha and that carries an archive for each supported platform.
 
 ## Extension releases
 
