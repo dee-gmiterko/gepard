@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { PrOverviewDetails } from '@gepard/common';
 import { Surface } from '../../../../components/Surface';
-import { Markdown } from '../../../../components/Markdown';
+import { Markdown } from '../../../../components/markdown';
 import { Panel } from '../shared/Panel';
 import { PanelBody } from '../shared/PanelBody';
 import { Muted } from '../shared/overviewStyles';

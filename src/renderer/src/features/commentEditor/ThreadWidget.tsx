@@ -13,7 +13,7 @@ import { OutdatedBadge, ResolvedBadge } from '../../components/StatusBadge';
 import { Byline } from '../../components/Byline';
 import { Surface } from '../../components/Surface';
 import { fieldChrome, textFieldBase } from '../../components/TextInput';
-import { Markdown } from '../../components/Markdown';
+import { Markdown } from '../../components/markdown';
 import { useDeleteComment } from '../../queries/comments';
 import { useViewer } from '../../queries/projects';
 import { authorDisplayName } from '../../helpers/actor';

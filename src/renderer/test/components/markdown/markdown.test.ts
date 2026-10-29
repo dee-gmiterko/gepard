@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffRow } from '@gepard/common';
-import { isMarkdownPath, markdownDiffSegments as segments } from '../../src/helpers/markdown';
+import { isMarkdownPath, markdownDiffSegments as segments } from '../../../src/components/markdown';
 
 const row = (kind: DiffRow['kind'], text: string): DiffRow => ({
   kind,

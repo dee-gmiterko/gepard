@@ -1,5 +1,6 @@
 import MarkdownToJsx from 'markdown-to-jsx/react';
 import styled, { css } from 'styled-components';
+import { renderRule } from './renderRules';
 
 const linkAndCode = css`
   a {
@@ -76,6 +77,9 @@ const OVERRIDES = {
   table: { component: ProseTable },
 };
 
+const BLOCK_OPTIONS = { disableParsingRawHTML: true, overrides: OVERRIDES, renderRule };
+const INLINE_OPTIONS = { disableParsingRawHTML: true, forceInline: true, overrides: OVERRIDES };
+
 const InlineProse = styled.span`
   color: inherit;
   font: inherit;
@@ -92,11 +96,7 @@ export function Markdown({ children, inline = false }: MarkdownProps): React.JSX
   const Wrapper = inline ? InlineProse : Prose;
   return (
     <Wrapper>
-      <MarkdownToJsx
-        options={{ disableParsingRawHTML: true, forceInline: inline, overrides: OVERRIDES }}
-      >
-        {children}
-      </MarkdownToJsx>
+      <MarkdownToJsx options={inline ? INLINE_OPTIONS : BLOCK_OPTIONS}>{children}</MarkdownToJsx>
     </Wrapper>
   );
 }

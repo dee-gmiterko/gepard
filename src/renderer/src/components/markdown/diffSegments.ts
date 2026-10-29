@@ -1,14 +1,4 @@
-import { z } from 'zod';
 import type { DiffRow } from '@gepard/common';
-
-export const MarkdownViewType = z.enum(['file', 'diff']);
-export type MarkdownViewType = z.infer<typeof MarkdownViewType>;
-
-const MARKDOWN_PATH = /\.(?:md|markdown|mkd)$/i;
-
-export function isMarkdownPath(path: string): boolean {
-  return MARKDOWN_PATH.test(path);
-}
 
 export interface MarkdownSegment {
   kind: 'context' | 'add' | 'delete';
