@@ -47,6 +47,8 @@ import { SystemPreferenceHandlers } from '../ipc/handlers/systemPreference';
 import { ThemeHandlers } from '../ipc/handlers/theme';
 import { LocalesHandlers } from '../ipc/handlers/locales';
 import { KeybindingsHandlers } from '../ipc/handlers/keybindings';
+import { HiddenFilesHandlers } from '../ipc/handlers/hiddenFiles';
+import { HiddenFilesService } from '../services/hiddenFiles';
 import { ContextMenuHandlers } from '../ipc/handlers/contextMenu';
 
 export interface Core {
@@ -159,11 +161,12 @@ export function composeHandlers(
   systemPreference: SystemPreferenceService,
 ): HandlerMap {
   const { ghService, gitService, review, indexer, extensions, settings } = core;
+  const hiddenFiles = new HiddenFilesService(settings, core.projects);
   return {
     ...new ProjectsHandlers(ghService, gitService, core.projects, indexer).toHandlerMap(),
     ...new LaunchHandlers(core.launch).toHandlerMap(),
-    ...new PrsHandlers(ghService, gitService, review).toHandlerMap(),
-    ...new FilesHandlers(gitService).toHandlerMap(),
+    ...new PrsHandlers(ghService, gitService, review, hiddenFiles).toHandlerMap(),
+    ...new FilesHandlers(gitService, hiddenFiles).toHandlerMap(),
     ...new SearchHandlers(core.paths, indexer, core.latestWins).toHandlerMap(),
     ...new CommentsHandlers(gitService, review).toHandlerMap(),
     ...new SyncHandlers(ghService, core.syncService, review, indexer).toHandlerMap(),
@@ -180,6 +183,7 @@ export function composeHandlers(
     ...new ThemeHandlers(settings, extensions).toHandlerMap(),
     ...new LocalesHandlers(settings, extensions).toHandlerMap(),
     ...new KeybindingsHandlers(settings).toHandlerMap(),
+    ...new HiddenFilesHandlers(settings, core.projects).toHandlerMap(),
     ...new ContextMenuHandlers(contextMenu).toHandlerMap(),
   };
 }

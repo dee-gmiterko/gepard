@@ -8,6 +8,9 @@ export const ProjectId = z
   .regex(/^[A-Za-z0-9._-]+$/, 'invalid project id')
   .refine((id) => id !== '.' && id !== '..', { message: 'invalid project id' });
 
+export const HiddenFilePatterns = z.array(z.string().max(500)).max(200);
+export type HiddenFilePatterns = z.infer<typeof HiddenFilePatterns>;
+
 export const ClonePhase = z.enum([
   'counting',
   'compressing',

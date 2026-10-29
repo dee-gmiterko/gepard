@@ -30,17 +30,18 @@ function renderOverlay(): Rendered {
 }
 
 describe('SettingsOverlay', () => {
-  it('shows one screen at a time, starting with general settings', async () => {
+  it('shows one screen at a time, starting with project settings', async () => {
     renderOverlay();
 
     const tabs = await screen.findAllByRole('tab');
     expect(tabs.map((tab) => tab.getAttribute('aria-label'))).toEqual([
+      'Project',
       'General',
       'Controls',
       'Extensions',
     ]);
-    expect(screen.getByRole('tab', { name: 'General' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('General');
+    expect(screen.getByRole('tab', { name: 'Project' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Project');
     expect(screen.queryByText('Install from GitHub')).toBeNull();
   });
 
@@ -55,7 +56,9 @@ describe('SettingsOverlay', () => {
   });
 
   it('shows theme and language settings on the same tab', async () => {
-    renderOverlay();
+    const { user } = renderOverlay();
+
+    await user.click(await screen.findByRole('tab', { name: 'General' }));
 
     const panel = await screen.findByRole('tabpanel');
     expect(within(panel).getByRole('heading', { name: 'Theme' })).toBeVisible();
@@ -101,8 +104,9 @@ describe('SettingsOverlay', () => {
   it('moves between tabs with the arrow, Home and End keys', async () => {
     const { user } = renderOverlay();
 
-    const general = await screen.findByRole('tab', { name: 'General' });
-    general.focus();
+    const project = await screen.findByRole('tab', { name: 'Project' });
+    project.focus();
+    await user.keyboard('{ArrowDown}');
     await user.keyboard('{ArrowDown}');
     expect(screen.getByRole('tab', { name: 'Controls' })).toHaveFocus();
     expect(screen.getByRole('tab', { name: 'Controls' })).toHaveAttribute('aria-selected', 'true');
@@ -111,19 +115,19 @@ describe('SettingsOverlay', () => {
     expect(screen.getByRole('tab', { name: 'Extensions' })).toHaveFocus();
 
     await user.keyboard('{ArrowDown}');
-    expect(screen.getByRole('tab', { name: 'General' })).toHaveFocus();
+    expect(screen.getByRole('tab', { name: 'Project' })).toHaveFocus();
 
     await user.keyboard('{ArrowUp}');
     expect(screen.getByRole('tab', { name: 'Extensions' })).toHaveFocus();
 
     await user.keyboard('{Home}');
-    expect(screen.getByRole('tab', { name: 'General' })).toHaveFocus();
+    expect(screen.getByRole('tab', { name: 'Project' })).toHaveFocus();
   });
 
   it('keeps only the selected tab in the tab order', async () => {
     renderOverlay();
 
-    expect(await screen.findByRole('tab', { name: 'General' })).toHaveAttribute('tabindex', '0');
+    expect(await screen.findByRole('tab', { name: 'Project' })).toHaveAttribute('tabindex', '0');
     expect(screen.getByRole('tab', { name: 'Controls' })).toHaveAttribute('tabindex', '-1');
   });
 

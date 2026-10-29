@@ -16,6 +16,7 @@ import type { FileLockService } from '../services/fileLock';
 const ProjectFile = Project.omit({ cloned: true }).extend({
   lastTargeting: PersistedTargeting.optional(),
   layout: PersistedLayout.optional(),
+  hiddenFiles: z.array(z.string()).optional(),
 });
 type ProjectFile = z.infer<typeof ProjectFile>;
 
@@ -103,6 +104,16 @@ export class ProjectStore {
 
   async setLayout(id: string, layout: PersistedLayout): Promise<void> {
     await this.updateProjectFile(id, (file) => ({ ...file, layout }));
+  }
+
+  async getHiddenFiles(id: string): Promise<string[]> {
+    const file = await this.readProjectFile(id);
+    return file?.hiddenFiles ?? [];
+  }
+
+  async setHiddenFiles(id: string, hiddenFiles: string[]): Promise<string[]> {
+    await this.updateProjectFile(id, (file) => ({ ...file, hiddenFiles }));
+    return hiddenFiles;
   }
 
   async addProject(url: string): Promise<Project> {

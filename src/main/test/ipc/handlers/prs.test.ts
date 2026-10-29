@@ -65,6 +65,7 @@ describe('overview.owners against a real repository', () => {
       services.gh,
       services.git,
       new ReviewStore(userData.paths, new FileLockService()),
+      { filter: (_projectId, items) => Promise.resolve([...items]) },
     ).toHandlerMap();
     return handlers['overview.owners']({ projectId, base, head }, { window: null });
   }
