@@ -8,7 +8,7 @@ const FILE_LIST_KEYS = new Set(['tree', 'diff', 'owners']);
 export function useGlobalHiddenFiles() {
   return useQuery({
     queryKey: qk.hiddenFilesGlobal(),
-    queryFn: () => invoke('hiddenFiles.getGlobal'),
+    queryFn: () => invoke('hiddenFiles.get', { scope: 'global' }),
   });
 }
 
@@ -16,7 +16,7 @@ export function useProjectHiddenFiles() {
   const projectId = useProjectId() ?? '';
   return useQuery({
     queryKey: qk.hiddenFilesProject(projectId),
-    queryFn: () => invoke('hiddenFiles.getProject', { projectId }),
+    queryFn: () => invoke('hiddenFiles.get', { scope: 'project', projectId }),
     enabled: Boolean(projectId),
   });
 }
@@ -35,7 +35,7 @@ export function useSetGlobalHiddenFiles() {
   const qc = useQueryClient();
   const invalidateFileLists = useInvalidateFileLists();
   return useMutation({
-    mutationFn: (patterns: string[]) => invoke('hiddenFiles.setGlobal', { patterns }),
+    mutationFn: (patterns: string[]) => invoke('hiddenFiles.set', { scope: 'global', patterns }),
     onSuccess: async (patterns) => {
       qc.setQueryData(qk.hiddenFilesGlobal(), patterns);
       await invalidateFileLists();
@@ -48,7 +48,8 @@ export function useSetProjectHiddenFiles() {
   const qc = useQueryClient();
   const invalidateFileLists = useInvalidateFileLists();
   return useMutation({
-    mutationFn: (patterns: string[]) => invoke('hiddenFiles.setProject', { projectId, patterns }),
+    mutationFn: (patterns: string[]) =>
+      invoke('hiddenFiles.set', { scope: 'project', projectId, patterns }),
     onSuccess: async (patterns) => {
       qc.setQueryData(qk.hiddenFilesProject(projectId), patterns);
       await invalidateFileLists();

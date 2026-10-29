@@ -8,19 +8,16 @@ export class HiddenFilesHandlers {
     private readonly projects: ProjectStore,
   ) {}
 
-  toHandlerMap(): Pick<
-    HandlerMap,
-    | 'hiddenFiles.getGlobal'
-    | 'hiddenFiles.setGlobal'
-    | 'hiddenFiles.getProject'
-    | 'hiddenFiles.setProject'
-  > {
+  toHandlerMap(): Pick<HandlerMap, 'hiddenFiles.get' | 'hiddenFiles.set'> {
     return {
-      'hiddenFiles.getGlobal': () => this.settings.getHiddenFiles(),
-      'hiddenFiles.setGlobal': ({ patterns }) => this.settings.setHiddenFiles(patterns),
-      'hiddenFiles.getProject': ({ projectId }) => this.projects.getHiddenFiles(projectId),
-      'hiddenFiles.setProject': ({ projectId, patterns }) =>
-        this.projects.setHiddenFiles(projectId, patterns),
+      'hiddenFiles.get': (target) =>
+        target.scope === 'global'
+          ? this.settings.getHiddenFiles()
+          : this.projects.getHiddenFiles(target.projectId),
+      'hiddenFiles.set': (input) =>
+        input.scope === 'global'
+          ? this.settings.setHiddenFiles(input.patterns)
+          : this.projects.setHiddenFiles(input.projectId, input.patterns),
     };
   }
 }

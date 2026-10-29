@@ -60,6 +60,11 @@ interface ChannelSpec {
   output: z.ZodType;
 }
 
+const HiddenFilesTarget = z.discriminatedUnion('scope', [
+  z.object({ scope: z.literal('global') }),
+  ProjectRef.extend({ scope: z.literal('project') }),
+]);
+
 export const channels = {
   'app.viewer': { input: z.void(), output: Viewer.nullable() },
   'app.viewerRepos': { input: z.void(), output: z.array(ViewerRepo) },
@@ -253,14 +258,9 @@ export const channels = {
     output: z.record(z.string(), z.string()),
   },
 
-  'hiddenFiles.getGlobal': { input: z.void(), output: HiddenFilePatterns },
-  'hiddenFiles.setGlobal': {
-    input: z.object({ patterns: HiddenFilePatterns }),
-    output: HiddenFilePatterns,
-  },
-  'hiddenFiles.getProject': { input: ProjectRef, output: HiddenFilePatterns },
-  'hiddenFiles.setProject': {
-    input: ProjectRef.extend({ patterns: HiddenFilePatterns }),
+  'hiddenFiles.get': { input: HiddenFilesTarget, output: HiddenFilePatterns },
+  'hiddenFiles.set': {
+    input: z.intersection(HiddenFilesTarget, z.object({ patterns: HiddenFilePatterns })),
     output: HiddenFilePatterns,
   },
 
