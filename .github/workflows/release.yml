@@ -29,10 +29,11 @@ jobs:
           manifest-file: .release-please-manifest.json
 
   build:
-    needs: [release-please, build-extensions]
+    needs: [release-please, build-extensions, verify-catalog]
     if: >-
       always() &&
       needs.release-please.outputs.release_created == 'true' &&
+      needs.verify-catalog.result == 'success' &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.build-extensions.result)
     strategy:
       fail-fast: false
@@ -67,6 +68,28 @@ jobs:
           shopt -s nullglob
           files=(src/app/dist/*.AppImage src/app/dist/*-setup.exe src/app/dist/*.dmg)
           gh release upload "$TAG" "${files[@]}" --clobber
+
+  verify-catalog:
+    needs: [release-please, build-extensions]
+    if: >-
+      always() &&
+      needs.release-please.outputs.release_created == 'true' &&
+      !contains(fromJSON('["failure", "cancelled"]'), needs.build-extensions.result)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: yarn install --immutable
+      - name: Verify every catalog entry is released under its catalogued sha
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: yarn extensions:bundle --verify-released --no-bundle
 
   extensions-matrix:
     needs: release-please
