@@ -89,7 +89,7 @@ jobs:
       - name: Verify every catalog entry is released under its catalogued sha
         env:
           GH_TOKEN: ${{ github.token }}
-        run: yarn extensions:bundle --verify-released --no-bundle
+        run: yarn extensions:verify-released
 
   extensions-matrix:
     needs: release-please

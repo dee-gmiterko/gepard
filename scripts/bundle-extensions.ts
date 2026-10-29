@@ -129,20 +129,19 @@ function verifyReleased(): void {
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
-  const argv = yargs(hideBin(process.argv))
-    .option('bundle', {
-      type: 'boolean',
-      default: true,
-      description: 'Copy the bundled extensions into dist/extensions',
-    })
-    .option('verify-released', {
-      type: 'boolean',
-      default: false,
-      description: 'Fail unless every catalog entry is released under its catalogued sha',
-    })
+  yargs(hideBin(process.argv))
+    .command(
+      ['bundle', '$0'],
+      'Copy the bundled extensions into dist/extensions',
+      () => {},
+      () => bundle(),
+    )
+    .command(
+      'verify-released',
+      'Fail unless every catalog entry is released under its catalogued sha',
+      () => {},
+      () => verifyReleased(),
+    )
     .strict()
     .parseSync();
-
-  if (argv.verifyReleased) verifyReleased();
-  if (argv.bundle && !process.exitCode) bundle();
 }
