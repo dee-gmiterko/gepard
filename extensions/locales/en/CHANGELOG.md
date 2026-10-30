@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.1.0](https://github.com/dee-gmiterko/gepard/compare/gepard-locale-en-v1.0.0...gepard-locale-en-v1.1.0) (2026-10-30)
+
+
+### Features
+
+* add a markdown preview mode for files and diffs to the view menu ([aca7843](https://github.com/dee-gmiterko/gepard/commit/aca7843ebd7289004d1115ae2174271bf18df2af))
+* add a mass action to mark all deleted files as viewed ([a3b1f0f](https://github.com/dee-gmiterko/gepard/commit/a3b1f0f41f714dde2310c6ea71183f20c14b20fd))
+* add a project settings tab and hide files by regex per project and globally ([31e06b7](https://github.com/dee-gmiterko/gepard/commit/31e06b7cda6fd0d1d94d14374795d5bcd67f31cf))
+* add a refresh button with a pending sync count to the header ([362dae8](https://github.com/dee-gmiterko/gepard/commit/362dae8c65e4dfffe807d8ca31ea4cd58997f129))
+* add a show current option to display only the file content in the view menu ([3c169c8](https://github.com/dee-gmiterko/gepard/commit/3c169c85d6e58b414ed8db877d915ae171fda99c))
+* cap panel widths by available space and declare the responsive viewport ([b14c408](https://github.com/dee-gmiterko/gepard/commit/b14c408df85da6477cb95d7abb748a3e9172da76))
+* redesign settings overlay with a tab list and two-column extensions ([1b279d3](https://github.com/dee-gmiterko/gepard/commit/1b279d3393e1b38cf08309a5307840a505086e11))
+* render mermaid diagrams in markdown and group markdown code in its own folder ([fce8413](https://github.com/dee-gmiterko/gepard/commit/fce84134f125632ac53d7c70e5fc97237be36668))
+* run as a server that serves the ui and bridges ipc over a websocket ([6ad207c](https://github.com/dee-gmiterko/gepard/commit/6ad207cd4b7bf0374e61491b0ccb544097cf3523))
+* show size details for binary files and binary diffs ([9486595](https://github.com/dee-gmiterko/gepard/commit/9486595b1f6b07acea5b8331a6c3bc9027c9a2e1))
+* show theme and language on one settings tab and keep the last of each enabled ([84b46bb](https://github.com/dee-gmiterko/gepard/commit/84b46bb66f7cab9eb45ba36279324f562046994f))
+* split the deleted-files mass action into full removals and removals only ([0a12a5e](https://github.com/dee-gmiterko/gepard/commit/0a12a5e3dc35bddf5fdf0f2ed728b047b666504c))
+* step through find matches with buttons and arrow keys ([2f9af8b](https://github.com/dee-gmiterko/gepard/commit/2f9af8b77f5fbbfce79ebe621375b1d93ebd901f))
+
+
+### Bug Fixes
+
+* cap the header refresh badge at 99+ ([2a19608](https://github.com/dee-gmiterko/gepard/commit/2a19608034f15cf62b1d6e17f595af36cca69d5c))
+* make comment submit and find stepping keybinding actions and keep comment drafts ([b524c59](https://github.com/dee-gmiterko/gepard/commit/b524c5972434158123932ad098d284a2430c0626))
+* skip markdown files in every prettier run ([1d486a3](https://github.com/dee-gmiterko/gepard/commit/1d486a36524d7f4d61bac6175867f6cf0bf088eb))
+
 ## 1.0.0 (2026-10-16)
 
 
