@@ -105,7 +105,7 @@ export function FileDetailPanel(): React.JSX.Element | null {
   const setLayout = useSetLayout();
   const path = useActiveFile();
   const isChangedFile = useIsCheckedOutChangedFile(path);
-  const { sameSet, similarSet, deletedSet } = useMassActions(path);
+  const { sameSet, similarSet, deletedSet, removedSet } = useMassActions(path);
 
   function commitWidth(value: number): void {
     dispatch({ type: 'layout/setFileCommentsPanelWidth', width: value });
@@ -159,7 +159,12 @@ export function FileDetailPanel(): React.JSX.Element | null {
           <Body>
             {isChangedFile ? (
               <Stack>
-                <MassActions sameSet={sameSet} similarSet={similarSet} deletedSet={deletedSet} />
+                <MassActions
+                  sameSet={sameSet}
+                  similarSet={similarSet}
+                  deletedSet={deletedSet}
+                  removedSet={removedSet}
+                />
                 <FileComments key={path} path={path} />
               </Stack>
             ) : targeting.pr === null ? (

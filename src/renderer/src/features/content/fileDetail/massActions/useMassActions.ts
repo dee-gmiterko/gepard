@@ -19,6 +19,7 @@ export interface MassActions {
   sameSet?: string[];
   similarSet?: string[];
   deletedSet?: string[];
+  removedSet?: string[];
 }
 
 export function useMassActions(path: string | null): MassActions {
@@ -71,7 +72,13 @@ export function useMassActions(path: string | null): MassActions {
   });
 
   return useMemo(() => {
-    if (path === null) return { sameSet: undefined, similarSet: undefined, deletedSet: undefined };
+    if (path === null)
+      return {
+        sameSet: undefined,
+        similarSet: undefined,
+        deletedSet: undefined,
+        removedSet: undefined,
+      };
     const signature = changeSignature(lines);
     const same: string[] = [];
     const rest: { path: string; lines: string[] }[] = [];
@@ -93,7 +100,15 @@ export function useMassActions(path: string | null): MassActions {
     const otherDeleted = isDeleted
       ? files.filter((f) => f.path !== path && f.changeType === 'DELETED').map((f) => f.path)
       : [];
+    const isRemoval = (f: { additions: number; deletions: number }): boolean =>
+      f.additions === 0 && f.deletions > 0;
+    const selfFile = files.find((f) => f.path === path);
+    const otherRemoved =
+      selfFile && isRemoval(selfFile)
+        ? files.filter((f) => f.path !== path && isRemoval(f)).map((f) => f.path)
+        : [];
     return {
+      removedSet: otherRemoved.length > 0 ? [path, ...otherRemoved] : undefined,
       deletedSet: otherDeleted.length > 0 ? [path, ...otherDeleted] : undefined,
       sameSet: same.length > 0 ? [path, ...same] : undefined,
       similarSet: similar.length > 0 ? [path, ...similar] : undefined,
