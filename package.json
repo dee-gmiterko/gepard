@@ -34,7 +34,7 @@
     "locales:refresh": "tsx scripts/refresh-locales.ts",
     "locales:check": "tsx scripts/refresh-locales.ts --check",
     "media:refresh": "tsx scripts/refresh-media.ts",
-    "catalog:refresh": "tsx scripts/refresh-catalog.ts",
+    "catalog:refresh": "turbo run build --filter='./extensions/*/*' && tsx scripts/refresh-catalog.ts",
     "catalog:check": "tsx scripts/refresh-catalog.ts --check",
     "validate": "turbo run validate",
     "prepare": "husky"

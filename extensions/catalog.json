@@ -6,7 +6,7 @@
     "displayName": "Godot",
     "kind": "grammar",
     "description": "Syntax highlighting for GDScript, Godot scene and resource files and shaders.",
-    "sha": "6f0ed34d099f4fc06ac2d53f4406e03e48288285"
+    "sha": "760e427b3a618b242f602ba466abcac4b6f2bf24e0a40e59f287abd472174831"
   },
   {
     "name": "gepard-locale-en",
@@ -15,7 +15,7 @@
     "displayName": "English",
     "kind": "locale",
     "description": "English UI translation.",
-    "sha": "07e596cc66b0c9f8a35b636fbbd1b39bc609a44b"
+    "sha": "fc8ee218b537a1ae01e3e6c54784c2068a8bc214c7d3d69f421244d6965d85ac"
   },
   {
     "name": "gepard-ext-cpp",
@@ -24,7 +24,7 @@
     "displayName": "C/C++",
     "kind": "lsp",
     "description": "Code intelligence for C and C++ projects (clangd).",
-    "sha": "182346a832f88ca33ac310bf26fa7f6d82b43b97"
+    "sha": "476b8466947f916cc37c34c46f6161edc478470638050c61c5fff6f8d62cab2f"
   },
   {
     "name": "gepard-ext-csharp",
@@ -41,7 +41,7 @@
       "win32-x64",
       "win32-arm64"
     ],
-    "sha": "dcb94c44f1131290e23c70d8a3cb95b175953bbb"
+    "sha": "550c0f7c9954c77f89380b5b1bb1c9d2c2356dde8969b5d1975864fee783e646"
   },
   {
     "name": "gepard-ext-gdscript",
@@ -50,7 +50,7 @@
     "displayName": "GDScript",
     "kind": "lsp",
     "description": "Code intelligence for Godot projects (headless Godot editor language server).",
-    "sha": "33767fcf653c636056a0fabe61d1a98a553a2c22"
+    "sha": "8a7a75e5b3a15edd8f6faa0d253b0ebf4cff7d70c59d8d4678a837984f1d5b23"
   },
   {
     "name": "gepard-ext-java",
@@ -59,7 +59,7 @@
     "displayName": "Java",
     "kind": "lsp",
     "description": "Code intelligence for Java projects (Eclipse JDT Language Server).",
-    "sha": "d9bd7925ee0531c02ae6efacdd0eacd44327a6b6"
+    "sha": "aa7f7669d9108169f1d26d437169b5a7b80aaf0d1f15f82cd7574d1d4609995f"
   },
   {
     "name": "gepard-ext-php",
@@ -68,7 +68,7 @@
     "displayName": "PHP",
     "kind": "lsp",
     "description": "Code intelligence for PHP projects (PHPantom).",
-    "sha": "987a5e668247a5cddcb40246e3c49c80a802ad0f"
+    "sha": "49470b6f26720681554f9eb0cb2bb94912d7c54a5d9666cb2096804512a7b40e"
   },
   {
     "name": "gepard-ext-python",
@@ -77,7 +77,7 @@
     "displayName": "Python",
     "kind": "lsp",
     "description": "Code intelligence for Python projects (Pyright).",
-    "sha": "716845ada0a11ed6baf013e3b85aaa2c7537c318"
+    "sha": "47a690c164f219642cbbe6cd4cbcd9e93f16448a344354854f5dba16bd0a22dc"
   },
   {
     "name": "gepard-ext-typescript",
@@ -94,7 +94,7 @@
       "win32-x64",
       "win32-arm64"
     ],
-    "sha": "8bd4661b2d3dfd82c9008accdeba728db4b5b5a0"
+    "sha": "ffca8024ca0063b1d5ddfb0c06491e93f08779ea8f2f0d7b90238e193a4c3558"
   },
   {
     "name": "gepard-theme-dark",
@@ -103,7 +103,7 @@
     "displayName": "Dark",
     "kind": "theme",
     "description": "Dark colour theme.",
-    "sha": "c0558c4dc3514e36f3ee98edd783657c962b6bdd"
+    "sha": "6c43db0bb22eefed680869d8e8977c9e2a19dac64312bfa4dc6c09ee94d457e4"
   },
   {
     "name": "gepard-theme-dark-high-contrast",
@@ -112,7 +112,7 @@
     "displayName": "Dark - High contrast",
     "kind": "theme",
     "description": "Dark high contrast colour theme.",
-    "sha": "e5e6fc037965ee29c22b2d6e01c52acc79da689b"
+    "sha": "8441f551cada28511bac2bdc69cb4841d70deeb40d8b09830ec54d43ee46264d"
   },
   {
     "name": "gepard-theme-light",
@@ -121,7 +121,7 @@
     "displayName": "Light",
     "kind": "theme",
     "description": "Light colour theme.",
-    "sha": "2512a2d70b9bfd1e7443428381da97470d261b73"
+    "sha": "e047639bd5349e37be4eca893f18f3911dcbb26fe6540d220d12c67dde1112d9"
   },
   {
     "name": "gepard-theme-light-high-contrast",
@@ -130,6 +130,6 @@
     "displayName": "Light - High contrast",
     "kind": "theme",
     "description": "Light high contrast colour theme.",
-    "sha": "6efac88d34d0749c0b02783785d234d4a11c4348"
+    "sha": "1cb10cc5ef2904fd6f6f689e6ad8d95c1c647dfe68b9cb9b5237e7a26b461abc"
   }
 ]

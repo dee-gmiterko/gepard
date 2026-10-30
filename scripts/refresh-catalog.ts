@@ -1,11 +1,10 @@
-import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs';
 import { formatJson } from './helpers/format-json';
+import { hashExtension } from './hash-extension';
 import {
   buildCatalog,
   buildReleaseConfig,
@@ -52,24 +51,13 @@ function repositorySlug(): string {
   return `${match[1]}/${match[2]}`;
 }
 
-// The tree id of the extension directory as git would commit it from the working tree.
-function treeSha(dir: string): string {
-  const tmp = mkdtempSync(path.join(tmpdir(), 'gepard-catalog-'));
-  try {
-    const env = { ...process.env, GIT_INDEX_FILE: path.join(tmp, 'index') };
-    const git = (...args: string[]): string =>
-      execFileSync('git', args, { cwd: ROOT_DIR, env, encoding: 'utf8' }).trim();
-    git('add', '-A', '--', dir);
-    return git('write-tree', `--prefix=${dir}/`);
-  } finally {
-    rmSync(tmp, { recursive: true, force: true });
-  }
-}
-
 async function main({ check }: { check: boolean }): Promise<void> {
   const packages = listExtensionPackages();
   const values: Array<[string, unknown]> = [
-    [CATALOG_FILE, buildCatalog(packages, repositorySlug(), treeSha)],
+    [
+      CATALOG_FILE,
+      buildCatalog(packages, repositorySlug(), (dir) => hashExtension(path.join(ROOT_DIR, dir))),
+    ],
     [
       RELEASE_CONFIG_FILE,
       buildReleaseConfig(readJson<ReleaseConfig>(RELEASE_CONFIG_FILE), packages),
