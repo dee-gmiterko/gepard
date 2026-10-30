@@ -1,10 +1,12 @@
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs';
 import type { CatalogEntry } from './helpers/catalog';
+import { hashExtension } from './hash-extension';
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = path.join(ROOT_DIR, 'dist/extensions');
@@ -24,7 +26,7 @@ export interface PublishedRelease {
 
 export interface ReleaseSource {
   publishedReleases: (repository: string) => PublishedRelease[];
-  treeSha: (tag: string, dir: string) => string | null;
+  archiveSha: (repository: string, tag: string, archive: string) => string | null;
 }
 
 export function findUnreleased(catalog: CatalogEntry[], source: ReleaseSource): string[] {
@@ -39,7 +41,13 @@ export function findUnreleased(catalog: CatalogEntry[], source: ReleaseSource): 
     const platforms = entry.platforms?.length ? entry.platforms : [null];
     const matching = releases
       .filter((release) => release.tagName.startsWith(`${entry.name}-v`))
-      .filter((release) => source.treeSha(release.tagName, entry.path) === entry.sha)
+      .filter((release) => {
+        const archive = release.assets.find((asset) => asset.endsWith('.tgz'));
+        return (
+          archive !== undefined &&
+          source.archiveSha(entry.repository, release.tagName, archive) === entry.sha
+        );
+      })
       .filter((release) =>
         platforms.every((platform) =>
           release.assets.some((asset) =>
@@ -53,13 +61,22 @@ export function findUnreleased(catalog: CatalogEntry[], source: ReleaseSource): 
   return problems;
 }
 
-function gitTreeSha(tag: string, dir: string): string | null {
+function releasedArchiveSha(repository: string, tag: string, archive: string): string | null {
+  const tmp = mkdtempSync(path.join(tmpdir(), 'gepard-release-'));
+  const unpacked = path.join(tmp, 'package');
   try {
-    return execFileSync('git', ['rev-parse', '--verify', '--quiet', `refs/tags/${tag}:${dir}`], {
-      encoding: 'utf8',
-    }).trim();
+    execFileSync(
+      'gh',
+      ['release', 'download', tag, '--repo', repository, '--pattern', archive, '--dir', tmp],
+      { stdio: 'ignore' },
+    );
+    mkdirSync(unpacked);
+    execFileSync('tar', ['-xzf', path.join(tmp, archive), '-C', unpacked, '--strip-components=1']);
+    return hashExtension(unpacked);
   } catch {
     return null;
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
   }
 }
 
@@ -114,7 +131,7 @@ function verifyReleased(): void {
   ) as CatalogEntry[];
   const problems = findUnreleased(catalog, {
     publishedReleases: ghPublishedReleases,
-    treeSha: gitTreeSha,
+    archiveSha: releasedArchiveSha,
   });
   if (problems.length > 0) {
     console.error(

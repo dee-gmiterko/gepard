@@ -15,7 +15,7 @@ const entry = (over: Partial<CatalogEntry> = {}): CatalogEntry => ({
 
 const source = (releases: PublishedRelease[], trees: Record<string, string>): ReleaseSource => ({
   publishedReleases: () => releases,
-  treeSha: (tag: string) => trees[tag] ?? null,
+  archiveSha: (_repository: string, tag: string) => trees[tag] ?? null,
 });
 
 describe('findUnreleased', () => {

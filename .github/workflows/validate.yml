@@ -29,7 +29,7 @@ jobs:
       - run: yarn install --immutable
       - run: yarn validate
       - run: yarn barrels:check
-      - run: yarn catalog:check
+      - run: yarn turbo run //#catalog:check
       - run: yarn test
       - name: Lint commit messages
         if: github.event_name == 'pull_request'

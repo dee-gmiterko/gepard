@@ -62,6 +62,16 @@
       "inputs": ["scripts/refresh-barrels.sh", "src/common/**", "src/common-lsp/**", "package.json"]
     },
     "//#catalog:check": {
+      "dependsOn": [
+        "gepard-grammar-godot#build",
+        "gepard-ext-cpp#build",
+        "gepard-ext-csharp#build",
+        "gepard-ext-gdscript#build",
+        "gepard-ext-java#build",
+        "gepard-ext-php#build",
+        "gepard-ext-python#build",
+        "gepard-ext-typescript#build"
+      ],
       "inputs": [
         "scripts/refresh-catalog.ts",
         "scripts/helpers/catalog.ts",
