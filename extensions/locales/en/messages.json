@@ -107,6 +107,7 @@
   "content.imageDiffViewer.beforeAlt": "Before: {path}",
   "content.imageDiffViewer.noImage": "No image",
   "content.massActions.applied": "Viewed",
+  "content.massActions.deleted": "Mark all deleted files as viewed: {count, plural, one {# other file} other {# other files}}",
   "content.massActions.hideFiles": "Hide files",
   "content.massActions.markAllViewed": "Mark all viewed",
   "content.massActions.same": "Same change also in: {count, plural, one {# other file} other {# other files}}",

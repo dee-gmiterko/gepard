@@ -18,6 +18,7 @@ const MAX_SYMBOL_LINES = 60;
 export interface MassActions {
   sameSet?: string[];
   similarSet?: string[];
+  deletedSet?: string[];
 }
 
 export function useMassActions(path: string | null): MassActions {
@@ -70,7 +71,7 @@ export function useMassActions(path: string | null): MassActions {
   });
 
   return useMemo(() => {
-    if (path === null) return { sameSet: undefined, similarSet: undefined };
+    if (path === null) return { sameSet: undefined, similarSet: undefined, deletedSet: undefined };
     const signature = changeSignature(lines);
     const same: string[] = [];
     const rest: { path: string; lines: string[] }[] = [];
@@ -87,9 +88,23 @@ export function useMassActions(path: string | null): MassActions {
     const similar = matcher
       ? rest.filter((c) => matchesSimilar(matcher, c.lines)).map((c) => c.path)
       : [];
+    const files = changed.data ?? [];
+    const isDeleted = files.some((f) => f.path === path && f.changeType === 'DELETED');
+    const otherDeleted = isDeleted
+      ? files.filter((f) => f.path !== path && f.changeType === 'DELETED').map((f) => f.path)
+      : [];
     return {
+      deletedSet: otherDeleted.length > 0 ? [path, ...otherDeleted] : undefined,
       sameSet: same.length > 0 ? [path, ...same] : undefined,
       similarSet: similar.length > 0 ? [path, ...similar] : undefined,
     };
-  }, [path, lines, candidatePaths, candidateLines, symbolsPerLine, symbolLines.length]);
+  }, [
+    path,
+    changed.data,
+    lines,
+    candidatePaths,
+    candidateLines,
+    symbolsPerLine,
+    symbolLines.length,
+  ]);
 }
