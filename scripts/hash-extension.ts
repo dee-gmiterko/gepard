@@ -48,7 +48,7 @@ export function hashExtension(dir: string): string {
   ) as PackedManifest;
   const packed = packedPaths(dir);
   assertEveryEntryPacked(dir, manifest.files ?? [], packed);
-  const hash = createHash('sha256');
+  const hash = createHash('sha1');
   const hashed = packed.filter((p) => p !== UNHASHED_ENTRY && !p.startsWith(`${UNHASHED_ENTRY}/`));
   for (const file of hashed.sort()) {
     const digest = createHash('sha256').update(content(dir, file)).digest('hex');
