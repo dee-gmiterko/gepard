@@ -5,7 +5,7 @@ import { useUiDispatch, useUiStore } from '../state/UiContext';
 import { useActiveFile, useLayout } from '../state/hooks';
 import type { Layout, QuickSearchMode, SidePanelTab, UiAction } from '../state/reducer';
 import { useSetLayout } from '../queries/projects';
-import { useSync, useViewed } from '../queries/comments';
+import { useSync, useSyncing, useViewed } from '../queries/comments';
 import { useTargetedFiles } from '../queries/files';
 import { useReviewActions } from '../queries/review';
 import { nextReviewFile } from '../helpers/targetedFiles';
@@ -127,7 +127,8 @@ export function useCommands(): Commands {
   const { mutate: setLayout } = useSetLayout();
   const review = useReviewActions();
   const runActionHandler = useRunActionHandler();
-  const { mutate: runSync, isPending: syncing } = useSync();
+  const { mutate: runSync } = useSync();
+  const syncing = useSyncing();
 
   return useMemo<Commands>(() => {
     const toggleLayout = (
