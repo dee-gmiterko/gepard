@@ -1,28 +1,10 @@
-import { z } from 'zod';
 import type { Paths } from '../main/paths';
 import type { FileLockService } from '../services/fileLock';
+import { CURRENT_SETTINGS_VERSION, SettingsFile } from './settingsMigrations';
 import { readJsonFile, writeJsonFile } from '../helpers/jsonFile';
 
-// Older files stored a single chord string per action.
-export const KeybindingsField = z
-  .record(z.string(), z.union([z.string(), z.array(z.string())]))
-  .transform((record) =>
-    Object.fromEntries(
-      Object.entries(record).map(([id, keys]) => [id, typeof keys === 'string' ? [keys] : keys]),
-    ),
-  );
-
-const SettingsFile = z.object({
-  theme: z.object({ templateId: z.string().nullable() }),
-  // Defaulted because `readJsonFile` treats a schema mismatch as corruption, so older files must still parse.
-  locale: z.object({ localeId: z.string().nullable() }).default({ localeId: null }),
-  extensions: z.record(z.string(), z.boolean()),
-  keybindings: KeybindingsField.default({}),
-  hiddenFiles: z.array(z.string()).default([]),
-});
-type SettingsFile = z.infer<typeof SettingsFile>;
-
 const EMPTY_SETTINGS: SettingsFile = {
+  version: CURRENT_SETTINGS_VERSION,
   theme: { templateId: null },
   locale: { localeId: null },
   extensions: {},
