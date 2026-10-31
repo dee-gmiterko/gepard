@@ -56,4 +56,5 @@ export const qk = {
   index: (p: string) => [...qk.project(p), 'index'] as const,
   languageServers: (p: string) => [...qk.project(p), 'languageServers'] as const,
   checkout: (p: string) => [...qk.project(p), 'checkout'] as const,
+  sync: (p: string) => [...qk.project(p), 'sync'] as const,
 };

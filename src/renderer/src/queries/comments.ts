@@ -1,6 +1,7 @@
 import {
   queryOptions,
   useMutation,
+  useMutationState,
   useQuery,
   useQueryClient,
   type QueryClient,
@@ -149,6 +150,7 @@ export function useSync() {
   const commit = useTargetCommit() ?? undefined;
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: qk.sync(projectId),
     mutationFn: async (mode: SyncMode = 'full') => ({
       pr,
       commit,
@@ -179,12 +181,24 @@ export function usePendingCount() {
   });
 }
 
+// Mutation state is per hook instance, so a running full sync is read from the cache instead.
+export function useSyncing(): boolean {
+  const projectId = useProjectId() ?? '';
+  return (
+    useMutationState({
+      filters: { mutationKey: qk.sync(projectId), status: 'pending' },
+      select: (mutation) => mutation.state.variables,
+    }).filter((mode) => mode === 'full').length > 0
+  );
+}
+
 export function useFullSync(): {
   sync: () => void;
   syncing: boolean;
   pendingCount: number | undefined;
 } {
-  const { mutate, isPending } = useSync();
+  const { mutate } = useSync();
+  const syncing = useSyncing();
   const { data } = usePendingCount();
-  return { sync: () => mutate('full'), syncing: isPending, pendingCount: data };
+  return { sync: () => mutate('full'), syncing, pendingCount: data };
 }
