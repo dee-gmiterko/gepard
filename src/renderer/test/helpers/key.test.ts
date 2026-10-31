@@ -4,7 +4,9 @@ import {
   bindingMatches,
   collidingInputs,
   effectiveKeys,
+  bindingKeyLabel,
   inputLabel,
+  isCustomized,
   keyChord,
   keyLabel,
   splitChord,
@@ -99,5 +101,36 @@ describe('collidingInputs', () => {
 
   it('ignores repeats within one action', () => {
     expect(collidingInputs([action('a', ['x', 'x'])], undefined).size).toBe(0);
+  });
+});
+
+describe('empty default keys', () => {
+  const unbound = action('sync', []);
+
+  it('has no keys or matches until bound', () => {
+    expect(effectiveKeys(unbound, undefined)).toEqual([]);
+    expect(bindingMatches(unbound, 'x', undefined)).toBe(false);
+    expect(bindingMatches(unbound, 'x', { sync: ['x'] })).toBe(true);
+  });
+
+  it('does not collide', () => {
+    expect(collidingInputs([unbound, action('b', [])], undefined).size).toBe(0);
+  });
+
+  it('has an empty label when unbound', () => {
+    expect(bindingKeyLabel('sync', undefined)).toBe('');
+    expect(bindingKeyLabel('sync', { sync: ['Gamepad:0'] })).toBe('Gamepad A');
+  });
+});
+
+describe('isCustomized', () => {
+  it('is true only when the override differs from the default keys', () => {
+    const binding = action('go', ['g', 'F3']);
+    expect(isCustomized(binding, undefined)).toBe(false);
+    expect(isCustomized(binding, { go: ['g', 'F3'] })).toBe(false);
+    expect(isCustomized(binding, { go: ['F3', 'g'] })).toBe(true);
+    expect(isCustomized(binding, { go: [] })).toBe(true);
+    expect(isCustomized(action('sync', []), { sync: [] })).toBe(false);
+    expect(isCustomized(action('sync', []), { sync: ['x'] })).toBe(true);
   });
 });

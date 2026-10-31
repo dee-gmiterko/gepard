@@ -15,6 +15,7 @@ import {
   collidingInputs,
   effectiveKeys,
   inputLabel,
+  isCustomized,
   keyChord,
   MODIFIER_KEYS,
 } from '../../helpers/key';
@@ -43,6 +44,10 @@ const messages = defineMessages({
   remove: {
     id: 'settings.keybindings.remove',
     defaultMessage: 'Remove {binding} from {name}',
+  },
+  unbound: {
+    id: 'settings.keybindings.unbound',
+    defaultMessage: 'Not bound',
   },
   listening: {
     id: 'settings.keybindings.listening',
@@ -91,6 +96,10 @@ const ListeningKey = styled(Badge)`
   font-family: ${({ theme }) => theme.font.mono};
   border-color: ${({ theme }) => theme.colors.accent};
   color: ${({ theme }) => theme.colors.accent};
+`;
+
+const Unbound = styled(Caption)`
+  font-style: italic;
 `;
 
 const Hint = styled(Caption)`
@@ -175,13 +184,14 @@ export function KeybindingsPanel(): React.JSX.Element {
         {keyBindings.map((binding) => {
           const isListening = listeningId === binding.id;
           const name = intl.formatMessage(binding.label);
-          const isCustom = Boolean(overrides?.[binding.id]);
+          const keys = effectiveKeys(binding, overrides);
+          const isCustom = isCustomized(binding, overrides);
 
           return (
             <ListRow key={binding.id}>
               <RowTitle $size="sm">{name}</RowTitle>
               <Keys $gap={2}>
-                {effectiveKeys(binding, overrides).map((input) => (
+                {keys.map((input) => (
                   <Key key={input} $collides={colliding.has(input)}>
                     {inputLabel(input)}
                     <RemoveKey
@@ -201,6 +211,11 @@ export function KeybindingsPanel(): React.JSX.Element {
                     </RemoveKey>
                   </Key>
                 ))}
+                {keys.length === 0 && !isListening && (
+                  <Unbound>
+                    <FormattedMessage {...messages.unbound} />
+                  </Unbound>
+                )}
                 {isListening && (
                   <ListeningKey
                     tabIndex={0}
