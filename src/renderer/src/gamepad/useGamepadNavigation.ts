@@ -6,14 +6,20 @@ import {
   stickDirection,
   type RepeatState,
 } from '../helpers/gamepad';
-import { findScrollTarget, moveFocus } from './domTargets';
+import { activateFocused, findScrollTarget, moveFocus } from './domTargets';
+import { useGamepadButtonPresses } from './useGamepadButtonPresses';
 import { useGamepadFrames } from './useGamepadFrames';
 
 const LEFT_STICK = [0, 1] as const;
 const RIGHT_STICK = [2, 3] as const;
+const LEFT_STICK_CLICK = 10;
 
 export function useGamepadNavigation(): void {
   const repeatRef = useRef<RepeatState>(INITIAL_REPEAT_STATE);
+
+  useGamepadButtonPresses((button) => {
+    if (button === LEFT_STICK_CLICK) activateFocused();
+  });
 
   useGamepadFrames((pads, elapsedMs) => {
     const pad = pads.find((p) => p.axes.length >= 4);

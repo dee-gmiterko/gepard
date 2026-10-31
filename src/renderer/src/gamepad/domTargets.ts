@@ -59,3 +59,8 @@ export function moveFocus(direction: FocusDirection): void {
   candidates[index].focus();
   candidates[index].scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
+
+export function activateFocused(): void {
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && active !== document.body) active.click();
+}
