@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.0](https://github.com/dee-gmiterko/gepard/compare/gepard-locale-en-v1.2.0...gepard-locale-en-v1.3.0) (2026-10-31)
+
+
+### Features
+
+* add an unbound-by-default sync keybinding ([02a39c8](https://github.com/dee-gmiterko/gepard/commit/02a39c8141b53816546cc57d1ea21dc7c1413a5a))
+* allow several bindings per action, bind gamepad buttons and navigate with gamepad sticks ([baadcb7](https://github.com/dee-gmiterko/gepard/commit/baadcb76ac334a4fc6c0a51ef417c8b90aba0d38)), closes [#12](https://github.com/dee-gmiterko/gepard/issues/12)
+
 ## [1.2.0](https://github.com/dee-gmiterko/gepard/compare/gepard-locale-en-v1.1.0...gepard-locale-en-v1.2.0) (2026-10-30)
 
 
