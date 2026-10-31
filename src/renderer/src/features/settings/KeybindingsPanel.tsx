@@ -1,7 +1,7 @@
 import { useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import styled from 'styled-components';
-import { RotateCcw } from 'react-feather';
+import { RotateCcw, X } from 'react-feather';
 import { List, ListRow, RowTitle } from '../../components/List';
 import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
@@ -9,9 +9,17 @@ import { IconButton } from '../../components/IconButton';
 import { Section } from '../../components/Section';
 import { SectionHeading } from '../../components/SectionHeading';
 import { Caption } from '../../components/Caption';
-import { Inline, Stack } from '../../components/Layout';
+import { Inline } from '../../components/Layout';
 import { keyBindings, type KeyBinding } from '../../keyboard/bindings';
-import { effectiveKey, keyChord, keyLabel, MODIFIER_KEYS } from '../../helpers/key';
+import {
+  collidingInputs,
+  effectiveKeys,
+  inputLabel,
+  keyChord,
+  MODIFIER_KEYS,
+} from '../../helpers/key';
+import { gamepadInput } from '../../helpers/gamepad';
+import { useGamepadButtonPresses } from '../../gamepad/useGamepadButtonPresses';
 import { useKeybindingOverrides, useSetKeybindingOverride } from '../../queries/keybindings';
 
 const messages = defineMessages({
@@ -21,27 +29,28 @@ const messages = defineMessages({
   },
   hint: {
     id: 'settings.keybindings.hint',
-    defaultMessage: 'Click "Rebind" and press a key or key combination. Escape cancels.',
+    defaultMessage:
+      'Click "Add" and press a button. Escape cancels. Bindings shown in red are used by more than one action.',
   },
-  rebind: {
-    id: 'settings.keybindings.rebind',
-    defaultMessage: 'Rebind',
+  add: {
+    id: 'settings.keybindings.add',
+    defaultMessage: 'Add',
   },
-  rebindLabel: {
-    id: 'settings.keybindings.rebindLabel',
-    defaultMessage: 'Rebind {name}',
+  addLabel: {
+    id: 'settings.keybindings.addLabel',
+    defaultMessage: 'Add a binding for {name}',
+  },
+  remove: {
+    id: 'settings.keybindings.remove',
+    defaultMessage: 'Remove {binding} from {name}',
   },
   listening: {
     id: 'settings.keybindings.listening',
-    defaultMessage: 'Press a key…',
+    defaultMessage: 'Press a button…',
   },
   reset: {
     id: 'settings.keybindings.reset',
     defaultMessage: 'Reset {name} to default',
-  },
-  conflict: {
-    id: 'settings.keybindings.conflict',
-    defaultMessage: 'Also used by {name}',
   },
   saveFailed: {
     id: 'settings.keybindings.saveFailed',
@@ -49,8 +58,33 @@ const messages = defineMessages({
   },
 });
 
-const Key = styled(Badge)`
+const Key = styled(Badge)<{ $collides: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[1]};
   font-family: ${({ theme }) => theme.font.mono};
+  ${({ $collides, theme }) =>
+    $collides ? `background: ${theme.colors.diffDelBg}; color: ${theme.colors.diffDelFg};` : ''}
+`;
+
+const RemoveKey = styled.button`
+  display: inline-flex;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.7;
+
+  &:hover,
+  &:focus-visible {
+    opacity: 1;
+  }
+`;
+
+const Keys = styled(Inline)`
+  flex-wrap: wrap;
+  justify-content: flex-end;
 `;
 
 const ListeningKey = styled(Badge)`
@@ -64,21 +98,13 @@ const Hint = styled(Caption)`
   margin-bottom: ${({ theme }) => theme.space[2]};
 `;
 
-const ConflictNote = styled.div`
+const ErrorNote = styled.div`
   font-size: ${({ theme }) => theme.font.size.xs};
   color: ${({ theme }) => theme.colors.danger};
 `;
 
 // Escape cancels listening and Tab is focus navigation, so neither can be bound.
 const RESERVED_KEYS = new Set(['Escape', 'Tab']);
-
-function conflictsFor(
-  binding: KeyBinding,
-  key: string,
-  overrides: Record<string, string> | undefined,
-): KeyBinding[] {
-  return keyBindings.filter((b) => b.id !== binding.id && effectiveKey(b, overrides) === key);
-}
 
 export function KeybindingsPanel(): React.JSX.Element {
   const intl = useIntl();
@@ -95,6 +121,13 @@ export function KeybindingsPanel(): React.JSX.Element {
     setListeningId(null);
   }
 
+  function addInput(binding: KeyBinding, input: string): void {
+    setListeningId(null);
+    const current = effectiveKeys(binding, overrides);
+    if (current.includes(input)) return;
+    setOverride.mutate({ id: binding.id, keys: [...current, input] });
+  }
+
   function handleCapture(binding: KeyBinding, e: ReactKeyboardEvent<HTMLSpanElement>): void {
     // The captured key must not also reach the overlay's Escape handling or `useGlobalKeys`.
     e.stopPropagation();
@@ -106,13 +139,26 @@ export function KeybindingsPanel(): React.JSX.Element {
     }
     if (MODIFIER_KEYS.has(e.key) || RESERVED_KEYS.has(e.key)) return;
 
-    setListeningId(null);
-    setOverride.mutate({ id: binding.id, key: keyChord(e) });
+    addInput(binding, keyChord(e));
+  }
+
+  useGamepadButtonPresses((button) => {
+    const binding = keyBindings.find((b) => b.id === listeningId);
+    if (binding) addInput(binding, gamepadInput(button));
+  }, listeningId !== null);
+
+  function removeInput(binding: KeyBinding, input: string): void {
+    setOverride.mutate({
+      id: binding.id,
+      keys: effectiveKeys(binding, overrides).filter((k) => k !== input),
+    });
   }
 
   function resetBinding(id: string): void {
-    setOverride.mutate({ id, key: null });
+    setOverride.mutate({ id, keys: null });
   }
+
+  const colliding = collidingInputs(keyBindings, overrides);
 
   return (
     <Section $flush>
@@ -121,69 +167,71 @@ export function KeybindingsPanel(): React.JSX.Element {
         <FormattedMessage {...messages.hint} />
       </Hint>
       {setOverride.isError && (
-        <ConflictNote>
+        <ErrorNote>
           <FormattedMessage {...messages.saveFailed} />
-        </ConflictNote>
+        </ErrorNote>
       )}
       <List>
         {keyBindings.map((binding) => {
           const isListening = listeningId === binding.id;
-          const key = effectiveKey(binding, overrides);
+          const name = intl.formatMessage(binding.label);
           const isCustom = Boolean(overrides?.[binding.id]);
-          const conflicts = conflictsFor(binding, key, overrides);
 
           return (
             <ListRow key={binding.id}>
-              <Stack $gap={1}>
-                <RowTitle $size="sm">{intl.formatMessage(binding.label)}</RowTitle>
-                {conflicts.length > 0 && (
-                  <ConflictNote>
-                    <FormattedMessage
-                      {...messages.conflict}
-                      values={{
-                        name: conflicts.map((c) => intl.formatMessage(c.label)).join(', '),
-                      }}
-                    />
-                  </ConflictNote>
-                )}
-              </Stack>
-              <Inline $gap={2}>
-                {isListening ? (
+              <RowTitle $size="sm">{name}</RowTitle>
+              <Keys $gap={2}>
+                {effectiveKeys(binding, overrides).map((input) => (
+                  <Key key={input} $collides={colliding.has(input)}>
+                    {inputLabel(input)}
+                    <RemoveKey
+                      type="button"
+                      aria-label={intl.formatMessage(messages.remove, {
+                        binding: inputLabel(input),
+                        name,
+                      })}
+                      title={intl.formatMessage(messages.remove, {
+                        binding: inputLabel(input),
+                        name,
+                      })}
+                      onClick={() => removeInput(binding, input)}
+                      disabled={setOverride.isPending}
+                    >
+                      <X size={10} />
+                    </RemoveKey>
+                  </Key>
+                ))}
+                {isListening && (
                   <ListeningKey
                     tabIndex={0}
                     ref={(el) => el?.focus()}
                     role="button"
-                    aria-label={intl.formatMessage(messages.rebindLabel, {
-                      name: intl.formatMessage(binding.label),
-                    })}
+                    aria-label={intl.formatMessage(messages.addLabel, { name })}
                     onKeyDown={(e) => handleCapture(binding, e)}
                     onBlur={cancelListening}
                   >
                     <FormattedMessage {...messages.listening} />
                   </ListeningKey>
-                ) : (
-                  <Key>{keyLabel(key)}</Key>
                 )}
                 {isCustom && !isListening && (
                   <IconButton
                     icon={RotateCcw}
                     size={14}
-                    label={intl.formatMessage(messages.reset, {
-                      name: intl.formatMessage(binding.label),
-                    })}
+                    label={intl.formatMessage(messages.reset, { name })}
                     onClick={() => resetBinding(binding.id)}
                     disabled={setOverride.isPending}
                   />
                 )}
                 {!isListening && (
                   <Button
+                    aria-label={intl.formatMessage(messages.addLabel, { name })}
                     onClick={() => startListening(binding.id)}
                     disabled={setOverride.isPending}
                   >
-                    <FormattedMessage {...messages.rebind} />
+                    <FormattedMessage {...messages.add} />
                   </Button>
                 )}
-              </Inline>
+              </Keys>
             </ListRow>
           );
         })}

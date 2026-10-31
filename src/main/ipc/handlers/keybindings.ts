@@ -7,7 +7,7 @@ export class KeybindingsHandlers {
   toHandlerMap(): Pick<HandlerMap, 'keybindings.getOverrides' | 'keybindings.setOverride'> {
     return {
       'keybindings.getOverrides': () => this.settings.getKeybindingOverrides(),
-      'keybindings.setOverride': ({ id, key }) => this.settings.setKeybindingOverride(id, key),
+      'keybindings.setOverride': ({ id, keys }) => this.settings.setKeybindingOverride(id, keys),
     };
   }
 }

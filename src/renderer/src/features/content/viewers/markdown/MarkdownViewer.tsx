@@ -19,7 +19,7 @@ const messages = defineMessages({
   },
 });
 
-const Page = styled.div`
+const Page = styled.div.attrs<{ 'data-gamepad-scroll': string }>({ 'data-gamepad-scroll': '' })`
   height: 100%;
   min-width: 0;
   box-sizing: border-box;

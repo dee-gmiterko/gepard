@@ -35,7 +35,7 @@ const Split = styled.div`
   height: 100%;
 `;
 
-const Half = styled.div`
+const Half = styled.div.attrs<{ 'data-gamepad-scroll': string }>({ 'data-gamepad-scroll': '' })`
   flex: 1 1 50%;
   min-height: 0;
   overflow: auto;

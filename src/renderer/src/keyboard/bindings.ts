@@ -7,8 +7,7 @@ const MOD: Modifier =
 
 export interface KeyBinding {
   id: string;
-  key: string;
-  alternateKeys?: readonly string[];
+  keys: readonly string[];
   label: MessageDescriptor;
   inTextEntry?: boolean;
   run: (commands: Commands) => boolean;
@@ -80,94 +79,92 @@ const messages = defineMessages({
 export const keyBindings: readonly KeyBinding[] = [
   {
     id: 'toggleViewed',
-    key: ' ',
+    keys: [' '],
     label: messages.toggleViewed,
     run: (commands) => commands.toggleViewed(),
   },
   {
     id: 'nextFile',
-    key: 'PageDown',
+    keys: ['PageDown'],
     label: messages.nextFile,
     run: (commands) => commands.nextFile(),
   },
   {
     id: 'prevFile',
-    key: 'PageUp',
+    keys: ['PageUp'],
     label: messages.prevFile,
     run: (commands) => commands.prevFile(),
   },
   {
     id: 'acceptNext',
-    key: 'End',
+    keys: ['End'],
     label: messages.acceptNext,
     run: (commands) => commands.acceptNext(),
   },
   {
     id: 'revertPrev',
-    key: 'Home',
+    keys: ['Home'],
     label: messages.revertPrev,
     run: (commands) => commands.revertPrev(),
   },
   {
     id: 'showFiles',
-    key: `${MOD}+Shift+E`,
+    keys: [`${MOD}+Shift+E`],
     label: messages.showFiles,
     run: (commands) => commands.showSidePanelTab('files'),
   },
   {
     id: 'showTargeted',
-    key: `${MOD}+Shift+G`,
+    keys: [`${MOD}+Shift+G`],
     label: messages.showTargeted,
     run: (commands) => commands.showSidePanelTab('targeted'),
   },
   {
     id: 'showSearch',
-    key: `${MOD}+Shift+F`,
+    keys: [`${MOD}+Shift+F`],
     label: messages.showSearch,
     run: (commands) => commands.showSidePanelTab('search'),
   },
   {
     id: 'quickSearchFile',
-    key: `${MOD}+F`,
+    keys: [`${MOD}+F`],
     label: messages.quickSearchFile,
     run: (commands) => commands.openQuickSearch('file'),
   },
   {
     id: 'quickSearchNavigate',
-    key: `${MOD}+P`,
+    keys: [`${MOD}+P`],
     label: messages.quickSearchNavigate,
     run: (commands) => commands.openQuickSearch('navigate'),
   },
   {
     id: 'toggleWrapLines',
-    key: `${MOD}+Shift+L`,
+    keys: [`${MOD}+Shift+L`],
     label: messages.toggleWrapLines,
     run: (commands) => commands.toggleWrapLines(),
   },
   {
     id: 'toggleFullFileDiff',
-    key: `${MOD}+Shift+D`,
+    keys: [`${MOD}+Shift+D`],
     label: messages.toggleFullFileDiff,
     run: (commands) => commands.toggleFullFileDiff(),
   },
   {
     id: 'submitComment',
-    key: `${MOD}+Enter`,
+    keys: [`${MOD}+Enter`],
     label: messages.submitComment,
     run: (commands) => commands.submitComment(),
   },
   {
     id: 'findNext',
-    key: 'Enter',
-    alternateKeys: ['F3', 'ArrowDown'],
+    keys: ['Enter', 'F3', 'ArrowDown'],
     label: messages.findNext,
     inTextEntry: true,
     run: (commands) => commands.findNext(),
   },
   {
     id: 'findPrevious',
-    key: 'Shift+Enter',
-    alternateKeys: ['Shift+F3', 'ArrowUp'],
+    keys: ['Shift+Enter', 'Shift+F3', 'ArrowUp'],
     label: messages.findPrevious,
     inTextEntry: true,
     run: (commands) => commands.findPrevious(),

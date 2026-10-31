@@ -12,7 +12,7 @@ export function useKeybindingOverrides() {
 export function useSetKeybindingOverride() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (args: { id: string; key: string | null }) =>
+    mutationFn: (args: { id: string; keys: string[] | null }) =>
       invoke('keybindings.setOverride', args),
     onSuccess: (overrides) => qc.setQueryData(qk.keybindingOverrides(), overrides),
   });
