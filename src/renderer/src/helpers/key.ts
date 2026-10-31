@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { keyBindings, type KeyBinding } from '../keyboard/bindings';
+import { gamepadLabel, isGamepadInput } from './gamepad';
 
 export const Modifier = z.enum(['Ctrl', 'Alt', 'Meta', 'Shift']);
 export type Modifier = z.infer<typeof Modifier>;
@@ -72,26 +73,46 @@ export function keyLabel(chord: string): string {
   return [...modifiers.map((m) => MODIFIER_LABELS[m]), plainKeyLabel(key)].join('+');
 }
 
-export type KeybindingOverrides = Record<string, string>;
+export type KeybindingOverrides = Record<string, readonly string[]>;
 
-export function effectiveKey(
+export function effectiveKeys(
   binding: KeyBinding,
   overrides: KeybindingOverrides | undefined,
-): string {
-  return overrides?.[binding.id] ?? binding.key;
+): readonly string[] {
+  return overrides?.[binding.id] ?? binding.keys;
 }
 
 export function bindingMatches(
   binding: KeyBinding,
-  chord: string,
+  input: string,
   overrides: KeybindingOverrides | undefined,
 ): boolean {
-  return (
-    effectiveKey(binding, overrides) === chord || Boolean(binding.alternateKeys?.includes(chord))
-  );
+  return effectiveKeys(binding, overrides).includes(input);
+}
+
+export function inputLabel(input: string): string {
+  return isGamepadInput(input) ? gamepadLabel(input) : keyLabel(input);
 }
 
 export function bindingKeyLabel(id: string, overrides: KeybindingOverrides | undefined): string {
   const binding = keyBindings.find((b) => b.id === id);
-  return binding ? keyLabel(effectiveKey(binding, overrides)) : '';
+  if (!binding) return '';
+  const keys = effectiveKeys(binding, overrides);
+  const preferred = keys.find((k) => !isGamepadInput(k)) ?? keys[0];
+  return preferred === undefined ? '' : inputLabel(preferred);
+}
+
+export function collidingInputs(
+  bindings: readonly KeyBinding[],
+  overrides: KeybindingOverrides | undefined,
+): Set<string> {
+  const owners = new Map<string, Set<string>>();
+  for (const binding of bindings) {
+    for (const input of effectiveKeys(binding, overrides)) {
+      const ids = owners.get(input) ?? new Set<string>();
+      ids.add(binding.id);
+      owners.set(input, ids);
+    }
+  }
+  return new Set([...owners].filter(([, ids]) => ids.size > 1).map(([input]) => input));
 }

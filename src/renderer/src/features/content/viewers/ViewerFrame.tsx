@@ -1,6 +1,8 @@
 import styled from 'styled-components';
 
-export const ViewerFrame = styled.div<{ $center?: boolean }>`
+export const ViewerFrame = styled.div.attrs<{ 'data-gamepad-scroll': string }>({
+  'data-gamepad-scroll': '',
+})<{ $center?: boolean }>`
   display: flex;
   container: viewer / inline-size;
   height: 100%;

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { KeyBinding } from '../../src/keyboard/bindings';
-import { effectiveKey, keyChord, keyLabel, splitChord } from '../../src/helpers/key';
+import {
+  bindingMatches,
+  collidingInputs,
+  effectiveKeys,
+  inputLabel,
+  keyChord,
+  keyLabel,
+  splitChord,
+} from '../../src/helpers/key';
 
 const event = (
   key: string,
@@ -46,17 +54,50 @@ describe('keyLabel', () => {
   });
 });
 
-describe('effectiveKey', () => {
-  const binding: KeyBinding = {
-    id: 'go',
-    key: 'g',
-    label: { defaultMessage: 'Go' },
-    run: () => true,
-  };
+const action = (id: string, keys: readonly string[]): KeyBinding => ({
+  id,
+  keys,
+  label: { defaultMessage: id },
+  run: () => true,
+});
 
-  it('prefers an override and otherwise uses the default key', () => {
-    expect(effectiveKey(binding, { go: 'h' })).toBe('h');
-    expect(effectiveKey(binding, {})).toBe('g');
-    expect(effectiveKey(binding, undefined)).toBe('g');
+describe('effectiveKeys', () => {
+  const binding = action('go', ['g', 'F3']);
+
+  it('prefers an override list and otherwise uses the default keys', () => {
+    expect(effectiveKeys(binding, { go: ['h', 'Gamepad:0'] })).toEqual(['h', 'Gamepad:0']);
+    expect(effectiveKeys(binding, { go: [] })).toEqual([]);
+    expect(effectiveKeys(binding, {})).toEqual(['g', 'F3']);
+    expect(effectiveKeys(binding, undefined)).toEqual(['g', 'F3']);
+  });
+});
+
+describe('bindingMatches', () => {
+  const binding = action('go', ['g', 'F3']);
+
+  it('matches any bound input of keyboard and gamepad kinds', () => {
+    expect(bindingMatches(binding, 'F3', undefined)).toBe(true);
+    expect(bindingMatches(binding, 'h', { go: ['h', 'Gamepad:2'] })).toBe(true);
+    expect(bindingMatches(binding, 'Gamepad:2', { go: ['h', 'Gamepad:2'] })).toBe(true);
+    expect(bindingMatches(binding, 'g', { go: ['h'] })).toBe(false);
+  });
+});
+
+describe('inputLabel', () => {
+  it('labels keyboard chords and gamepad buttons', () => {
+    expect(inputLabel('Ctrl+k')).toBe('Ctrl+K');
+    expect(inputLabel('Gamepad:0')).toBe('Gamepad A');
+  });
+});
+
+describe('collidingInputs', () => {
+  it('reports inputs bound to more than one action', () => {
+    const bindings = [action('a', ['x', 'Gamepad:0']), action('b', ['y']), action('c', ['y'])];
+    expect(collidingInputs(bindings, undefined)).toEqual(new Set(['y']));
+    expect(collidingInputs(bindings, { b: ['Gamepad:0'] })).toEqual(new Set(['Gamepad:0']));
+  });
+
+  it('ignores repeats within one action', () => {
+    expect(collidingInputs([action('a', ['x', 'x'])], undefined).size).toBe(0);
   });
 });

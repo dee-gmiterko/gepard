@@ -1,3 +1,5 @@
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { makeUserData, type UserData } from '../support/tmp';
 import { SettingsStore } from '../../store/settings';
@@ -54,15 +56,37 @@ describe('store/settings and known extension files', () => {
     await settings.setTemplateId('tpl');
     await settings.setLocaleId('cs');
     await settings.setEnabled('ext-a', false);
-    await settings.setKeybindingOverride('act', 'ctrl+k');
+    await settings.setKeybindingOverride('act', ['ctrl+k']);
     await settings.setHiddenFiles(['\\.lock$']);
-    await settings.setKeybindingOverride('other', 'ctrl+j');
+    await settings.setKeybindingOverride('other', ['ctrl+j', 'Gamepad:0']);
     await settings.setKeybindingOverride('other', null);
     expect(await settings.getTemplateId()).toBe('tpl');
     expect(await settings.getLocaleId()).toBe('cs');
     expect(await settings.getEnabledMap()).toEqual({ 'ext-a': false });
-    expect(await settings.getKeybindingOverrides()).toEqual({ act: 'ctrl+k' });
+    expect(await settings.getKeybindingOverrides()).toEqual({ act: ['ctrl+k'] });
     expect(await settings.getHiddenFiles()).toEqual(['\\.lock$']);
+  });
+
+  it('migrates the single-string keybinding shape of older files', async () => {
+    const file = userData.paths.settingsJsonPath();
+    await mkdir(dirname(file), { recursive: true });
+    await writeFile(
+      file,
+      JSON.stringify({
+        theme: { templateId: null },
+        extensions: {},
+        keybindings: { act: 'Ctrl+K', multi: ['a', 'Gamepad:1'] },
+      }),
+    );
+    expect(await settings.getKeybindingOverrides()).toEqual({
+      act: ['Ctrl+K'],
+      multi: ['a', 'Gamepad:1'],
+    });
+    await settings.setKeybindingOverride('act', ['Ctrl+K', 'Gamepad:0']);
+    expect(await settings.getKeybindingOverrides()).toEqual({
+      act: ['Ctrl+K', 'Gamepad:0'],
+      multi: ['a', 'Gamepad:1'],
+    });
   });
 
   it('keeps every update when different setters run concurrently', async () => {
@@ -70,12 +94,12 @@ describe('store/settings and known extension files', () => {
       settings.setTemplateId('tpl'),
       settings.setLocaleId('cs'),
       settings.setEnabled('ext-a', false),
-      settings.setKeybindingOverride('act', 'ctrl+k'),
+      settings.setKeybindingOverride('act', ['ctrl+k']),
     ]);
     expect(await settings.getTemplateId()).toBe('tpl');
     expect(await settings.getLocaleId()).toBe('cs');
     expect(await settings.getEnabledMap()).toEqual({ 'ext-a': false });
-    expect(await settings.getKeybindingOverrides()).toEqual({ act: 'ctrl+k' });
+    expect(await settings.getKeybindingOverrides()).toEqual({ act: ['ctrl+k'] });
   });
 
   it('keeps every update when the same setter runs concurrently for different keys', async () => {

@@ -3,12 +3,21 @@ import type { Paths } from '../main/paths';
 import type { FileLockService } from '../services/fileLock';
 import { readJsonFile, writeJsonFile } from '../helpers/jsonFile';
 
+// Older files stored a single chord string per action.
+export const KeybindingsField = z
+  .record(z.string(), z.union([z.string(), z.array(z.string())]))
+  .transform((record) =>
+    Object.fromEntries(
+      Object.entries(record).map(([id, keys]) => [id, typeof keys === 'string' ? [keys] : keys]),
+    ),
+  );
+
 const SettingsFile = z.object({
   theme: z.object({ templateId: z.string().nullable() }),
   // Defaulted because `readJsonFile` treats a schema mismatch as corruption, so older files must still parse.
   locale: z.object({ localeId: z.string().nullable() }).default({ localeId: null }),
   extensions: z.record(z.string(), z.boolean()),
-  keybindings: z.record(z.string(), z.string()).default({}),
+  keybindings: KeybindingsField.default({}),
   hiddenFiles: z.array(z.string()).default([]),
 });
 type SettingsFile = z.infer<typeof SettingsFile>;
@@ -77,11 +86,11 @@ export class SettingsStore {
     return (await this.read()).keybindings;
   }
 
-  async setKeybindingOverride(id: string, key: string | null): Promise<KeybindingOverrides> {
+  async setKeybindingOverride(id: string, keys: string[] | null): Promise<KeybindingOverrides> {
     return this.update(async (settings) => {
       const keybindings = { ...settings.keybindings };
-      if (key === null) delete keybindings[id];
-      else keybindings[id] = key;
+      if (keys === null) delete keybindings[id];
+      else keybindings[id] = keys;
       await writeJsonFile(this.paths.settingsJsonPath(), { ...settings, keybindings });
       return keybindings;
     });

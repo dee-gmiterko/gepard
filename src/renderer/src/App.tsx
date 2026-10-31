@@ -2,6 +2,8 @@ import styled from 'styled-components';
 import { useUiDispatch } from './state/UiContext';
 import { useProjectId, useSettingsOpen } from './state/hooks';
 import { useGlobalKeys } from './keyboard/useGlobalKeys';
+import { useGamepadBindings } from './gamepad/useGamepadBindings';
+import { useGamepadNavigation } from './gamepad/useGamepadNavigation';
 import { useWindowTitle } from './hooks/useWindowTitle';
 import { useContextMenuLabels } from './hooks/useContextMenuLabels';
 import { Launchpad } from './features/launchpad/Launchpad';
@@ -27,6 +29,8 @@ const Body = styled.div`
 
 function App(): React.JSX.Element {
   useGlobalKeys();
+  useGamepadBindings();
+  useGamepadNavigation();
   useWindowTitle();
   useContextMenuLabels();
   const projectId = useProjectId();

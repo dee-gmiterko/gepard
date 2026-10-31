@@ -60,6 +60,8 @@ interface ChannelSpec {
   output: z.ZodType;
 }
 
+const KeybindingOverrides = z.record(z.string(), z.array(z.string()));
+
 const HiddenFilesTarget = z.discriminatedUnion('scope', [
   z.object({ scope: z.literal('global') }),
   ProjectRef.extend({ scope: z.literal('project') }),
@@ -252,10 +254,10 @@ export const channels = {
   },
   'locales.list': { input: z.void(), output: z.array(LocaleData) },
 
-  'keybindings.getOverrides': { input: z.void(), output: z.record(z.string(), z.string()) },
+  'keybindings.getOverrides': { input: z.void(), output: KeybindingOverrides },
   'keybindings.setOverride': {
-    input: z.object({ id: z.string(), key: z.string().nullable() }),
-    output: z.record(z.string(), z.string()),
+    input: z.object({ id: z.string(), keys: z.array(z.string()).nullable() }),
+    output: KeybindingOverrides,
   },
 
   'hiddenFiles.get': { input: HiddenFilesTarget, output: HiddenFilePatterns },
