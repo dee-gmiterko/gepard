@@ -74,6 +74,10 @@ const messages = defineMessages({
     id: 'keyboard.quickSearchNavigate',
     defaultMessage: 'Go to file or symbol',
   },
+  sync: {
+    id: 'keyboard.sync',
+    defaultMessage: 'Sync with the remote',
+  },
 });
 
 export const keyBindings: readonly KeyBinding[] = [
@@ -168,5 +172,11 @@ export const keyBindings: readonly KeyBinding[] = [
     label: messages.findPrevious,
     inTextEntry: true,
     run: (commands) => commands.findPrevious(),
+  },
+  {
+    id: 'sync',
+    keys: [],
+    label: messages.sync,
+    run: (commands) => commands.sync(),
   },
 ];

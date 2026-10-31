@@ -5,7 +5,7 @@ import { useUiDispatch, useUiStore } from '../state/UiContext';
 import { useActiveFile, useLayout } from '../state/hooks';
 import type { Layout, QuickSearchMode, SidePanelTab, UiAction } from '../state/reducer';
 import { useSetLayout } from '../queries/projects';
-import { useViewed } from '../queries/comments';
+import { useSync, useViewed } from '../queries/comments';
 import { useTargetedFiles } from '../queries/files';
 import { useReviewActions } from '../queries/review';
 import { nextReviewFile } from '../helpers/targetedFiles';
@@ -84,6 +84,7 @@ export interface Commands {
   submitComment: () => boolean;
   findNext: () => boolean;
   findPrevious: () => boolean;
+  sync: () => boolean;
 }
 
 const FILE_VIEW_COMMANDS: Record<
@@ -126,6 +127,7 @@ export function useCommands(): Commands {
   const { mutate: setLayout } = useSetLayout();
   const review = useReviewActions();
   const runActionHandler = useRunActionHandler();
+  const { mutate: runSync, isPending: syncing } = useSync();
 
   return useMemo<Commands>(() => {
     const toggleLayout = (
@@ -190,6 +192,11 @@ export function useCommands(): Commands {
       submitComment: () => runActionHandler('submitComment'),
       findNext: () => runActionHandler('findNext'),
       findPrevious: () => runActionHandler('findPrevious'),
+      sync: () => {
+        if (syncing) return false;
+        runSync('full');
+        return true;
+      },
     };
-  }, [store, dispatch, setLayout, review, runActionHandler]);
+  }, [store, dispatch, setLayout, review, runActionHandler, runSync, syncing]);
 }

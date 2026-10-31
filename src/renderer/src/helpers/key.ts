@@ -82,6 +82,17 @@ export function effectiveKeys(
   return overrides?.[binding.id] ?? binding.keys;
 }
 
+export function isCustomized(
+  binding: KeyBinding,
+  overrides: KeybindingOverrides | undefined,
+): boolean {
+  const override = overrides?.[binding.id];
+  return (
+    override !== undefined &&
+    (override.length !== binding.keys.length || override.some((k, i) => k !== binding.keys[i]))
+  );
+}
+
 export function bindingMatches(
   binding: KeyBinding,
   input: string,
