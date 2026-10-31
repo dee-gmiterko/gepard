@@ -58,7 +58,7 @@ jobs:
       - run: yarn install --immutable
       - run: yarn turbo run build
       - run: yarn extensions:bundle
-      - run: yarn workspace gepard run build:${{ matrix.target }} --publish never
+      - run: yarn workspace gepard run package:${{ matrix.target }} --publish never
       - name: Upload to release
         shell: bash
         env:
