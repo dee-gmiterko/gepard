@@ -1,9 +1,15 @@
+import { useState } from 'react';
 import { defineMessages, FormattedDate, FormattedMessage } from 'react-intl';
 import styled from 'styled-components';
 import { Inline } from '../../../../components/Layout';
-import type { TimelineDay as Day } from '../../../../helpers/overview';
+import {
+  COMMIT_RUN_LIMIT,
+  collapseCommitRun,
+  type TimelineDay as Day,
+  type TimelineGroup,
+} from '../../../../helpers/overview';
 import { Muted } from '../shared/overviewStyles';
-import { TimelineLine } from './TimelineLine';
+import { TimelineLine, TimelineMore } from './TimelineLine';
 
 const messages = defineMessages({
   commits: {
@@ -38,7 +44,21 @@ const Line = styled.ul`
   list-style: none;
 `;
 
+function groupKey(group: TimelineGroup): string {
+  const first = group.events[0];
+  return [
+    group.kind,
+    group.at,
+    group.actor,
+    first.sha,
+    first.reviewState,
+    group.events.length,
+  ].join('|');
+}
+
 export function TimelineDay({ day }: { day: Day }): React.JSX.Element {
+  const [expanded, setExpanded] = useState(false);
+  const items = collapseCommitRun(day.groups, COMMIT_RUN_LIMIT, expanded);
   return (
     <div>
       <Heading $gap={2}>
@@ -62,9 +82,13 @@ export function TimelineDay({ day }: { day: Day }): React.JSX.Element {
         </Inline>
       </Heading>
       <Line>
-        {day.groups.map((group, i) => (
-          <TimelineLine key={`${group.kind}-${group.at}-${group.actor}-${i}`} group={group} />
-        ))}
+        {items.map((item) =>
+          item.type === 'more' ? (
+            <TimelineMore key="more" hidden={item.hidden} onClick={() => setExpanded(true)} />
+          ) : (
+            <TimelineLine key={groupKey(item.group)} group={item.group} />
+          ),
+        )}
       </Line>
     </div>
   );

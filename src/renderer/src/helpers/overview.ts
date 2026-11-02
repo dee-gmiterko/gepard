@@ -150,6 +150,34 @@ export function groupTimeline(events: readonly TimelineEvent[]): TimelineGroup[]
   return groups;
 }
 
+export const COMMIT_RUN_LIMIT = 8;
+
+export type TimelineItem =
+  { type: 'group'; group: TimelineGroup } | { type: 'more'; hidden: number };
+
+export function collapseCommitRun(
+  groups: readonly TimelineGroup[],
+  limit: number,
+  expanded: boolean,
+): TimelineItem[] {
+  const commitTotal = groups.filter((g) => g.kind === 'commit').length;
+  if (expanded || commitTotal <= limit) return groups.map((group) => ({ type: 'group', group }));
+  const items: TimelineItem[] = [];
+  let shown = 0;
+  for (const group of groups) {
+    if (group.kind !== 'commit') {
+      items.push({ type: 'group', group });
+    } else if (shown < limit) {
+      shown += 1;
+      items.push({ type: 'group', group });
+    } else if (shown === limit) {
+      shown += 1;
+      items.push({ type: 'more', hidden: commitTotal - limit });
+    }
+  }
+  return items;
+}
+
 export function groupTimelineByDay(groups: readonly TimelineGroup[]): TimelineDay[] {
   const days: TimelineDay[] = [];
   for (const group of groups) {

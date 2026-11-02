@@ -51,6 +51,7 @@ import {
   RemoteViewedFile,
   type Viewer,
   type ViewerRepo,
+  type AllowedMergeMethods,
   type MergeMethod,
   type ProjectOverview,
   AppError,
@@ -88,6 +89,12 @@ const MERGE_METHOD_FLAGS: Record<MergeMethod, string> = {
   SQUASH: '--squash',
   REBASE: '--rebase',
 };
+
+const RepoMergeSettings = z.object({
+  mergeCommitAllowed: z.boolean(),
+  squashMergeAllowed: z.boolean(),
+  rebaseMergeAllowed: z.boolean(),
+});
 
 const PrHeadBase = z.object({ headRefOid: Sha, baseRefOid: Sha });
 
@@ -671,6 +678,21 @@ export class GhService {
     );
     const number = parsePrCreateUrl(stdout);
     return this.viewPr(owner, repo, number);
+  }
+
+  async allowedMergeMethods(owner: string, repo: string): Promise<AllowedMergeMethods> {
+    const settings = await this.gh.json(RepoMergeSettings, [
+      'repo',
+      'view',
+      `${owner}/${repo}`,
+      '--json',
+      'mergeCommitAllowed,squashMergeAllowed,rebaseMergeAllowed',
+    ]);
+    return {
+      merge: settings.mergeCommitAllowed,
+      squash: settings.squashMergeAllowed,
+      rebase: settings.rebaseMergeAllowed,
+    };
   }
 
   async mergePr(owner: string, repo: string, number: number, method: MergeMethod): Promise<void> {

@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import type { ReviewDecision } from '@gepard/common';
 import { defineMessages, FormattedMessage } from 'react-intl';
+import type { MergeReadiness } from '@gepard/common';
 import { Button } from '../../../../components/Button';
+import { canMerge, useMergeBlockedReason } from './mergeReadiness';
 import { MergeModal } from './MergeModal';
 
 const messages = defineMessages({
@@ -11,23 +12,34 @@ const messages = defineMessages({
 export function MergeButton({
   pr,
   title,
-  reviewDecision,
+  head,
+  base,
+  mergeReadiness,
 }: {
   pr: number;
   title: string;
-  reviewDecision: ReviewDecision | null;
+  head: string;
+  base: string;
+  mergeReadiness: MergeReadiness;
 }): React.JSX.Element {
   const [open, setOpen] = useState(false);
+  const blockedReason = useMergeBlockedReason(mergeReadiness);
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
+      <Button
+        disabled={!canMerge(mergeReadiness)}
+        title={blockedReason}
+        onClick={() => setOpen(true)}
+      >
         <FormattedMessage {...messages.merge} />
       </Button>
       {open && (
         <MergeModal
           pr={pr}
           title={title}
-          reviewDecision={reviewDecision}
+          head={head}
+          base={base}
+          mergeReadiness={mergeReadiness}
           onClose={() => setOpen(false)}
         />
       )}

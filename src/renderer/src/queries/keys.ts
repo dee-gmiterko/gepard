@@ -34,6 +34,7 @@ export const qk = {
   prRange: (p: string, pr: number) => [...qk.pr(p, pr), 'range'] as const,
   changedFileOwners: (p: string, base: string, head: string) =>
     [...qk.commit(p, head), 'owners', base] as const,
+  mergeMethods: (p: string) => [...qk.project(p), 'mergeMethods'] as const,
   branches: (p: string) => [...qk.project(p), 'branches'] as const,
   pr: (p: string, pr: number) => [...qk.project(p), 'pr', pr] as const,
   prSummary: (p: string, pr: number) => [...qk.pr(p, pr), 'summary'] as const,

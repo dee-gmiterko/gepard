@@ -19,6 +19,7 @@ export const ChannelNameList = z.enum([
   'pr.branches',
   'pr.create',
   'pr.merge',
+  'pr.mergeMethods',
   'issues.create',
   'commits.list',
   'overview.project',

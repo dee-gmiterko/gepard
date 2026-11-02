@@ -24,6 +24,9 @@ function prNode(
     reviewDecision: null,
     headRefName: 'thing',
     baseRefName: 'main',
+    mergeable: 'MERGEABLE',
+    mergeStateStatus: 'CLEAN',
+    commits: { nodes: [{ commit: { statusCheckRollup: { state: 'SUCCESS' } } }] },
     isCrossRepository: false,
     headRepository: null,
     headRepositoryOwner: null,
@@ -156,6 +159,9 @@ describe('normalizePrOverview', () => {
       mergedAt: null,
       closedAt: null,
       reviewDecision: '',
+      mergeable: 'MERGEABLE',
+      mergeStateStatus: 'CLEAN',
+      statusCheckRollup: [],
       reviews: [
         { author: { login: 'a' }, state: 'APPROVED', submittedAt: T(2) },
         { author: null, state: 'PENDING', submittedAt: null },
@@ -166,5 +172,6 @@ describe('normalizePrOverview', () => {
     expect(out.reviewDecision).toBeNull();
     expect(out.reviews).toHaveLength(1);
     expect(out.reviewRequests).toEqual(['u', 'team']);
+    expect(out.mergeReadiness).toEqual({ state: 'READY', blockers: [], warnings: [] });
   });
 });

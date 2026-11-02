@@ -1,4 +1,4 @@
-import { defineMessages, FormattedMessage } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import styled from 'styled-components';
 import { ArrowLeft } from 'react-feather';
 import type { UseQueryResult } from '@tanstack/react-query';
@@ -7,6 +7,7 @@ import { Badge } from '../../../../components/Badge';
 import { Button } from '../../../../components/Button';
 import { Inline, Stack } from '../../../../components/Layout';
 import { Skeleton } from '../../../../components/Skeleton';
+import { useTargetPr } from '../../../../state/hooks';
 import { SyncButton } from '../../sync/SyncButton';
 import { DecisionBadge } from '../shared/DecisionBadge';
 import { ForkBadge } from '../shared/ForkBadge';
@@ -20,6 +21,19 @@ import { useOverviewActions } from '../shared/useOverviewActions';
 const messages = defineMessages({
   allPrs: { id: 'content.overview.pr.allPrs', defaultMessage: 'All pull requests' },
   review: { id: 'content.overview.pr.review', defaultMessage: 'Review' },
+  reviewSwitches: {
+    id: 'content.overview.pr.reviewSwitches',
+    defaultMessage: 'Start reviewing this pull request and make it your review target',
+  },
+  reviewContinues: {
+    id: 'content.overview.pr.reviewContinues',
+    defaultMessage: 'Continue reviewing this pull request',
+  },
+  isTarget: { id: 'content.overview.pr.isTarget', defaultMessage: 'Review target' },
+  notTarget: {
+    id: 'content.overview.pr.notTarget',
+    defaultMessage: 'Not your current review target',
+  },
   stateOpen: { id: 'content.overview.pr.state.open', defaultMessage: 'Open' },
   stateDraft: { id: 'content.overview.pr.state.draft', defaultMessage: 'Draft' },
   stateMerged: { id: 'content.overview.pr.state.merged', defaultMessage: 'Merged' },
@@ -74,7 +88,10 @@ export function PrHeader({
 }): React.JSX.Element {
   const { data: pr } = prQuery;
   const { data: details } = detailsQuery;
+  const intl = useIntl();
   const actions = useOverviewActions();
+  const targetPr = useTargetPr();
+  const isTarget = pr !== undefined && pr.number === targetPr;
   return (
     <Stack $gap={2} $align="flex-start">
       <div>
@@ -105,12 +122,29 @@ export function PrHeader({
           )}
           {pr?.isCrossRepository && <ForkBadge head={prHeadLabel(pr)} />}
           <DecisionBadge decision={details?.reviewDecision ?? null} />
+          {isTarget && (
+            <Badge>
+              <FormattedMessage {...messages.isTarget} />
+            </Badge>
+          )}
         </Identity>
         <Actions $gap={2}>
           {pr && details?.state === 'OPEN' && !details.isDraft && (
-            <MergeButton pr={pr.number} title={pr.title} reviewDecision={details.reviewDecision} />
+            <MergeButton
+              pr={pr.number}
+              title={pr.title}
+              head={prHeadLabel(pr)}
+              base={pr.baseRefName}
+              mergeReadiness={details.mergeReadiness}
+            />
           )}
-          <Button variant="primary" onClick={actions.openFiles}>
+          <Button
+            variant="primary"
+            title={intl.formatMessage(
+              isTarget ? messages.reviewContinues : messages.reviewSwitches,
+            )}
+            onClick={actions.openFiles}
+          >
             <FormattedMessage {...messages.review} />
           </Button>
           <SyncButton />
@@ -128,6 +162,11 @@ export function PrHeader({
               />
             </Muted>
           )
+        )}
+        {pr && !isTarget && (
+          <Muted>
+            <FormattedMessage {...messages.notTarget} />
+          </Muted>
         )}
         {detailsQuery.isPending ? (
           <Skeleton width="72px" />

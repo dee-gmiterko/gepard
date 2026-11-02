@@ -12,6 +12,7 @@ import {
 import { CommentsRef, PrRef, ProjectRef } from './schemas/refs';
 import { CommitAnnotation } from './schemas/checks';
 import {
+  AllowedMergeMethods,
   ChangedFile,
   CheckoutResult,
   Commit,
@@ -127,6 +128,7 @@ export const channels = {
     }),
     output: PrSummary,
   },
+  'pr.mergeMethods': { input: ProjectRef, output: AllowedMergeMethods },
   'pr.merge': { input: PrRef.extend({ method: MergeMethod }), output: z.void() },
   'issues.create': {
     input: ProjectRef.extend({

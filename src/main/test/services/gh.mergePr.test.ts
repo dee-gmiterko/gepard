@@ -25,8 +25,10 @@ describe('GhService.mergePr', () => {
     await userData.cleanup();
   });
 
-  function serviceWith(run: typeof execRun): GhService {
-    const runJson: typeof execRunJson = () => Promise.reject(new Error('unexpected json call'));
+  function serviceWith(
+    run: typeof execRun,
+    runJson: typeof execRunJson = () => Promise.reject(new Error('unexpected json call')),
+  ): GhService {
     return new GhService(new GhClient(connectivity, run, runJson), projects);
   }
 
@@ -59,5 +61,37 @@ describe('GhService.mergePr', () => {
     const service = serviceWith(() => Promise.reject(failure));
 
     await expect(service.mergePr('acme', 'widgets', 42, 'MERGE')).rejects.toThrow(/not mergeable/);
+  });
+
+  it('reads the merge methods the repository allows', async () => {
+    const spawned: string[][] = [];
+    const service = serviceWith(
+      () => Promise.reject(new Error('unexpected run call')),
+      (schema, _cmd, args) => {
+        spawned.push(args);
+        return Promise.resolve(
+          schema.parse({
+            mergeCommitAllowed: true,
+            squashMergeAllowed: false,
+            rebaseMergeAllowed: true,
+          }),
+        );
+      },
+    );
+
+    expect(await service.allowedMergeMethods('acme', 'widgets')).toEqual({
+      merge: true,
+      squash: false,
+      rebase: true,
+    });
+    expect(spawned).toEqual([
+      [
+        'repo',
+        'view',
+        'acme/widgets',
+        '--json',
+        'mergeCommitAllowed,squashMergeAllowed,rebaseMergeAllowed',
+      ],
+    ]);
   });
 });

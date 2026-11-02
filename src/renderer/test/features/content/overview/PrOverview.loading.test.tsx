@@ -13,6 +13,7 @@ const details: PrOverviewDetails = {
   mergedAt: null,
   closedAt: null,
   reviewDecision: 'APPROVED',
+  mergeReadiness: { state: 'READY', blockers: [], warnings: [] },
   reviews: [],
   reviewRequests: ['dave'],
 };

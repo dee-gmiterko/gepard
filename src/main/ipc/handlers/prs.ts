@@ -27,6 +27,7 @@ export class PrsHandlers {
     | 'pr.branches'
     | 'pr.create'
     | 'pr.merge'
+    | 'pr.mergeMethods'
     | 'issues.create'
     | 'commits.list'
     | 'overview.project'
@@ -76,6 +77,11 @@ export class PrsHandlers {
       'pr.create': async ({ projectId, base, head, title, body }) => {
         const { owner, repo } = await this.gh.repoRefFor(projectId);
         return this.gh.createPr(owner, repo, { base, head, title, body });
+      },
+
+      'pr.mergeMethods': async ({ projectId }) => {
+        const { owner, repo } = await this.gh.repoRefFor(projectId);
+        return this.gh.allowedMergeMethods(owner, repo);
       },
 
       'pr.merge': async ({ projectId, pr, method }) => {

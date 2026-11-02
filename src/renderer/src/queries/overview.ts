@@ -4,6 +4,9 @@ import { qk } from './keys';
 import { useOverviewPr, useProjectId } from '../state/hooks';
 import { changedFilesQuery } from './files';
 
+// GitHub computes mergeability lazily and reports UNKNOWN until it has finished.
+const MERGEABILITY_POLL_MS = 3000;
+
 export function useProjectOverview() {
   const projectId = useProjectId() ?? '';
   return useQuery({
@@ -11,6 +14,10 @@ export function useProjectOverview() {
     queryFn: () => invoke('overview.project', { projectId }),
     enabled: Boolean(projectId),
     staleTime: 30_000,
+    refetchInterval: (query) =>
+      query.state.data?.prs.some((p) => p.mergeReadiness.state === 'CHECKING')
+        ? MERGEABILITY_POLL_MS
+        : false,
   });
 }
 
@@ -22,6 +29,10 @@ export function usePrOverviewDetails() {
     queryFn: pr === null ? skipToken : () => invoke('overview.pr', { projectId, pr }),
     enabled: Boolean(projectId),
     staleTime: 30_000,
+    refetchInterval: (query) =>
+      query.state.data?.state === 'OPEN' && query.state.data.mergeReadiness.state === 'CHECKING'
+        ? MERGEABILITY_POLL_MS
+        : false,
   });
 }
 

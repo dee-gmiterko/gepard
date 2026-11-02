@@ -110,6 +110,16 @@ export function usePrSummary(pr: number | null): UseQueryResult<PrSummary> {
   });
 }
 
+export function useAllowedMergeMethods() {
+  const projectId = useProjectId() ?? '';
+  return useQuery({
+    queryKey: qk.mergeMethods(projectId),
+    queryFn: () => invoke('pr.mergeMethods', { projectId }),
+    enabled: Boolean(projectId),
+    staleTime: 5 * 60_000,
+  });
+}
+
 export function useMergePr() {
   const projectId = useProjectId() ?? '';
   const qc = useQueryClient();

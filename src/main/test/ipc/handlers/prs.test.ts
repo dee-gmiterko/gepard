@@ -116,6 +116,7 @@ describe('pr.merge and overview.range handlers', () => {
 
   function setup(): {
     handlers: ReturnType<PrsHandlers['toHandlerMap']>;
+    allowedMergeMethods: MockInstance<GhService['allowedMergeMethods']>;
     mergePr: MockInstance<GhService['mergePr']>;
     viewPrHeadBase: MockInstance<GhService['viewPrHeadBase']>;
     prRange: MockInstance<GitService['prRange']>;
@@ -126,6 +127,9 @@ describe('pr.merge and overview.range handlers', () => {
     const viewPrHeadBase = vi
       .spyOn(services.gh, 'viewPrHeadBase')
       .mockResolvedValue({ headRefOid: 'h'.repeat(40), baseRefOid: 'b'.repeat(40) });
+    const allowedMergeMethods = vi
+      .spyOn(services.gh, 'allowedMergeMethods')
+      .mockResolvedValue({ merge: true, squash: false, rebase: true });
     const prRange = vi
       .spyOn(services.git, 'prRange')
       .mockResolvedValue({ base: 'm'.repeat(40), head: 'h'.repeat(40) });
@@ -135,7 +139,7 @@ describe('pr.merge and overview.range handlers', () => {
       new ReviewStore(userData.paths, new FileLockService()),
       { filter: (_projectId, items) => Promise.resolve([...items]) },
     ).toHandlerMap();
-    return { handlers, mergePr, viewPrHeadBase, prRange };
+    return { handlers, allowedMergeMethods, mergePr, viewPrHeadBase, prRange };
   }
 
   it('merges the PR in the project repository with the requested method', async () => {
@@ -164,5 +168,17 @@ describe('pr.merge and overview.range handlers', () => {
       baseRefOid: 'b'.repeat(40),
     });
     expect(range).toEqual({ base: 'm'.repeat(40), head: 'h'.repeat(40) });
+  });
+
+  it('reports the merge methods the repository allows', async () => {
+    const { handlers, allowedMergeMethods } = setup();
+
+    const methods = await handlers['pr.mergeMethods'](
+      { projectId: 'acme__widgets' },
+      { window: null },
+    );
+
+    expect(allowedMergeMethods).toHaveBeenCalledWith('acme', 'widgets');
+    expect(methods).toEqual({ merge: true, squash: false, rebase: true });
   });
 });

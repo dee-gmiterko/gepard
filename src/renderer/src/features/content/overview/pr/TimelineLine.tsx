@@ -24,10 +24,15 @@ const messages = defineMessages({
   },
   merged: { id: 'content.overview.pr.event.merged', defaultMessage: 'Merged' },
   closed: { id: 'content.overview.pr.event.closed', defaultMessage: 'Closed' },
+  showMore: {
+    id: 'content.overview.pr.event.showMoreCommits',
+    defaultMessage: 'Show {count, plural, one {# more commit} other {# more commits}}',
+  },
   someone: { id: 'content.overview.pr.someone', defaultMessage: 'Someone' },
 });
 
 const DOT_SIZE = 9;
+const SHORT_SHA_LENGTH = 7;
 
 const DOT_CENTER = ({ theme }: { theme: Theme }): string => `calc(${theme.space[1]} + 0.5lh)`;
 
@@ -80,11 +85,31 @@ const Text = styled.div`
   overflow-wrap: anywhere;
 `;
 
+const Sha = styled.span`
+  font-family: ${({ theme }) => theme.font.mono};
+`;
+
 const Meta = styled(Caption)`
   display: flex;
   flex-wrap: wrap;
   gap: 0 ${({ theme }) => theme.space[2]};
 `;
+
+export function TimelineMore({
+  hidden,
+  onClick,
+}: {
+  hidden: number;
+  onClick: () => void;
+}): React.JSX.Element {
+  return (
+    <Item>
+      <LinkButton onClick={onClick}>
+        <FormattedMessage {...messages.showMore} values={{ count: hidden }} />
+      </LinkButton>
+    </Item>
+  );
+}
 
 export function TimelineLine({ group }: { group: TimelineGroup }): React.JSX.Element {
   const actions = useOverviewActions();
@@ -126,6 +151,7 @@ export function TimelineLine({ group }: { group: TimelineGroup }): React.JSX.Ele
       <Text>{onClick ? <LinkButton onClick={onClick}>{text}</LinkButton> : text}</Text>
       <Meta>
         {group.kind === 'commit' && <span>{actor}</span>}
+        {first.sha && <Sha>{first.sha.slice(0, SHORT_SHA_LENGTH)}</Sha>}
         <FormattedDate value={group.at} timeStyle="short" />
         {group.kind === 'comment' && count > 1 && (
           <FormattedMessage {...messages.commentCount} values={{ count }} />

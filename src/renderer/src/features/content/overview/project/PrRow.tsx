@@ -99,7 +99,13 @@ export function PrRow({ pr }: { pr: OverviewPr }): React.JSX.Element {
       </WideOnly>
       <Inline $gap={2}>
         {pr.state === 'OPEN' && !pr.isDraft && (
-          <MergeButton pr={pr.number} title={pr.title} reviewDecision={pr.reviewDecision} />
+          <MergeButton
+            pr={pr.number}
+            title={pr.title}
+            head={prHeadLabel(pr)}
+            base={pr.baseRefName}
+            mergeReadiness={pr.mergeReadiness}
+          />
         )}
         <Button onClick={() => actions.reviewPr(pr.number)}>
           <FormattedMessage {...messages.review} />

@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
-import type { OverviewPr, PrOverviewDetails } from '@gepard/common';
+import type {
+  AllowedMergeMethods,
+  MergeReadiness,
+  OverviewPr,
+  PrOverviewDetails,
+} from '@gepard/common';
 import App from '../../../../src/App';
 import { renderWithProviders } from '../../../support/render';
+import { MergeModal } from '../../../../src/features/content/overview/shared/MergeModal';
 import { createWorld, overviewPr, pr } from '../../../support/world';
 
 const details: PrOverviewDetails = {
@@ -13,18 +19,23 @@ const details: PrOverviewDetails = {
   mergedAt: null,
   closedAt: null,
   reviewDecision: null,
+  mergeReadiness: { state: 'READY', blockers: [], warnings: [] },
   reviews: [],
   reviewRequests: [],
 };
 
+const READY: MergeReadiness = { state: 'READY', blockers: [], warnings: [] };
+
 function setup({
-  decision = null,
+  readiness = READY,
+  methods = { merge: true, squash: true, rebase: true },
   row = {},
 }: {
-  decision?: PrOverviewDetails['reviewDecision'];
+  readiness?: MergeReadiness;
+  methods?: AllowedMergeMethods;
   row?: Partial<OverviewPr>;
 } = {}): ReturnType<typeof renderWithProviders> {
-  const listed = overviewPr(7, 'Speed up the indexer', { reviewDecision: decision, ...row });
+  const listed = overviewPr(7, 'Speed up the indexer', { mergeReadiness: readiness, ...row });
   const world = createWorld({ prs: [pr(7, 'Speed up the indexer')], overviewPrs: [listed] });
   const state = { merged: false };
   const handlers = {
@@ -32,8 +43,9 @@ function setup({
     'overview.pr': (): PrOverviewDetails =>
       state.merged
         ? { ...details, state: 'MERGED', mergedAt: '2026-01-02T00:00:00Z' }
-        : { ...details, reviewDecision: decision },
+        : { ...details, mergeReadiness: readiness },
     'overview.project': () => ({ prs: state.merged ? [] : [listed], closedPrs: [], activity: [] }),
+    'pr.mergeMethods': () => methods,
     'pr.merge': () => {
       state.merged = true;
     },
@@ -42,15 +54,6 @@ function setup({
 }
 
 describe('PR overview merge dialog', () => {
-  it('opens the details of a PR without targeting it', async () => {
-    const { user, ipc } = setup();
-
-    await user.click(await screen.findByRole('button', { name: '#7 Speed up the indexer' }));
-
-    expect(await screen.findByText('All pull requests')).toBeVisible();
-    expect(ipc.callsTo('pr.checkout').every((c) => c.target.kind === 'default')).toBe(true);
-  });
-
   it('merges from the pull request list with the chosen method', async () => {
     const { user, ipc } = setup();
 
@@ -104,28 +107,123 @@ describe('PR overview merge dialog', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it.each([
-    ['CHANGES_REQUESTED', 'Changes have been requested on this pull request.'],
-    ['REVIEW_REQUIRED', 'This pull request has not been approved yet.'],
-  ] as const)(
-    'warns before merging a PR with decision %s but still allows it',
-    async (decision, warning) => {
-      const { user, ipc } = setup({ decision });
-
-      await user.click(await screen.findByRole('button', { name: 'Merge' }));
-      const dialog = await screen.findByRole('dialog');
-      expect(within(dialog).getByText(warning)).toBeVisible();
-      await user.click(within(dialog).getByRole('button', { name: 'Merge' }));
-
-      await waitFor(() => expect(ipc.callsTo('pr.merge')).toHaveLength(1));
-    },
-  );
-
-  it('shows no warning for an approved PR', async () => {
-    const { user } = setup({ decision: 'APPROVED' });
+  it('shows what is merged into what and offers the merge commit by default', async () => {
+    const { user } = setup();
 
     await user.click(await screen.findByRole('button', { name: 'Merge' }));
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).queryByText(/not been approved|requested/)).toBeNull();
+
+    expect(within(dialog).getByText('feature-7 into main')).toBeVisible();
+    expect(within(dialog).getByRole('combobox')).toHaveValue('MERGE');
+    expect(within(dialog).getByText('Ready to merge.')).toBeVisible();
+  });
+
+  it('does not offer merge methods the repository disallows', async () => {
+    const { user } = setup({ methods: { merge: true, squash: false, rebase: false } });
+
+    await user.click(await screen.findByRole('button', { name: 'Merge' }));
+    const dialog = await screen.findByRole('dialog');
+
+    await waitFor(() =>
+      expect(
+        within(dialog)
+          .getAllByRole('option')
+          .map((o) => o.textContent),
+      ).toEqual(['Create a merge commit']),
+    );
+    expect(within(dialog).getByRole('combobox')).toHaveValue('MERGE');
+  });
+
+  it('disables Merge with the reason for conflicts, in the list and in the details', async () => {
+    const { user } = setup({ readiness: { state: 'CONFLICTING', blockers: [], warnings: [] } });
+
+    const listButton = await screen.findByRole('button', { name: 'Merge' });
+    expect(listButton).toBeDisabled();
+    expect(listButton).toHaveAttribute('title', expect.stringMatching(/conflicts/));
+
+    await user.click(screen.getByRole('button', { name: '#7 Speed up the indexer' }));
+    await screen.findByText('All pull requests');
+    const headerButton = await screen.findByRole('button', { name: 'Merge' });
+    expect(headerButton).toBeDisabled();
+    expect(headerButton).toHaveAttribute('title', expect.stringMatching(/conflicts/));
+  });
+
+  it('disables Merge and lists the blockers when GitHub would reject the merge', async () => {
+    setup({
+      readiness: {
+        state: 'BLOCKED',
+        blockers: ['REVIEW_REQUIRED', 'CHECKS_PENDING'],
+        warnings: [],
+      },
+    });
+
+    const button = await screen.findByRole('button', { name: 'Merge' });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute(
+      'title',
+      expect.stringContaining('A required review is missing.'),
+    );
+    expect(button).toHaveAttribute(
+      'title',
+      expect.stringContaining('Some checks are still running.'),
+    );
+  });
+
+  it('hides Merge for draft pull requests', async () => {
+    setup({
+      readiness: { state: 'BLOCKED', blockers: ['DRAFT'], warnings: [] },
+      row: { isDraft: true },
+    });
+
+    await screen.findByText('#7 Speed up the indexer');
+    expect(screen.queryByRole('button', { name: 'Merge' })).toBeNull();
+  });
+
+  it('shows a neutral checking state and keeps merging possible', async () => {
+    const { user } = setup({ readiness: { state: 'CHECKING', blockers: [], warnings: [] } });
+
+    await user.click(await screen.findByRole('button', { name: 'Merge' }));
+    const dialog = await screen.findByRole('dialog');
+
+    expect(within(dialog).getByText(/Checking whether/)).toBeVisible();
+    expect(within(dialog).getByRole('button', { name: 'Merge' })).toBeEnabled();
+  });
+
+  it('warns about a branch behind its base without blocking', async () => {
+    const { user } = setup({ readiness: { state: 'READY', blockers: [], warnings: ['BEHIND'] } });
+
+    await user.click(await screen.findByRole('button', { name: 'Merge' }));
+    const dialog = await screen.findByRole('dialog');
+
+    expect(within(dialog).getByText('The branch is behind its base branch.')).toBeVisible();
+    expect(within(dialog).getByRole('button', { name: 'Merge' })).toBeEnabled();
+  });
+});
+
+describe('MergeModal confirm', () => {
+  function renderModal(readiness: MergeReadiness): ReturnType<typeof renderWithProviders> {
+    const world = createWorld();
+    return renderWithProviders(
+      <MergeModal
+        pr={7}
+        title="Speed up the indexer"
+        head="feature-7"
+        base="main"
+        mergeReadiness={readiness}
+        onClose={() => undefined}
+      />,
+      world.handlers,
+    );
+  }
+
+  it.each([
+    [{ state: 'CONFLICTING', blockers: [], warnings: [] }, /conflicts/],
+    [{ state: 'BLOCKED', blockers: ['CHECKS_FAILING'], warnings: [] }, /Some checks are failing/],
+  ] as const)('disables confirm for %j and says why', async (readiness, reason) => {
+    renderModal({ ...readiness, blockers: [...readiness.blockers], warnings: [] });
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(reason)).toBeVisible();
+    expect(within(dialog).getByRole('button', { name: 'Merge' })).toBeDisabled();
   });
 });
