@@ -98,4 +98,29 @@ describe('Combobox', () => {
 
     expect(selections).toEqual([]);
   });
+
+  it('clears free text with the clear button only while text is present', async () => {
+    function FreeTextPicker(): React.JSX.Element {
+      const [text, setText] = useState('');
+      return (
+        <Combobox<Fruit>
+          items={fruits}
+          value={null}
+          getKey={(f) => f.id}
+          getLabel={(f) => f.name}
+          onSelect={() => undefined}
+          freeText={{ text, onTextChange: setText }}
+        />
+      );
+    }
+    const { user } = renderWithProviders(<FreeTextPicker />, createWorld().handlers);
+    const input = await screen.findByRole('combobox');
+    expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument();
+
+    await user.type(input, 'App');
+    await user.click(screen.getByRole('button', { name: 'Clear' }));
+
+    expect(input).toHaveValue('');
+    expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument();
+  });
 });

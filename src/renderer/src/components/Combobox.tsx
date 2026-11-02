@@ -143,6 +143,19 @@ export function Combobox<T>({
     }
   }
 
+  const showClear =
+    !disabled &&
+    (freeText ? freeText.text !== '' : value !== null || unresolvedLabel !== undefined);
+
+  function clear(): void {
+    if (freeText) {
+      freeText.onTextChange('');
+      onQueryChange?.('');
+    } else {
+      selectItem(null);
+    }
+  }
+
   const displayValue = freeText
     ? freeText.text
     : open
@@ -181,14 +194,7 @@ export function Combobox<T>({
           }}
           onKeyDown={handleKeyDown}
         />
-        {!freeText && (value !== null || unresolvedLabel !== undefined) && !disabled && (
-          <IconButton
-            icon={X}
-            label={resolvedClearLabel}
-            size={12}
-            onClick={() => selectItem(null)}
-          />
-        )}
+        {showClear && <IconButton icon={X} label={resolvedClearLabel} size={12} onClick={clear} />}
       </InputRow>
       {open && !disabled && (loading || filtered.length > 0) && (
         <Menu id={listboxId} role="listbox" onMouseDown={(e) => e.preventDefault()}>

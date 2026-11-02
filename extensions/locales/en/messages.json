@@ -273,7 +273,6 @@
   "header.launching": "Opening in a new window…",
   "header.offline": "Offline",
   "header.offlineHint": "GitHub could not be reached. Changes stay local until the connection returns.",
-  "header.pathTarget.clear": "Clear",
   "header.pathTarget.placeholder": "Path…",
   "header.prTarget.forkPrLabel": "#{number} {title} (fork: {head})",
   "header.prTarget.newPullRequest": "New pull request",

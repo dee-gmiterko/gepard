@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Folder, X } from 'react-feather';
+import { Folder } from 'react-feather';
 import { defineMessages, useIntl } from 'react-intl';
 import { Combobox } from '../../components/Combobox';
 import { IconField } from '../../components/IconField';
-import { IconButton } from '../../components/IconButton';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useTree } from '../../queries/files';
 import { useTargeting } from '../../state/hooks';
@@ -14,10 +13,6 @@ const messages = defineMessages({
   placeholder: {
     id: 'header.pathTarget.placeholder',
     defaultMessage: 'Path…',
-  },
-  clear: {
-    id: 'header.pathTarget.clear',
-    defaultMessage: 'Clear',
   },
 });
 
@@ -103,14 +98,6 @@ export function PathTarget(): React.JSX.Element {
         placeholder={intl.formatMessage(messages.placeholder)}
         onCommit={commit}
       />
-      {targeting.path !== null && (
-        <IconButton
-          icon={X}
-          label={intl.formatMessage(messages.clear)}
-          size={12}
-          onClick={() => commit('')}
-        />
-      )}
     </IconField>
   );
 }
