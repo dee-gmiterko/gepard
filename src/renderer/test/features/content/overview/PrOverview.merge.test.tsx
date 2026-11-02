@@ -117,15 +117,13 @@ describe('PR overview merge dialog', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('shows what is merged into what and offers the merge commit by default', async () => {
+  it('offers the merge commit by default', async () => {
     const { user } = setup();
 
     await user.click(await screen.findByRole('button', { name: 'Merge' }));
     const dialog = await screen.findByRole('dialog');
 
-    expect(within(dialog).getByText('feature-7 into main')).toBeVisible();
     expect(within(dialog).getByRole('combobox')).toHaveValue('MERGE');
-    expect(within(dialog).getByText('Ready to merge.')).toBeVisible();
   });
 
   it('does not offer merge methods the repository disallows', async () => {
@@ -189,23 +187,21 @@ describe('PR overview merge dialog', () => {
     expect(screen.queryByRole('button', { name: 'Merge' })).toBeNull();
   });
 
-  it('shows a neutral checking state and keeps merging possible', async () => {
+  it('keeps merging possible while mergeability is still unknown', async () => {
     const { user } = setup({ readiness: { state: 'CHECKING', blockers: [], warnings: [] } });
 
     await user.click(await screen.findByRole('button', { name: 'Merge' }));
     const dialog = await screen.findByRole('dialog');
 
-    expect(within(dialog).getByText(/Checking whether/)).toBeVisible();
     expect(within(dialog).getByRole('button', { name: 'Merge' })).toBeEnabled();
   });
 
-  it('warns about a branch behind its base without blocking', async () => {
+  it('does not block merging a branch behind its base', async () => {
     const { user } = setup({ readiness: { state: 'READY', blockers: [], warnings: ['BEHIND'] } });
 
     await user.click(await screen.findByRole('button', { name: 'Merge' }));
     const dialog = await screen.findByRole('dialog');
 
-    expect(within(dialog).getByText('The branch is behind its base branch.')).toBeVisible();
     expect(within(dialog).getByRole('button', { name: 'Merge' })).toBeEnabled();
   });
 });

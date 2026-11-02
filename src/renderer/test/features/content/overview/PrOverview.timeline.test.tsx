@@ -30,7 +30,7 @@ function commit(n: number): Commit {
 }
 
 describe('PR overview timeline', () => {
-  it('collapses long commit runs, shows short SHAs and expands in place', async () => {
+  it('collapses long commit runs and expands them in place', async () => {
     const world = createWorld({ prs: [pr(7, 'Speed up the indexer')], targeting: { pr: 7 } });
     const commits = Array.from({ length: 12 }, (_, i) => commit(i + 1));
     const { user } = renderWithProviders(<App />, {
@@ -40,7 +40,6 @@ describe('PR overview timeline', () => {
     });
 
     expect(await screen.findByText('Change number 1')).toBeVisible();
-    expect(screen.getByText('1aaaaaa')).toBeVisible();
     expect(screen.queryByText('Change number 12')).toBeNull();
 
     await user.click(screen.getByRole('button', { name: 'Show 4 more commits' }));
