@@ -1,8 +1,8 @@
 import { useUiDispatch } from '../../../../state/UiContext';
 import { useOverviewPr, useTargeting } from '../../../../state/hooks';
-import { useTargetActions } from '../../../header/useTargetActions';
 import type { Targeting } from '../../../../state/reducer';
 import { useOpenReview } from './useOpenReview';
+import { useRetarget } from './useRetarget';
 
 export interface OverviewActions {
   openPr: (pr: number) => void;
@@ -20,7 +20,7 @@ export function useOverviewActions(): OverviewActions {
   const targeting = useTargeting();
   const overviewPr = useOverviewPr();
   const dispatch = useUiDispatch();
-  const { setTarget } = useTargetActions();
+  const setTarget = useRetarget();
   const openReview = useOpenReview();
 
   function reviewPr(pr: number | null): void {
