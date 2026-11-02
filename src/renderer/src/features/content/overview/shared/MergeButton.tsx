@@ -17,6 +17,7 @@ export function MergeButton({
   mergeReadiness,
   viewedFiles,
   totalFiles,
+  prominent = false,
 }: {
   pr: number;
   title: string;
@@ -25,12 +26,14 @@ export function MergeButton({
   mergeReadiness: MergeReadiness;
   viewedFiles: number;
   totalFiles: number;
+  prominent?: boolean;
 }): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const blockedReason = useMergeBlockedReason(mergeReadiness);
   return (
     <>
       <Button
+        variant={prominent ? 'primary' : 'secondary'}
         disabled={!canMerge(mergeReadiness)}
         title={blockedReason}
         onClick={() => setOpen(true)}
