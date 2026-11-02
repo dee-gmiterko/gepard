@@ -25,11 +25,13 @@ import { withFileReference } from '../helpers/github/reviewMapping';
 import {
   GhPrOverview,
   normalizePrOverview,
-  parseProjectOverview,
   PR_OVERVIEW_FIELDS,
+} from '../helpers/github/prOverview';
+import {
+  parseProjectOverview,
   PROJECT_OVERVIEW_QUERY,
   ProjectOverviewResponse,
-} from '../helpers/github/overview';
+} from '../helpers/github/projectOverview';
 import {
   NodeId,
   Sha,
