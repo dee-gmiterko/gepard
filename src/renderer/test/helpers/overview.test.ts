@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ChangedFile } from '@gepard/common';
 import {
+  buildTimelineEvents,
   groupByExtension,
   groupByFolder,
   groupByOwner,
@@ -52,21 +53,46 @@ describe('timeline grouping', () => {
     actor,
   });
 
-  it('merges consecutive commits by one actor within an hour only', () => {
+  it('merges consecutive comments by one actor within an hour only, never commits', () => {
     const groups = groupTimeline([
       ev('commit', '2026-01-01T10:00:00Z', 'a'),
       ev('commit', '2026-01-01T10:30:00Z', 'a'),
-      ev('commit', '2026-01-01T10:40:00Z', 'b'),
-      ev('commit', '2026-01-01T13:00:00Z', 'b'),
+      ev('comment', '2026-01-01T10:40:00Z', 'b'),
+      ev('comment', '2026-01-01T11:00:00Z', 'b'),
+      ev('comment', '2026-01-01T13:00:00Z', 'b'),
       ev('review', '2026-01-01T13:01:00Z', 'b'),
       ev('review', '2026-01-01T13:02:00Z', 'b'),
     ]);
     expect(groups.map((g) => [g.kind, g.events.length])).toEqual([
-      ['commit', 2],
       ['commit', 1],
       ['commit', 1],
+      ['comment', 2],
+      ['comment', 1],
       ['review', 1],
       ['review', 1],
+    ]);
+  });
+
+  it('carries each commit message headline onto its own event', () => {
+    const events = buildTimelineEvents({
+      author: 'a',
+      createdAt: '2026-01-01T09:00:00Z',
+      commits: [
+        {
+          oid: 'a'.repeat(40),
+          messageHeadline: 'Fix the indexer',
+          messageBody: '',
+          authoredDate: '2026-01-01T10:00:00Z',
+          committedDate: '2026-01-01T10:00:00Z',
+          authors: [{ login: 'a', name: 'A', email: 'a@example.com' }],
+        },
+      ],
+      threads: [],
+      details: null,
+    });
+    expect(events.map((e) => [e.kind, e.headline])).toEqual([
+      ['opened', undefined],
+      ['commit', 'Fix the indexer'],
     ]);
   });
 

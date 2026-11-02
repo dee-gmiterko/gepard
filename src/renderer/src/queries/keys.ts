@@ -31,6 +31,7 @@ export const qk = {
     [...qk.prsAll(p), search, commit, path] as const,
   projectOverview: (p: string) => [...qk.project(p), 'overview'] as const,
   prOverview: (p: string, pr: number) => [...qk.pr(p, pr), 'overview'] as const,
+  prRange: (p: string, pr: number) => [...qk.pr(p, pr), 'range'] as const,
   changedFileOwners: (p: string, base: string, head: string) =>
     [...qk.commit(p, head), 'owners', base] as const,
   branches: (p: string) => [...qk.project(p), 'branches'] as const,

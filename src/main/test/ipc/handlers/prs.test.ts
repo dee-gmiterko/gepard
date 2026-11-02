@@ -2,12 +2,15 @@ import { execFile } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrsHandlers } from '../../../ipc/handlers/prs';
 import { ReviewStore } from '../../../store/review';
 import { FileLockService } from '../../../services/fileLock';
 import { makeUserData, type UserData } from '../../support/tmp';
 import { makeGitServices } from '../../support/services';
+import type { GhService } from '../../../services/gh';
+import type { GitService } from '../../../services/git';
+import type { MockInstance } from 'vitest';
 
 const execFileP = promisify(execFile);
 const ENV = {
@@ -97,5 +100,69 @@ describe('overview.owners against a real repository', () => {
   it('honours rules with character classes', async () => {
     const result = await owners('* @everyone\n*.[ch] @c-team\n', ['src/a.c', 'src/a.js']);
     expect(result).toEqual({ 'src/a.c': ['@c-team'], 'src/a.js': ['@everyone'] });
+  });
+});
+
+describe('pr.merge and overview.range handlers', () => {
+  let userData: UserData;
+
+  beforeEach(async () => {
+    userData = await makeUserData();
+  });
+
+  afterEach(async () => {
+    await userData.cleanup();
+  });
+
+  function setup(): {
+    handlers: ReturnType<PrsHandlers['toHandlerMap']>;
+    mergePr: MockInstance<GhService['mergePr']>;
+    viewPrHeadBase: MockInstance<GhService['viewPrHeadBase']>;
+    prRange: MockInstance<GitService['prRange']>;
+  } {
+    const services = makeGitServices(userData.paths);
+    vi.spyOn(services.gh, 'repoRefFor').mockResolvedValue({ owner: 'acme', repo: 'widgets' });
+    const mergePr = vi.spyOn(services.gh, 'mergePr').mockResolvedValue(undefined);
+    const viewPrHeadBase = vi
+      .spyOn(services.gh, 'viewPrHeadBase')
+      .mockResolvedValue({ headRefOid: 'h'.repeat(40), baseRefOid: 'b'.repeat(40) });
+    const prRange = vi
+      .spyOn(services.git, 'prRange')
+      .mockResolvedValue({ base: 'm'.repeat(40), head: 'h'.repeat(40) });
+    const handlers = new PrsHandlers(
+      services.gh,
+      services.git,
+      new ReviewStore(userData.paths, new FileLockService()),
+      { filter: (_projectId, items) => Promise.resolve([...items]) },
+    ).toHandlerMap();
+    return { handlers, mergePr, viewPrHeadBase, prRange };
+  }
+
+  it('merges the PR in the project repository with the requested method', async () => {
+    const { handlers, mergePr } = setup();
+
+    await handlers['pr.merge'](
+      { projectId: 'acme__widgets', pr: 7, method: 'SQUASH' },
+      { window: null },
+    );
+
+    expect(mergePr).toHaveBeenCalledWith('acme', 'widgets', 7, 'SQUASH');
+  });
+
+  it('resolves the range of a PR from its current head and base', async () => {
+    const { handlers, viewPrHeadBase, prRange } = setup();
+
+    const range = await handlers['overview.range'](
+      { projectId: 'acme__widgets', pr: 7 },
+      { window: null },
+    );
+
+    expect(viewPrHeadBase).toHaveBeenCalledWith('acme', 'widgets', 7);
+    expect(prRange).toHaveBeenCalledWith('acme__widgets', {
+      pr: 7,
+      headRefOid: 'h'.repeat(40),
+      baseRefOid: 'b'.repeat(40),
+    });
+    expect(range).toEqual({ base: 'm'.repeat(40), head: 'h'.repeat(40) });
   });
 });

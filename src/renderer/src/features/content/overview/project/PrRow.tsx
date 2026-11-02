@@ -9,6 +9,7 @@ import { DecisionBadge } from '../shared/DecisionBadge';
 import { FileCount } from '../shared/FileCount';
 import { Lines } from '../shared/Lines';
 import { ForkBadge } from '../shared/ForkBadge';
+import { MergeButton } from '../shared/MergeButton';
 import { PrLabel } from '../shared/PrLabel';
 import { ProgressBar } from '../../../../components/ProgressBar';
 import { RelativeTime } from '../shared/RelativeTime';
@@ -96,9 +97,14 @@ export function PrRow({ pr }: { pr: OverviewPr }): React.JSX.Element {
       <WideOnly>
         <RelativeTime value={pr.updatedAt} />
       </WideOnly>
-      <Button onClick={() => actions.reviewPr(pr.number)}>
-        <FormattedMessage {...messages.review} />
-      </Button>
+      <Inline $gap={2}>
+        {pr.state === 'OPEN' && !pr.isDraft && (
+          <MergeButton pr={pr.number} title={pr.title} reviewDecision={pr.reviewDecision} />
+        )}
+        <Button onClick={() => actions.reviewPr(pr.number)}>
+          <FormattedMessage {...messages.review} />
+        </Button>
+      </Inline>
     </RowGrid>
   );
 }

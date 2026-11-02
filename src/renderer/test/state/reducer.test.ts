@@ -108,6 +108,41 @@ describe('overview tab', () => {
   });
 });
 
+describe('overview PR', () => {
+  it('is independent of the targeted PR', () => {
+    const s = state({ targeting: { pr: 3, commit: null, path: null }, overviewPr: 3 });
+    const next = uiReducer(s, { type: 'overview/pr', pr: 9 });
+    expect(next.overviewPr).toBe(9);
+    expect(next.targeting.pr).toBe(3);
+    expect(uiReducer(next, { type: 'target/pr', pr: 4 }).overviewPr).toBe(9);
+  });
+
+  it('returns the same state when the PR is unchanged', () => {
+    const s = state({ overviewPr: 5 });
+    expect(uiReducer(s, { type: 'overview/pr', pr: 5 })).toBe(s);
+  });
+
+  it('can be cleared to show the project overview', () => {
+    expect(
+      uiReducer(state({ overviewPr: 5 }), { type: 'overview/pr', pr: null }).overviewPr,
+    ).toBeNull();
+  });
+
+  it('is seeded from the persisted targeting when a project opens', () => {
+    const next = uiReducer(state({ projectId: 'proj-a' }), {
+      type: 'project/open',
+      projectId: 'proj-b',
+      targeting: { pr: 7, commit: null, path: null },
+      layout: initialUiState.layout,
+    });
+    expect(next.overviewPr).toBe(7);
+  });
+
+  it('is cleared when the project closes', () => {
+    expect(uiReducer(state({ overviewPr: 5 }), { type: 'project/close' }).overviewPr).toBeNull();
+  });
+});
+
 describe('opening a project', () => {
   it('resets everything, including pinned files', () => {
     const s = state({ pinnedFiles: ['a.ts'], projectId: 'proj-a' });

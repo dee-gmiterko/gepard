@@ -20,11 +20,22 @@ const messages = defineMessages({
   },
 });
 
+const Count = styled(Muted)`
+  font-weight: 400;
+  font-size: ${({ theme }) => theme.font.size.xs};
+`;
+
 const Heading = styled(Inline)`
   padding-bottom: ${({ theme }) => theme.space[1]};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   font-weight: 600;
   font-size: ${({ theme }) => theme.font.size.sm};
+`;
+
+const Line = styled.ul`
+  margin: ${({ theme }) => theme.space[2]} 0 0 ${({ theme }) => theme.space[2]};
+  padding: 0;
+  list-style: none;
 `;
 
 export function TimelineDay({ day }: { day: Day }): React.JSX.Element {
@@ -34,25 +45,27 @@ export function TimelineDay({ day }: { day: Day }): React.JSX.Element {
         <FormattedDate value={day.day} dateStyle="medium" timeZone="UTC" />
         <Inline $gap={2}>
           {day.counts.commit > 0 && (
-            <Muted>
+            <Count>
               <FormattedMessage {...messages.commits} values={{ count: day.counts.commit }} />
-            </Muted>
+            </Count>
           )}
           {day.counts.comment > 0 && (
-            <Muted>
+            <Count>
               <FormattedMessage {...messages.comments} values={{ count: day.counts.comment }} />
-            </Muted>
+            </Count>
           )}
           {day.counts.review > 0 && (
-            <Muted>
+            <Count>
               <FormattedMessage {...messages.reviews} values={{ count: day.counts.review }} />
-            </Muted>
+            </Count>
           )}
         </Inline>
       </Heading>
-      {day.groups.map((group) => (
-        <TimelineLine key={`${group.kind}-${group.at}-${group.actor}`} group={group} />
-      ))}
+      <Line>
+        {day.groups.map((group, i) => (
+          <TimelineLine key={`${group.kind}-${group.at}-${group.actor}-${i}`} group={group} />
+        ))}
+      </Line>
     </div>
   );
 }

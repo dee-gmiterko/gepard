@@ -1,7 +1,8 @@
 import { defineMessages, FormattedDate, FormattedMessage } from 'react-intl';
 import styled from 'styled-components';
 import { Caption } from '../../../../components/Caption';
-import type { TimelineGroup } from '../../../../helpers/overview';
+import type { Theme } from '../../../../theme/tokens';
+import type { TimelineGroup, TimelineKind } from '../../../../helpers/overview';
 import { LinkButton } from '../shared/overviewStyles';
 import { useOverviewActions } from '../shared/useOverviewActions';
 
@@ -10,13 +11,11 @@ const messages = defineMessages({
     id: 'content.overview.pr.event.opened',
     defaultMessage: '{actor} opened the pull request',
   },
-  commit: {
-    id: 'content.overview.pr.event.commit',
-    defaultMessage: '{actor} pushed {count, plural, one {# commit} other {# commits}}',
-  },
-  comment: {
-    id: 'content.overview.pr.event.comment',
-    defaultMessage: '{actor} wrote {count, plural, one {# comment} other {# comments}}',
+  commitFallback: { id: 'content.overview.pr.event.commit', defaultMessage: 'Commit' },
+  comment: { id: 'content.overview.pr.event.comment', defaultMessage: '{actor} commented' },
+  commentCount: {
+    id: 'content.overview.pr.event.commentCount',
+    defaultMessage: '{count, plural, one {# comment} other {# comments}}',
   },
   review: {
     id: 'content.overview.pr.event.review',
@@ -28,24 +27,70 @@ const messages = defineMessages({
   someone: { id: 'content.overview.pr.someone', defaultMessage: 'Someone' },
 });
 
-const Time = styled(Caption)`
-  min-width: 56px;
-  font-variant-numeric: tabular-nums;
+const DOT_SIZE = 9;
+
+const DOT_CENTER = ({ theme }: { theme: Theme }): string => `calc(${theme.space[1]} + 0.5lh)`;
+
+const Item = styled.li`
+  position: relative;
+  padding: ${({ theme }) => theme.space[1]} 0 ${({ theme }) => theme.space[1]}
+    ${({ theme }) => theme.space[4]};
+  font-size: ${({ theme }) => theme.font.size.sm};
+  min-width: 0;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -1px;
+    width: 1px;
+    background: ${({ theme }) => theme.colors.border};
+  }
+
+  &:first-child::before {
+    top: ${DOT_CENTER};
+  }
+
+  &:last-child::before {
+    bottom: calc(100% - ${DOT_CENTER});
+  }
 `;
 
-const Row = styled.div`
+const Dot = styled.span<{ $kind: TimelineKind }>`
+  position: absolute;
+  top: calc(${DOT_CENTER} - ${DOT_SIZE / 2}px);
+  left: -${DOT_SIZE / 2 + 0.5}px;
+  width: ${DOT_SIZE}px;
+  height: ${DOT_SIZE}px;
+  box-sizing: border-box;
+  border: 2px solid ${({ theme }) => theme.colors.bg};
+  border-radius: 50%;
+  background: ${({ theme, $kind }) =>
+    $kind === 'merged'
+      ? theme.colors.success
+      : $kind === 'closed'
+        ? theme.colors.danger
+        : $kind === 'commit'
+          ? theme.colors.accent
+          : theme.colors.fgSubtle};
+`;
+
+const Text = styled.div`
+  overflow-wrap: anywhere;
+`;
+
+const Meta = styled(Caption)`
   display: flex;
-  gap: ${({ theme }) => theme.space[3]};
-  align-items: baseline;
-  padding: ${({ theme }) => theme.space[1]} ${({ theme }) => theme.space[2]};
-  font-size: ${({ theme }) => theme.font.size.sm};
+  flex-wrap: wrap;
+  gap: 0 ${({ theme }) => theme.space[2]};
 `;
 
 export function TimelineLine({ group }: { group: TimelineGroup }): React.JSX.Element {
   const actions = useOverviewActions();
   const actor = group.actor ?? <FormattedMessage {...messages.someone} />;
+  const first = group.events[0];
   const count = group.events.length;
-  const reviewState = group.events[0].reviewState ?? '';
   let text: React.ReactNode;
   let onClick: (() => void) | null = null;
   switch (group.kind) {
@@ -53,17 +98,19 @@ export function TimelineLine({ group }: { group: TimelineGroup }): React.JSX.Ele
       text = <FormattedMessage {...messages.opened} values={{ actor }} />;
       break;
     case 'commit': {
-      const sha = group.events.at(-1)?.sha;
-      text = <FormattedMessage {...messages.commit} values={{ actor, count }} />;
+      const { sha } = first;
+      text = first.headline ?? <FormattedMessage {...messages.commitFallback} />;
       if (sha) onClick = () => actions.openCommit(sha);
       break;
     }
     case 'comment':
-      text = <FormattedMessage {...messages.comment} values={{ actor, count }} />;
+      text = <FormattedMessage {...messages.comment} values={{ actor }} />;
       onClick = actions.openComments;
       break;
     case 'review':
-      text = <FormattedMessage {...messages.review} values={{ actor, state: reviewState }} />;
+      text = (
+        <FormattedMessage {...messages.review} values={{ actor, state: first.reviewState ?? '' }} />
+      );
       onClick = actions.openComments;
       break;
     case 'merged':
@@ -74,11 +121,16 @@ export function TimelineLine({ group }: { group: TimelineGroup }): React.JSX.Ele
       break;
   }
   return (
-    <Row>
-      <Time>
+    <Item>
+      <Dot $kind={group.kind} aria-hidden />
+      <Text>{onClick ? <LinkButton onClick={onClick}>{text}</LinkButton> : text}</Text>
+      <Meta>
+        {group.kind === 'commit' && <span>{actor}</span>}
         <FormattedDate value={group.at} timeStyle="short" />
-      </Time>
-      {onClick ? <LinkButton onClick={onClick}>{text}</LinkButton> : <span>{text}</span>}
-    </Row>
+        {group.kind === 'comment' && count > 1 && (
+          <FormattedMessage {...messages.commentCount} values={{ count }} />
+        )}
+      </Meta>
+    </Item>
   );
 }

@@ -392,6 +392,19 @@ export class GitService {
     });
   }
 
+  // Resolves a PR's range without moving the checked-out HEAD, unlike checkoutTarget.
+  prRange(
+    projectId: string,
+    pr: { pr: number; headRefOid: string; baseRefOid: string },
+  ): Promise<{ base: string; head: string }> {
+    return this.enqueue(projectId, async () => {
+      const repoRoot = this.paths.projectRepoDir(projectId);
+      await this.ensureCommit(repoRoot, pr.headRefOid, { pr: pr.pr, baseRefOid: pr.baseRefOid });
+      const { stdout } = await this.git.run(repoRoot, ['merge-base', pr.baseRefOid, pr.headRefOid]);
+      return { base: stdout.trim(), head: pr.headRefOid };
+    });
+  }
+
   ensurePrCommitsFetched(projectId: string, pr: number, oids: string[]): Promise<void> {
     return this.enqueue(projectId, async () => {
       if (oids.length === 0) return;

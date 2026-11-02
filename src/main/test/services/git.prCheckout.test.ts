@@ -86,6 +86,45 @@ describe('GitService.checkoutTarget for pull requests (integration)', () => {
     expect(result).toEqual({ base: rootSha, head: featureSha });
   });
 
+  describe('prRange', () => {
+    it('returns the merge-base and PR head without moving HEAD', async () => {
+      const repo = userData.paths.projectRepoDir('acme__origin');
+      await svc.checkoutTarget('acme__origin', { kind: 'commit', sha: mainTip });
+      const before = await git(repo, ['rev-parse', 'HEAD']);
+
+      const result = await svc.prRange('acme__origin', {
+        pr: 1,
+        headRefOid: featureSha,
+        baseRefOid: mainTip,
+      });
+
+      expect(result).toEqual({ base: rootSha, head: featureSha });
+      expect(await git(repo, ['rev-parse', 'HEAD'])).toBe(before);
+      expect(await git(repo, ['status', '--porcelain'])).toBe('');
+    });
+
+    it('fetches a fork PR head reachable only via refs/pull/N/head', async () => {
+      const repo = userData.paths.projectRepoDir('acme__bare');
+      const before = await git(repo, ['rev-parse', 'HEAD']);
+
+      const result = await svc.prRange('acme__bare', {
+        pr: 1,
+        headRefOid: forkSha,
+        baseRefOid: mainTip,
+      });
+
+      expect(result).toEqual({ base: rootSha, head: forkSha });
+      expect(await git(repo, ['cat-file', '-t', forkSha])).toBe('commit');
+      expect(await git(repo, ['rev-parse', 'HEAD'])).toBe(before);
+    });
+
+    it('fails for a head that exists nowhere on the remote', async () => {
+      await expect(
+        svc.prRange('acme__bare', { pr: 9, headRefOid: 'c'.repeat(40), baseRefOid: mainTip }),
+      ).rejects.toThrow(/not on origin/);
+    });
+  });
+
   it('fails clearly for a commit that exists nowhere on the remote', async () => {
     await expect(
       svc.checkoutTarget('acme__bare', {

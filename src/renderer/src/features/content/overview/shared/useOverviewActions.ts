@@ -1,6 +1,7 @@
 import { useUiDispatch } from '../../../../state/UiContext';
-import { useTargeting } from '../../../../state/hooks';
+import { useOverviewPr, useTargeting } from '../../../../state/hooks';
 import { useTargetActions } from '../../../header/useTargetActions';
+import type { Targeting } from '../../../../state/reducer';
 import { useOpenReview } from './useOpenReview';
 
 export interface OverviewActions {
@@ -17,33 +18,53 @@ export interface OverviewActions {
 
 export function useOverviewActions(): OverviewActions {
   const targeting = useTargeting();
+  const overviewPr = useOverviewPr();
   const dispatch = useUiDispatch();
-  const { setPr, setPath, setCommit } = useTargetActions();
+  const { setTarget } = useTargetActions();
   const openReview = useOpenReview();
+
+  function reviewPr(pr: number | null): void {
+    const next = { pr, commit: null, path: targeting.path };
+    setTarget(next);
+    openReview(next);
+  }
+
+  function focusOverviewPr(patch: Partial<Targeting> = {}): void {
+    const pr = overviewPr ?? targeting.pr;
+    setTarget({
+      pr,
+      commit: pr === targeting.pr ? targeting.commit : null,
+      path: targeting.path,
+      ...patch,
+    });
+  }
 
   return {
     openPr: (pr) => {
-      setPr(pr);
+      dispatch({ type: 'overview/pr', pr });
       dispatch({ type: 'mainTab/set', tab: 'overview' });
     },
-    reviewPr: (pr) => {
-      setPr(pr);
-      openReview({ ...targeting, pr, commit: null });
+    reviewPr,
+    showAllPrs: () => dispatch({ type: 'overview/pr', pr: null }),
+    openComments: () => {
+      focusOverviewPr();
+      dispatch({ type: 'mainTab/set', tab: 'comments' });
     },
-    showAllPrs: () => setPr(null),
-    openComments: () => dispatch({ type: 'mainTab/set', tab: 'comments' }),
-    openFiles: () => openReview(targeting),
-    openFile: (path) => dispatch({ type: 'file/open', path }),
+    openFiles: () => reviewPr(overviewPr ?? targeting.pr),
+    openFile: (path) => {
+      focusOverviewPr();
+      dispatch({ type: 'file/open', path });
+    },
     openFolder: (path) => {
-      setPath(path);
+      focusOverviewPr({ path });
       dispatch({ type: 'mainTab/set', tab: 'files' });
     },
     openExtension: (extension) => {
-      setPath(`**/*${extension}`);
+      focusOverviewPr({ path: `**/*${extension}` });
       dispatch({ type: 'mainTab/set', tab: 'files' });
     },
     openCommit: (sha) => {
-      setCommit(sha);
+      focusOverviewPr({ commit: sha });
       dispatch({ type: 'mainTab/set', tab: 'files' });
     },
   };

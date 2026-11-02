@@ -79,6 +79,7 @@ export interface UiState {
   previewFile: string | null;
   activeFile: string | null;
   mainTab: MainTab;
+  overviewPr: number | null;
   checkoutHead: { base: string; head: string } | null;
   toasts: Toast[];
   headerStatus: HeaderStatus | null;
@@ -101,6 +102,7 @@ export const initialUiState: UiState = {
   previewFile: null,
   activeFile: null,
   mainTab: 'overview',
+  overviewPr: null,
   checkoutHead: null,
   toasts: [],
   headerStatus: null,
@@ -145,6 +147,7 @@ export type UiAction =
   | { type: 'file/revert' }
   | { type: 'review/openFile'; targeting: Pick<Targeting, 'pr' | 'commit'>; path: string }
   | { type: 'mainTab/set'; tab: MainTab }
+  | { type: 'overview/pr'; pr: number | null }
   | { type: 'toast/push'; toast: Toast }
   | { type: 'toast/dismiss'; id: string }
   | { type: 'headerStatus/publish'; message: MessageDescriptor }
@@ -168,6 +171,7 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
       const opened = {
         ...initialUiState,
         projectId: action.projectId,
+        overviewPr: action.targeting.pr,
         layout: action.layout,
         toasts: state.toasts,
         headerStatus: state.headerStatus,
@@ -288,6 +292,9 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
         return state;
       }
       return openFile(state, action.path);
+    case 'overview/pr':
+      if (state.overviewPr === action.pr) return state;
+      return { ...state, overviewPr: action.pr };
     case 'mainTab/set':
       if (state.mainTab === action.tab) return state;
       return { ...state, mainTab: action.tab };

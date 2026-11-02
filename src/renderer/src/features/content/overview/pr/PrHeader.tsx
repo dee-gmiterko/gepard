@@ -13,6 +13,7 @@ import { ForkBadge } from '../shared/ForkBadge';
 import { PrLabel } from '../shared/PrLabel';
 import { QueryState } from '../shared/QueryState';
 import { RelativeTime } from '../shared/RelativeTime';
+import { MergeButton } from '../shared/MergeButton';
 import { LinkButton, Muted } from '../shared/overviewStyles';
 import { useOverviewActions } from '../shared/useOverviewActions';
 
@@ -30,16 +31,32 @@ const messages = defineMessages({
 });
 
 const Title = styled.h1`
-  flex: 1;
   min-width: 0;
   margin: 0;
+  overflow-wrap: anywhere;
   font-weight: 600;
   font-size: ${({ theme }) => theme.font.size.lg};
   color: ${({ theme }) => theme.colors.fg};
 `;
 
-const HeaderRow = styled(Inline)`
+const HeaderRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[4]};
+  align-items: flex-start;
   align-self: stretch;
+  justify-content: space-between;
+`;
+
+const Identity = styled(Inline)`
+  flex: 1 1 320px;
+  flex-wrap: wrap;
+  align-items: baseline;
+`;
+
+const Actions = styled(Inline)`
+  flex-shrink: 0;
+  margin-left: auto;
 `;
 
 function stateMessage(details: PrOverviewDetails): keyof typeof messages {
@@ -69,28 +86,35 @@ export function PrHeader({
         </LinkButton>
       </div>
       <HeaderRow>
-        <Title>
-          {prQuery.isPending ? (
-            <Skeleton width="50%" height="1.2em" />
+        <Identity $gap={2}>
+          <Title>
+            {prQuery.isPending ? (
+              <Skeleton width="240px" height="1.2em" />
+            ) : (
+              pr && <PrLabel number={pr.number} title={pr.title} truncate={false} />
+            )}
+          </Title>
+          {detailsQuery.isPending ? (
+            <Skeleton width="56px" height="1.2em" />
           ) : (
-            pr && <PrLabel number={pr.number} title={pr.title} truncate={false} />
+            details && (
+              <Badge $tone={details.state === 'MERGED' ? 'success' : undefined}>
+                <FormattedMessage {...messages[stateMessage(details)]} />
+              </Badge>
+            )
           )}
-        </Title>
-        {detailsQuery.isPending ? (
-          <Skeleton width="56px" height="1.2em" />
-        ) : (
-          details && (
-            <Badge>
-              <FormattedMessage {...messages[stateMessage(details)]} />
-            </Badge>
-          )
-        )}
-        {pr?.isCrossRepository && <ForkBadge head={prHeadLabel(pr)} />}
-        <DecisionBadge decision={details?.reviewDecision ?? null} />
-        <Button variant="primary" onClick={actions.openFiles}>
-          <FormattedMessage {...messages.review} />
-        </Button>
-        <SyncButton />
+          {pr?.isCrossRepository && <ForkBadge head={prHeadLabel(pr)} />}
+          <DecisionBadge decision={details?.reviewDecision ?? null} />
+        </Identity>
+        <Actions $gap={2}>
+          {pr && details?.state === 'OPEN' && !details.isDraft && (
+            <MergeButton pr={pr.number} title={pr.title} reviewDecision={details.reviewDecision} />
+          )}
+          <Button variant="primary" onClick={actions.openFiles}>
+            <FormattedMessage {...messages.review} />
+          </Button>
+          <SyncButton />
+        </Actions>
       </HeaderRow>
       <Inline $gap={2}>
         {prQuery.isPending ? (

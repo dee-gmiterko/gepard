@@ -3,8 +3,9 @@ import { defineMessages, FormattedMessage } from 'react-intl';
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { PrOverviewDetails, PrSummary } from '@gepard/common';
 import { Stack } from '../../../../components/Layout';
-import { useComments } from '../../../../queries/comments';
-import { usePrCommits } from '../../../../queries/prs';
+import { usePrComments } from '../../../../queries/comments';
+import { usePrCommitList } from '../../../../queries/prs';
+import { useOverviewPr } from '../../../../state/hooks';
 import {
   buildTimelineEvents,
   groupTimeline,
@@ -25,8 +26,9 @@ export function TimelinePanel({
   prQuery: UseQueryResult<PrSummary>;
   detailsQuery: UseQueryResult<PrOverviewDetails>;
 }): React.JSX.Element {
-  const commitsQuery = usePrCommits();
-  const commentsQuery = useComments();
+  const overviewPr = useOverviewPr();
+  const commitsQuery = usePrCommitList(overviewPr);
+  const commentsQuery = usePrComments(overviewPr);
   const pr = prQuery.data;
   const commits = commitsQuery.data;
   const threads = commentsQuery.data;

@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
-import { useViewed } from '../../../../queries/comments';
+import { usePrViewed } from '../../../../queries/comments';
+import { useOverviewPr } from '../../../../state/hooks';
 
 export function useViewedPaths(): ReadonlySet<string> {
-  const { data } = useViewed();
+  const { data } = usePrViewed(useOverviewPr());
   return useMemo(() => new Set((data ?? []).filter((v) => v.viewed).map((v) => v.path)), [data]);
 }

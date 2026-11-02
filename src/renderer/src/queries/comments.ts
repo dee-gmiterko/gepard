@@ -18,8 +18,11 @@ function commentsKey(projectId: string, pr: number | null) {
 }
 
 export function useComments() {
+  return usePrComments(useTargetPr());
+}
+
+export function usePrComments(pr: number | null) {
   const projectId = useProjectId() ?? '';
-  const pr = useTargetPr();
   return useQuery({
     queryKey: commentsKey(projectId, pr),
     queryFn: () => invoke('comments.list', { projectId, pr }),
@@ -35,8 +38,12 @@ export function viewedQuery(projectId: string, pr: number) {
 }
 
 export function useViewed() {
+  return usePrViewed(useTargetPr());
+}
+
+export function usePrViewed(prNumber: number | null) {
   const projectId = useProjectId() ?? '';
-  const pr = useTargetPr() ?? NaN;
+  const pr = prNumber ?? NaN;
   return useQuery({
     ...viewedQuery(projectId, pr),
     enabled: Boolean(projectId) && Number.isFinite(pr),

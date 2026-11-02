@@ -55,4 +55,27 @@ describe('target actions persist what the reducer applies', () => {
     expect(current().targeting).toEqual(full);
     expect(persisted().at(-1)).toEqual(current().targeting);
   });
+
+  it('setTarget keeps the commit when the PR is unchanged and persists the full targeting once', async () => {
+    const { actions, persisted, current } = startFrom(full);
+    actions.setTarget({ ...full, path: 'src/b.ts' });
+    await flush();
+    expect(current().targeting).toEqual({ ...full, path: 'src/b.ts' });
+    expect(persisted()).toEqual([current().targeting]);
+  });
+
+  it('setTarget to another PR applies its commit and path together', async () => {
+    const { actions, persisted, current } = startFrom(full);
+    actions.setTarget({ pr: 8, commit: 'e'.repeat(40), path: null });
+    await flush();
+    expect(current().targeting).toEqual({ pr: 8, commit: 'e'.repeat(40), path: null });
+    expect(persisted().at(-1)).toEqual(current().targeting);
+  });
+
+  it('setTarget to another PR without a commit clears the old commit', async () => {
+    const { actions, current } = startFrom(full);
+    actions.setTarget({ pr: 8, commit: null, path: 'src/a.ts' });
+    await flush();
+    expect(current().targeting).toEqual({ pr: 8, commit: null, path: 'src/a.ts' });
+  });
 });

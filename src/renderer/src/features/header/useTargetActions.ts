@@ -7,6 +7,7 @@ export interface TargetActions {
   setPr: (pr: number | null) => void;
   setCommit: (sha: string | null) => void;
   setPath: (path: string | null) => void;
+  setTarget: (next: Targeting) => void;
 }
 
 export function useTargetActions(): TargetActions {
@@ -19,7 +20,18 @@ export function useTargetActions(): TargetActions {
     setTargeting.mutate(targeting);
   }
 
+  function setTarget(next: Targeting): void {
+    const prChanged = next.pr !== targeting.pr;
+    if (prChanged) dispatch({ type: 'target/pr', pr: next.pr });
+    if (next.commit !== (prChanged ? null : targeting.commit)) {
+      dispatch({ type: 'target/commit', sha: next.commit });
+    }
+    dispatch({ type: 'target/path', path: next.path });
+    setTargeting.mutate(next);
+  }
+
   return {
+    setTarget,
     setPr: (pr) =>
       apply(
         { type: 'target/pr', pr },

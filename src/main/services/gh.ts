@@ -51,6 +51,7 @@ import {
   RemoteViewedFile,
   type Viewer,
   type ViewerRepo,
+  type MergeMethod,
   type ProjectOverview,
   AppError,
 } from '@gepard/common';
@@ -81,6 +82,12 @@ const PR_SUMMARY_FIELDS = [
 ].join(',');
 
 const PrCommitsResponse = z.object({ commits: z.array(Commit) });
+
+const MERGE_METHOD_FLAGS: Record<MergeMethod, string> = {
+  MERGE: '--merge',
+  SQUASH: '--squash',
+  REBASE: '--rebase',
+};
 
 const PrHeadBase = z.object({ headRefOid: Sha, baseRefOid: Sha });
 
@@ -664,6 +671,17 @@ export class GhService {
     );
     const number = parsePrCreateUrl(stdout);
     return this.viewPr(owner, repo, number);
+  }
+
+  async mergePr(owner: string, repo: string, number: number, method: MergeMethod): Promise<void> {
+    await this.gh.run([
+      'pr',
+      'merge',
+      String(number),
+      '-R',
+      `${owner}/${repo}`,
+      MERGE_METHOD_FLAGS[method],
+    ]);
   }
 
   async createIssue(owner: string, repo: string, input: CreateIssueInput): Promise<IssueRef> {
