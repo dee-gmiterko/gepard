@@ -20,6 +20,9 @@ const CONNECTION_PATTERNS: RegExp[] = [
   /connection (refused|reset)/i,
   /network is unreachable/i,
   /no route to host/i,
+  /REFUSED_STREAM/,
+  /http2: (Transport|server): /i,
+  /GOAWAY/,
 ];
 
 const AUTH_PATTERNS: RegExp[] = [

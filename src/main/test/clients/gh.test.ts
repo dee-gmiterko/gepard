@@ -151,6 +151,8 @@ describe('GhClient failure classification', () => {
     'dial tcp 140.82.121.6:443: connect: connection refused',
     'dial tcp 140.82.121.6:443: connect: network is unreachable',
     'dial tcp: lookup api.github.com on 127.0.0.53:53: Temporary failure in name resolution',
+    'Post "https://api.github.com/graphql": http2: Transport: cannot retry err [stream error: stream ID 1; REFUSED_STREAM; received from peer] after Request.Body was written; define Request.GetBody to avoid this error',
+    'Post "https://api.github.com/graphql": http2: server sent GOAWAY and closed the connection',
   ])('treats %j as a connection failure', async (stderr) => {
     await expect(failureOf(stderr)).resolves.toBeInstanceOf(ConnectionError);
   });
