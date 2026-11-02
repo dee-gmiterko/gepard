@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import styled, { css } from 'styled-components';
 import { centerLayout } from './centerLayout';
 
-const MessageTone = z.enum(['muted', 'subtle', 'danger']);
+const MessageTone = z.enum(['muted', 'subtle', 'warning', 'danger']);
 type MessageTone = z.infer<typeof MessageTone>;
 const MessageLayout = z.enum(['block', 'center', 'inline']);
 type MessageLayout = z.infer<typeof MessageLayout>;
@@ -14,9 +14,11 @@ const Box = styled.div<{ $tone: MessageTone; $layout: MessageLayout }>`
   color: ${({ theme, $tone }) =>
     $tone === 'danger'
       ? theme.colors.danger
-      : $tone === 'subtle'
-        ? theme.colors.fgSubtle
-        : theme.colors.fgMuted};
+      : $tone === 'warning'
+        ? theme.colors.warning
+        : $tone === 'subtle'
+          ? theme.colors.fgSubtle
+          : theme.colors.fgMuted};
   ${({ theme, $layout }) =>
     $layout === 'center'
       ? centerLayout

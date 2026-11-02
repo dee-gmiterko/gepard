@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  GhPrOverview,
-  normalizePrOverview,
   parseProjectOverview,
   type ProjectOverviewResponse,
-} from '../../../helpers/github/overview';
+} from '../../../helpers/github/projectOverview';
 
 const T = (n: number): string => `2026-01-0${n}T00:00:00Z`;
 
@@ -24,6 +22,9 @@ function prNode(
     reviewDecision: null,
     headRefName: 'thing',
     baseRefName: 'main',
+    mergeable: 'MERGEABLE',
+    mergeStateStatus: 'CLEAN',
+    commits: { nodes: [{ commit: { statusCheckRollup: { state: 'SUCCESS' } } }] },
     isCrossRepository: false,
     headRepository: null,
     headRepositoryOwner: null,
@@ -143,28 +144,5 @@ describe('parseProjectOverview', () => {
       ['review', 'bob', 7],
       ['commit', 'Ann A', 7],
     ]);
-  });
-});
-
-describe('normalizePrOverview', () => {
-  it('maps empty decisions to null, drops unsubmitted reviews and names team requests', () => {
-    const raw = GhPrOverview.parse({
-      state: 'OPEN',
-      isDraft: false,
-      body: '',
-      updatedAt: T(1),
-      mergedAt: null,
-      closedAt: null,
-      reviewDecision: '',
-      reviews: [
-        { author: { login: 'a' }, state: 'APPROVED', submittedAt: T(2) },
-        { author: null, state: 'PENDING', submittedAt: null },
-      ],
-      reviewRequests: [{ login: 'u' }, { name: 'team' }],
-    });
-    const out = normalizePrOverview(raw);
-    expect(out.reviewDecision).toBeNull();
-    expect(out.reviews).toHaveLength(1);
-    expect(out.reviewRequests).toEqual(['u', 'team']);
   });
 });

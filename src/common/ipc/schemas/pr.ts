@@ -124,6 +124,16 @@ export type PersistedTargeting = z.infer<typeof PersistedTargeting>;
 export const IssueRef = z.object({ number: z.int().positive(), url: z.string() });
 export type IssueRef = z.infer<typeof IssueRef>;
 
+export const MergeMethod = z.enum(['MERGE', 'SQUASH', 'REBASE']);
+export type MergeMethod = z.infer<typeof MergeMethod>;
+
+export const AllowedMergeMethods = z.object({
+  merge: z.boolean(),
+  squash: z.boolean(),
+  rebase: z.boolean(),
+});
+export type AllowedMergeMethods = z.infer<typeof AllowedMergeMethods>;
+
 export const CheckoutResult = z.object({ base: Sha, head: Sha });
 export type CheckoutResult = z.infer<typeof CheckoutResult>;
 

@@ -7,6 +7,26 @@ export type ReviewDecision = z.infer<typeof ReviewDecision>;
 export const PrState = z.enum(['OPEN', 'CLOSED', 'MERGED']);
 export type PrState = z.infer<typeof PrState>;
 
+export const MergeBlocker = z.enum([
+  'DRAFT',
+  'CHANGES_REQUESTED',
+  'REVIEW_REQUIRED',
+  'CHECKS_FAILING',
+  'CHECKS_PENDING',
+  'OTHER',
+]);
+export type MergeBlocker = z.infer<typeof MergeBlocker>;
+
+export const MergeWarning = z.enum(['BEHIND', 'CHECKS_FAILING']);
+export type MergeWarning = z.infer<typeof MergeWarning>;
+
+export const MergeReadiness = z.object({
+  state: z.enum(['READY', 'CHECKING', 'CONFLICTING', 'BLOCKED']),
+  blockers: z.array(MergeBlocker),
+  warnings: z.array(MergeWarning),
+});
+export type MergeReadiness = z.infer<typeof MergeReadiness>;
+
 export const OverviewPr = ForkFields.extend({
   number: z.int().positive(),
   title: z.string(),
@@ -24,6 +44,7 @@ export const OverviewPr = ForkFields.extend({
   comments: z.int().nonnegative(),
   unresolvedThreads: z.int().nonnegative(),
   reviewDecision: ReviewDecision.nullable(),
+  mergeReadiness: MergeReadiness,
   viewedFiles: z.int().nonnegative(),
   countedFiles: z.int().nonnegative(),
 });
@@ -57,6 +78,7 @@ export const PrOverviewDetails = z.object({
   mergedAt: IsoDate.nullable(),
   closedAt: IsoDate.nullable(),
   reviewDecision: ReviewDecision.nullable(),
+  mergeReadiness: MergeReadiness,
   reviews: z.array(
     z.object({
       author: Login.nullable(),

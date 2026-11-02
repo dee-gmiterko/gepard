@@ -25,11 +25,13 @@ import { withFileReference } from '../helpers/github/reviewMapping';
 import {
   GhPrOverview,
   normalizePrOverview,
-  parseProjectOverview,
   PR_OVERVIEW_FIELDS,
+} from '../helpers/github/prOverview';
+import {
+  parseProjectOverview,
   PROJECT_OVERVIEW_QUERY,
   ProjectOverviewResponse,
-} from '../helpers/github/overview';
+} from '../helpers/github/projectOverview';
 import {
   NodeId,
   Sha,
@@ -51,6 +53,8 @@ import {
   RemoteViewedFile,
   type Viewer,
   type ViewerRepo,
+  type AllowedMergeMethods,
+  type MergeMethod,
   type ProjectOverview,
   AppError,
 } from '@gepard/common';
@@ -81,6 +85,18 @@ const PR_SUMMARY_FIELDS = [
 ].join(',');
 
 const PrCommitsResponse = z.object({ commits: z.array(Commit) });
+
+const MERGE_METHOD_FLAGS: Record<MergeMethod, string> = {
+  MERGE: '--merge',
+  SQUASH: '--squash',
+  REBASE: '--rebase',
+};
+
+const RepoMergeSettings = z.object({
+  mergeCommitAllowed: z.boolean(),
+  squashMergeAllowed: z.boolean(),
+  rebaseMergeAllowed: z.boolean(),
+});
 
 const PrHeadBase = z.object({ headRefOid: Sha, baseRefOid: Sha });
 
@@ -664,6 +680,32 @@ export class GhService {
     );
     const number = parsePrCreateUrl(stdout);
     return this.viewPr(owner, repo, number);
+  }
+
+  async allowedMergeMethods(owner: string, repo: string): Promise<AllowedMergeMethods> {
+    const settings = await this.gh.json(RepoMergeSettings, [
+      'repo',
+      'view',
+      `${owner}/${repo}`,
+      '--json',
+      'mergeCommitAllowed,squashMergeAllowed,rebaseMergeAllowed',
+    ]);
+    return {
+      merge: settings.mergeCommitAllowed,
+      squash: settings.squashMergeAllowed,
+      rebase: settings.rebaseMergeAllowed,
+    };
+  }
+
+  async mergePr(owner: string, repo: string, number: number, method: MergeMethod): Promise<void> {
+    await this.gh.run([
+      'pr',
+      'merge',
+      String(number),
+      '-R',
+      `${owner}/${repo}`,
+      MERGE_METHOD_FLAGS[method],
+    ]);
   }
 
   async createIssue(owner: string, repo: string, input: CreateIssueInput): Promise<IssueRef> {

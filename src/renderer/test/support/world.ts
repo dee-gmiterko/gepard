@@ -85,6 +85,7 @@ export function overviewPr(
     comments: 0,
     unresolvedThreads: 0,
     reviewDecision: null,
+    mergeReadiness: { state: 'READY', blockers: [], warnings: [] },
     viewedFiles: 0,
     countedFiles: 1,
     ...overrides,
@@ -235,6 +236,9 @@ export function createWorld(options: WorldOptions = {}): World {
     'viewed.list': () => [],
     'overview.project': () => ({ prs: options.overviewPrs ?? [], closedPrs: [], activity: [] }),
     'overview.owners': () => null,
+    'overview.range': () => ({ base: BASE, head: HEAD }),
+    'pr.merge': () => undefined,
+    'pr.mergeMethods': () => ({ merge: true, squash: true, rebase: true }),
     'files.changed': () => paths.map(changedFile),
     'trees.get': () => paths,
     'files.content': ({ path, sha: contentSha }) => ({

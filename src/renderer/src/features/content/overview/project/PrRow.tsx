@@ -9,6 +9,8 @@ import { DecisionBadge } from '../shared/DecisionBadge';
 import { FileCount } from '../shared/FileCount';
 import { Lines } from '../shared/Lines';
 import { ForkBadge } from '../shared/ForkBadge';
+import { canMerge } from '../shared/mergeReadiness';
+import { MergeButton } from '../shared/MergeButton';
 import { PrLabel } from '../shared/PrLabel';
 import { ProgressBar } from '../../../../components/ProgressBar';
 import { RelativeTime } from '../shared/RelativeTime';
@@ -37,6 +39,9 @@ const TitleLine = styled(Inline)`
 
 export function PrRow({ pr }: { pr: OverviewPr }): React.JSX.Element {
   const actions = useOverviewActions();
+  const fullyViewed = pr.countedFiles > 0 && pr.viewedFiles >= pr.countedFiles;
+  const mergeIsNextStep =
+    pr.state === 'OPEN' && !pr.isDraft && canMerge(pr.mergeReadiness) && fullyViewed;
   return (
     <RowGrid>
       <Cell>
@@ -96,9 +101,26 @@ export function PrRow({ pr }: { pr: OverviewPr }): React.JSX.Element {
       <WideOnly>
         <RelativeTime value={pr.updatedAt} />
       </WideOnly>
-      <Button onClick={() => actions.reviewPr(pr.number)}>
-        <FormattedMessage {...messages.review} />
-      </Button>
+      <Inline $gap={2}>
+        {pr.state === 'OPEN' && !pr.isDraft && (
+          <MergeButton
+            pr={pr.number}
+            title={pr.title}
+            head={prHeadLabel(pr)}
+            base={pr.baseRefName}
+            mergeReadiness={pr.mergeReadiness}
+            viewedFiles={pr.viewedFiles}
+            totalFiles={pr.countedFiles}
+            prominent={mergeIsNextStep}
+          />
+        )}
+        <Button
+          variant={mergeIsNextStep ? 'secondary' : 'primary'}
+          onClick={() => actions.reviewPr(pr.number)}
+        >
+          <FormattedMessage {...messages.review} />
+        </Button>
+      </Inline>
     </RowGrid>
   );
 }

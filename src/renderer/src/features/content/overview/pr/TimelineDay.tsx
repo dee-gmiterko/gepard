@@ -1,9 +1,15 @@
+import { useState } from 'react';
 import { defineMessages, FormattedDate, FormattedMessage } from 'react-intl';
 import styled from 'styled-components';
 import { Inline } from '../../../../components/Layout';
-import type { TimelineDay as Day } from '../../../../helpers/overview';
+import {
+  COMMIT_RUN_LIMIT,
+  collapseCommitRun,
+  type TimelineDay as Day,
+  type TimelineGroup,
+} from '../../../../helpers/overview';
 import { Muted } from '../shared/overviewStyles';
-import { TimelineLine } from './TimelineLine';
+import { TimelineLine, TimelineMore } from './TimelineLine';
 
 const messages = defineMessages({
   commits: {
@@ -20,6 +26,11 @@ const messages = defineMessages({
   },
 });
 
+const Count = styled(Muted)`
+  font-weight: 400;
+  font-size: ${({ theme }) => theme.font.size.xs};
+`;
+
 const Heading = styled(Inline)`
   padding-bottom: ${({ theme }) => theme.space[1]};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
@@ -27,32 +38,58 @@ const Heading = styled(Inline)`
   font-size: ${({ theme }) => theme.font.size.sm};
 `;
 
+const Line = styled.ul`
+  margin: ${({ theme }) => theme.space[2]} 0 0 ${({ theme }) => theme.space[2]};
+  padding: 0;
+  list-style: none;
+`;
+
+function groupKey(group: TimelineGroup): string {
+  const first = group.events[0];
+  return [
+    group.kind,
+    group.at,
+    group.actor,
+    first.sha,
+    first.reviewState,
+    group.events.length,
+  ].join('|');
+}
+
 export function TimelineDay({ day }: { day: Day }): React.JSX.Element {
+  const [expanded, setExpanded] = useState(false);
+  const items = collapseCommitRun(day.groups, COMMIT_RUN_LIMIT, expanded);
   return (
     <div>
       <Heading $gap={2}>
         <FormattedDate value={day.day} dateStyle="medium" timeZone="UTC" />
         <Inline $gap={2}>
           {day.counts.commit > 0 && (
-            <Muted>
+            <Count>
               <FormattedMessage {...messages.commits} values={{ count: day.counts.commit }} />
-            </Muted>
+            </Count>
           )}
           {day.counts.comment > 0 && (
-            <Muted>
+            <Count>
               <FormattedMessage {...messages.comments} values={{ count: day.counts.comment }} />
-            </Muted>
+            </Count>
           )}
           {day.counts.review > 0 && (
-            <Muted>
+            <Count>
               <FormattedMessage {...messages.reviews} values={{ count: day.counts.review }} />
-            </Muted>
+            </Count>
           )}
         </Inline>
       </Heading>
-      {day.groups.map((group) => (
-        <TimelineLine key={`${group.kind}-${group.at}-${group.actor}`} group={group} />
-      ))}
+      <Line>
+        {items.map((item) =>
+          item.type === 'more' ? (
+            <TimelineMore key="more" hidden={item.hidden} onClick={() => setExpanded(true)} />
+          ) : (
+            <TimelineLine key={groupKey(item.group)} group={item.group} />
+          ),
+        )}
+      </Line>
     </div>
   );
 }

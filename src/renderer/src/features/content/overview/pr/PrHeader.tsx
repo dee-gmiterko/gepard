@@ -1,4 +1,4 @@
-import { defineMessages, FormattedMessage } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import styled from 'styled-components';
 import { ArrowLeft } from 'react-feather';
 import type { UseQueryResult } from '@tanstack/react-query';
@@ -7,18 +7,35 @@ import { Badge } from '../../../../components/Badge';
 import { Button } from '../../../../components/Button';
 import { Inline, Stack } from '../../../../components/Layout';
 import { Skeleton } from '../../../../components/Skeleton';
+import { useTargetPr } from '../../../../state/hooks';
 import { SyncButton } from '../../sync/SyncButton';
 import { DecisionBadge } from '../shared/DecisionBadge';
 import { ForkBadge } from '../shared/ForkBadge';
 import { PrLabel } from '../shared/PrLabel';
 import { QueryState } from '../shared/QueryState';
 import { RelativeTime } from '../shared/RelativeTime';
+import { MergeButton } from '../shared/MergeButton';
 import { LinkButton, Muted } from '../shared/overviewStyles';
+import { useChangedFileList } from './useChangedFileList';
+import { useViewedPaths } from './useViewedPaths';
 import { useOverviewActions } from '../shared/useOverviewActions';
 
 const messages = defineMessages({
   allPrs: { id: 'content.overview.pr.allPrs', defaultMessage: 'All pull requests' },
   review: { id: 'content.overview.pr.review', defaultMessage: 'Review' },
+  reviewSwitches: {
+    id: 'content.overview.pr.reviewSwitches',
+    defaultMessage: 'Start reviewing this pull request and make it your review target',
+  },
+  reviewContinues: {
+    id: 'content.overview.pr.reviewContinues',
+    defaultMessage: 'Continue reviewing this pull request',
+  },
+  isTarget: { id: 'content.overview.pr.isTarget', defaultMessage: 'Review target' },
+  notTarget: {
+    id: 'content.overview.pr.notTarget',
+    defaultMessage: 'Not your current review target',
+  },
   stateOpen: { id: 'content.overview.pr.state.open', defaultMessage: 'Open' },
   stateDraft: { id: 'content.overview.pr.state.draft', defaultMessage: 'Draft' },
   stateMerged: { id: 'content.overview.pr.state.merged', defaultMessage: 'Merged' },
@@ -30,16 +47,32 @@ const messages = defineMessages({
 });
 
 const Title = styled.h1`
-  flex: 1;
   min-width: 0;
   margin: 0;
+  overflow-wrap: anywhere;
   font-weight: 600;
   font-size: ${({ theme }) => theme.font.size.lg};
   color: ${({ theme }) => theme.colors.fg};
 `;
 
-const HeaderRow = styled(Inline)`
+const HeaderRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[4]};
+  align-items: flex-start;
   align-self: stretch;
+  justify-content: space-between;
+`;
+
+const Identity = styled(Inline)`
+  flex: 1 1 320px;
+  flex-wrap: wrap;
+  align-items: baseline;
+`;
+
+const Actions = styled(Inline)`
+  flex-shrink: 0;
+  margin-left: auto;
 `;
 
 function stateMessage(details: PrOverviewDetails): keyof typeof messages {
@@ -57,7 +90,14 @@ export function PrHeader({
 }): React.JSX.Element {
   const { data: pr } = prQuery;
   const { data: details } = detailsQuery;
+  const intl = useIntl();
   const actions = useOverviewActions();
+  const targetPr = useTargetPr();
+  const { files } = useChangedFileList();
+  const viewedPaths = useViewedPaths();
+  const totalFiles = files.length > 0 ? files.length : (pr?.changedFiles ?? 0);
+  const viewedFiles = files.filter((f) => viewedPaths.has(f.path)).length;
+  const isTarget = pr !== undefined && pr.number === targetPr;
   return (
     <Stack $gap={2} $align="flex-start">
       <div>
@@ -69,28 +109,54 @@ export function PrHeader({
         </LinkButton>
       </div>
       <HeaderRow>
-        <Title>
-          {prQuery.isPending ? (
-            <Skeleton width="50%" height="1.2em" />
+        <Identity $gap={2}>
+          <Title>
+            {prQuery.isPending ? (
+              <Skeleton width="240px" height="1.2em" />
+            ) : (
+              pr && <PrLabel number={pr.number} title={pr.title} truncate={false} />
+            )}
+          </Title>
+          {detailsQuery.isPending ? (
+            <Skeleton width="56px" height="1.2em" />
           ) : (
-            pr && <PrLabel number={pr.number} title={pr.title} truncate={false} />
+            details && (
+              <Badge $tone={details.state === 'MERGED' ? 'success' : undefined}>
+                <FormattedMessage {...messages[stateMessage(details)]} />
+              </Badge>
+            )
           )}
-        </Title>
-        {detailsQuery.isPending ? (
-          <Skeleton width="56px" height="1.2em" />
-        ) : (
-          details && (
+          {pr?.isCrossRepository && <ForkBadge head={prHeadLabel(pr)} />}
+          <DecisionBadge decision={details?.reviewDecision ?? null} />
+          {isTarget && (
             <Badge>
-              <FormattedMessage {...messages[stateMessage(details)]} />
+              <FormattedMessage {...messages.isTarget} />
             </Badge>
-          )
-        )}
-        {pr?.isCrossRepository && <ForkBadge head={prHeadLabel(pr)} />}
-        <DecisionBadge decision={details?.reviewDecision ?? null} />
-        <Button variant="primary" onClick={actions.openFiles}>
-          <FormattedMessage {...messages.review} />
-        </Button>
-        <SyncButton />
+          )}
+        </Identity>
+        <Actions $gap={2}>
+          {pr && details?.state === 'OPEN' && !details.isDraft && (
+            <MergeButton
+              pr={pr.number}
+              title={pr.title}
+              head={prHeadLabel(pr)}
+              base={pr.baseRefName}
+              mergeReadiness={details.mergeReadiness}
+              viewedFiles={viewedFiles}
+              totalFiles={totalFiles}
+            />
+          )}
+          <Button
+            variant="primary"
+            title={intl.formatMessage(
+              isTarget ? messages.reviewContinues : messages.reviewSwitches,
+            )}
+            onClick={actions.openFiles}
+          >
+            <FormattedMessage {...messages.review} />
+          </Button>
+          <SyncButton />
+        </Actions>
       </HeaderRow>
       <Inline $gap={2}>
         {prQuery.isPending ? (
@@ -104,6 +170,11 @@ export function PrHeader({
               />
             </Muted>
           )
+        )}
+        {pr && !isTarget && (
+          <Muted>
+            <FormattedMessage {...messages.notTarget} />
+          </Muted>
         )}
         {detailsQuery.isPending ? (
           <Skeleton width="72px" />

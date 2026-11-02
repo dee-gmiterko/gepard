@@ -5,8 +5,9 @@ import type { PrSummary } from '@gepard/common';
 import { Inline } from '../../../../components/Layout';
 import { Skeleton } from '../../../../components/Skeleton';
 import { Surface } from '../../../../components/Surface';
-import { useComments, useViewed } from '../../../../queries/comments';
-import { usePrCommits } from '../../../../queries/prs';
+import { usePrComments, usePrViewed } from '../../../../queries/comments';
+import { usePrCommitList } from '../../../../queries/prs';
+import { useOverviewPr } from '../../../../state/hooks';
 import { FileCount } from '../shared/FileCount';
 import { Lines } from '../shared/Lines';
 import { ProgressBar } from '../../../../components/ProgressBar';
@@ -40,9 +41,10 @@ const Box = styled(Surface).attrs({ $elevation: 'flat' })`
 export function PrFacts({ prQuery }: { prQuery: UseQueryResult<PrSummary> }): React.JSX.Element {
   const actions = useOverviewActions();
   const { files, isPending: filesPending } = useChangedFileList();
-  const commitsQuery = usePrCommits();
-  const commentsQuery = useComments();
-  const viewedQuery = useViewed();
+  const overviewPr = useOverviewPr();
+  const commitsQuery = usePrCommitList(overviewPr);
+  const commentsQuery = usePrComments(overviewPr);
+  const viewedQuery = usePrViewed(overviewPr);
   const commits = commitsQuery.data;
   const pr = prQuery.data;
   const threads = commentsQuery.data ?? [];

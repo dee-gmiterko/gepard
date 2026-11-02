@@ -15,7 +15,13 @@ import {
   useTargetPr,
   useTargeting,
 } from '../state/hooks';
-import type { ChannelInput, CheckoutResult, PrSummary, TargetRef } from '@gepard/common';
+import type {
+  ChannelInput,
+  CheckoutResult,
+  MergeMethod,
+  PrSummary,
+  TargetRef,
+} from '@gepard/common';
 
 export function usePrList(search?: string) {
   const projectId = useProjectId() ?? '';
@@ -29,9 +35,11 @@ export function usePrList(search?: string) {
 }
 
 export function usePrCommits() {
+  return usePrCommitList(useTargetPr(), useTargetPath() ?? undefined);
+}
+
+export function usePrCommitList(pr: number | null, path?: string) {
   const projectId = useProjectId() ?? '';
-  const pr = useTargetPr();
-  const path = useTargetPath() ?? undefined;
   return useQuery({
     queryKey: qk.prCommits(projectId, pr ?? NaN, path),
     queryFn: pr === null ? skipToken : () => invoke('pr.commits', { projectId, pr, path }),
@@ -90,11 +98,39 @@ export function useCheckoutTarget(): CheckoutTarget {
 }
 
 export function useTargetedPr(): UseQueryResult<PrSummary> {
+  return usePrSummary(useTargetPr());
+}
+
+export function usePrSummary(pr: number | null): UseQueryResult<PrSummary> {
   const projectId = useProjectId() ?? '';
-  const pr = useTargetPr();
   return useQuery({
     queryKey: qk.prSummary(projectId, pr ?? NaN),
     queryFn: pr === null ? skipToken : () => invoke('pr.view', { projectId, pr }),
     enabled: Boolean(projectId),
+  });
+}
+
+export function useAllowedMergeMethods() {
+  const projectId = useProjectId() ?? '';
+  return useQuery({
+    queryKey: qk.mergeMethods(projectId),
+    queryFn: () => invoke('pr.mergeMethods', { projectId }),
+    enabled: Boolean(projectId),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useMergePr() {
+  const projectId = useProjectId() ?? '';
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { pr: number; method: MergeMethod }) =>
+      invoke('pr.merge', { projectId, ...input }),
+    onSettled: (_data, _error, { pr }) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: qk.prsAll(projectId) }),
+        qc.invalidateQueries({ queryKey: qk.projectOverview(projectId) }),
+        qc.invalidateQueries({ queryKey: qk.pr(projectId, pr) }),
+      ]),
   });
 }

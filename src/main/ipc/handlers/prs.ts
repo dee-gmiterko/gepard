@@ -26,11 +26,14 @@ export class PrsHandlers {
     | 'pr.checkout'
     | 'pr.branches'
     | 'pr.create'
+    | 'pr.merge'
+    | 'pr.mergeMethods'
     | 'issues.create'
     | 'commits.list'
     | 'overview.project'
     | 'overview.pr'
     | 'overview.owners'
+    | 'overview.range'
     | 'checks.annotations'
   > {
     return {
@@ -76,6 +79,16 @@ export class PrsHandlers {
         return this.gh.createPr(owner, repo, { base, head, title, body });
       },
 
+      'pr.mergeMethods': async ({ projectId }) => {
+        const { owner, repo } = await this.gh.repoRefFor(projectId);
+        return this.gh.allowedMergeMethods(owner, repo);
+      },
+
+      'pr.merge': async ({ projectId, pr, method }) => {
+        const { owner, repo } = await this.gh.repoRefFor(projectId);
+        await this.gh.mergePr(owner, repo, pr, method);
+      },
+
       'issues.create': async ({ projectId, title, body, clearUnassignedThreadIds }) => {
         const { owner, repo } = await this.gh.repoRefFor(projectId);
         const issue = await this.gh.createIssue(owner, repo, { title, body });
@@ -97,6 +110,12 @@ export class PrsHandlers {
       'overview.pr': async ({ projectId, pr }) => {
         const { owner, repo } = await this.gh.repoRefFor(projectId);
         return this.gh.prOverview(owner, repo, pr);
+      },
+
+      'overview.range': async ({ projectId, pr }) => {
+        const { owner, repo } = await this.gh.repoRefFor(projectId);
+        const { headRefOid, baseRefOid } = await this.gh.viewPrHeadBase(owner, repo, pr);
+        return this.git.prRange(projectId, { pr, headRefOid, baseRefOid });
       },
 
       'overview.owners': async ({ projectId, base, head }) => {

@@ -6,14 +6,21 @@ import {
   ReviewState,
   type OverviewActivity,
   type OverviewPr,
-  type PrOverviewDetails,
   type ProjectOverview,
 } from '@gepard/common';
+import {
+  deriveMergeReadiness,
+  GhMergeable,
+  GhMergeStateStatus,
+  tallyRollupState,
+} from './mergeReadiness';
 
 export const PROJECT_OVERVIEW_QUERY = `
 fragment PrFields on PullRequest {
   number title state isDraft createdAt updatedAt additions deletions changedFiles reviewDecision
   headRefName baseRefName
+  mergeable mergeStateStatus
+  commits(last:1) { nodes { commit { statusCheckRollup { state } } } }
   isCrossRepository
   headRepository { name }
   headRepositoryOwner { login }
@@ -76,6 +83,15 @@ const PrNode = ForkFields.extend({
   reviewDecision: z.enum(['APPROVED', 'CHANGES_REQUESTED', 'REVIEW_REQUIRED']).nullable(),
   headRefName: z.string(),
   baseRefName: z.string(),
+  mergeable: GhMergeable,
+  mergeStateStatus: GhMergeStateStatus,
+  commits: z.object({
+    nodes: z.array(
+      z.object({
+        commit: z.object({ statusCheckRollup: z.object({ state: z.string() }).nullable() }),
+      }),
+    ),
+  }),
   author: Author,
   comments: z.object({ totalCount: z.int().nonnegative() }),
   latestOpinionatedReviews: z.object({ totalCount: z.int().nonnegative() }),
@@ -172,6 +188,13 @@ function toOverviewPr(node: z.infer<typeof PrNode>): OverviewPr {
     comments: node.comments.totalCount + threads.reduce((sum, t) => sum + t.comments.totalCount, 0),
     unresolvedThreads: threads.filter((t) => !t.isResolved).length,
     reviewDecision: node.reviewDecision,
+    mergeReadiness: deriveMergeReadiness({
+      isDraft: node.isDraft,
+      mergeable: node.mergeable,
+      mergeStateStatus: node.mergeStateStatus,
+      reviewDecision: node.reviewDecision,
+      checks: tallyRollupState(node.commits.nodes[0]?.commit.statusCheckRollup?.state ?? null),
+    }),
     viewedFiles: node.files.nodes.filter((f) => f.viewerViewedState === 'VIEWED').length,
     countedFiles: node.files.nodes.length,
   };
@@ -206,55 +229,5 @@ export function parseProjectOverview(response: ProjectOverviewResponse): Project
     prs,
     closedPrs: closed.nodes.map(toOverviewPr),
     activity: activity.slice(0, ACTIVITY_LIMIT),
-  };
-}
-
-const GhReviewDecision = z
-  .enum(['APPROVED', 'CHANGES_REQUESTED', 'REVIEW_REQUIRED', ''])
-  .nullable()
-  .transform((v) => v || null);
-
-const GhReviewRequest = z.object({ login: z.string().optional(), name: z.string().optional() });
-
-export const GhPrOverview = z.object({
-  state: PrState,
-  isDraft: z.boolean(),
-  body: z.string(),
-  updatedAt: IsoDate,
-  mergedAt: IsoDate.nullable(),
-  closedAt: IsoDate.nullable(),
-  reviewDecision: GhReviewDecision,
-  reviews: z.array(
-    z.object({
-      author: z.object({ login: z.string() }).nullable(),
-      state: ReviewState,
-      submittedAt: IsoDate.nullable(),
-    }),
-  ),
-  reviewRequests: z.array(GhReviewRequest),
-});
-export type GhPrOverview = z.infer<typeof GhPrOverview>;
-
-export const PR_OVERVIEW_FIELDS =
-  'state,isDraft,body,updatedAt,mergedAt,closedAt,reviewDecision,reviews,reviewRequests';
-
-export function normalizePrOverview(raw: GhPrOverview): PrOverviewDetails {
-  return {
-    state: raw.state,
-    isDraft: raw.isDraft,
-    body: raw.body,
-    updatedAt: raw.updatedAt,
-    mergedAt: raw.mergedAt,
-    closedAt: raw.closedAt,
-    reviewDecision: raw.reviewDecision,
-    reviews: raw.reviews.flatMap((r) =>
-      r.submittedAt
-        ? [{ author: r.author?.login ?? null, state: r.state, submittedAt: r.submittedAt }]
-        : [],
-    ),
-    reviewRequests: raw.reviewRequests.flatMap((r) => {
-      const name = r.login ?? r.name;
-      return name ? [name] : [];
-    }),
   };
 }

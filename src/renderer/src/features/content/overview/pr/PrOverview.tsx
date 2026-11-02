@@ -1,4 +1,5 @@
-import { useTargetedPr } from '../../../../queries/prs';
+import { usePrSummary } from '../../../../queries/prs';
+import { useOverviewPr } from '../../../../state/hooks';
 import { usePrOverviewDetails } from '../../../../queries/overview';
 import { Page, PageBody } from '../shared/overviewStyles';
 import { DescriptionPanel } from './DescriptionPanel';
@@ -9,7 +10,7 @@ import { ReviewersPanel } from './ReviewersPanel';
 import { TimelinePanel } from './TimelinePanel';
 
 export function PrOverview(): React.JSX.Element {
-  const prQuery = useTargetedPr();
+  const prQuery = usePrSummary(useOverviewPr());
   const detailsQuery = usePrOverviewDetails();
 
   return (

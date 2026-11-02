@@ -75,6 +75,7 @@ export interface TimelineEvent {
   actor: string | null;
   reviewState?: ReviewState;
   sha?: string;
+  headline?: string;
 }
 
 export interface TimelineGroup {
@@ -91,7 +92,7 @@ export interface TimelineDay {
 }
 
 const GROUP_WINDOW_MS = 60 * 60 * 1000;
-const MERGEABLE: ReadonlySet<TimelineKind> = new Set(['commit', 'comment']);
+const MERGEABLE: ReadonlySet<TimelineKind> = new Set(['comment']);
 
 export function buildTimelineEvents(input: {
   author: string | null;
@@ -107,6 +108,7 @@ export function buildTimelineEvents(input: {
       at: c.committedDate,
       actor: c.authors[0]?.login ?? c.authors[0]?.name ?? null,
       sha: c.oid,
+      headline: c.messageHeadline,
     });
   }
   for (const t of input.threads) {
@@ -146,6 +148,34 @@ export function groupTimeline(events: readonly TimelineEvent[]): TimelineGroup[]
     }
   }
   return groups;
+}
+
+export const COMMIT_RUN_LIMIT = 8;
+
+export type TimelineItem =
+  { type: 'group'; group: TimelineGroup } | { type: 'more'; hidden: number };
+
+export function collapseCommitRun(
+  groups: readonly TimelineGroup[],
+  limit: number,
+  expanded: boolean,
+): TimelineItem[] {
+  const commitTotal = groups.filter((g) => g.kind === 'commit').length;
+  if (expanded || commitTotal <= limit) return groups.map((group) => ({ type: 'group', group }));
+  const items: TimelineItem[] = [];
+  let shown = 0;
+  for (const group of groups) {
+    if (group.kind !== 'commit') {
+      items.push({ type: 'group', group });
+    } else if (shown < limit) {
+      shown += 1;
+      items.push({ type: 'group', group });
+    } else if (shown === limit) {
+      shown += 1;
+      items.push({ type: 'more', hidden: commitTotal - limit });
+    }
+  }
+  return items;
 }
 
 export function groupTimelineByDay(groups: readonly TimelineGroup[]): TimelineDay[] {

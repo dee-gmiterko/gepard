@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { ChangedFile } from '@gepard/common';
 import {
+  buildTimelineEvents,
+  collapseCommitRun,
   groupByExtension,
   groupByFolder,
   groupByOwner,
@@ -9,6 +11,7 @@ import {
   latestReviewStates,
   topChangedFiles,
   type TimelineEvent,
+  type TimelineGroup,
 } from '../../src/helpers/overview';
 
 function file(path: string, additions: number, deletions = 0): ChangedFile {
@@ -52,21 +55,46 @@ describe('timeline grouping', () => {
     actor,
   });
 
-  it('merges consecutive commits by one actor within an hour only', () => {
+  it('merges consecutive comments by one actor within an hour only, never commits', () => {
     const groups = groupTimeline([
       ev('commit', '2026-01-01T10:00:00Z', 'a'),
       ev('commit', '2026-01-01T10:30:00Z', 'a'),
-      ev('commit', '2026-01-01T10:40:00Z', 'b'),
-      ev('commit', '2026-01-01T13:00:00Z', 'b'),
+      ev('comment', '2026-01-01T10:40:00Z', 'b'),
+      ev('comment', '2026-01-01T11:00:00Z', 'b'),
+      ev('comment', '2026-01-01T13:00:00Z', 'b'),
       ev('review', '2026-01-01T13:01:00Z', 'b'),
       ev('review', '2026-01-01T13:02:00Z', 'b'),
     ]);
     expect(groups.map((g) => [g.kind, g.events.length])).toEqual([
-      ['commit', 2],
       ['commit', 1],
       ['commit', 1],
+      ['comment', 2],
+      ['comment', 1],
       ['review', 1],
       ['review', 1],
+    ]);
+  });
+
+  it('carries each commit message headline onto its own event', () => {
+    const events = buildTimelineEvents({
+      author: 'a',
+      createdAt: '2026-01-01T09:00:00Z',
+      commits: [
+        {
+          oid: 'a'.repeat(40),
+          messageHeadline: 'Fix the indexer',
+          messageBody: '',
+          authoredDate: '2026-01-01T10:00:00Z',
+          committedDate: '2026-01-01T10:00:00Z',
+          authors: [{ login: 'a', name: 'A', email: 'a@example.com' }],
+        },
+      ],
+      threads: [],
+      details: null,
+    });
+    expect(events.map((e) => [e.kind, e.headline])).toEqual([
+      ['opened', undefined],
+      ['commit', 'Fix the indexer'],
     ]);
   });
 
@@ -82,6 +110,42 @@ describe('timeline grouping', () => {
       ['2026-01-01', 2, 0],
       ['2026-01-02', 0, 1],
     ]);
+  });
+});
+
+describe('collapseCommitRun', () => {
+  const group = (kind: TimelineEvent['kind'], n: number): TimelineGroup => ({
+    kind,
+    actor: 'a',
+    at: `2026-01-01T10:${String(n).padStart(2, '0')}:00Z`,
+    events: [{ kind, at: '', actor: 'a' }],
+  });
+  const groups = [
+    group('commit', 1),
+    group('commit', 2),
+    group('comment', 3),
+    group('commit', 4),
+    group('commit', 5),
+    group('review', 6),
+  ];
+
+  it('keeps everything when the run fits', () => {
+    expect(collapseCommitRun(groups, 4, false).every((i) => i.type === 'group')).toBe(true);
+  });
+
+  it('replaces the commits past the limit by one expander, keeping other events', () => {
+    const items = collapseCommitRun(groups, 2, false);
+    expect(items.map((i) => (i.type === 'more' ? `more:${i.hidden}` : i.group.kind))).toEqual([
+      'commit',
+      'commit',
+      'comment',
+      'more:2',
+      'review',
+    ]);
+  });
+
+  it('shows every group once expanded', () => {
+    expect(collapseCommitRun(groups, 2, true)).toHaveLength(groups.length);
   });
 });
 

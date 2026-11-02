@@ -84,6 +84,10 @@ export function useIsDiffView(): boolean {
   return useUiSelector(isDiffView);
 }
 
+export function useOverviewPr(): number | null {
+  return useUiSelector((s) => s.overviewPr);
+}
+
 export function useTargetPr(): number | null {
   return useUiSelector((s) => s.targeting.pr);
 }
