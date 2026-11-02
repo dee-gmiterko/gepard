@@ -15,12 +15,16 @@ export function MergeButton({
   head,
   base,
   mergeReadiness,
+  viewedFiles,
+  totalFiles,
 }: {
   pr: number;
   title: string;
   head: string;
   base: string;
   mergeReadiness: MergeReadiness;
+  viewedFiles: number;
+  totalFiles: number;
 }): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const blockedReason = useMergeBlockedReason(mergeReadiness);
@@ -40,6 +44,8 @@ export function MergeButton({
           head={head}
           base={base}
           mergeReadiness={mergeReadiness}
+          viewedFiles={viewedFiles}
+          totalFiles={totalFiles}
           onClose={() => setOpen(false)}
         />
       )}

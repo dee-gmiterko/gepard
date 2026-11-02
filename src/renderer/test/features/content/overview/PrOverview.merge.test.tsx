@@ -35,7 +35,12 @@ function setup({
   methods?: AllowedMergeMethods;
   row?: Partial<OverviewPr>;
 } = {}): ReturnType<typeof renderWithProviders> {
-  const listed = overviewPr(7, 'Speed up the indexer', { mergeReadiness: readiness, ...row });
+  const listed = overviewPr(7, 'Speed up the indexer', {
+    mergeReadiness: readiness,
+    viewedFiles: 1,
+    countedFiles: 1,
+    ...row,
+  });
   const world = createWorld({ prs: [pr(7, 'Speed up the indexer')], overviewPrs: [listed] });
   const state = { merged: false };
   const handlers = {
@@ -74,8 +79,13 @@ describe('PR overview merge dialog', () => {
     await user.click(await screen.findByRole('button', { name: 'Merge' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Merge' }));
+    await user.click(await within(dialog).findByRole('button', { name: 'Merge anyway' }));
 
-    expect(ipc.callsTo('pr.merge')).toEqual([expect.objectContaining({ pr: 7, method: 'MERGE' })]);
+    await waitFor(() =>
+      expect(ipc.callsTo('pr.merge')).toEqual([
+        expect.objectContaining({ pr: 7, method: 'MERGE' }),
+      ]),
+    );
   });
 
   it('updates the header badge and removes the Merge button after merging from the details', async () => {
@@ -85,9 +95,9 @@ describe('PR overview merge dialog', () => {
     await screen.findByText('All pull requests');
     await screen.findByText('Open');
     await user.click(await screen.findByRole('button', { name: 'Merge' }));
-    await user.click(
-      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Merge' }),
-    );
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Merge' }));
+    await user.click(await within(dialog).findByRole('button', { name: 'Merge anyway' }));
 
     await waitFor(() => expect(screen.queryByText('Open')).toBeNull());
     expect((await screen.findAllByText('Merged')).length).toBeGreaterThan(0);
@@ -200,6 +210,69 @@ describe('PR overview merge dialog', () => {
   });
 });
 
+describe('merge confirmation for unviewed files', () => {
+  it('merges directly when every file is viewed', async () => {
+    const { user, ipc } = setup({ row: { viewedFiles: 3, countedFiles: 3 } });
+
+    await user.click(await screen.findByRole('button', { name: 'Merge' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Merge' }));
+
+    await waitFor(() => expect(ipc.callsTo('pr.merge')).toHaveLength(1));
+  });
+
+  it('asks again with the counts, keeps the method on Back and merges only on Merge anyway', async () => {
+    const { user, ipc } = setup({ row: { viewedFiles: 1, countedFiles: 3 } });
+
+    await user.click(await screen.findByRole('button', { name: 'Merge' }));
+    let dialog = await screen.findByRole('dialog');
+    await user.selectOptions(within(dialog).getByRole('combobox'), 'REBASE');
+    await user.click(within(dialog).getByRole('button', { name: 'Merge' }));
+
+    expect(within(dialog).getByText('2 of 3 files are not marked as viewed.')).toBeVisible();
+    expect(ipc.callsTo('pr.merge')).toEqual([]);
+    expect(within(dialog).getByRole('button', { name: 'Merge anyway' })).toHaveFocus();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Back' }));
+    dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('combobox')).toHaveValue('REBASE');
+    expect(ipc.callsTo('pr.merge')).toEqual([]);
+
+    await user.click(within(dialog).getByRole('button', { name: 'Merge' }));
+    await user.click(await within(dialog).findByRole('button', { name: 'Merge anyway' }));
+
+    await waitFor(() =>
+      expect(ipc.callsTo('pr.merge')).toEqual([
+        expect.objectContaining({ pr: 7, method: 'REBASE' }),
+      ]),
+    );
+  });
+
+  it('never merges on the first Enter', async () => {
+    const { user, ipc } = setup({ row: { viewedFiles: 0, countedFiles: 2 } });
+
+    await user.click(await screen.findByRole('button', { name: 'Merge' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('combobox'));
+    await user.keyboard('{Enter}');
+
+    expect(ipc.callsTo('pr.merge')).toEqual([]);
+  });
+
+  it('asks for confirmation in the header dialog when the details view has unviewed files', async () => {
+    const { user, ipc } = setup({ row: { viewedFiles: 3, countedFiles: 3 } });
+
+    await user.click(await screen.findByRole('button', { name: '#7 Speed up the indexer' }));
+    await screen.findByText('All pull requests');
+    await user.click(await screen.findByRole('button', { name: 'Merge' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Merge' }));
+
+    expect(await within(dialog).findByText(/files are not marked as viewed/)).toBeVisible();
+    expect(ipc.callsTo('pr.merge')).toEqual([]);
+  });
+});
+
 describe('MergeModal confirm', () => {
   function renderModal(readiness: MergeReadiness): ReturnType<typeof renderWithProviders> {
     const world = createWorld();
@@ -210,6 +283,8 @@ describe('MergeModal confirm', () => {
         head="feature-7"
         base="main"
         mergeReadiness={readiness}
+        viewedFiles={1}
+        totalFiles={1}
         onClose={() => undefined}
       />,
       world.handlers,

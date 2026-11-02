@@ -16,6 +16,8 @@ import { QueryState } from '../shared/QueryState';
 import { RelativeTime } from '../shared/RelativeTime';
 import { MergeButton } from '../shared/MergeButton';
 import { LinkButton, Muted } from '../shared/overviewStyles';
+import { useChangedFileList } from './useChangedFileList';
+import { useViewedPaths } from './useViewedPaths';
 import { useOverviewActions } from '../shared/useOverviewActions';
 
 const messages = defineMessages({
@@ -91,6 +93,10 @@ export function PrHeader({
   const intl = useIntl();
   const actions = useOverviewActions();
   const targetPr = useTargetPr();
+  const { files } = useChangedFileList();
+  const viewedPaths = useViewedPaths();
+  const totalFiles = files.length > 0 ? files.length : (pr?.changedFiles ?? 0);
+  const viewedFiles = files.filter((f) => viewedPaths.has(f.path)).length;
   const isTarget = pr !== undefined && pr.number === targetPr;
   return (
     <Stack $gap={2} $align="flex-start">
@@ -136,6 +142,8 @@ export function PrHeader({
               head={prHeadLabel(pr)}
               base={pr.baseRefName}
               mergeReadiness={details.mergeReadiness}
+              viewedFiles={viewedFiles}
+              totalFiles={totalFiles}
             />
           )}
           <Button

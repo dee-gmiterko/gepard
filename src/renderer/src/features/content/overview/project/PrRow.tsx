@@ -105,6 +105,8 @@ export function PrRow({ pr }: { pr: OverviewPr }): React.JSX.Element {
             head={prHeadLabel(pr)}
             base={pr.baseRefName}
             mergeReadiness={pr.mergeReadiness}
+            viewedFiles={pr.viewedFiles}
+            totalFiles={pr.countedFiles}
           />
         )}
         <Button onClick={() => actions.reviewPr(pr.number)}>

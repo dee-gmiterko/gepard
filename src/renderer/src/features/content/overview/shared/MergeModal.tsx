@@ -25,6 +25,12 @@ const messages = defineMessages({
   squash: { id: 'content.overview.merge.method.squash', defaultMessage: 'Squash and merge' },
   rebase: { id: 'content.overview.merge.method.rebase', defaultMessage: 'Rebase and merge' },
   cancel: { id: 'content.overview.merge.cancel', defaultMessage: 'Cancel' },
+  unviewed: {
+    id: 'content.overview.merge.unviewed',
+    defaultMessage: '{count} of {total} files are not marked as viewed.',
+  },
+  back: { id: 'content.overview.merge.back', defaultMessage: 'Back' },
+  mergeAnyway: { id: 'content.overview.merge.anyway', defaultMessage: 'Merge anyway' },
   merging: { id: 'content.overview.merge.merging', defaultMessage: 'Merging…' },
   confirm: { id: 'content.overview.merge.confirm', defaultMessage: 'Merge' },
 });
@@ -121,6 +127,8 @@ export function MergeModal({
   head,
   base,
   mergeReadiness,
+  viewedFiles,
+  totalFiles,
   onClose,
 }: {
   pr: number;
@@ -128,6 +136,8 @@ export function MergeModal({
   head: string;
   base: string;
   mergeReadiness: MergeReadiness;
+  viewedFiles: number;
+  totalFiles: number;
   onClose: () => void;
 }): React.JSX.Element {
   const intl = useIntl();
@@ -135,6 +145,8 @@ export function MergeModal({
   const allowed = useAllowedMergeMethods();
   const offered = offeredMethods(allowed.data);
   const [chosen, setChosen] = useState<MergeMethod | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const unviewed = Math.max(0, totalFiles - viewedFiles);
   const method =
     chosen && offered.includes(chosen)
       ? chosen
@@ -143,6 +155,10 @@ export function MergeModal({
   function handleSubmit(e: FormEvent): void {
     e.preventDefault();
     if (merge.isPending || !canMerge(mergeReadiness)) return;
+    if (unviewed > 0 && !confirming) {
+      setConfirming(true);
+      return;
+    }
     merge.mutate({ pr, method }, { onSuccess: onClose });
   }
 
@@ -153,46 +169,82 @@ export function MergeModal({
       onClose={onClose}
       onSubmit={handleSubmit}
     >
-      <Stack>
-        <Subject>
-          <PrLabel number={pr} title={title} truncate={false} />
-        </Subject>
-        <Muted>
-          <FormattedMessage {...messages.branches} values={{ head, base }} />
-        </Muted>
-        <Field>
-          <FormattedMessage {...messages.method} />
-          <Select
-            value={method}
-            onChange={(e) => setChosen(toMergeMethod(e.target.value))}
-            disabled={merge.isPending}
-          >
-            {offered.map((m) => (
-              <option key={m} value={m}>
-                {intl.formatMessage(METHOD_LABELS[m])}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <MergeStatus readiness={mergeReadiness} />
-        {merge.isError && (
-          <Message tone="danger" layout="inline">
-            {formatDescribedError(intl, merge.error)}
-          </Message>
-        )}
-      </Stack>
-      <Actions>
-        <Button type="button" onClick={onClose}>
-          <FormattedMessage {...messages.cancel} />
-        </Button>
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={merge.isPending || !canMerge(mergeReadiness)}
-        >
-          <FormattedMessage {...(merge.isPending ? messages.merging : messages.confirm)} />
-        </Button>
-      </Actions>
+      {confirming ? (
+        <>
+          <Stack>
+            <Subject>
+              <PrLabel number={pr} title={title} truncate={false} />
+            </Subject>
+            <Message tone="warning" layout="inline">
+              <FormattedMessage
+                {...messages.unviewed}
+                values={{ count: unviewed, total: totalFiles }}
+              />
+            </Message>
+            {merge.isError && (
+              <Message tone="danger" layout="inline">
+                {formatDescribedError(intl, merge.error)}
+              </Message>
+            )}
+          </Stack>
+          <Actions>
+            <Button type="button" disabled={merge.isPending} onClick={() => setConfirming(false)}>
+              <FormattedMessage {...messages.back} />
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              autoFocus
+              disabled={merge.isPending || !canMerge(mergeReadiness)}
+            >
+              <FormattedMessage {...(merge.isPending ? messages.merging : messages.mergeAnyway)} />
+            </Button>
+          </Actions>
+        </>
+      ) : (
+        <>
+          <Stack>
+            <Subject>
+              <PrLabel number={pr} title={title} truncate={false} />
+            </Subject>
+            <Muted>
+              <FormattedMessage {...messages.branches} values={{ head, base }} />
+            </Muted>
+            <Field>
+              <FormattedMessage {...messages.method} />
+              <Select
+                value={method}
+                onChange={(e) => setChosen(toMergeMethod(e.target.value))}
+                disabled={merge.isPending}
+              >
+                {offered.map((m) => (
+                  <option key={m} value={m}>
+                    {intl.formatMessage(METHOD_LABELS[m])}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <MergeStatus readiness={mergeReadiness} />
+            {merge.isError && (
+              <Message tone="danger" layout="inline">
+                {formatDescribedError(intl, merge.error)}
+              </Message>
+            )}
+          </Stack>
+          <Actions>
+            <Button type="button" onClick={onClose}>
+              <FormattedMessage {...messages.cancel} />
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={merge.isPending || !canMerge(mergeReadiness)}
+            >
+              <FormattedMessage {...(merge.isPending ? messages.merging : messages.confirm)} />
+            </Button>
+          </Actions>
+        </>
+      )}
     </Modal>
   );
 }
