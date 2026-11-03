@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import type { Commit, PrOverviewDetails } from '@gepard/common';
 import App from '../../../../src/App';
 import { renderWithProviders } from '../../../support/render';
@@ -39,12 +39,17 @@ describe('PR overview timeline', () => {
       'pr.commits': () => commits,
     });
 
-    expect(await screen.findByText('Change number 1')).toBeVisible();
-    expect(screen.queryByText('Change number 12')).toBeNull();
+    const timeline = await screen.findByRole('region', { name: 'Timeline' });
+    expect(await within(timeline).findByText('Change number 1')).toBeTruthy();
+    expect(within(timeline).queryByText('Change number 12')).toBeNull();
+    const shown = within(timeline)
+      .getAllByText(/^Change number \d+$/)
+      .map((el) => el.textContent);
+    expect(shown).toEqual(Array.from({ length: 8 }, (_, i) => `Change number ${i + 1}`));
 
-    await user.click(screen.getByRole('button', { name: 'Show 4 more commits' }));
+    await user.click(within(timeline).getByRole('button', { name: 'Show 4 more commits' }));
 
-    expect(await screen.findByText('Change number 12')).toBeVisible();
-    expect(screen.queryByRole('button', { name: /more commits/ })).toBeNull();
+    expect(await within(timeline).findByText('Change number 12')).toBeTruthy();
+    expect(within(timeline).queryByRole('button', { name: /more commits/ })).toBeNull();
   });
 });

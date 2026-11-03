@@ -26,6 +26,7 @@ export const qk = {
   commitsAll: (p: string) => [...qk.project(p), 'commits'] as const,
   commits: (p: string, search?: string, path?: string) =>
     [...qk.commitsAll(p), search, path] as const,
+  commitGraph: (p: string, pr: number | null) => [...qk.project(p), 'commitGraph', pr] as const,
   prsAll: (p: string) => [...qk.project(p), 'prs'] as const,
   prs: (p: string, search?: string, commit?: string, path?: string) =>
     [...qk.prsAll(p), search, commit, path] as const,

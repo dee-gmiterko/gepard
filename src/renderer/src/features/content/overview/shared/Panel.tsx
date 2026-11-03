@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import styled from 'styled-components';
 import { SectionHeading } from '../../../../components/SectionHeading';
 
@@ -18,9 +18,10 @@ export function Panel({
   actions?: ReactNode;
   children: ReactNode;
 }): React.JSX.Element {
+  const id = useId();
   return (
-    <Block>
-      <SectionHeading title={title} actions={actions} />
+    <Block aria-labelledby={id}>
+      <SectionHeading title={<span id={id}>{title}</span>} actions={actions} />
       {children}
     </Block>
   );
