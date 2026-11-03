@@ -30,6 +30,7 @@ export class PrsHandlers {
     | 'pr.mergeMethods'
     | 'issues.create'
     | 'commits.list'
+    | 'commits.graph'
     | 'overview.project'
     | 'overview.pr'
     | 'overview.owners'
@@ -138,6 +139,17 @@ export class PrsHandlers {
 
       'commits.list': ({ projectId, search, path, limit }) =>
         this.git.listCommits(projectId, { search, path, limit }),
+
+      'commits.graph': async ({ projectId, pr, offset, limit }) => {
+        let tips: string[] = [];
+        if (pr !== undefined) {
+          const { owner, repo } = await this.gh.repoRefFor(projectId);
+          const { headRefOid } = await this.gh.viewPrHeadBase(owner, repo, pr);
+          await this.git.ensurePrCommitsFetched(projectId, pr, [headRefOid]);
+          tips = [headRefOid];
+        }
+        return this.git.graphPage(projectId, { offset, limit, tips });
+      },
     };
   }
 }

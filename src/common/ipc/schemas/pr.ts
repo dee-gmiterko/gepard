@@ -107,6 +107,22 @@ export const Commit = z.object({
 });
 export type Commit = z.infer<typeof Commit>;
 
+export const GraphCommit = z.object({
+  oid: Sha,
+  parents: z.array(Sha),
+  messageHeadline: z.string(),
+  committedDate: IsoDate,
+  authorName: z.string(),
+  refs: z.array(z.string().min(1)),
+});
+export type GraphCommit = z.infer<typeof GraphCommit>;
+
+export const GraphPage = z.object({
+  commits: z.array(GraphCommit),
+  nextOffset: z.int().nonnegative().nullable(),
+});
+export type GraphPage = z.infer<typeof GraphPage>;
+
 export const TargetRef = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('pr'), pr: z.int().positive() }),
   z.object({ kind: z.literal('commit'), sha: Sha, pr: z.int().positive().optional() }),

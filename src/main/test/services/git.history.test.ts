@@ -107,3 +107,67 @@ describe('GitService.listCommits (integration)', () => {
     });
   });
 });
+
+describe('GitService.graphPage (integration)', () => {
+  let origin: TmpDir;
+  let userData: UserData;
+  let svc: GitService;
+  const projectId = 'acme__graph';
+  const oids: Record<string, string> = {};
+
+  async function commit(message: string): Promise<string> {
+    await git(origin.path, ['commit', '--allow-empty', '-m', message]);
+    return git(origin.path, ['rev-parse', 'HEAD']);
+  }
+
+  beforeAll(async () => {
+    origin = await makeTmpDir('git-graph-origin');
+    userData = await makeUserData();
+    svc = makeGitServices(userData.paths).git;
+    const o = origin.path;
+    await git(o, ['init', '-b', 'main']);
+    oids.root = await commit('root');
+    await git(o, ['checkout', '-b', 'topic']);
+    oids.topic = await commit('topic work');
+    await git(o, ['checkout', 'main']);
+    oids.main = await commit('main work');
+    await git(o, ['merge', '--no-ff', 'topic', '-m', 'merge topic']);
+    oids.merge = await git(o, ['rev-parse', 'HEAD']);
+    await git(o, ['tag', 'v1']);
+    await svc.cloneProject(projectId, `file://${o}`);
+  }, 30_000);
+
+  afterAll(async () => {
+    await origin.cleanup();
+    await userData.cleanup();
+  });
+
+  it('lists every commit with parents and ref decorations, children before parents', async () => {
+    const page = await svc.graphPage(projectId, { offset: 0, limit: 10 });
+
+    expect(page.nextOffset).toBeNull();
+    expect(page.commits.map((c) => c.messageHeadline)).toEqual(
+      expect.arrayContaining(['merge topic', 'main work', 'topic work', 'root']),
+    );
+    const byOid = new Map(page.commits.map((c) => [c.oid, c]));
+    const merge = byOid.get(oids.merge);
+    expect(merge?.parents).toEqual([oids.main, oids.topic]);
+    expect(merge?.refs).toEqual(expect.arrayContaining(['main', 'v1']));
+    expect(byOid.get(oids.topic)?.refs).toContain('topic');
+    expect(byOid.get(oids.root)?.parents).toEqual([]);
+    const index = (oid: string): number => page.commits.findIndex((c) => c.oid === oid);
+    expect(index(oids.merge)).toBeLessThan(index(oids.main));
+    expect(index(oids.main)).toBeLessThan(index(oids.root));
+  });
+
+  it('pages by offset and reports where the next page starts', async () => {
+    const first = await svc.graphPage(projectId, { offset: 0, limit: 2 });
+    const second = await svc.graphPage(projectId, { offset: 2, limit: 2 });
+
+    expect(first.commits).toHaveLength(2);
+    expect(first.nextOffset).toBe(2);
+    expect(second.commits).toHaveLength(2);
+    expect(second.nextOffset).toBeNull();
+    expect(new Set([...first.commits, ...second.commits].map((c) => c.oid)).size).toBe(4);
+  });
+});

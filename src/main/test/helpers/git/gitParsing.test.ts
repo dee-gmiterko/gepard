@@ -4,7 +4,9 @@ import {
   parseBranchNames,
   parseCloneProgressLine,
   parseDiffTreeStdinFiles,
+  parseGitGraph,
   parseGitLog,
+  parseRefDecorations,
   parseNameStatus,
   parseNumstat,
   parseUnifiedDiff,
@@ -260,6 +262,44 @@ describe('parseGitLog', () => {
 
   it('returns nothing for empty output', () => {
     expect(parseGitLog('')).toEqual([]);
+  });
+});
+
+describe('parseRefDecorations', () => {
+  it('drops HEAD pointers, strips origin/ and tag prefixes and merges duplicates', () => {
+    expect(
+      parseRefDecorations('HEAD -> main, origin/main, origin/HEAD, tag: v1, origin/feature'),
+    ).toEqual(['main', 'v1', 'feature']);
+  });
+
+  it('returns nothing for an undecorated commit', () => {
+    expect(parseRefDecorations('')).toEqual([]);
+    expect(parseRefDecorations('HEAD')).toEqual([]);
+  });
+});
+
+describe('parseGitGraph', () => {
+  it('parses parents, author and decorations', () => {
+    const record = (oid: string, parents: string, refs: string): string =>
+      ['\n' + oid, parents, '2026-01-01T00:00:00+00:00', 'Ann', `subject ${oid}`, refs].join(
+        '\x1f',
+      ) + '\x1e';
+    const commits = parseGitGraph(record('c', 'a b', 'HEAD -> main') + record('a', '', ''));
+    expect(commits).toEqual([
+      {
+        oid: 'c',
+        parents: ['a', 'b'],
+        messageHeadline: 'subject c',
+        committedDate: '2026-01-01T00:00:00+00:00',
+        authorName: 'Ann',
+        refs: ['main'],
+      },
+      expect.objectContaining({ oid: 'a', parents: [], refs: [] }),
+    ]);
+  });
+
+  it('returns nothing for empty output', () => {
+    expect(parseGitGraph('')).toEqual([]);
   });
 });
 

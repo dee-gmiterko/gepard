@@ -120,6 +120,8 @@ describe('pr.merge and overview.range handlers', () => {
     mergePr: MockInstance<GhService['mergePr']>;
     viewPrHeadBase: MockInstance<GhService['viewPrHeadBase']>;
     prRange: MockInstance<GitService['prRange']>;
+    graphPage: MockInstance<GitService['graphPage']>;
+    ensurePrCommitsFetched: MockInstance<GitService['ensurePrCommitsFetched']>;
   } {
     const services = makeGitServices(userData.paths);
     vi.spyOn(services.gh, 'repoRefFor').mockResolvedValue({ owner: 'acme', repo: 'widgets' });
@@ -133,13 +135,27 @@ describe('pr.merge and overview.range handlers', () => {
     const prRange = vi
       .spyOn(services.git, 'prRange')
       .mockResolvedValue({ base: 'm'.repeat(40), head: 'h'.repeat(40) });
+    const graphPage = vi
+      .spyOn(services.git, 'graphPage')
+      .mockResolvedValue({ commits: [], nextOffset: null });
+    const ensurePrCommitsFetched = vi
+      .spyOn(services.git, 'ensurePrCommitsFetched')
+      .mockResolvedValue(undefined);
     const handlers = new PrsHandlers(
       services.gh,
       services.git,
       new ReviewStore(userData.paths, new FileLockService()),
       { filter: (_projectId, items) => Promise.resolve([...items]) },
     ).toHandlerMap();
-    return { handlers, allowedMergeMethods, mergePr, viewPrHeadBase, prRange };
+    return {
+      handlers,
+      allowedMergeMethods,
+      mergePr,
+      viewPrHeadBase,
+      prRange,
+      graphPage,
+      ensurePrCommitsFetched,
+    };
   }
 
   it('merges the PR in the project repository with the requested method', async () => {
@@ -180,5 +196,33 @@ describe('pr.merge and overview.range handlers', () => {
 
     expect(allowedMergeMethods).toHaveBeenCalledWith('acme', 'widgets');
     expect(methods).toEqual({ merge: true, squash: false, rebase: true });
+  });
+
+  it('pages the commit graph without a PR', async () => {
+    const { handlers, graphPage, viewPrHeadBase } = setup();
+
+    await handlers['commits.graph'](
+      { projectId: 'acme__widgets', offset: 100, limit: 50 },
+      { window: null },
+    );
+
+    expect(viewPrHeadBase).not.toHaveBeenCalled();
+    expect(graphPage).toHaveBeenCalledWith('acme__widgets', { offset: 100, limit: 50, tips: [] });
+  });
+
+  it('adds the PR head to the commit graph and fetches it first', async () => {
+    const { handlers, graphPage, ensurePrCommitsFetched } = setup();
+
+    await handlers['commits.graph'](
+      { projectId: 'acme__widgets', pr: 7, offset: 0, limit: 50 },
+      { window: null },
+    );
+
+    expect(ensurePrCommitsFetched).toHaveBeenCalledWith('acme__widgets', 7, ['h'.repeat(40)]);
+    expect(graphPage).toHaveBeenCalledWith('acme__widgets', {
+      offset: 0,
+      limit: 50,
+      tips: ['h'.repeat(40)],
+    });
   });
 });

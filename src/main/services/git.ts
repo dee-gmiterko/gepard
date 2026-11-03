@@ -5,7 +5,9 @@ import { looksBinary } from '../helpers/binary';
 import { mimeForPath } from '../helpers/mime';
 import { assertInRepo } from '../helpers/repoPath';
 import {
+  GIT_GRAPH_FORMAT,
   GIT_LOG_FORMAT,
+  parseGitGraph,
   changeTypeFromLetter,
   parseCloneProgressLine,
   parseDiffTreeStdinFiles,
@@ -29,6 +31,7 @@ import {
   type FileChange,
   type FileContent,
   type FileDiff,
+  type GraphPage,
   type ImageData,
   isGlob,
   matchesTarget,
@@ -337,6 +340,36 @@ export class GitService {
       );
       return result;
     });
+  }
+
+  async graphPage(
+    projectId: string,
+    opts: { offset: number; limit: number; tips?: string[] },
+  ): Promise<GraphPage> {
+    const repoRoot = this.paths.projectRepoDir(projectId);
+    const { stdout } = await this.git.run(repoRoot, [
+      'log',
+      '--topo-order',
+      '--date=iso-strict',
+      '--decorate-refs=refs/heads',
+      '--decorate-refs=refs/remotes',
+      '--decorate-refs=refs/tags',
+      `--pretty=format:${GIT_GRAPH_FORMAT}`,
+      `--skip=${opts.offset}`,
+      '-n',
+      String(opts.limit + 1),
+      '--branches',
+      '--remotes',
+      '--tags',
+      ...(opts.tips ?? []),
+      '--',
+    ]);
+    const all = parseGitGraph(stdout);
+    const commits = all.slice(0, opts.limit);
+    return {
+      commits,
+      nextOffset: all.length > opts.limit ? opts.offset + commits.length : null,
+    };
   }
 
   async listCommits(

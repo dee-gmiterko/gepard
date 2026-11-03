@@ -18,6 +18,7 @@ import {
   Commit,
   FileContent,
   FileDiff,
+  GraphPage,
   IssueRef,
   MergeMethod,
   NodeId,
@@ -145,6 +146,14 @@ export const channels = {
       limit: z.int().positive().optional(),
     }),
     output: z.array(Commit),
+  },
+  'commits.graph': {
+    input: ProjectRef.extend({
+      pr: z.int().positive().optional(),
+      offset: z.int().nonnegative().default(0),
+      limit: z.int().positive().max(500).default(100),
+    }),
+    output: GraphPage,
   },
 
   'overview.project': { input: ProjectRef, output: ProjectOverview },

@@ -1,5 +1,12 @@
 import type { z } from 'zod';
-import { ClonePhase, type ChangedFile, type Commit, type DiffRow, AppError } from '@gepard/common';
+import {
+  ClonePhase,
+  type ChangedFile,
+  type Commit,
+  type DiffRow,
+  type GraphCommit,
+  AppError,
+} from '@gepard/common';
 
 type ChangeType = ChangedFile['changeType'];
 
@@ -30,6 +37,38 @@ export function parseCloneProgressLine(line: string): {
 const RS = '\x1e';
 const US = '\x1f';
 export const GIT_LOG_FORMAT = ['%H', '%ad', '%cd', '%an', '%ae', '%s', '%b'].join(US) + RS;
+
+export const GIT_GRAPH_FORMAT = ['%H', '%P', '%cd', '%an', '%s', '%D'].join(US) + RS;
+
+export function parseRefDecorations(decoration: string): string[] {
+  const refs = new Set<string>();
+  for (const raw of decoration.split(',')) {
+    let name = raw.trim();
+    if (name.startsWith('HEAD -> ')) name = name.slice('HEAD -> '.length);
+    if (name === '' || name === 'HEAD' || name === 'origin/HEAD') continue;
+    refs.add(name.startsWith('tag: ') ? name.slice('tag: '.length) : stripOriginPrefix(name));
+  }
+  return [...refs];
+}
+
+export function parseGitGraph(stdout: string): GraphCommit[] {
+  return stdout
+    .split(RS)
+    .map((record) => record.replace(/^\n/, ''))
+    .filter((record) => record.length > 0)
+    .map((record) => {
+      const [oid, parents, committedDate, authorName, messageHeadline, decoration] =
+        record.split(US);
+      return {
+        oid,
+        parents: parents ? parents.split(' ') : [],
+        messageHeadline,
+        committedDate,
+        authorName,
+        refs: parseRefDecorations(decoration ?? ''),
+      };
+    });
+}
 
 export function parseGitLog(stdout: string): Commit[] {
   return stdout
