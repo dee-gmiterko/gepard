@@ -79,7 +79,7 @@ export const RowGrid = styled.div<{ $columns?: string; $head?: boolean }>`
     min-width: 0;
   }
 
-  > :last-child {
+  > :last-child:not(:only-child) {
     justify-self: end;
   }
 

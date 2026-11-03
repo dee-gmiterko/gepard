@@ -178,6 +178,7 @@ export function collapseCommitRun(
   return items;
 }
 
+// Takes chronological groups; days are newest first, groups within a day stay chronological.
 export function groupTimelineByDay(groups: readonly TimelineGroup[]): TimelineDay[] {
   const days: TimelineDay[] = [];
   for (const group of groups) {
@@ -194,7 +195,7 @@ export function groupTimelineByDay(groups: readonly TimelineGroup[]): TimelineDa
     entry.groups.push(group);
     entry.counts[group.kind] += group.events.length;
   }
-  return days;
+  return days.reverse();
 }
 
 export function latestReviewStates(

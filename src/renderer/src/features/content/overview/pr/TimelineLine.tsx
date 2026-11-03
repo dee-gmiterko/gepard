@@ -1,5 +1,6 @@
 import { defineMessages, FormattedDate, FormattedMessage } from 'react-intl';
 import styled from 'styled-components';
+import { MessageSquare } from 'react-feather';
 import { Caption } from '../../../../components/Caption';
 import type { Theme } from '../../../../theme/tokens';
 import type { TimelineGroup, TimelineKind } from '../../../../helpers/overview';
@@ -81,6 +82,23 @@ const Dot = styled.span<{ $kind: TimelineKind }>`
           : theme.colors.fgSubtle};
 `;
 
+const ICON_SIZE = 16;
+
+const CommentMarker = styled.span`
+  position: absolute;
+  top: calc(${DOT_CENTER} - ${ICON_SIZE / 2}px);
+  left: -${ICON_SIZE / 2 + 0.5}px;
+  width: ${ICON_SIZE}px;
+  height: ${ICON_SIZE}px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: ${({ theme }) => theme.colors.commentBg};
+  border: 1px solid ${({ theme }) => theme.colors.warning};
+  color: ${({ theme }) => theme.colors.warning};
+`;
+
 const Text = styled.div`
   overflow-wrap: anywhere;
 `;
@@ -147,7 +165,13 @@ export function TimelineLine({ group }: { group: TimelineGroup }): React.JSX.Ele
   }
   return (
     <Item>
-      <Dot $kind={group.kind} aria-hidden />
+      {group.kind === 'comment' ? (
+        <CommentMarker aria-hidden>
+          <MessageSquare size={9} />
+        </CommentMarker>
+      ) : (
+        <Dot $kind={group.kind} aria-hidden />
+      )}
       <Text>{onClick ? <LinkButton onClick={onClick}>{text}</LinkButton> : text}</Text>
       <Meta>
         {group.kind === 'commit' && <span>{actor}</span>}

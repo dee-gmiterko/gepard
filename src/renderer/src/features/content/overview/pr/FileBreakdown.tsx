@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { defineMessages, FormattedMessage } from 'react-intl';
-import styled from 'styled-components';
 import { useChangedFileOwners } from '../../../../queries/overview';
 import {
   groupByExtension,
@@ -9,6 +8,7 @@ import {
   NO_EXTENSION,
   UNOWNED,
 } from '../../../../helpers/overview';
+import { Stack } from '../../../../components/Layout';
 import { Panel } from '../shared/Panel';
 import { PanelBody } from '../shared/PanelBody';
 import { QueryState } from '../shared/QueryState';
@@ -25,12 +25,6 @@ const messages = defineMessages({
   noExtension: { id: 'content.overview.pr.noExtension', defaultMessage: '(no extension)' },
   unowned: { id: 'content.overview.pr.unowned', defaultMessage: 'Unowned' },
 });
-
-const Columns = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: ${({ theme }) => theme.space[5]};
-`;
 
 export function FileBreakdown(): React.JSX.Element {
   const actions = useOverviewActions();
@@ -50,7 +44,8 @@ export function FileBreakdown(): React.JSX.Element {
   const ownersPending = isPending || owners.isPending;
 
   return (
-    <Columns aria-busy={isPending}>
+    <Stack $gap={5} aria-busy={isPending}>
+      <TopFilesPanel files={files} isPending={isPending} />
       <Panel title={<FormattedMessage {...messages.folders} />}>
         <PanelBody isPending={isPending}>
           <GroupList
@@ -89,7 +84,6 @@ export function FileBreakdown(): React.JSX.Element {
           </PanelBody>
         </Panel>
       )}
-      <TopFilesPanel files={files} isPending={isPending} />
-    </Columns>
+    </Stack>
   );
 }

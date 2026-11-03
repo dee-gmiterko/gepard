@@ -269,6 +269,7 @@ export function createWorld(options: WorldOptions = {}): World {
       return { ...found, baseRefOid: BASE };
     },
     'symbols.line': ({ path, line }) => ({ path, line, symbols: [] }),
+    'commits.graph': () => ({ commits: [], nextOffset: null }),
     'commits.list': ({ search }) => {
       if (!search) return commits;
       return searchableCommits.filter((c) => matches(c.messageHeadline, search));

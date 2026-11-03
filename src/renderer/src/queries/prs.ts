@@ -1,6 +1,7 @@
 import {
   skipToken,
   useMutation,
+  useInfiniteQuery,
   useMutationState,
   useQuery,
   useQueryClient,
@@ -34,6 +35,8 @@ export function usePrList(search?: string) {
   });
 }
 
+const GRAPH_PAGE_SIZE = 100;
+
 export function usePrCommits() {
   return usePrCommitList(useTargetPr(), useTargetPath() ?? undefined);
 }
@@ -56,6 +59,23 @@ export function useCommits(search?: string) {
     queryKey: qk.commits(projectId, search, path),
     queryFn: () => invoke('commits.list', { projectId, search, path }),
     enabled: !usingPr && Boolean(projectId),
+  });
+}
+
+export function useCommitGraph(pr: number | null) {
+  const projectId = useProjectId() ?? '';
+  return useInfiniteQuery({
+    queryKey: qk.commitGraph(projectId, pr),
+    queryFn: ({ pageParam }) =>
+      invoke('commits.graph', {
+        projectId,
+        pr: pr ?? undefined,
+        offset: pageParam,
+        limit: GRAPH_PAGE_SIZE,
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (last) => last.nextOffset ?? undefined,
+    enabled: Boolean(projectId),
   });
 }
 
