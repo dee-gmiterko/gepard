@@ -98,6 +98,30 @@ describe('timeline grouping', () => {
     ]);
   });
 
+  it('lists days newest first and keeps groups chronological within a day', () => {
+    const days = groupTimelineByDay(
+      groupTimeline([
+        ev('commit', '2026-01-01T10:00:00Z', 'a'),
+        ev('comment', '2026-01-01T11:00:00Z', 'b'),
+        ev('commit', '2026-01-01T12:00:00Z', 'a'),
+        ev('review', '2026-01-02T09:00:00Z', 'b'),
+        ev('comment', '2026-01-02T10:00:00Z', 'b'),
+      ]),
+    );
+    expect(days.map((d) => d.day)).toEqual(['2026-01-02', '2026-01-01']);
+    expect(days.map((d) => d.groups.map((g) => [g.kind, g.at]))).toEqual([
+      [
+        ['review', '2026-01-02T09:00:00Z'],
+        ['comment', '2026-01-02T10:00:00Z'],
+      ],
+      [
+        ['commit', '2026-01-01T10:00:00Z'],
+        ['comment', '2026-01-01T11:00:00Z'],
+        ['commit', '2026-01-01T12:00:00Z'],
+      ],
+    ]);
+  });
+
   it('buckets groups by day with per-kind counts', () => {
     const days = groupTimelineByDay(
       groupTimeline([
@@ -107,8 +131,8 @@ describe('timeline grouping', () => {
       ]),
     );
     expect(days.map((d) => [d.day, d.counts.commit, d.counts.comment])).toEqual([
-      ['2026-01-01', 2, 0],
       ['2026-01-02', 0, 1],
+      ['2026-01-01', 2, 0],
     ]);
   });
 });
