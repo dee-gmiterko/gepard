@@ -1,5 +1,5 @@
 import { Inline } from '../../../../components/Layout';
-import { Muted, RowGrid, Truncated } from '../shared/overviewStyles';
+import { Muted, Num, RowGrid, Truncated } from '../shared/overviewStyles';
 
 const SINGLE_COLUMN = 'minmax(0, 1fr)';
 
@@ -14,7 +14,9 @@ export function ReviewerRow({
     <RowGrid $columns={SINGLE_COLUMN}>
       <Inline $gap={2}>
         <Truncated>{name}</Truncated>
-        <Muted>{children}</Muted>
+        <Muted>
+          <Num>{children}</Num>
+        </Muted>
       </Inline>
     </RowGrid>
   );
