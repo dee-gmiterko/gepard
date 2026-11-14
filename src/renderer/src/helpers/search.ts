@@ -4,6 +4,22 @@ import type { ViewMode } from '../components/ViewModeToggle';
 export type FileMatches = GroupedResult['files'][number];
 export type MatchItem = FileMatches['matches'][number];
 
+export function excludeLocations(
+  files: readonly FileMatches[],
+  locations: readonly { path: string; line: number }[],
+): FileMatches[] {
+  const out: FileMatches[] = [];
+  for (const file of files) {
+    const matches = file.matches.filter(
+      (m) => !locations.some((l) => l.path === file.path && l.line === m.line),
+    );
+    if (matches.length > 0 || (file.matches.length === 0 && file.moreMatches)) {
+      out.push(matches.length === file.matches.length ? file : { ...file, matches });
+    }
+  }
+  return out;
+}
+
 export type SearchRow =
   | { kind: 'folder'; key: string; path: string; name: string; depth: number }
   | { kind: 'file'; key: string; path: string; name: string; depth: number; file: FileMatches }

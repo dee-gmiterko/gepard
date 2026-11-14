@@ -84,7 +84,52 @@ const PR_SUMMARY_FIELDS = [
   'labels',
 ].join(',');
 
-const PrCommitsResponse = z.object({ commits: z.array(Commit) });
+const PR_COMMITS_PAGE_QUERY = `
+query($owner:String!, $name:String!, $number:Int!, $endCursor:String) {
+  repository(owner:$owner, name:$name) {
+    pullRequest(number:$number) {
+      commits(first:100, after:$endCursor) {
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          commit {
+            oid messageHeadline messageBody authoredDate committedDate
+            authors(first:10) { nodes { name email user { login } } }
+          }
+        }
+      }
+    }
+  }
+}`;
+
+const PrCommitsPageResponse = z.object({
+  data: z.object({
+    repository: z.object({
+      pullRequest: z
+        .object({
+          commits: z.object({
+            pageInfo: GqlPageInfo,
+            nodes: z.array(
+              z.object({
+                commit: Commit.omit({ authors: true }).extend({
+                  authors: z.object({
+                    nodes: z.array(
+                      z.object({
+                        name: z.string(),
+                        email: z.string(),
+                        user: z.object({ login: Login }).nullable(),
+                      }),
+                    ),
+                  }),
+                }),
+              }),
+            ),
+          }),
+        })
+        .nullable(),
+    }),
+  }),
+  errors: z.array(GqlError).optional(),
+});
 
 const MERGE_METHOD_FLAGS: Record<MergeMethod, string> = {
   MERGE: '--merge',
@@ -628,18 +673,32 @@ export class GhService {
     return normalizePrOverview(raw);
   }
 
-  // gh returns a PR's commits in topological order, oldest first.
+  // GraphQL returns a PR's commits oldest first; `gh pr view --json commits` caps at 100.
   async viewPrCommits(owner: string, repo: string, number: number): Promise<Commit[]> {
-    const { commits } = await this.gh.json(PrCommitsResponse, [
-      'pr',
-      'view',
-      String(number),
-      '-R',
-      `${owner}/${repo}`,
-      '--json',
-      'commits',
-    ]);
-    return commits;
+    const out: Commit[] = [];
+    let cursor: string | null = null;
+    for (;;) {
+      const page: z.output<typeof PrCommitsPageResponse> = await this.gh.graphql(
+        PrCommitsPageResponse,
+        PR_COMMITS_PAGE_QUERY,
+        { owner, name: repo, number, endCursor: cursor },
+      );
+      const commits = page.data.repository.pullRequest?.commits;
+      if (!commits) break;
+      for (const { commit } of commits.nodes) {
+        out.push({
+          ...commit,
+          authors: commit.authors.nodes.map((a) => ({
+            login: a.user?.login ?? null,
+            name: a.name,
+            email: a.email,
+          })),
+        });
+      }
+      if (!commits.pageInfo.hasNextPage) break;
+      cursor = commits.pageInfo.endCursor;
+    }
+    return out;
   }
 
   async viewPrHeadBase(

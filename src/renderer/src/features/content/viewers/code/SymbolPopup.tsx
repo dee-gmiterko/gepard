@@ -10,6 +10,7 @@ import { Message } from '../../../../components/Message';
 import { PathAndLine } from '../../../../components/PathAndLine';
 import { PathLabel } from '../../../../components/PathLabel';
 import { useFileContent } from '../../../../queries/files';
+import { excludeLocations } from '../../../../helpers/search';
 import { useSearch, type SearchParams } from '../../../../queries/search';
 
 const messages = defineMessages({
@@ -158,7 +159,14 @@ function SymbolPopup({
     [path, symbol],
   );
   const references = useSearch(sha, params);
-  const files = references.data?.files ?? [];
+  const files = useMemo(
+    () =>
+      excludeLocations(
+        references.data?.files ?? [],
+        internal.map((d) => ({ path: d.location.path, line: d.location.range.start.line })),
+      ),
+    [references.data, internal],
+  );
   const partial =
     references.data?.hasMore || references.data?.truncated || files.some((f) => f.moreMatches);
 
