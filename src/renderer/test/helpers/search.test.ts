@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  buildSearchRows,
-  countMatches,
-  excludeLocations,
-  type FileMatches,
-} from '../../src/helpers/search';
+import { buildSearchRows, countMatches, type FileMatches } from '../../src/helpers/search';
 
 function file(path: string, lines: number[] = [1], moreMatches = false): FileMatches {
   return {
@@ -92,24 +87,5 @@ describe('countMatches', () => {
   it('sums the matches carried by the files', () => {
     expect(countMatches([file('a.ts', [1, 2, 3]), file('b.ts', [4])])).toBe(4);
     expect(countMatches([])).toBe(0);
-  });
-});
-
-describe('excludeLocations', () => {
-  it('drops the matches at the given locations and files left empty', () => {
-    const files = [file('a.ts', [16]), file('b.ts', [22]), file('c.ts', [16, 30])];
-    expect(excludeLocations(files, [{ path: 'a.ts', line: 16 }]).map((f) => f.path)).toEqual([
-      'b.ts',
-      'c.ts',
-    ]);
-    const kept = excludeLocations(files, [{ path: 'c.ts', line: 16 }]);
-    expect(kept[2].matches.map((m) => m.line)).toEqual([30]);
-  });
-
-  it('keeps untouched files as they are and files that still have more matches', () => {
-    const files = [file('a.ts', [1]), file('b.ts', [5], true)];
-    expect(excludeLocations(files, [])).toEqual(files);
-    const more = excludeLocations(files, [{ path: 'b.ts', line: 5 }]);
-    expect(more.map((f) => f.path)).toEqual(['a.ts']);
   });
 });

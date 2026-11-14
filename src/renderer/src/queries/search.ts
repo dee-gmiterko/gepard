@@ -130,6 +130,32 @@ export function useDefinition(sha: string, path: string, pos: Pos | null) {
   );
 }
 
+export function useUsages(
+  sha: string,
+  path: string,
+  pos: Pos,
+  paging: { limit?: number; maxMatchesPerFile?: number },
+) {
+  const projectId = useProjectId() ?? '';
+  const { limit, maxMatchesPerFile } = paging;
+  return ignoreCancelled(
+    useQuery({
+      queryKey: [
+        ...qk.file(projectId, sha, path),
+        'usages',
+        pos,
+        limit,
+        maxMatchesPerFile,
+      ] as const,
+      queryFn: () =>
+        invoke('symbols.usages', { projectId, sha, path, pos, limit, maxMatchesPerFile }),
+      enabled: Boolean(projectId) && Boolean(sha) && Boolean(path),
+      staleTime: Infinity,
+      gcTime: SEARCH_GC_MS,
+    }),
+  );
+}
+
 export function useDefinitions(sha: string, path: string, positions: Pos[]) {
   const projectId = useProjectId() ?? '';
   return useQueries({

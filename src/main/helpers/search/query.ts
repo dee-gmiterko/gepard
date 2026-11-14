@@ -31,7 +31,10 @@ export function pageOptions(input: ParsedSearch): PageOptions {
   };
 }
 
-export function toResult(input: ParsedSearch, page: Page): GroupedResult {
+export function toResult(
+  input: Pick<ParsedSearch, 'kind' | 'text' | 'scope' | 'offset'>,
+  page: Page,
+): GroupedResult {
   return {
     query: { kind: input.kind, text: input.text, scope: input.scope },
     files: page.files,

@@ -9,6 +9,7 @@ import {
   type ChannelName,
   type ChannelOutput,
   type ChannelParsedInput,
+  type DefinitionTarget,
   GroupedResult,
   SearchQuery,
   type LanguageSession,
@@ -59,6 +60,9 @@ const runSearch = (input: ChannelParsedInput<'search.run'>): Promise<ChannelOutp
 const workspaceSymbols = (
   input: ChannelParsedInput<'symbols.workspace'>,
 ): Promise<ChannelOutput<'symbols.workspace'>> => call('symbols.workspace', input);
+const usages = (
+  input: ChannelParsedInput<'symbols.usages'>,
+): Promise<ChannelOutput<'symbols.usages'>> => call('symbols.usages', input);
 const lineSymbols = (
   input: ChannelParsedInput<'symbols.line'>,
 ): Promise<ChannelOutput<'symbols.line'>> => call('symbols.line', input);
@@ -402,6 +406,56 @@ describe('search.run', () => {
       });
       expect(result).toMatchObject({ files: [], hasMore: false, matchesInPage: 0 });
       expect(references).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('usages', () => {
+    const referenced = [
+      { path: 'x.ts', matches: [hit(1), hit(4)] },
+      { path: 'y.ts', matches: [hit(2)] },
+    ];
+    const target = (path: string, line: number, external = false): DefinitionTarget => ({
+      location: { path, range: { start: { line, col: 1 }, end: { line, col: 2 } } },
+      external,
+    });
+    const input = { projectId: PROJECT, sha: SHA, path: 'x.ts', pos: { line: 1, col: 1 } };
+
+    it('returns the definitions and the references without the internal definition lines', async () => {
+      mocks.session = {
+        definition: vi.fn(() => Promise.resolve([target('x.ts', 1)])),
+        references: vi.fn(() => Promise.resolve(referenced)),
+      };
+      const result = await usages(input);
+      expect(result.definitions).toEqual([target('x.ts', 1)]);
+      expect(result.references.files.map((f) => [f.path, f.matches.map((m) => m.line)])).toEqual([
+        ['x.ts', [4]],
+        ['y.ts', [2]],
+      ]);
+    });
+
+    it('keeps every reference when the definition is external', async () => {
+      mocks.session = {
+        definition: vi.fn(() => Promise.resolve([target('x.ts', 1, true)])),
+        references: vi.fn(() => Promise.resolve(referenced)),
+      };
+      const result = await usages(input);
+      expect(result.references.matchesInPage).toBe(3);
+    });
+
+    it('pages the references and caps matches per file', async () => {
+      mocks.session = {
+        definition: vi.fn(() => Promise.resolve([])),
+        references: vi.fn(() => Promise.resolve(referenced)),
+      };
+      const result = await usages({ ...input, limit: 1, maxMatchesPerFile: 1 });
+      expect(result.references).toMatchObject({ hasMore: true, matchesInPage: 1 });
+      expect(result.references.files[0]).toMatchObject({ path: 'x.ts', moreMatches: true });
+    });
+
+    it('is empty when no language session covers the file', async () => {
+      const result = await usages(input);
+      expect(result.definitions).toEqual([]);
+      expect(result.references).toMatchObject({ files: [], hasMore: false, matchesInPage: 0 });
     });
   });
 

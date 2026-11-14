@@ -11,6 +11,7 @@ import {
   type ChannelOutput,
   type ChannelParsedInput,
   type LanguageSession,
+  type Pos,
   type WorkspaceSymbol,
   navigationSymbols,
   resolveImportSpecifier,
@@ -138,6 +139,18 @@ export class SearchHandlers {
     );
   }
 
+  private async symbolAt(projectId: string, path: string, pos: Pos): Promise<string> {
+    try {
+      const text = await readFile(
+        resolveInRepo(this.paths.projectRepoDir(projectId), path),
+        'utf8',
+      );
+      return identifierAt(text.split('\n')[pos.line - 1] ?? '', pos.col);
+    } catch {
+      return '';
+    }
+  }
+
   definitionAt(
     input: ChannelParsedInput<'symbols.definition'>,
   ): Promise<ChannelOutput<'symbols.definition'>> {
@@ -146,17 +159,42 @@ export class SearchHandlers {
       async ({ token }) => {
         this.requireCurrentSha(input.projectId, input.sha);
         const session = await this.findSession(input.projectId, input.path);
-        const repoRoot = this.paths.projectRepoDir(input.projectId);
-        let symbol: string;
-        try {
-          const text = await readFile(resolveInRepo(repoRoot, input.path), 'utf8');
-          const lineText = text.split('\n')[input.pos.line - 1] ?? '';
-          symbol = identifierAt(lineText, input.pos.col);
-        } catch {
-          symbol = '';
-        }
+        const symbol = await this.symbolAt(input.projectId, input.path, input.pos);
         const definitions = session ? await session.definition(input.path, input.pos, token) : [];
         return { symbol, definitions };
+      },
+    );
+  }
+
+  usagesAt(input: ChannelParsedInput<'symbols.usages'>): Promise<ChannelOutput<'symbols.usages'>> {
+    return this.latest.withLatestWins(
+      `symbols.usages:${input.projectId}:${input.path}:${input.pos.line}:${input.pos.col}`,
+      async ({ token }) => {
+        this.requireCurrentSha(input.projectId, input.sha);
+        const session = await this.findSession(input.projectId, input.path);
+        const symbol = await this.symbolAt(input.projectId, input.path, input.pos);
+        const definitions = session ? await session.definition(input.path, input.pos, token) : [];
+        const raw = session ? await session.references(input.path, input.pos, token) : [];
+        const defined = definitions
+          .filter((d) => !d.external)
+          .map((d) => ({ path: d.location.path, line: d.location.range.start.line }));
+        const files = raw
+          .map((f) => ({
+            ...f,
+            matches: f.matches.filter(
+              (m) => !defined.some((d) => d.path === f.path && d.line === m.line),
+            ),
+          }))
+          .filter((f) => f.matches.length > 0);
+        const page = applyPage(files, {
+          limit: input.limit,
+          maxMatchesPerFile: input.maxMatchesPerFile,
+        });
+        return {
+          symbol,
+          definitions,
+          references: toResult({ kind: 'references', text: symbol, scope: 'all', offset: 0 }, page),
+        };
       },
     );
   }
@@ -223,6 +261,7 @@ export class SearchHandlers {
     | 'search.run'
     | 'symbols.line'
     | 'symbols.definition'
+    | 'symbols.usages'
     | 'symbols.import'
     | 'symbols.workspace'
     | 'symbols.document'
@@ -231,6 +270,7 @@ export class SearchHandlers {
       'search.run': (input) => this.runSearch(input),
       'symbols.line': (input) => this.lineSymbols(input),
       'symbols.definition': (input) => this.definitionAt(input),
+      'symbols.usages': (input) => this.usagesAt(input),
       'symbols.import': (input) => this.importTarget(input),
       'symbols.workspace': (input) => this.workspaceSymbols(input),
       'symbols.document': (input) => this.documentSymbols(input),

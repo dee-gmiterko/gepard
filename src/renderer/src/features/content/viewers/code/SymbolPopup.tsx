@@ -1,4 +1,4 @@
-import { useMemo, useSyncExternalStore } from 'react';
+import { useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage } from 'react-intl';
@@ -10,8 +10,7 @@ import { Message } from '../../../../components/Message';
 import { PathAndLine } from '../../../../components/PathAndLine';
 import { PathLabel } from '../../../../components/PathLabel';
 import { useFileContent } from '../../../../queries/files';
-import { excludeLocations } from '../../../../helpers/search';
-import { useSearch, type SearchParams } from '../../../../queries/search';
+import { useUsages } from '../../../../queries/search';
 
 const messages = defineMessages({
   definition: {
@@ -144,31 +143,17 @@ function SymbolPopup({
   entry: SymbolPopupEntry;
   onOpen: (path: string, line: number) => void;
 }): React.JSX.Element {
-  const { symbol, definitions } = entry;
-  const internal = definitions.filter((d) => !d.external);
-  const params = useMemo<SearchParams>(
-    () => ({
-      kind: 'references',
-      scope: 'all',
-      targetedPaths: [],
-      text: symbol.name,
-      at: { path, pos: { line: symbol.line, col: symbol.col } },
-      limit: REFERENCE_FILES,
-      maxMatchesPerFile: REFERENCES_PER_FILE,
-    }),
-    [path, symbol],
+  const { symbol } = entry;
+  const usages = useUsages(
+    sha,
+    path,
+    { line: symbol.line, col: symbol.col },
+    { limit: REFERENCE_FILES, maxMatchesPerFile: REFERENCES_PER_FILE },
   );
-  const references = useSearch(sha, params);
-  const files = useMemo(
-    () =>
-      excludeLocations(
-        references.data?.files ?? [],
-        internal.map((d) => ({ path: d.location.path, line: d.location.range.start.line })),
-      ),
-    [references.data, internal],
-  );
-  const partial =
-    references.data?.hasMore || references.data?.truncated || files.some((f) => f.moreMatches);
+  const internal = (usages.data?.definitions ?? []).filter((d) => !d.external);
+  const references = usages.data?.references;
+  const files = references?.files ?? [];
+  const partial = references?.hasMore || references?.truncated || files.some((f) => f.moreMatches);
 
   return (
     <Popup>
@@ -192,7 +177,7 @@ function SymbolPopup({
             </DefinitionEntry>
           </Link>
         ))}
-        {internal.length === 0 && (
+        {usages.data && internal.length === 0 && (
           <Message layout="inline" tone="subtle">
             <FormattedMessage {...messages.externalDefinition} />
           </Message>
@@ -202,12 +187,12 @@ function SymbolPopup({
         <Caption>
           <FormattedMessage {...messages.references} />
         </Caption>
-        {references.isFetching && !references.data && (
+        {usages.isFetching && !usages.data && (
           <Message layout="inline" tone="subtle">
             <FormattedMessage {...messages.loading} />
           </Message>
         )}
-        {references.data && files.length === 0 && (
+        {references && files.length === 0 && (
           <Message layout="inline" tone="subtle">
             <FormattedMessage {...messages.noReferences} />
           </Message>
