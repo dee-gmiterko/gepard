@@ -21,6 +21,7 @@ import {
   CommitAnnotationsResponse,
   parseCommitAnnotations,
 } from '../helpers/github/checks';
+import { paginateGraphql } from '../helpers/github/pagination';
 import { withFileReference } from '../helpers/github/reviewMapping';
 import {
   GhPrOverview,
@@ -676,13 +677,17 @@ export class GhService {
   // GraphQL returns a PR's commits oldest first; `gh pr view --json commits` caps at 100.
   async viewPrCommits(owner: string, repo: string, number: number): Promise<Commit[]> {
     const out: Commit[] = [];
-    let cursor: string | null = null;
-    for (;;) {
-      const page: z.output<typeof PrCommitsPageResponse> = await this.gh.graphql(
-        PrCommitsPageResponse,
-        PR_COMMITS_PAGE_QUERY,
-        { owner, name: repo, number, endCursor: cursor },
-      );
+    const pages = paginateGraphql(
+      (endCursor) =>
+        this.gh.graphql(PrCommitsPageResponse, PR_COMMITS_PAGE_QUERY, {
+          owner,
+          name: repo,
+          number,
+          endCursor,
+        }),
+      (page) => page.data.repository.pullRequest?.commits.pageInfo,
+    );
+    for await (const page of pages) {
       const commits = page.data.repository.pullRequest?.commits;
       if (!commits) break;
       for (const { commit } of commits.nodes) {
@@ -695,8 +700,6 @@ export class GhService {
           })),
         });
       }
-      if (!commits.pageInfo.hasNextPage) break;
-      cursor = commits.pageInfo.endCursor;
     }
     return out;
   }
@@ -792,23 +795,21 @@ export class GhService {
     after: string,
   ): Promise<string[]> {
     const out: string[] = [];
-    let cursor: string | null = after;
-    for (;;) {
-      const page: z.output<typeof PrFilesPageResponse> = await this.gh.graphql(
-        PrFilesPageResponse,
-        PR_FILES_PAGE_QUERY,
-        {
+    const pages = paginateGraphql(
+      (endCursor) =>
+        this.gh.graphql(PrFilesPageResponse, PR_FILES_PAGE_QUERY, {
           owner,
           name: repo,
           number,
-          endCursor: cursor,
-        },
-      );
+          endCursor,
+        }),
+      (page) => page.data.repository.pullRequest?.files.pageInfo,
+      after,
+    );
+    for await (const page of pages) {
       const files = page.data.repository.pullRequest?.files;
       if (!files) break;
       out.push(...files.nodes.map((f) => f.path));
-      if (!files.pageInfo.hasNextPage) break;
-      cursor = files.pageInfo.endCursor;
     }
     return out;
   }
@@ -895,19 +896,14 @@ export class GhService {
   async listViewerRepos(): Promise<ViewerRepo[]> {
     if (!(await this.hasActiveAuth())) return [];
     const repos: ViewerRepo[] = [];
-    let cursor: string | null = null;
-    for (;;) {
-      const page: z.output<typeof ViewerReposResponse> = await this.gh.graphql(
-        ViewerReposResponse,
-        VIEWER_REPOS_QUERY,
-        {
-          endCursor: cursor,
-        },
-      );
-      const { nodes, pageInfo } = page.data.viewer.repositories;
+    const pages = paginateGraphql(
+      (endCursor) => this.gh.graphql(ViewerReposResponse, VIEWER_REPOS_QUERY, { endCursor }),
+      (page) => page.data.viewer.repositories.pageInfo,
+    );
+    for await (const page of pages) {
+      const { nodes } = page.data.viewer.repositories;
       repos.push(...nodes.map((n) => ({ owner: n.owner.login, repo: n.name, url: n.url })));
-      if (!pageInfo.hasNextPage || repos.length >= MAX_VIEWER_REPOS) break;
-      cursor = pageInfo.endCursor;
+      if (repos.length >= MAX_VIEWER_REPOS) break;
     }
     return repos;
   }
@@ -917,17 +913,16 @@ export class GhService {
     after: string | null,
   ): Promise<GqlReviewCommentRaw[]> {
     const out: GqlReviewCommentRaw[] = [];
-    let cursor = after;
-    for (;;) {
-      const page = await this.gh.graphql(ThreadCommentsPage, THREAD_COMMENTS_QUERY, {
-        threadId,
-        endCursor: cursor,
-      });
+    const pages = paginateGraphql(
+      (endCursor) =>
+        this.gh.graphql(ThreadCommentsPage, THREAD_COMMENTS_QUERY, { threadId, endCursor }),
+      (page) => page.data.node?.comments.pageInfo,
+      after,
+    );
+    for await (const page of pages) {
       const comments = page.data.node?.comments;
       if (!comments) break;
       out.push(...comments.nodes);
-      if (!comments.pageInfo.hasNextPage) break;
-      cursor = comments.pageInfo.endCursor;
     }
     return out;
   }
@@ -938,21 +933,20 @@ export class GhService {
     number: number,
   ): Promise<ReviewThreadsResult> {
     const threads: GqlReviewThreadRaw[] = [];
-    let prId: string;
-    let headRefOid: string;
-    let baseRefOid: string;
-    let cursor: string | null = null;
-    for (;;) {
-      const page: z.output<typeof GqlReviewThreadsPage> = await this.gh.graphql(
-        GqlReviewThreadsPage,
-        REVIEW_THREADS_QUERY,
-        {
+    let prId = '';
+    let headRefOid = '';
+    let baseRefOid = '';
+    const pages = paginateGraphql(
+      (endCursor) =>
+        this.gh.graphql(GqlReviewThreadsPage, REVIEW_THREADS_QUERY, {
           owner,
           name: repo,
           number,
-          endCursor: cursor,
-        },
-      );
+          endCursor,
+        }),
+      (page) => page.data.repository.pullRequest.reviewThreads.pageInfo,
+    );
+    for await (const page of pages) {
       const pr = page.data.repository.pullRequest;
       prId = pr.id;
       headRefOid = pr.headRefOid;
@@ -967,34 +961,29 @@ export class GhService {
         }
         threads.push(thread);
       }
-      if (!pr.reviewThreads.pageInfo.hasNextPage) break;
-      cursor = pr.reviewThreads.pageInfo.endCursor;
     }
     return { prId, headRefOid, baseRefOid, threads };
   }
 
   async fetchViewedFiles(owner: string, repo: string, number: number): Promise<FilesViewedResult> {
     const files: RemoteViewedFile[] = [];
-    let prId: string;
-    let headRefOid: string;
-    let cursor: string | null = null;
-    for (;;) {
-      const page: z.output<typeof FilesViewedPage> = await this.gh.graphql(
-        FilesViewedPage,
-        FILES_VIEWED_QUERY,
-        {
+    let prId = '';
+    let headRefOid = '';
+    const pages = paginateGraphql(
+      (endCursor) =>
+        this.gh.graphql(FilesViewedPage, FILES_VIEWED_QUERY, {
           owner,
           name: repo,
           number,
-          endCursor: cursor,
-        },
-      );
+          endCursor,
+        }),
+      (page) => page.data.repository.pullRequest.files.pageInfo,
+    );
+    for await (const page of pages) {
       const pr = page.data.repository.pullRequest;
       prId = pr.id;
       headRefOid = pr.headRefOid;
       files.push(...pr.files.nodes);
-      if (!pr.files.pageInfo.hasNextPage) break;
-      cursor = pr.files.pageInfo.endCursor;
     }
     return { prId, headRefOid, files };
   }
@@ -1146,24 +1135,21 @@ export class GhService {
     number: number,
   ): Promise<GeneralCommentsResult> {
     const comments: GqlIssueCommentRaw[] = [];
-    let prId: string;
-    let cursor: string | null = null;
-    for (;;) {
-      const page: z.output<typeof GeneralCommentsPage> = await this.gh.graphql(
-        GeneralCommentsPage,
-        GENERAL_COMMENTS_QUERY,
-        {
+    let prId = '';
+    const pages = paginateGraphql(
+      (endCursor) =>
+        this.gh.graphql(GeneralCommentsPage, GENERAL_COMMENTS_QUERY, {
           owner,
           name: repo,
           number,
-          endCursor: cursor,
-        },
-      );
+          endCursor,
+        }),
+      (page) => page.data.repository.pullRequest.comments.pageInfo,
+    );
+    for await (const page of pages) {
       const pr = page.data.repository.pullRequest;
       prId = pr.id;
       comments.push(...pr.comments.nodes);
-      if (!pr.comments.pageInfo.hasNextPage) break;
-      cursor = pr.comments.pageInfo.endCursor;
     }
     return { prId, comments };
   }

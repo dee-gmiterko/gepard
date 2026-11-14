@@ -65,6 +65,7 @@ export class ExtensionInstallerService {
     return this.gh.json(z.array(GitHubRelease), [
       'api',
       `repos/${repositorySlug(repo)}/releases?per_page=100`,
+      '--paginate',
     ]);
   }
 
