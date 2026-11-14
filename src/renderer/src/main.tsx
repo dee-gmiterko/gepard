@@ -27,10 +27,10 @@ createRoot(rootElement).render(
         <AppThemeProvider>
           <UiProvider>
             <ActionHandlersProvider>
-              <ToastHost />
               <ErrorBoundary>
                 <App />
               </ErrorBoundary>
+              <ToastHost />
             </ActionHandlersProvider>
           </UiProvider>
         </AppThemeProvider>

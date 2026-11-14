@@ -24,6 +24,7 @@ const Body = styled.div`
   display: grid;
   grid-template-columns: auto 1fr;
   container-type: inline-size;
+  z-index: ${({ theme }) => theme.z.floating};
   min-height: 0;
 `;
 

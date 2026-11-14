@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { RepoPath } from './pr';
-import { Location, Range, SymbolKind } from './search';
+import { GroupedResult, Location, Range, SymbolKind } from './search';
 
 export const SymbolModifier = z.enum([
   'declaration',
@@ -58,6 +58,8 @@ export const DefinitionResult = z.object({
   definitions: z.array(DefinitionTarget),
 });
 export type DefinitionResult = z.infer<typeof DefinitionResult>;
+export const UsagesResult = DefinitionResult.extend({ references: GroupedResult });
+export type UsagesResult = z.infer<typeof UsagesResult>;
 
 export const ImportTargetResult = z.object({ path: RepoPath.nullable() });
 export type ImportTargetResult = z.infer<typeof ImportTargetResult>;

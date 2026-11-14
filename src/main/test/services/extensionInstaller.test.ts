@@ -178,7 +178,11 @@ describe('ExtensionInstallerService', () => {
     const list = await installer.install(DEMO);
 
     expect(github.calls).toHaveLength(2);
-    expect(github.calls[0]).toEqual(['api', 'repos/dee-gmiterko/gepard/releases?per_page=100']);
+    expect(github.calls[0]).toEqual([
+      'api',
+      'repos/dee-gmiterko/gepard/releases?per_page=100',
+      '--paginate',
+    ]);
     expect(github.calls[1]).toEqual([
       'release',
       'download',
@@ -243,7 +247,11 @@ describe('ExtensionInstallerService', () => {
 
       const list = await installer.install(fromRepo('https://github.com/other/ext', ''));
       expect(list.map((e) => e.version)).toEqual(['0.2.0']);
-      expect(github.calls[0]).toEqual(['api', 'repos/other/ext/releases?per_page=100']);
+      expect(github.calls[0]).toEqual([
+        'api',
+        'repos/other/ext/releases?per_page=100',
+        '--paginate',
+      ]);
       expect(github.downloads[0]).toBe(`gepard-ext-demo-v0.2.0/${newer}`);
     });
 

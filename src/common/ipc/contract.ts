@@ -34,6 +34,7 @@ import { Comment, CommentDraft, LocalViewedState, ReviewThread } from './schemas
 import { GroupedResult, Pos, SearchQuery, SymbolKind, WorkspaceSymbol } from './schemas/search';
 import {
   DefinitionResult,
+  UsagesResult,
   ImportTargetResult,
   DocumentSymbolsResult,
   IndexStatus,
@@ -187,6 +188,16 @@ export const channels = {
   'symbols.definition': {
     input: ProjectRef.extend({ sha: Sha, path: RepoPath, pos: Pos }),
     output: DefinitionResult,
+  },
+  'symbols.usages': {
+    input: ProjectRef.extend({
+      sha: Sha,
+      path: RepoPath,
+      pos: Pos,
+      limit: z.int().positive().max(200).optional(),
+      maxMatchesPerFile: z.int().positive().optional(),
+    }),
+    output: UsagesResult,
   },
   'symbols.import': {
     input: ProjectRef.extend({ sha: Sha, path: RepoPath, specifier: z.string() }),
