@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import styled from 'styled-components';
 import { defineMessages, FormattedMessage, useIntl, type MessageDescriptor } from 'react-intl';
 import type { ImageData } from '@gepard/common';
-import { Image } from '../../../../components/Image';
+import { ZoomableImage } from '../../../../components/ZoomableImage';
 import { Message } from '../../../../components/Message';
 import { ViewerFrame } from '../ViewerFrame';
 import { imageSrc } from '../../../../helpers/image';
@@ -85,7 +85,7 @@ function ImageSide({
         <FormattedMessage {...label} />
       </Label>
       {url ? (
-        <Image src={url} alt={intl.formatMessage(alt, { path })} />
+        <ZoomableImage src={url} alt={intl.formatMessage(alt, { path })} />
       ) : (
         <Message tone="subtle" layout="inline">
           <FormattedMessage {...messages.noImage} />

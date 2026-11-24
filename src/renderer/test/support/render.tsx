@@ -8,6 +8,7 @@ import { createQueryClient } from '../../src/queries/createQueryClient';
 import { UiProvider } from '../../src/state/UiProvider';
 import { ActionHandlersProvider } from '../../src/keyboard/ActionHandlersProvider';
 import { ToastHost } from '../../src/state/ToastHost';
+import { LightboxHost } from '../../src/state/LightboxHost';
 import { AppThemeProvider } from '../../src/theme/ThemeProvider';
 import { createFakeIpc, type FakeIpc, type Handlers } from './fakeIpc';
 
@@ -34,6 +35,7 @@ export function renderWithProviders(
         <AppThemeProvider>
           <UiProvider>
             <ActionHandlersProvider>
+              <LightboxHost />
               <ToastHost />
               <ErrorBoundary>{ui}</ErrorBoundary>
             </ActionHandlersProvider>

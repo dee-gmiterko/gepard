@@ -27,6 +27,9 @@ export interface Toast {
   detail?: string;
 }
 
+export type LightboxContent =
+  { kind: 'image'; src: string; alt: string } | { kind: 'svg'; svg: string; label: string };
+
 export interface HeaderStatus {
   id: number;
   message: MessageDescriptor;
@@ -85,6 +88,7 @@ export interface UiState {
   headerStatus: HeaderStatus | null;
   revealLine: { line: number; side: DiffSide } | null;
   settingsOpen: boolean;
+  lightbox: LightboxContent | null;
   quickSearch: QuickSearchMode | null;
   contextMenu: ContextMenuRequest | null;
   contextMenuLineTarget: ContextMenuLineTarget | null;
@@ -108,6 +112,7 @@ export const initialUiState: UiState = {
   headerStatus: null,
   revealLine: null,
   settingsOpen: false,
+  lightbox: null,
   quickSearch: null,
   contextMenu: null,
   contextMenuLineTarget: null,
@@ -153,6 +158,8 @@ export type UiAction =
   | { type: 'headerStatus/publish'; message: MessageDescriptor }
   | { type: 'headerStatus/clear'; id: number }
   | { type: 'settings/setOpen'; open: boolean }
+  | { type: 'lightbox/open'; content: LightboxContent }
+  | { type: 'lightbox/close' }
   | { type: 'quickSearch/open'; mode: QuickSearchMode }
   | { type: 'quickSearch/close' }
   | { type: 'contextMenu/open'; menu: ContextMenuRequest }
@@ -324,6 +331,11 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
     case 'settings/setOpen':
       if (state.settingsOpen === action.open) return state;
       return { ...state, settingsOpen: action.open };
+    case 'lightbox/open':
+      return { ...state, lightbox: action.content };
+    case 'lightbox/close':
+      if (state.lightbox === null) return state;
+      return { ...state, lightbox: null };
     case 'quickSearch/open':
       if (state.quickSearch === action.mode) return state;
       return { ...state, quickSearch: action.mode };

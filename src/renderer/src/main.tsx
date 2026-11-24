@@ -5,6 +5,7 @@ import App from './App';
 import { UiProvider } from './state/UiProvider';
 import { ActionHandlersProvider } from './keyboard/ActionHandlersProvider';
 import { ToastHost } from './state/ToastHost';
+import { LightboxHost } from './state/LightboxHost';
 import { AppThemeProvider } from './theme/ThemeProvider';
 import { ErrorBoundary } from './errors/ErrorBoundary';
 import { installWindowErrorHandlers } from './errors/installWindowErrorHandlers';
@@ -30,6 +31,7 @@ createRoot(rootElement).render(
               <ErrorBoundary>
                 <App />
               </ErrorBoundary>
+              <LightboxHost />
               <ToastHost />
             </ActionHandlersProvider>
           </UiProvider>
