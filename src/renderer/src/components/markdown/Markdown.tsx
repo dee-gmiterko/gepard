@@ -1,5 +1,6 @@
 import MarkdownToJsx from 'markdown-to-jsx/react';
 import styled, { css } from 'styled-components';
+import { ZoomableImage } from '../ZoomableImage';
 import { renderRule } from './renderRules';
 
 const linkAndCode = css`
@@ -57,8 +58,10 @@ const Prose = styled.div`
   }
 `;
 
-const ProseImage = styled.img`
+const ProseImage = styled(ZoomableImage)`
   max-width: 100%;
+  background: none;
+  border: none;
 `;
 
 const ProseTable = styled.table`

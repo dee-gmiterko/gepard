@@ -523,3 +523,18 @@ describe('context menu', () => {
     expect(uiReducer(closed, { type: 'contextMenu/close' })).toBe(closed);
   });
 });
+
+describe('lightbox', () => {
+  const content = { kind: 'image', src: 'data:image/png;base64,AA', alt: 'a' } as const;
+
+  it('opens and closes via lightbox actions', () => {
+    const opened = uiReducer(state(), { type: 'lightbox/open', content });
+    expect(opened.lightbox).toEqual(content);
+    expect(uiReducer(opened, { type: 'lightbox/close' }).lightbox).toBeNull();
+  });
+
+  it('keeps the same state when closing a closed lightbox', () => {
+    const closed = state();
+    expect(uiReducer(closed, { type: 'lightbox/close' })).toBe(closed);
+  });
+});

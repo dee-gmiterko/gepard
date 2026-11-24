@@ -2,12 +2,17 @@ import { useEffect, useId, useState } from 'react';
 import { defineMessages, useIntl } from 'react-intl';
 import styled, { useTheme } from 'styled-components';
 import type { Theme } from '../../theme/tokens';
+import { useUiDispatch } from '../../state/UiContext';
 import { mermaidFallbackTheme, mermaidThemeVariables } from './mermaidTheme';
 
 const messages = defineMessages({
   renderFailed: {
     id: 'components.markdown.mermaid.renderFailed',
     defaultMessage: 'Could not render diagram: {reason}',
+  },
+  diagram: {
+    id: 'components.markdown.mermaid.diagram',
+    defaultMessage: 'Diagram',
   },
   invalidSyntax: {
     id: 'components.markdown.mermaid.invalidSyntax',
@@ -20,6 +25,7 @@ const svgCache = new Map<string, string>();
 
 const Diagram = styled.div`
   overflow: auto;
+  cursor: zoom-in;
 
   svg {
     max-width: 100%;
@@ -70,6 +76,7 @@ type State =
 export function MermaidBlock({ source }: { source: string }): React.JSX.Element {
   const theme = useTheme();
   const intl = useIntl();
+  const dispatch = useUiDispatch();
   const id = useId().replaceAll(':', '');
   const cacheKey = `${theme.mode}\0${JSON.stringify(theme.colors)}\0${source}`;
   const cached = svgCache.get(cacheKey);
@@ -104,7 +111,19 @@ export function MermaidBlock({ source }: { source: string }): React.JSX.Element 
 
   const current = state?.key === cacheKey ? state : undefined;
   const svg = cached ?? (current?.status === 'done' ? current.svg : undefined);
-  if (svg !== undefined) return <Diagram dangerouslySetInnerHTML={{ __html: svg }} />;
+  if (svg !== undefined) {
+    return (
+      <Diagram
+        dangerouslySetInnerHTML={{ __html: svg }}
+        onClick={() =>
+          dispatch({
+            type: 'lightbox/open',
+            content: { kind: 'svg', svg, label: intl.formatMessage(messages.diagram) },
+          })
+        }
+      />
+    );
+  }
 
   return (
     <>

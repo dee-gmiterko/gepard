@@ -51,3 +51,15 @@ describe('mermaid fences', () => {
     expect(mermaid.initialize).not.toHaveBeenCalled();
   });
 });
+
+describe('mermaid lightbox', () => {
+  it('opens the diagram in the lightbox and closes it with the close button', async () => {
+    mermaid.parse.mockResolvedValue(true);
+    mermaid.render.mockResolvedValue({ svg: '<svg data-testid="zoom-diagram"></svg>' });
+    const { user } = show('```mermaid\ngraph TD; A-->Z\n```');
+    await user.click(await screen.findByTestId('zoom-diagram'));
+    expect(await screen.findByTestId('lightbox-content')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByTestId('lightbox-content')).toBeNull();
+  });
+});

@@ -4,6 +4,7 @@ import { isDiffView } from './selectors';
 import type {
   UiState,
   HeaderStatus,
+  LightboxContent,
   Layout,
   MainTab,
   QuickSearchMode,
@@ -70,6 +71,10 @@ export function useHeaderStatusState(): HeaderStatus | null {
 
 export function useSettingsOpen(): boolean {
   return useUiSelector((s) => s.settingsOpen);
+}
+
+export function useLightbox(): LightboxContent | null {
+  return useUiSelector((s) => s.lightbox);
 }
 
 export function useQuickSearchMode(): QuickSearchMode | null {
